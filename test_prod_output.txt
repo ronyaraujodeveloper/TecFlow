@@ -1,0 +1,315 @@
+﻿Compila├º├úo de 28/05/2026 19:38:56 iniciada.
+     1>Projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" no n├│ 1 (Restore destino(s)).
+     1>_GetAllRestoreProjectPathItems:
+         Determinando os projetos a serem restaurados...
+       Restore:
+         A valida├º├úo da cadeia de certificados X.509 usar├í o reposit├│rio de confian├ºa padr├úo selecionado pelo .NET.
+         A valida├º├úo da cadeia de certificados X.509 usar├í o reposit├│rio de confian├ºa padr├úo selecionado pelo .NET.
+     1>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.Json (>= 8.0.8), mas Microsoft.Extensions.Configuration.Json 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Json 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Core\obj\project.assets.json
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\obj\project.assets.json
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Tests\obj\project.assets.json
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Application\obj\project.assets.json
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj restaurado (em 160 ms).
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj restaurado (em 159 ms).
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj restaurado (em 159 ms).
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj restaurado (em 159 ms).
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\obj\project.assets.json
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj restaurado (em 3 ms).
+     1>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+     1>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         O arquivo de ativos n├úo foi alterado. Ignorando grava├º├úo de arquivo de ativos. Caminho: c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\obj\project.assets.json
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj restaurado (em 4 ms).
+         
+         Arquivos de configura├º├úo NuGet usados:
+             C:\Users\rony_\AppData\Roaming\NuGet\NuGet.Config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.FallbackLocation.config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config
+         
+         Feeds usados:
+             https://api.nuget.org/v3/index.json
+             C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+         Todos os projetos est├úo atualizados para restaura├º├úo.
+     1>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (Restore destino(s)).
+   1:7>Projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" no n├│ 2 (VSTest destino(s)).
+     1>BuildProject:
+         Build iniciada, aguarde...
+   1:7>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:7) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) no n├│ 2 (destinos padr├úo).
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+     1>c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+   1:8>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj" (5:8) no n├│ 1 (destinos padr├úo).
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.Json (>= 8.0.8), mas Microsoft.Extensions.Configuration.Json 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Json 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+     5>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+   1:8>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj" (2:7) no n├│ 3 (destinos padr├úo).
+     2>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+     2>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+     2>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+     2>c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+   1:8>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj" (4:10) no n├│ 4 (destinos padr├úo).
+     4>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+     4>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+     4>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+     4>c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+   1:8>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj" (6:7) no n├│ 2 (destinos padr├úo).
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+     6>c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+   1:8>O projeto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (1:8) est├í compilando "c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj" (3:6) no n├│ 2 (destinos padr├úo).
+     3>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+     3>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+     3>c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+     4>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Core.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildRuntimeConfigurationFiles:
+       Ignorando o destino "GenerateBuildRuntimeConfigurationFiles" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Core -> c:\Programacao\Tecso.Automacao\Tecso.Core\bin\Debug\net8.0\Tecso.Core.dll
+     4>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj" (destinos padr├úo).
+     5>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Infrastructure.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildRuntimeConfigurationFiles:
+       Ignorando o destino "GenerateBuildRuntimeConfigurationFiles" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Infrastructure -> c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\bin\Debug\net8.0\Tecso.Infrastructure.dll
+     5>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj" (destinos padr├úo).
+     2>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Application.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Application -> c:\Programacao\Tecso.Automacao\Tecso.Application\bin\Debug\net8.0\Tecso.Application.dll
+     2>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj" (destinos padr├úo).
+     6>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Infrastructure.Services.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Infrastructure.Services -> c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\bin\Debug\net8.0\Tecso.Infrastructure.Services.dll
+     6>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj" (destinos padr├úo).
+     3>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _DiscoverMvcApplicationParts:
+       Ignorando o destino "_DiscoverMvcApplicationParts" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Orquestrador.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _CreateAppHost:
+       Ignorando o destino "_CreateAppHost" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _ProcessScopedCssFiles:
+       Ignorando o destino "_ProcessScopedCssFiles" porque ele n├úo tem sa├¡das.
+       _ProcessScopedCssFiles:
+       Ignorando o destino "_ProcessScopedCssFiles" porque ele n├úo tem sa├¡das.
+       _BuildCopyStaticWebAssetsPreserveNewest:
+       Ignorando o destino "_BuildCopyStaticWebAssetsPreserveNewest" porque ele n├úo tem sa├¡das.
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       Ignorando o destino "_CopyOutOfDateSourceItemsToOutputDirectory" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildRuntimeConfigurationFiles:
+       Ignorando o destino "GenerateBuildRuntimeConfigurationFiles" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Orquestrador -> c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\bin\Debug\net8.0\Tecso.Orquestrador.dll
+     3>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj" (destinos padr├úo).
+     1>GenerateTargetFrameworkMonikerAttribute:
+       Ignorando o destino "GenerateTargetFrameworkMonikerAttribute" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CoreGenerateAssemblyInfo:
+       Ignorando o destino "CoreGenerateAssemblyInfo" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _GenerateSourceLinkFile:
+         O Link de Origem est├í vazio, o arquivo 'obj\Debug\net8.0\Tecso.Tests.sourcelink.json' n├úo existe.
+       CoreCompile:
+       Ignorando o destino "CoreCompile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       Ignorando o destino "_CopyOutOfDateSourceItemsToOutputDirectory" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildDependencyFile:
+       Ignorando o destino "GenerateBuildDependencyFile" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       GenerateBuildRuntimeConfigurationFiles:
+       Ignorando o destino "GenerateBuildRuntimeConfigurationFiles" porque todos os arquivos de sa├¡da est├úo atualizados em rela├º├úo aos arquivos de entrada.
+       CopyFilesToOutputDirectory:
+         Tecso.Tests -> c:\Programacao\Tecso.Automacao\Tecso.Tests\bin\Debug\net8.0\Tecso.Tests.dll
+     1>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destinos padr├úo).
+     1>BuildProject:
+         Build conclu├¡do.
+         
+Execu├º├úo de teste para c:\Programacao\Tecso.Automacao\Tecso.Tests\bin\Debug\net8.0\Tecso.Tests.dll (.NETCoreApp,Version=v8.0)
+1 arquivos de teste no total corresponderam ao padr├úo especificado.
+[xUnit.net 00:00:00.01] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 8.0.27)
+[xUnit.net 00:00:00.20]   Discovering: Tecso.Tests
+[xUnit.net 00:00:00.28]   Discovered:  Tecso.Tests
+[xUnit.net 00:00:00.34]   Starting:    Tecso.Tests
+[xUnit.net 00:00:02.36]   Finished:    Tecso.Tests
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.DataService_GetAllAsync_DeveRetornarTodosOsProdutos [1 s]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.AddAsync_DeveAdicionarNovoProdutoAoContexto [128 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.GetByIdAsync_DeveRetornarNullParaIdInexistente [168 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.GetByIdAsync_DeveRetornarProdutoExistente [8 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.UpdateAsync_DeveAtualizarProdutoExistente [4 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.DataService_GetByIdAsync_DeveRetornarProdutoCorreto [2 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.DeleteAsync_DeveRemoverProdutoExistente [35 ms]
+  Aprovado Tecso.Tests.Integration.ProdutoRepositoryIntegrationTests.GetAllAsync_DeveRetornarTodosOsProdutos [2 ms]
+
+Execu├º├úo de Teste Bem-sucedida.
+Total de testes: 8
+     Aprovados: 8
+Tempo total: 3,5828 Segundos
+     1>Projeto de compila├º├úo pronto "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino(s)).
+
+Compila├º├úo com ├¬xito.
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (Restore destino) (1) ->
+       (Restore destino) -> 
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.Json (>= 8.0.8), mas Microsoft.Extensions.Configuration.Json 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Json 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso. [c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj]
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       (ResolvePackageAssets destino) -> 
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj" (destino padr├úo) (5:8) ->
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.Json (>= 8.0.8), mas Microsoft.Extensions.Configuration.Json 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Json 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Infrastructure depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure\Tecso.Infrastructure.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj" (destino padr├úo) (2:7) ->
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Application\Tecso.Application.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj" (destino padr├úo) (4:10) ->
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Hosting.Abstractions (>= 8.0.8), mas Microsoft.Extensions.Hosting.Abstractions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Hosting.Abstractions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Core\Tecso.Core.csproj : warning NU1603: Tecso.Core depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj" (destino padr├úo) (6:7) ->
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration (>= 8.0.8), mas Microsoft.Extensions.Configuration 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Serilog.Settings.Configuration 8.0.0 depende de Microsoft.Extensions.Configuration.Binder (>= 8.0.8), mas Microsoft.Extensions.Configuration.Binder 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.Binder 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Infrastructure.Services\Tecso.Infrastructure.Services.csproj : warning NU1603: Microsoft.EntityFrameworkCore 8.0.8 depende de Microsoft.Extensions.Logging (>= 8.0.8), mas Microsoft.Extensions.Logging 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Logging 9.0.0 foi resolvido em vez disso.
+
+
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (VSTest destino) (1:7) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Tests\Tecso.Tests.csproj" (destino padr├úo) (1:8) ->
+       "c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj" (destino padr├úo) (3:6) ->
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.EnvironmentVariables (>= 8.0.8), mas Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.FileExtensions (>= 8.0.8), mas Microsoft.Extensions.Configuration.FileExtensions 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.FileExtensions 9.0.0 foi resolvido em vez disso.
+         c:\Programacao\Tecso.Automacao\Tecso.Orquestrador\Tecso.Orquestrador.csproj : warning NU1603: Tecso.Infrastructure.Services depende de Microsoft.Extensions.Configuration.UserSecrets (>= 8.0.8), mas Microsoft.Extensions.Configuration.UserSecrets 8.0.8 n├úo foi encontrado. Microsoft.Extensions.Configuration.UserSecrets 9.0.0 foi resolvido em vez disso.
+
+    56 Aviso(s)
+    0 Erro(s)
+
+Tempo Decorrido 00:00:13.91

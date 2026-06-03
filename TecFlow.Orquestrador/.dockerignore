@@ -1,0 +1,9 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/*.user
+**/.agents
+**/node_modules
+**/*.md
+!README.md

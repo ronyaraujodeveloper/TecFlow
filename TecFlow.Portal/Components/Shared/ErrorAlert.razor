@@ -1,0 +1,19 @@
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert @AlertClass d-flex align-items-start gap-2" role="alert">
+        <span class="flex-grow-1">@Message</span>
+        @if (Dismissible)
+        {
+            <button type="button" class="btn-close" aria-label="Fechar" @onclick="OnDismiss"></button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool IsOffline { get; set; }
+    [Parameter] public bool Dismissible { get; set; } = true;
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private string AlertClass => IsOffline ? "alert-warning" : "alert-danger";
+}

@@ -1,0 +1,31 @@
+@implements IDisposable
+@inject ISessionStateService SessionState
+
+@if (SessionState.IsAuthenticated)
+{
+    <a href="/dashboard" class="badge text-bg-success text-decoration-none">
+        Sessão ativa (@SessionState.ActivePlatform)
+        @if (!string.IsNullOrWhiteSpace(SessionState.DisplayName))
+        {
+            <span> — @SessionState.DisplayName</span>
+        }
+    </a>
+}
+else
+{
+    <span class="badge text-bg-secondary">Não autenticado</span>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        SessionState.OnChange += HandleSessionChanged;
+    }
+
+    private void HandleSessionChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        SessionState.OnChange -= HandleSessionChanged;
+    }
+}

@@ -1,0 +1,384 @@
+@page "/dashboard"
+
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+@using TecFlow.Portal.Models.Responses
+
+@inject ISessionStateService SessionState
+
+@inject IAuthCookieService AuthCookie
+
+@inject IDashboardApiService DashboardApi
+
+@inject ILoadingService LoadingService
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@inject NavigationManager Navigation
+
+
+
+<PageTitle>Painel — TecFlow</PageTitle>
+
+
+
+<div class="dashboard-page">
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+
+        <div>
+
+            <h1 class="h3 fw-bold mb-1">Painel</h1>
+
+            <p class="text-muted mb-0">
+
+                Bem-vindo, <strong>@_displayName</strong>
+
+                @if (_platform is not null)
+
+                {
+
+                    <span class="badge text-bg-primary ms-2">@_platform</span>
+
+                }
+
+            </p>
+
+        </div>
+
+        <div class="d-flex gap-2">
+
+            <button type="button" class="btn btn-outline-primary" disabled="@_isLoading" @onclick="ReloadAsync">
+
+                Atualizar
+
+            </button>
+
+            <a href="/" class="btn btn-outline-secondary">Início</a>
+
+            <a href="/auth/logout" class="btn btn-outline-danger">Terminar sessão</a>
+
+        </div>
+
+    </div>
+
+
+
+    @if (!string.IsNullOrWhiteSpace(_globalError))
+
+    {
+
+        <ErrorAlert Message="@_globalError" IsOffline="@_isOffline" OnDismiss="@(EventCallback.Factory.Create(this, ClearGlobalError))" />
+
+    }
+
+
+
+    <div class="row g-3 mb-4">
+
+        <MetricsSummaryCards Stats="@_stats" />
+
+    </div>
+
+
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-lg-8">
+
+            <CampaignsWidget Campaigns="@_campaigns" ErrorMessage="@_campaignsError" />
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <PipelineStatusWidget Status="@_pipelineStatus"
+
+                                  IsLoading="@_pipelineLoading"
+
+                                  ErrorMessage="@_pipelineError" />
+
+        </div>
+
+    </div>
+
+
+
+    <MetricsWidget Metrics="@_metrics" ErrorMessage="@_metricsError" />
+
+</div>
+
+
+
+@code {
+
+    private string? _displayName;
+
+    private string? _platform;
+
+    private string? _userId;
+
+
+
+    private DashboardSummaryDto? _stats;
+
+    private List<CampaignDto>? _campaigns;
+
+    private List<MetricDto>? _metrics;
+
+    private PipelineStatusDto? _pipelineStatus;
+
+
+
+    private string? _globalError;
+
+    private string? _campaignsError;
+
+    private string? _metricsError;
+
+    private string? _pipelineError;
+
+    private bool _isOffline;
+
+    private bool _isLoading;
+
+    private bool _pipelineLoading;
+
+
+
+    protected override async Task OnInitializedAsync()
+
+    {
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+
+
+        if (user.Identity?.IsAuthenticated != true)
+
+        {
+
+            Navigation.NavigateTo("/", replace: true);
+
+            return;
+
+        }
+
+
+
+        AuthCookie.SyncSessionFromPrincipal(user);
+
+
+
+        _displayName = user.Identity?.Name ?? SessionState.DisplayName ?? "Utilizador";
+
+        _platform = user.FindFirst(TecFlow.Portal.Security.TecFlowClaimTypes.Platform)?.Value
+
+            ?? SessionState.ActivePlatform?.ToString();
+
+        _userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+
+            ?? SessionState.UserId;
+
+
+
+        await LoadDashboardDataAsync();
+
+    }
+
+
+
+    private async Task ReloadAsync() => await LoadDashboardDataAsync();
+
+
+
+    private async Task LoadDashboardDataAsync()
+
+    {
+
+        ClearGlobalError();
+
+        _campaignsError = null;
+
+        _metricsError = null;
+
+        _pipelineError = null;
+
+        _isLoading = true;
+
+        _pipelineLoading = true;
+
+
+
+        using var scope = LoadingService.BeginScope("A atualizar painel...");
+
+
+
+        var statsTask = DashboardApi.GetStatsAsync();
+
+        var campaignsTask = DashboardApi.GetCampaignsAsync();
+
+        var metricsTask = DashboardApi.GetMetricsAsync();
+
+        var pipelineTask = DashboardApi.GetPipelineStatusAsync();
+
+
+
+        await Task.WhenAll(statsTask, campaignsTask, metricsTask, pipelineTask);
+
+
+
+        ApplyStatsResult(await statsTask);
+
+        ApplyCampaignsResult(await campaignsTask);
+
+        ApplyMetricsResult(await metricsTask);
+
+        ApplyPipelineResult(await pipelineTask);
+
+
+
+        _isLoading = false;
+
+        _pipelineLoading = false;
+
+    }
+
+
+
+    private void ApplyStatsResult(Models.ApiResult<DashboardSummaryDto> result)
+
+    {
+
+        if (result.Success)
+
+        {
+
+            _stats = result.Data ?? new DashboardSummaryDto();
+
+            return;
+
+        }
+
+
+
+        SetGlobalError(result);
+
+    }
+
+
+
+    private void ApplyCampaignsResult(Models.ApiResult<List<CampaignDto>> result)
+
+    {
+
+        if (result.Success)
+
+        {
+
+            _campaigns = result.Data ?? [];
+
+            return;
+
+        }
+
+
+
+        _campaigns = [];
+
+        _campaignsError = result.ErrorMessage;
+
+        if (result.IsOffline)
+
+        {
+
+            SetGlobalError(result);
+
+        }
+
+    }
+
+
+
+    private void ApplyMetricsResult(Models.ApiResult<List<MetricDto>> result)
+
+    {
+
+        if (result.Success)
+
+        {
+
+            _metrics = result.Data ?? [];
+
+            return;
+
+        }
+
+
+
+        _metrics = [];
+
+        _metricsError = result.ErrorMessage;
+
+        if (result.IsOffline)
+
+        {
+
+            SetGlobalError(result);
+
+        }
+
+    }
+
+
+
+    private void ApplyPipelineResult(Models.ApiResult<PipelineStatusDto> result)
+
+    {
+
+        if (result.Success)
+
+        {
+
+            _pipelineStatus = result.Data;
+
+            return;
+
+        }
+
+
+
+        _pipelineError = result.ErrorMessage ?? "Não foi possível obter o estado do pipeline.";
+
+    }
+
+
+
+    private void SetGlobalError<T>(Models.ApiResult<T> result)
+
+    {
+
+        _globalError = result.ErrorMessage;
+
+        _isOffline = result.IsOffline;
+
+    }
+
+
+
+    private void ClearGlobalError()
+
+    {
+
+        _globalError = null;
+
+        _isOffline = false;
+
+    }
+
+}
+

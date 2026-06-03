@@ -1,0 +1,20 @@
+@startuml
+title Arquitetura TecFlow
+
+package "TecFlow.Core" {
+  interface IDataService
+  class Produto
+}
+
+package "TecFlow.Data" {
+  class AppDbContext
+}
+
+package "TecFlow.Core.Services" {
+  class DataService
+}
+
+IDataService <|.. DataService
+DataService --> AppDbContext
+AppDbContext --> Produto
+@enduml

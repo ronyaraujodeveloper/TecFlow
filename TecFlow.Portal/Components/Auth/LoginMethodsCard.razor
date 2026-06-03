@@ -1,0 +1,167 @@
+@using TecFlow.Portal.Models.Enums
+@inject ITikTokAuthService TikTokAuthService
+@inject IShopeeAuthService ShopeeAuthService
+@inject IAuthCookieService AuthCookie
+@inject IOAuthProviderRegistry OAuthRegistry
+@inject NavigationManager Navigation
+
+<div class="card shadow-lg border-0 login-card">
+    <div class="card-header bg-transparent border-0 pt-4 px-4">
+        <a href="/" class="text-decoration-none text-muted small">
+            &larr; Voltar
+        </a>
+        <h1 class="h3 fw-bold mt-3 mb-1">Entrar com @PlatformTitle</h1>
+        <p class="text-muted mb-0">Escolha um método de autenticação para continuar.</p>
+    </div>
+
+    <div class="card-body px-4 pb-4">
+        <ErrorAlert Message="@_errorMessage" IsOffline="@_isOffline" OnDismiss="@(EventCallback.Factory.Create(this, ClearError))" />
+
+        <div class="d-grid gap-2 mb-3">
+            <OAuthProviderButton Provider="AuthProvider.Facebook" Label="Facebook"
+                                 IconClass="facebook" IconContent="f"
+                                 BtnClass="btn-outline-primary"
+                                 Platform="Platform" OnError="SetError" />
+
+            <OAuthProviderButton Provider="AuthProvider.Google" Label="Google"
+                                 IconClass="google" IconContent="G"
+                                 BtnClass="btn-outline-danger"
+                                 Platform="Platform" OnError="SetError" />
+
+            <OAuthProviderButton Provider="AuthProvider.ICloud" Label="iCloud"
+                                 IconClass="icloud" IconContent="&#63743;"
+                                 BtnClass="btn-outline-secondary"
+                                 Platform="Platform" OnError="SetError" />
+
+            <button type="button" class="btn btn-outline-dark btn-lg auth-provider-btn"
+                    @onclick="() => SelectProvider(AuthProvider.EmailPassword)">
+                <span class="provider-icon email">@@</span> E-mail e senha
+            </button>
+        </div>
+
+        @if (_selectedProvider is AuthProvider.EmailPassword)
+        {
+            <EditForm Model="_emailModel" OnValidSubmit="SubmitEmailLoginAsync" class="border-top pt-3">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label" for="email">E-mail</label>
+                    <InputText id="email" class="form-control form-control-lg" @bind-Value="_emailModel.Email" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="password">Senha</label>
+                    <InputText id="password" type="password" class="form-control form-control-lg"
+                               @bind-Value="_emailModel.Password" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100">Entrar</button>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LoginPlatform Platform { get; set; }
+
+    private AuthProvider? _selectedProvider;
+    private string? _errorMessage;
+    private bool _isOffline;
+    private readonly EmailLoginModel _emailModel = new();
+
+    private string PlatformTitle => Platform switch
+    {
+        LoginPlatform.TikTok => "TikTok",
+        LoginPlatform.Shopee => "Shopee",
+        _ => "Plataforma"
+    };
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("oauth", out var oauthStatus))
+        {
+            _errorMessage = oauthStatus.ToString() switch
+            {
+                "not-configured" => "OAuth não configurado. Defina ClientId e ClientSecret em appsettings (Authentication:OAuth).",
+                "no-token" => "O provedor OAuth não devolveu token. Tente novamente.",
+                "failed" => query.TryGetValue("message", out var msg)
+                    ? Uri.UnescapeDataString(msg.ToString())
+                    : "Falha na autenticação OAuth.",
+                _ => null
+            };
+        }
+    }
+
+    private void SelectProvider(AuthProvider provider)
+    {
+        _selectedProvider = provider;
+        ClearError();
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+        _isOffline = false;
+    }
+
+    private void SetError(string message)
+    {
+        _errorMessage = message;
+        _isOffline = false;
+    }
+
+    private async Task SubmitEmailLoginAsync()
+    {
+        ClearError();
+        var result = await LoginAsync(
+            AuthProvider.EmailPassword,
+            accessToken: null,
+            idToken: null,
+            _emailModel.Email,
+            _emailModel.Password);
+
+        await HandleResultAsync(result, AuthProvider.EmailPassword);
+    }
+
+    private async Task<Models.ApiResult<Models.Responses.AuthTokenResponse>> LoginAsync(
+        AuthProvider provider,
+        string? accessToken,
+        string? idToken,
+        string? email,
+        string? password)
+    {
+        return Platform switch
+        {
+            LoginPlatform.TikTok => await TikTokAuthService.LoginAsync(provider, accessToken, idToken, email, password),
+            LoginPlatform.Shopee => await ShopeeAuthService.LoginAsync(provider, accessToken, idToken, email, password),
+            _ => Models.ApiResult<Models.Responses.AuthTokenResponse>.Fail("Plataforma inválida.")
+        };
+    }
+
+    private async Task HandleResultAsync(
+        Models.ApiResult<Models.Responses.AuthTokenResponse> result,
+        AuthProvider provider)
+    {
+        if (!result.Success || result.Data is null)
+        {
+            _errorMessage = result.ErrorMessage ?? "Falha na autenticação.";
+            _isOffline = result.IsOffline;
+            return;
+        }
+
+        await AuthCookie.SignInFromAuthResponseAsync(result.Data, Platform, provider);
+        Navigation.NavigateTo("/dashboard", forceLoad: true);
+    }
+
+    private sealed class EmailLoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "E-mail é obrigatório.")]
+        [ValidEmail(ErrorMessage = "E-mail inválido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Senha é obrigatória.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

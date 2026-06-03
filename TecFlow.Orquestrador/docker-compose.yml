@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: TecFlow-postgres
+    environment:
+      POSTGRES_USER: Us_Automacao
+      POSTGRES_PASSWORD: "tecban321@"
+      POSTGRES_DB: automacaosociais
+    ports:
+      - "5432:5432"
+    volumes:
+      - TecFlow_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Us_Automacao -d automacaosociais"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  orquestrador:
+    build:
+      context: ..
+      dockerfile: TecFlow.Orquestrador/Dockerfile
+    container_name: TecFlow-orquestrador
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=automacaosociais;Username=Us_Automacao;Password=tecban321@;Include Error Detail=true"
+      Database__Provider: PostgreSQL
+      Encryption__Key: "z4wTRplZYgexzdRDmuV59SFL6cYlJ8sJGtPWtrxmiko="
+      Jwt__Key: "4F7A2D9E8C1B6A5F3D2C8E7B9A1F4D6C8E2A7B5D9F1C3A6E"
+      Jwt__Issuer: TecFlowAPI
+      Jwt__Audience: TecFlowClient
+    ports:
+      - "8080:8080"
+
+volumes:
+  TecFlow_pgdata:

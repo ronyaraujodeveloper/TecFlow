@@ -1,0 +1,170 @@
+@using System.Globalization
+
+@using TecFlow.Portal.Models.Responses
+
+
+
+@if (Stats is null)
+
+{
+
+    <div class="col-12">
+
+        <div class="alert alert-light border mb-0">Sem dados de métricas disponíveis.</div>
+
+    </div>
+
+}
+
+else
+
+{
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Visualizações</p>
+
+                <p class="h4 fw-bold mb-0">@FormatInteger(Stats.TotalViews)</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Cliques · CTR</p>
+
+                <p class="h4 fw-bold mb-0">@FormatInteger(Stats.TotalClicks)</p>
+
+                <p class="small text-muted mb-0">@FormatPercent(Stats.AverageCtr)</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Vendas · Conversão</p>
+
+                <p class="h4 fw-bold mb-0">@FormatInteger(Stats.TotalSales)</p>
+
+                <p class="small text-muted mb-0">@FormatPercent(Stats.AverageConversion)</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Receita · ROI</p>
+
+                <p class="h4 fw-bold mb-0 text-success">@FormatCurrency(Stats.TotalRevenue)</p>
+
+                <p class="small mb-0 @(Stats.AverageRoi >= 0 ? "text-success" : "text-danger")">
+
+                    ROI @FormatPercent((double)Stats.AverageRoi)
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-6 col-lg-4">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Investimento total</p>
+
+                <p class="h5 fw-semibold mb-0">@FormatCurrency(Stats.TotalInvestment)</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-6 col-lg-4">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">Lucro total</p>
+
+                <p class="h5 fw-semibold mb-0 @(Stats.TotalProfit >= 0 ? "text-success" : "text-danger")">
+
+                    @FormatCurrency(Stats.TotalProfit)
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-12 col-lg-4">
+
+        <div class="card border-0 shadow-sm dashboard-kpi h-100">
+
+            <div class="card-body">
+
+                <p class="text-muted small mb-1">CAC médio</p>
+
+                <p class="h5 fw-semibold mb-0">@FormatCurrency(Stats.AverageCac)</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+}
+
+
+
+@code {
+
+    [Parameter] public DashboardSummaryDto? Stats { get; set; }
+
+
+
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+
+
+    private static string FormatInteger(long value) => value.ToString("N0", PtBr);
+
+    private static string FormatCurrency(decimal value) => value.ToString("C2", PtBr);
+
+    private static string FormatPercent(double value) => $"{value:F2} %";
+
+}
+

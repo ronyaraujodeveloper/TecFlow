@@ -1,0 +1,164 @@
+@using System.Globalization
+
+@using TecFlow.Portal.Models.Responses
+
+
+
+<div class="card border-0 shadow-sm">
+
+    <div class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+
+        <h2 class="h6 fw-semibold mb-0">Campanhas</h2>
+
+        <span class="badge text-bg-light text-dark">@(Campaigns?.Count ?? 0)</span>
+
+    </div>
+
+    <div class="card-body p-0">
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+
+        {
+
+            <div class="p-3">
+
+                <p class="text-danger small mb-0">@ErrorMessage</p>
+
+            </div>
+
+        }
+
+        else if (Campaigns is null || Campaigns.Count == 0)
+
+        {
+
+            <div class="p-4 text-center text-muted">
+
+                <p class="mb-0">Nenhuma campanha registada.</p>
+
+            </div>
+
+        }
+
+        else
+
+        {
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 dashboard-table">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>Nome</th>
+
+                            <th>Período</th>
+
+                            <th class="text-end">Orçamento</th>
+
+                            <th>Estado</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var campaign in Campaigns)
+
+                        {
+
+                            <tr>
+
+                                <td>
+
+                                    <span class="fw-medium">@campaign.Name</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(campaign.Description))
+
+                                    {
+
+                                        <br />
+
+                                        <span class="small text-muted text-truncate d-inline-block" style="max-width: 14rem;">
+
+                                            @campaign.Description
+
+                                        </span>
+
+                                    }
+
+                                </td>
+
+                                <td class="small text-nowrap">
+
+                                    @campaign.StartDate.ToString("d", PtBr)
+
+                                    —
+
+                                    @campaign.EndDate.ToString("d", PtBr)
+
+                                </td>
+
+                                <td class="text-end text-nowrap">@campaign.Budget.ToString("C2", PtBr)</td>
+
+                                <td>
+
+                                    @if (campaign.IsActive())
+
+                                    {
+
+                                        <span class="badge text-bg-success">Ativa</span>
+
+                                    }
+
+                                    else if (campaign.EndDate < DateTime.UtcNow)
+
+                                    {
+
+                                        <span class="badge text-bg-secondary">Encerrada</span>
+
+                                    }
+
+                                    else
+
+                                    {
+
+                                        <span class="badge text-bg-warning text-dark">Agendada</span>
+
+                                    }
+
+                                </td>
+
+                            </tr>
+
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        }
+
+    </div>
+
+</div>
+
+
+
+@code {
+
+    [Parameter] public IReadOnlyList<CampaignDto>? Campaigns { get; set; }
+
+    [Parameter] public string? ErrorMessage { get; set; }
+
+
+
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+}
+

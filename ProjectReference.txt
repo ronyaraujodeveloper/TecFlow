@@ -1,0 +1,43 @@
+// ProjectReferences por csproj encontrados
+
+Arquivo CSProj: TecFlow.API.csproj
+  - ..\TecFlow.Application\TecFlow.Application.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+  - ..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj
+  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+
+Arquivo CSProj: TecFlow.Application.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+
+Arquivo CSProj: TecFlow.Core.csproj
+  (Nenhuma ProjectReference encontrada neste csproj)
+
+Arquivo CSProj: TecFlow.Dashboard.csproj
+  - ..\TecFlow.Application\TecFlow.Application.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+  - ..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj
+  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+
+Arquivo CSProj: TecFlow.Infrastructure.Services.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+
+Arquivo CSProj: TecFlow.Infrastructure.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+
+Arquivo CSProj: TecFlow.Orquestrador.csproj
+  - ..\TecFlow.Application\TecFlow.Application.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+  - ..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj
+  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+
+Arquivo CSProj: TecFlow.Tests.csproj
+  - ..\TecFlow.Application\TecFlow.Application.csproj
+  - ..\TecFlow.Core\TecFlow.Core.csproj
+  - ..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj
+  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+  - ..\TecFlow.Orquestrador\TecFlow.Orquestrador.csproj
+
+Arquivo CSProj: TecFlow.Util.csproj
+  (Nenhuma ProjectReference encontrada neste csproj)
+

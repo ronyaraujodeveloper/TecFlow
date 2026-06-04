@@ -31,7 +31,9 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 
 6. **Validações Obrigatórias:** Cadastros de e-mail, celular/WhatsApp, CPF, CNPJ alfanumérico e CEP devem passar estritamente pelos métodos do `ValidationHelper` em `TecFlow.Business/Service` antes de qualquer persistência.
 
-7. **Auto-atualização do Roadmap:** Toda vez que eu te pedir para executar uma tarefa descrita neste arquivo, assim que você concluir a implementação do código com sucesso e sem erros de compilação, você DEVE marcar automaticamente a respectiva tarefa como concluída mudando de `[ ]` para `[x]` **neste `README.md`**, sem que eu precise te pedir explicitamente. Sincronize também `docs/LISTA_ARQUIVOS_MUDANCAS.md` e `docs/DIAGRAMAS_ARQUITETURA.md` conforme `.cursorrules`.
+7. **Design Responsivo & Mentalidade Mobile First:** Qualquer novo componente visual, página ou layout criado no projeto `TecFlow.WebUi` DEVE obrigatoriamente contemplar design responsivo (Mobile First). É proibido o uso de larguras fixas em pixels para containers principais e tabelas densas; utilize grids fluidos, flexbox e classes utilitárias responsivas (Bootstrap/Tailwind) para garantir que a interface se adapte nativamente a PCs, Celulares e Tablets.
+
+8. **Auto-atualização do Roadmap:** Toda vez que eu te pedir para executar uma tarefa descrita neste arquivo, assim que você concluir a implementação do código com sucesso e sem erros de compilação, você DEVE marcar automaticamente a respectiva tarefa como concluída mudando de `[ ]` para `[x]` **neste `README.md`**, sem que eu precise te pedir explicitamente. Sincronize também `docs/LISTA_ARQUIVOS_MUDANCAS.md` e `docs/DIAGRAMAS_ARQUITETURA.md` conforme `.cursorrules`.
 
 ## 🚀 Fases do Desenvolvimento e Reestruturação (Checklist)
 
@@ -76,39 +78,55 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
   - [x] 3.3. Sincronização de Catálogo (Produtos): Implementar mapeamento de payloads, busca de produtos das plataformas e conversão para o nosso padrão [Nome]ResponseDto.
   - [x] 3.4. Gestão de Pedidos & Estoque: Estruturar os endpoints/serviços para receber webhooks ou realizar polling de novos pedidos e atualizar estoque de forma bidirecional.
 
-### Fase 4: Inteligência para Afiliados, Mensageria e Escala 🚀
-- [ ] 4.1. Sistema de Filas e Mensageria (Foco em Automação de Engajamento)
+### Fase 4: Visão de Negócio - Plataforma de Automação e Inteligência para Afiliados de Alta Escala 🚀
+Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend `TecFlow.WebUi` para controle, auditoria e monitoramento em produção.
+
+### Fase 5: Engenharia e Infraestrutura para Afiliados, Mensageria e Escala 🛠️
+- [ ] 5.1. Sistema de Filas e Mensageria (Foco em Automação de Engajamento)
   - [ ] Implementar infraestrutura com RabbitMQ ou Azure Service Bus no ecossistema TecFlow.
   - [ ] Criar Webhooks/BackgroundServices para monitorar em tempo real mensagens e comentários postados em suas publicações nas redes/marketplaces.
   - [ ] Estruturar fila de processamento assíncrono para triagem de palavras-chave (ex: identificar comentários como "eu quero" ou "link") e preparar a entrega automatizada do link de afiliado correto sem sobrecarregar o banco de dados.
 
-- [ ] 4.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi)
+- [ ] 5.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi)
   - [ ] Criar módulo visual no 'TecFlow.WebUi' focado no rastreio e auditoria de comissões de afiliado.
   - [ ] Integrar com as APIs de performance de afiliados da Shopee e TikTok Shop para buscar o relatório de cliques, conversões e comissões geradas.
   - [ ] Desenvolver lógica de conciliação para bater as vendas rastreadas pelos seus links com os pagamentos reais efetuados pelas plataformas, detalhando quais produtos divulgados geraram a comissão correta e alertando sobre divergências de valores.
 
-- [ ] 4.3. Mecanismo de Mapeamento de Produtos e Atributos Globais para Propaganda
+- [ ] 5.3. Mecanismo de Mapeamento de Produtos e Atributos Globais para Propaganda
   - [ ] Adaptar a estrutura de catálogos para mapear "Produtos de Propaganda/Divulgação" em vez de estoque físico próprio.
   - [ ] Criar uma estrutura de "Dados Globais do Produto" (Nome Amigável, Categoria Global, Imagens de Destaque, Preço Médio e Seus Links de Afiliado Shopee/TikTok).
   - [ ] Desenvolver um gerador de metadados baseado nesses atributos para alimentar automaticamente suas ferramentas de postagem, garantindo que as informações do produto saiam padronizadas e corretas em qualquer canal de divulgação.
 
-- [ ] 4.4. Observabilidade e Telemetria (Monitoramento de Produção)
+- [ ] 5.4. Observabilidade e Telemetria (Monitoramento de Produção)
   - [ ] Instalar o OpenTelemetry nos projetos centrais do TecFlow.
   - [ ] Configurar exportadores de logs e métricas (como Seq ou Prometheus/Grafana) para monitorar a saúde do ecossistema em produção.
   - [ ] Criar um mini-dashboard de saúde técnica para acompanhar taxas de sucesso das requisições de webhook de comentários, tempo de resposta das APIs de comissão e alertas de falhas em segundo plano.
 
-### Fase 5: Módulo de Vendas Diretas e Gestão de Estoque (Futuro) 📦
-- [ ] 5.1. Arquitetura Multi-Tenant / Multi-Conta por Marketplace (SaaS Ready)
+### Fase 6: Módulo de Vendas Diretas e Gestão de Estoque (Futuro) 📦
+- [ ] 6.1. Arquitetura Multi-Tenant / Multi-Conta por Marketplace (SaaS Ready)
   - [ ] Ajustar a modelagem do banco de dados na camada 'Database' para suportar o conceito de inquilinos (Tenants) e vinculação de múltiplos 'ShopId' por usuário.
   - [ ] Adaptar as queries e repositórios para isolar os dados de cada loja, permitindo que o lojista gerencie múltiplos CNPJs/Contas da Shopee e TikTok Shop no mesmo painel.
 
-- [ ] 5.2. Core de Vendas, Faturamento e ERP Local
+- [ ] 6.2. Core de Vendas, Faturamento e ERP Local
   - [ ] Criar entidades de 'Pedido de Venda' (Order), 'Cliente' (Customer) e 'Item do Pedido' para registrar vendas próprias.
   - [ ] Estruturar o fluxo de estados do pedido (Pendente, Pago, Faturado, Enviado, Concluído) e preparar ganchos para futura integração com emissão de Notas Fiscais Eletrônicas (NF-e).
 
-- [ ] 5.3. Controle Avançado de Estoque Próprio (Estoque Físico)
+- [ ] 6.3. Controle Avançado de Estoque Próprio (Estoque Físico)
   - [ ] Implementar tabelas de movimentação de estoque (Entradas por compra, Saídas por venda, Ajustes manuais, Estoque Mínimo e Alertas).
   - [ ] Desenvolver serviço de reserva de estoque para garantir que, no momento em que um pedido de venda direta for gerado, as unidades fiquem bloqueadas temporariamente até a confirmação do pagamento, evitando o Overbooking (vender o que não tem).
+
+### Fase 7: Estratégia Mobile Híbrida (Android e iOS) 📱
+- [ ] 7.1. Fundação Mobile-First no TecFlow.WebUi e Contratos de API
+  - [ ] Auditar e refatorar layouts existentes do `TecFlow.WebUi` para conformidade Mobile First (breakpoints, tabelas responsivas, navegação touch-friendly).
+  - [ ] Padronizar contratos REST (`*Filter`, `*ResponseDto`) e autenticação para consumo estável por clientes móveis futuros.
+
+- [ ] 7.2. Shell Híbrido Nativo (.NET MAUI / Blazor Hybrid)
+  - [ ] Avaliar e estruturar projeto compartilhado (RCL) reutilizando componentes Blazor do `TecFlow.WebUi`.
+  - [ ] Configurar pipeline de build e publicação para Android e iOS (lojas ou distribuição interna).
+
+- [ ] 7.3. Engajamento Móvel em Tempo Real
+  - [ ] Integrar notificações push (FCM/APNs) para alertas de comentários, comissões e falhas de webhook.
+  - [ ] Implementar deep links para abrir diretamente painéis de conciliação e fila de engajamento no app.
 
 ## 📚 Documentação Complementar
 * Veja a [Lista de Mudanças de Arquivos](./docs/LISTA_ARQUIVOS_MUDANCAS.md)

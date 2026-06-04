@@ -1,13 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Core.Entities;
 
 /// <summary>Vínculo de afiliado por marketplace para um produto global de propaganda.</summary>
 [Table("MarketplaceAffiliateLinks")]
-public class MarketplaceAffiliateLink : BaseEntity
+public class MarketplaceAffiliateLink : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("ProdutoGlobalId")]
     public int GlobalProductId { get; set; }
 

@@ -4,6 +4,7 @@ using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Services.Integrations.Auth;
 using TecFlow.Tests.Helpers;
 
@@ -12,12 +13,21 @@ namespace TecFlow.Tests.Unit.Integrations;
 public class MarketplaceAuthServiceTests
 {
     private readonly Mock<IMarketplaceTokenRepository> _tokenRepository = new();
+    private readonly Mock<IMarketplaceAccountRepository> _accountRepository = new();
+    private readonly Mock<ICurrentTenantService> _currentTenant = new();
     private readonly Mock<IHttpClientFactory> _httpClientFactory = new();
     private readonly MarketplaceSignatureService _signatureService = new();
+
+    public MarketplaceAuthServiceTests()
+    {
+        _currentTenant.Setup(t => t.TenantId).Returns(Guid.NewGuid());
+    }
 
     private MarketplaceAuthService CreateService() =>
         new(
             _tokenRepository.Object,
+            _accountRepository.Object,
+            _currentTenant.Object,
             _signatureService,
             _httpClientFactory.Object,
             MarketplaceTestOptionsFactory.TikTokOptions(),

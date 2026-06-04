@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
-using TecFlow.SharedUi.Security;
+using TecFlow.Core.Security;
 using TecFlow.SharedUi.Services.State;
 
 namespace TecFlow.Mobile.Services;

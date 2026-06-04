@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Util.Security;
 
 namespace TecFlow.Database.Repositorio;
@@ -30,7 +31,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
         optionsBuilder.UseNpgsql(connectionString, npgsql =>
             npgsql.MigrationsAssembly("TecFlow.Infrastructure"));
 
-        return new AppDbContext(optionsBuilder.Options, encryptionService);
+        return new AppDbContext(optionsBuilder.Options, encryptionService, new NullCurrentTenantService());
     }
 
     private static string ResolveSettingsPath()

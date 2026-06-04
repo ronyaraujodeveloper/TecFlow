@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 
 [Table("Afiliados")]
-public class Affiliate : BaseEntity
+public class Affiliate : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("Nome")]
     public string Name { get; set; } = string.Empty;
 

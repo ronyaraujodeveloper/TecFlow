@@ -1,6 +1,6 @@
 # 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
 
-**Última varredura:** 4 de junho de 2026  
+**Última varredura:** 4 de junho de 2026 (Fase 7.1 — Multi-Tenant)  
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
 **Solution:** `TecFlow.sln` — 12 projetos `TecFlow.*` + `Tecso.LerArquivos` externo (Portal e Dashboard **removidos**)
 
@@ -74,6 +74,56 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Orquestrador/Controllers/HealthDashboardController.cs** — `GET /api/saude/dashboard`.
 - [x] **TecFlow.SharedUi/Components/Pages/PainelSaude.razor**, **Components/Health/HealthStatusCard.razor**.
 - [x] Instrumentação: **SocialMediaCommentConsumer**, **AffiliateAnalyticsService**.
+
+### Fase 7.3 — Controle avançado de estoque físico (jun/2026)
+
+- [x] **TecFlow.Core/Enums/InventoryMovementType.cs** — EntradaPorCompra, SaidaPorVenda, AjusteManual, Reserva, CancelamentoReserva.
+- [x] **TecFlow.Core/Entities/Inventory.cs** — PhysicalQuantity, ReservedQuantity, AvailableQuantity (calculado), MinimumStock.
+- [x] **TecFlow.Core/Entities/InventoryMovement.cs** — kardex com SalesOrderId.
+- [x] **TecFlow.Business/Interfaces/Inventory/IInventoryService.cs** — ReserveStock, ConfirmStockDebit, ReleaseStockReservation.
+- [x] **TecFlow.Business/Interfaces/Inventory/IInventoryAlertHook.cs** — gancho para push (Fase 4).
+- [x] **TecFlow.Business/Domain/Inventory/InsufficientStockException.cs**.
+- [x] **TecFlow.Infrastructure.Services/Stock/InventoryService.cs** — transações Serializable + retry de concorrência.
+- [x] **TecFlow.Infrastructure.Services/Stock/LoggingInventoryAlertHook.cs** — log estruturado de estoque mínimo.
+- [x] Integração: **SalesOrderService** (reserva na criação; débito em Pago; liberação em Cancelado), **InvoiceOrchestrator** (débito idempotente).
+- [x] **TecFlow.API/Controllers/InventoryController.cs** — `api/estoque`.
+- [x] **TecFlow.Infrastructure/Migrations/20260604141216_AddPhysicalInventory.cs**.
+
+### Fase 7.2 — Core de Vendas, Faturamento e ERP Local (jun/2026)
+
+- [x] **TecFlow.Core/Enums/OrderStatus.cs** — Pendente, Pago, Faturado, Enviado, Concluido, Cancelado.
+- [x] **TecFlow.Core/Entities/Customer.cs** — cliente com endereço completo e `TenantId`.
+- [x] **TecFlow.Core/Entities/SalesOrder.cs** — pedido de venda (`OrderNumber`, totais, `ShopId`, status).
+- [x] **TecFlow.Core/Entities/SalesOrderItem.cs** — itens do pedido.
+- [x] **TecFlow.Business/Domain/Sales/OrderStateMachine.cs** — transições rígidas de estado.
+- [x] **TecFlow.Business/Interfaces/Sales/IInvoiceOrchestrator.cs** — `PrepareInvoiceAsync` + payload NF-e mockado.
+- [x] **TecFlow.Infrastructure.Services/Sales/InvoiceOrchestrator.cs**, **SalesOrderService.cs**.
+- [x] **TecFlow.API/Controllers/CustomersController.cs** — `api/vendas/clientes`.
+- [x] **TecFlow.API/Controllers/SalesOrdersController.cs** — `api/vendas/pedidos`, `PUT .../status`, `POST .../faturar`.
+- [x] **TecFlow.Database/Filter/** — `CustomerFilter`, `SalesOrderFilter`.
+- [x] **TecFlow.Business/Dto/** — `CustomerDto`, `SalesOrderDto`, `InvoicePayloadDto`, envelopes `*ResponseDto`.
+- [x] **TecFlow.Infrastructure/Migrations/20260604140643_AddSalesOrderCore.cs**.
+- [x] **TecFlow.Tests/Unit/Sales/OrderStateMachineTests.cs**.
+
+### Fase 7.1 — Multi-Tenant / Multi-Conta Marketplace (jun/2026)
+
+- [x] **TecFlow.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
+- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens + CNPJ.
+- [x] **TecFlow.Core/Abstractions/ITenantScopedEntity.cs**, **IShopScopedEntity.cs** — contratos de isolamento.
+- [x] **TecFlow.Core/Security/TecFlowClaimTypes.cs** — claims `tenant_id`, `shop_id` (movido de SharedUi).
+- [x] **TenantId** em: `UserAccount`, `Product`, `Campaign`, `Affiliate`, `Content`, `Conversion`, `Metric`, `MarketplaceToken`, `MarketplaceOrder`, `MarketplaceOrderLine`, `GlobalAdvertisingProduct`, `MarketplaceAffiliateLink`, `UserDeviceToken`.
+- [x] **TecFlow.Database/MultiTenancy/** — `ICurrentTenantService`, `NullCurrentTenantService`, `TenantQueryFilterExtensions`, `TenantDbSetExtensions`.
+- [x] **TecFlow.Database/AppDbContext.cs** — filtros globais, `SaveChanges` com `TenantId`, criptografia em `MarketplaceAccount`.
+- [x] **TecFlow.Infrastructure/Security/CurrentTenantService.cs** — JWT + header `X-TecFlow-Shop-Id`.
+- [x] **TecFlow.Infrastructure/Security/JwtTokenService.cs** — claim `TecFlow:tenant_id` no login.
+- [x] **TecFlow.Infrastructure.Services/Tenancy/TenantProvisioningService.cs** — tenant automático no cadastro de usuário.
+- [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceAccountRepository.cs** — listagem consolidada / por loja.
+- [x] Repositórios adaptados: **ProductRepository**, **MarketplaceTokenRepository**, **MarketplaceOrderRepository** (`ListConsolidated*`, `ListForShop*`).
+- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — persiste `MarketplaceAccount` no OAuth.
+- [x] **TecFlow.Infrastructure/Migrations/20260604135726_AddMultiTenantArchitecture.cs** — schema + tenant padrão para dados legados.
+- [x] **TecFlow.Database/Filter/** — `TenantFilter`, `MarketplaceAccountFilter`; **ProductFilter** + `ShopId`/`TenantId`.
+- [x] **TecFlow.Business/Dto/** — `TenantDto`, `TenantResponseDto`, `MarketplaceAccountDto`, `MarketplaceAccountResponseDto`.
+- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** — callback OAuth exige `[Authorize]`.
 
 ### Fase 6.3 — Produtos globais de propaganda (jun/2026)
 

@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Entities;
 using TecFlow.Database;
+using TecFlow.Database.MultiTenancy;
 
 namespace TecFlow.Orquestrador.Extensions;
 
@@ -14,6 +17,9 @@ public static class DemoDataSeeder
 
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tenantProvisioning = scope.ServiceProvider.GetRequiredService<ITenantProvisioningService>();
+        var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenantService>();
+        currentTenant.BypassTenantFilters = true;
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("TecFlow.Seed");
 
@@ -26,7 +32,7 @@ public static class DemoDataSeeder
         logger.LogInformation("A inserir dados demo (demo@TecFlow.local / Test@123)...");
 
         var now = DateTime.UtcNow;
-        var owner = new TecFlow.Core.Entities.UserAccount
+        var owner = new UserAccount
         {
             Name = "Utilizador Demo",
             Email = "demo@TecFlow.local",
@@ -36,10 +42,12 @@ public static class DemoDataSeeder
             CreatedAt = now
         };
 
+        var tenant = await tenantProvisioning.EnsureTenantForUserAsync(owner);
+        owner.TenantId = tenant.Id;
         db.UserAccounts.Add(owner);
         await db.SaveChangesAsync();
 
-        var tikTokCampaign = new TecFlow.Core.Entities.Campaign
+        var tikTokCampaign = new Campaign
         {
             Name = "TikTok Shop — Verão 2026",
             Description = "Campanha sazonal de afiliados TikTok Shop com foco em eletrónicos.",
@@ -47,10 +55,11 @@ public static class DemoDataSeeder
             EndDate = now.AddDays(60),
             Budget = 15000m,
             OwnerId = owner.Id,
+            TenantId = tenant.Id,
             CreatedAt = now
         };
 
-        var shopeeCampaign = new TecFlow.Core.Entities.Campaign
+        var shopeeCampaign = new Campaign
         {
             Name = "Shopee — Flash Sale Maio",
             Description = "Promoções relâmpago e cupons para afiliados Shopee.",
@@ -58,10 +67,11 @@ public static class DemoDataSeeder
             EndDate = now.AddDays(23),
             Budget = 8500m,
             OwnerId = owner.Id,
+            TenantId = tenant.Id,
             CreatedAt = now
         };
 
-        var closedCampaign = new TecFlow.Core.Entities.Campaign
+        var closedCampaign = new Campaign
         {
             Name = "TikTok Ads — Remarketing Q1",
             Description = "Campanha encerrada de remarketing (dados históricos no painel).",
@@ -69,6 +79,7 @@ public static class DemoDataSeeder
             EndDate = now.AddDays(-30),
             Budget = 5200m,
             OwnerId = owner.Id,
+            TenantId = tenant.Id,
             CreatedAt = now
         };
 
@@ -76,7 +87,7 @@ public static class DemoDataSeeder
         await db.SaveChangesAsync();
 
         db.Metrics.AddRange(
-            new TecFlow.Core.Entities.Metric
+            new Metric
             {
                 CampaignId = tikTokCampaign.Id,
                 Views = 125000,
@@ -85,9 +96,10 @@ public static class DemoDataSeeder
                 Investment = 4500m,
                 Revenue = 18900m,
                 OwnerId = owner.Id,
+                TenantId = tenant.Id,
                 CreatedAt = now
             },
-            new TecFlow.Core.Entities.Metric
+            new Metric
             {
                 CampaignId = tikTokCampaign.Id,
                 Views = 48000,
@@ -96,9 +108,10 @@ public static class DemoDataSeeder
                 Investment = 1800m,
                 Revenue = 6200m,
                 OwnerId = owner.Id,
+                TenantId = tenant.Id,
                 CreatedAt = now.AddDays(-14)
             },
-            new TecFlow.Core.Entities.Metric
+            new Metric
             {
                 CampaignId = shopeeCampaign.Id,
                 Views = 89000,
@@ -107,9 +120,10 @@ public static class DemoDataSeeder
                 Investment = 2800m,
                 Revenue = 11200m,
                 OwnerId = owner.Id,
+                TenantId = tenant.Id,
                 CreatedAt = now
             },
-            new TecFlow.Core.Entities.Metric
+            new Metric
             {
                 CampaignId = closedCampaign.Id,
                 Views = 210000,
@@ -118,6 +132,7 @@ public static class DemoDataSeeder
                 Investment = 5200m,
                 Revenue = 9800m,
                 OwnerId = owner.Id,
+                TenantId = tenant.Id,
                 CreatedAt = now.AddDays(-90)
             });
 

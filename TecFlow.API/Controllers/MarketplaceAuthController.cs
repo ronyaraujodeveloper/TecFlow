@@ -30,7 +30,7 @@ public class MarketplaceAuthController : ControllerBase
 
     /// <summary>Callback OAuth: troca o authorization code por tokens e persiste no banco.</summary>
     [HttpGet("callback")]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<ActionResult<MarketplaceTokenResult>> CallbackAsync(
         [FromQuery] MarketplaceType type,
         [FromQuery] string code,

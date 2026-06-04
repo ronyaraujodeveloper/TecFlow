@@ -64,6 +64,9 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Property<int>("OwnerId")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -115,6 +118,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("DataInicio");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -162,6 +168,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("DataInicio");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -203,6 +212,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("Vendas");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -211,6 +223,72 @@ namespace TecFlow.Infrastructure.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Conversaos");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(18)
+                        .HasColumnType("character varying(18)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("StreetNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DocumentNumber");
+
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.GlobalAdvertisingProduct", b =>
@@ -257,17 +335,154 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Property<int>("OwnerId")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GlobalProductUid")
-                        .IsUnique();
-
                     b.HasIndex("OwnerId");
 
+                    b.HasIndex("TenantId", "GlobalProductUid")
+                        .IsUnique();
+
                     b.ToTable("ProdutosPropagandaGlobal");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.Inventory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MinimumStock")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PhysicalQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReservedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TenantId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("Inventories");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.InventoryMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("InventoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MovementType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SalesOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InventoryId");
+
+                    b.HasIndex("TenantId", "SalesOrderId", "MovementType");
+
+                    b.ToTable("InventoryMovements");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Cnpj")
+                        .HasMaxLength(18)
+                        .HasColumnType("character varying(18)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MarketplaceType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RefreshExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShopId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ShopName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ShopId", "MarketplaceType")
+                        .IsUnique();
+
+                    b.ToTable("MarketplaceAccounts");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAffiliateLink", b =>
@@ -309,6 +524,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("IdProdutoPlataforma");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -356,12 +574,15 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Property<bool>("StockDeducted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalOrderId", "MarketplaceType", "ShopId")
+                    b.HasIndex("TenantId", "ExternalOrderId", "MarketplaceType", "ShopId")
                         .IsUnique();
 
                     b.ToTable("MarketplaceOrders");
@@ -396,6 +617,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -439,12 +663,15 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ShopId", "MarketplaceType")
+                    b.HasIndex("TenantId", "ShopId", "MarketplaceType")
                         .IsUnique();
 
                     b.ToTable("MarketplaceTokens");
@@ -489,6 +716,9 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Property<int>("Sales")
                         .HasColumnType("integer")
                         .HasColumnName("Vendas");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -616,6 +846,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("PublicoAlvo");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -623,10 +856,129 @@ namespace TecFlow.Infrastructure.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.HasIndex("SkuCode", "MarketplaceSource", "MarketplaceShopId")
+                    b.HasIndex("TenantId", "SkuCode", "MarketplaceSource", "MarketplaceShopId")
                         .HasFilter("\"SkuCodigo\" IS NOT NULL AND \"MarketplaceOrigem\" IS NOT NULL");
 
                     b.ToTable("Produtos");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.SalesOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("FreightAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ShopId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("TenantId", "OrderNumber")
+                        .IsUnique();
+
+                    b.ToTable("SalesOrders");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.SalesOrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("SalesOrderItems");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.UserAccount", b =>
@@ -658,6 +1010,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("Plano");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TikTokRefreshToken")
                         .HasColumnType("text");
 
@@ -675,6 +1030,8 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnName("TelefoneWhatsApp");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Usuarios");
                 });
@@ -705,6 +1062,9 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -715,7 +1075,7 @@ namespace TecFlow.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "Token")
+                    b.HasIndex("TenantId", "OwnerId", "Token")
                         .IsUnique();
 
                     b.ToTable("UserDeviceTokens");
@@ -828,6 +1188,39 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.Inventory", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.InventoryMovement", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.Inventory", "Inventory")
+                        .WithMany("Movements")
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inventory");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAccount", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.Tenant", "Tenant")
+                        .WithMany("MarketplaceAccounts")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAffiliateLink", b =>
                 {
                     b.HasOne("TecFlow.Core.Entities.GlobalAdvertisingProduct", "GlobalProduct")
@@ -885,6 +1278,47 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.SalesOrder", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.Customer", "Customer")
+                        .WithMany("Orders")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.SalesOrderItem", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.SalesOrder", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TecFlow.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.UserAccount", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Campaign", b =>
                 {
                     b.Navigation("Affiliates");
@@ -895,9 +1329,19 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Navigation("Affiliates");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.Customer", b =>
+                {
+                    b.Navigation("Orders");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.GlobalAdvertisingProduct", b =>
                 {
                     b.Navigation("MarketplaceLinks");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.Inventory", b =>
+                {
+                    b.Navigation("Movements");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrder", b =>
@@ -908,6 +1352,16 @@ namespace TecFlow.Infrastructure.Migrations
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>
                 {
                     b.Navigation("ChildMetrics");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.SalesOrder", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.Tenant", b =>
+                {
+                    b.Navigation("MarketplaceAccounts");
                 });
 #pragma warning restore 612, 618
         }

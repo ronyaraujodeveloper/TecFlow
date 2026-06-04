@@ -6,16 +6,19 @@ using TecFlow.Core.Enums;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Infrastructure.Configuration;
 using TecFlow.Database;
+using TecFlow.Database.MultiTenancy;
 
 namespace TecFlow.Infrastructure.Services.Repositories
 {
     public class ProductRepository : IProductRepository
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentTenantService _currentTenant;
 
-        public ProductRepository(AppDbContext context)
+        public ProductRepository(AppDbContext context, ICurrentTenantService currentTenant)
         {
             _context = context;
+            _currentTenant = currentTenant;
         }
 
         public async Task<Product?> GetByIdAsync(int id)
@@ -79,6 +82,23 @@ namespace TecFlow.Infrastructure.Services.Repositories
             return await _context.Products
                 .Where(c => c.OwnerId == ownerId)
                 .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Product>> ListConsolidatedForCurrentTenantAsync()
+        {
+            return await _context.Products
+                .OrderByDescending(p => p.ModifiedOn)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Product>> ListForShopAsync(string shopId)
+        {
+            var list = await _context.Products
+                .WithManualTenantScope(_currentTenant)
+                .Where(p => p.MarketplaceShopId == shopId || p.MarketplaceShopId == null)
+                .OrderByDescending(p => p.ModifiedOn)
+                .ToListAsync();
+            return list;
         }
         public async Task<Product> CreateAsync(Product produto)
         {

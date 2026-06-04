@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Core.Entities;
 
 [Table("MarketplaceOrders")]
-public class MarketplaceOrder : BaseEntity
+public class MarketplaceOrder : BaseEntity, ITenantScopedEntity, IShopScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Required]
     [MaxLength(128)]
     public required string ExternalOrderId { get; set; }

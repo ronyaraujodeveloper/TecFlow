@@ -22,17 +22,18 @@ namespace TecFlow.Infrastructure.Security
             string? JwtKey = _configuration["Jwt:Key"];
             var key = Encoding.UTF8.GetBytes(JwtKey ?? string.Empty);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Name, usuario.Name)
+                new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new(ClaimTypes.Email, usuario.Email),
+                new(ClaimTypes.Name, usuario.Name),
+                new(TecFlow.Core.Security.TecFlowClaimTypes.TenantId, usuario.TenantId.ToString())
             };
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
-                claims: claims,
+                claims: claims.AsEnumerable(),
                 expires: DateTime.UtcNow.AddHours(8),
                 signingCredentials: new SigningCredentials(
                     new SymmetricSecurityKey(key),

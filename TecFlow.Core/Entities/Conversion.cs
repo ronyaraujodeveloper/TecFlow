@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 
 [Table("Conversaos")]
-public class Conversion : BaseEntity
+public class Conversion : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("AfiliadoId")]
     public int AffiliateId { get; set; }
 

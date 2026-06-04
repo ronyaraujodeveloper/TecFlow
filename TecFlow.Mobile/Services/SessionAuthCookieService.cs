@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using TecFlow.SharedUi.Models.Enums;
 using TecFlow.SharedUi.Models.Responses;
-using TecFlow.SharedUi.Security;
+using TecFlow.Core.Security;
 using TecFlow.SharedUi.Services.Auth;
 using TecFlow.SharedUi.Services.State;
 

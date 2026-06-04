@@ -7,6 +7,7 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Data;
 using TecFlow.Infrastructure.Services.Repositories;
 using TecFlow.Util.Security;
@@ -30,10 +31,11 @@ namespace TecFlow.Tests.Integration
             var encryptionService = new AesEncryptionService(
                 "z4wTRplZYgexzdRDmuV59SFL6cYlJ8sJGtPWtrxmiko=");
 
-            _context = new AppDbContext(options, encryptionService);
+            var currentTenant = new NullCurrentTenantService();
+            _context = new AppDbContext(options, encryptionService, currentTenant);
 
             // Inicializa os repositórios e serviços que usam o DbContext
-            _productRepository = new ProductRepository(_context);
+            _productRepository = new ProductRepository(_context, currentTenant);
             _dataService = new DataService(_context, NullLogger<DataService>.Instance);
 
             // Povoa o banco de dados com dados iniciais se necessário para certos testes

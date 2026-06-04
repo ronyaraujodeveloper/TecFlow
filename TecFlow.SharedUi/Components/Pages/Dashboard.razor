@@ -115,7 +115,7 @@
         AuthCookie.SyncSessionFromPrincipal(user);
 
         _displayName = user.Identity?.Name ?? SessionState.DisplayName ?? "Utilizador";
-        _platform = user.FindFirst(TecFlow.SharedUi.Security.TecFlowClaimTypes.Platform)?.Value
+        _platform = user.FindFirst(TecFlow.Core.Security.TecFlowClaimTypes.Platform)?.Value
             ?? SessionState.ActivePlatform?.ToString();
 
         await LoadDashboardDataAsync();

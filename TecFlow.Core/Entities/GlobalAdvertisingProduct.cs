@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 
 /// <summary>Produto global de propaganda/divulgação (catálogo de afiliado, não estoque físico).</summary>
 [Table("ProdutosPropagandaGlobal")]
-public class GlobalAdvertisingProduct : BaseEntity
+public class GlobalAdvertisingProduct : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     public Guid GlobalProductUid { get; set; } = Guid.NewGuid();
 
     [Column("NomeAmigavel")]

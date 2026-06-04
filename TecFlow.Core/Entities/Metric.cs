@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 
 [Table("Metricas")]
-public class Metric : BaseEntity
+public class Metric : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("CampanhaId")]
     public int CampaignId { get; set; }
 

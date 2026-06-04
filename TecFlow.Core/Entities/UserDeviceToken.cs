@@ -1,9 +1,14 @@
+using TecFlow.Core.Abstractions;
+
 namespace TecFlow.Core.Entities;
 
 /// <summary>Token FCM/APNs do dispositivo móvel associado ao utilizador (OwnerId).</summary>
-public class UserDeviceToken
+public class UserDeviceToken : ITenantScopedEntity
 {
     public int Id { get; set; }
+
+    public Guid TenantId { get; set; }
+
     public int OwnerId { get; set; }
     public string Token { get; set; } = string.Empty;
     public string Platform { get; set; } = string.Empty;

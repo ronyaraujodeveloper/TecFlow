@@ -9,6 +9,7 @@ using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database.MultiTenancy;
 
 namespace TecFlow.Infrastructure.Services.Integrations.Auth;
 
@@ -17,6 +18,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromMinutes(5);
 
     private readonly IMarketplaceTokenRepository _tokenRepository;
+    private readonly IMarketplaceAccountRepository _accountRepository;
+    private readonly ICurrentTenantService _currentTenant;
     private readonly IMarketplaceSignatureService _signatureService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TikTokShopIntegrationOptions _tikTokOptions;
@@ -25,6 +28,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
+        IMarketplaceAccountRepository accountRepository,
+        ICurrentTenantService currentTenant,
         IMarketplaceSignatureService signatureService,
         IHttpClientFactory httpClientFactory,
         IOptions<TikTokShopIntegrationOptions> tikTokOptions,
@@ -32,6 +37,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         ILogger<MarketplaceAuthService> logger)
     {
         _tokenRepository = tokenRepository;
+        _accountRepository = accountRepository;
+        _currentTenant = currentTenant;
         _signatureService = signatureService;
         _httpClientFactory = httpClientFactory;
         _tikTokOptions = tikTokOptions.Value;
@@ -88,8 +95,15 @@ public class MarketplaceAuthService : IMarketplaceAuthService
                 return Fail(type, shopId, "Access token não retornado pela plataforma.");
             }
 
+            var tenantId = await ResolveTenantIdForShopAsync(shopId, type);
+            if (tenantId is null)
+            {
+                return Fail(type, shopId, "Faça login no painel TecFlow antes de vincular uma nova loja.");
+            }
+
             var entity = new MarketplaceToken
             {
+                TenantId = tenantId.Value,
                 ShopId = shopId,
                 MarketplaceType = type,
                 AccessToken = tokenPayload.AccessToken,
@@ -102,6 +116,18 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
             entity.Touch();
             await _tokenRepository.UpsertAsync(entity);
+
+            await _accountRepository.UpsertAsync(new MarketplaceAccount
+            {
+                TenantId = tenantId.Value,
+                ShopId = shopId,
+                ShopName = shopId,
+                MarketplaceType = type,
+                AccessToken = entity.AccessToken,
+                RefreshToken = entity.RefreshToken,
+                ExpiresAt = entity.ExpiresAt,
+                RefreshExpiresAt = entity.RefreshExpiresAt
+            });
 
             return new MarketplaceTokenResult
             {
@@ -422,6 +448,22 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             throw new InvalidOperationException(
                 $"Configure {ShopeeIntegrationOptions.SectionName}:PartnerId e PartnerKey.");
         }
+    }
+
+    private async Task<Guid?> ResolveTenantIdForShopAsync(string shopId, MarketplaceType type)
+    {
+        if (_currentTenant.TenantId is { } activeTenant && activeTenant != Guid.Empty)
+        {
+            return activeTenant;
+        }
+
+        var existing = await _tokenRepository.GetByShopAndMarketplaceIgnoreTenantAsync(shopId, type);
+        if (existing is null || existing.TenantId == Guid.Empty)
+        {
+            return null;
+        }
+
+        return existing.TenantId;
     }
 
     private static MarketplaceTokenResult Fail(MarketplaceType type, string shopId, string message) =>

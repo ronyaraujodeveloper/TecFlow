@@ -1,4 +1,5 @@
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
 
 namespace TecFlow.Database.Filter;
@@ -135,6 +136,46 @@ public static class FilterQueryExtensions
     {
         if (filter.Id.HasValue) source = source.Where(x => x.Id == filter.Id.Value);
         if (HasText(filter.SomeProperty)) source = source.Where(x => x.SomeProperty.Contains(filter.SomeProperty!, StringComparison.OrdinalIgnoreCase));
+        return source;
+    }
+
+    public static IEnumerable<Customer> ApplyFilter(this IEnumerable<Customer> source, CustomerFilter filter)
+    {
+        if (filter.Id.HasValue) source = source.Where(x => x.Id == filter.Id.Value);
+        if (filter.TenantId.HasValue) source = source.Where(x => x.TenantId == filter.TenantId.Value);
+        if (HasText(filter.Name)) source = source.Where(x => x.Name.Contains(filter.Name!, StringComparison.OrdinalIgnoreCase));
+        if (HasText(filter.DocumentNumber)) source = source.Where(x => x.DocumentNumber != null && x.DocumentNumber.Contains(filter.DocumentNumber!));
+        if (HasText(filter.Email)) source = source.Where(x => x.Email != null && x.Email.Contains(filter.Email!, StringComparison.OrdinalIgnoreCase));
+        if (HasText(filter.Phone)) source = source.Where(x => x.Phone != null && x.Phone.Contains(filter.Phone!));
+        if (HasText(filter.City)) source = source.Where(x => x.City.Contains(filter.City!, StringComparison.OrdinalIgnoreCase));
+        if (HasText(filter.State)) source = source.Where(x => x.State.Equals(filter.State, StringComparison.OrdinalIgnoreCase));
+        return source;
+    }
+
+    public static IEnumerable<Inventory> ApplyFilter(this IEnumerable<Inventory> source, InventoryFilter filter)
+    {
+        if (filter.Id.HasValue) source = source.Where(x => x.Id == filter.Id.Value);
+        if (filter.TenantId.HasValue) source = source.Where(x => x.TenantId == filter.TenantId.Value);
+        if (filter.ProductId.HasValue) source = source.Where(x => x.ProductId == filter.ProductId.Value);
+        if (filter.MinimumStock.HasValue) source = source.Where(x => x.MinimumStock == filter.MinimumStock.Value);
+        if (filter.BelowMinimumOnly == true)
+        {
+            source = source.Where(x => x.MinimumStock > 0 && x.AvailableQuantity < x.MinimumStock);
+        }
+
+        return source;
+    }
+
+    public static IEnumerable<SalesOrder> ApplyFilter(this IEnumerable<SalesOrder> source, SalesOrderFilter filter)
+    {
+        if (filter.Id.HasValue) source = source.Where(x => x.Id == filter.Id.Value);
+        if (filter.TenantId.HasValue) source = source.Where(x => x.TenantId == filter.TenantId.Value);
+        if (HasText(filter.OrderNumber)) source = source.Where(x => x.OrderNumber.Contains(filter.OrderNumber!, StringComparison.OrdinalIgnoreCase));
+        if (HasText(filter.ShopId)) source = source.Where(x => x.ShopId == filter.ShopId);
+        if (filter.CustomerId.HasValue) source = source.Where(x => x.CustomerId == filter.CustomerId.Value);
+        if (filter.Status.HasValue) source = source.Where(x => x.Status == filter.Status.Value);
+        if (filter.CreatedFrom.HasValue) source = source.Where(x => x.CreatedAt >= filter.CreatedFrom.Value);
+        if (filter.CreatedTo.HasValue) source = source.Where(x => x.CreatedAt <= filter.CreatedTo.Value);
         return source;
     }
 }

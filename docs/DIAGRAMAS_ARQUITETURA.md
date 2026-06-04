@@ -963,7 +963,139 @@ TecFlow.API ──publish──► RabbitMQ ──consume──► TecFlow.Worke
 
 ---
 
+## 📦 DIAGRAMA 7.3: Transação de Estoque Físico (Reserva → Débito → Kardex)
+
+```mermaid
+sequenceDiagram
+  participant API as TecFlow.API
+  participant SO as SalesOrderService
+  participant INV as InventoryService
+  participant DB as Inventories + Movements
+  participant Hook as IInventoryAlertHook
+
+  API->>SO: POST /api/vendas/pedidos
+  SO->>INV: ReserveStockForOrderAsync (Serializable)
+  INV->>DB: ReservedQuantity += qty, Movement Reserva
+  alt AvailableQuantity insuficiente
+    INV-->>API: InsufficientStockException (409)
+  end
+
+  API->>SO: PUT status → Pago
+  SO->>INV: ConfirmStockDebitAsync
+  INV->>DB: PhysicalQuantity -= qty, ReservedQuantity -= qty, SaidaPorVenda
+
+  API->>SO: PUT status → Cancelado
+  SO->>INV: ReleaseStockReservationAsync
+  INV->>DB: ReservedQuantity -= qty, CancelamentoReserva
+
+  INV->>Hook: OnMinimumStockReachedAsync (se Available < Minimum)
+```
+
+| Método | Quando | Efeito |
+|--------|--------|--------|
+| `ReserveStockForOrderAsync` | Pedido **Pendente** criado | Bloqueia unidades (anti-overbooking) |
+| `ConfirmStockDebitAsync` | **Pago** ou faturamento | Baixa física + zera reserva do pedido |
+| `ReleaseStockReservationAsync` | **Cancelado** | Devolve reserva ao disponível |
+
+---
+
+## 🛒 DIAGRAMA 7.2: Ciclo de Vida do Pedido de Venda (ERP Local)
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pendente
+  Pendente --> Pago: pagamento confirmado
+  Pendente --> Cancelado: cancelamento
+  Pago --> Faturado: PrepareInvoiceAsync
+  Pago --> Cancelado: cancelamento
+  Faturado --> Enviado: expedição
+  Faturado --> Cancelado: cancelamento
+  Enviado --> Concluido: entrega confirmada
+  Enviado --> Cancelado: cancelamento
+  Concluido --> [*]
+  Cancelado --> [*]
+```
+
+```mermaid
+sequenceDiagram
+  participant API as TecFlow.API
+  participant SVC as SalesOrderService
+  participant SM as OrderStateMachine
+  participant INV as InvoiceOrchestrator
+  participant DB as PostgreSQL
+
+  API->>SVC: POST /api/vendas/pedidos
+  SVC->>DB: SalesOrder + SalesOrderItems (TenantId)
+  API->>SVC: PUT /pedidos/{id}/status (Pago)
+  SVC->>SM: EnsureCanTransition
+  API->>INV: POST /pedidos/{id}/faturar
+  INV->>SM: Pago → Faturado
+  INV->>DB: Update status + InvoicePayloadDto mock
+```
+
+| Entidade | Tabela | Isolamento |
+|----------|--------|------------|
+| Customer | `Customers` | `TenantId` |
+| SalesOrder (Order) | `SalesOrders` | `TenantId` + `ShopId` opcional |
+| SalesOrderItem | `SalesOrderItems` | `TenantId` |
+
+**API:** `api/vendas/clientes`, `api/vendas/pedidos`, `POST .../faturar` → gancho NF-e (`InvoicePayloadDto`).
+
+---
+
+## 🏢 DIAGRAMA 7.1: Multi-Tenant / Multi-Conta Marketplace (SaaS Ready)
+
+```mermaid
+flowchart TB
+  subgraph JWT["Contexto HTTP / JWT"]
+    Claims["Claims: tenant_id, shop_id (opcional)"]
+    Header["Header: X-TecFlow-Shop-Id (painel)"]
+  end
+
+  subgraph Infra["TecFlow.Infrastructure"]
+    CTS[CurrentTenantService]
+  end
+
+  subgraph DB["TecFlow.Database"]
+    CTX[AppDbContext]
+    QF[HasQueryFilter TenantId + ShopId]
+    SC[SaveChanges → TenantId automático]
+  end
+
+  subgraph Core["TecFlow.Core"]
+    T[Tenant]
+    MA[MarketplaceAccount]
+    ENT[Product, Orders, Tokens, Campaigns, ...]
+  end
+
+  Claims --> CTS
+  Header --> CTS
+  CTS --> CTX
+  CTX --> QF
+  CTX --> SC
+  QF --> ENT
+  T --> MA
+  MA -->|ShopId + CNPJ + tokens criptografados| ENT
+```
+
+| Camada | Artefato | Função |
+|--------|----------|--------|
+| Core | `Tenant`, `MarketplaceAccount`, `ITenantScopedEntity` | Modelo SaaS e vínculo multi-loja |
+| Database | `ICurrentTenantService`, `TenantQueryFilterExtensions` | Filtros globais EF + escopo manual |
+| Infrastructure | `CurrentTenantService` | Extrai `tenant_id` / `shop_id` do JWT ou header |
+| Repositories | `ListConsolidated*` / `ListForShop*` | Visão agregada vs. loja única no painel |
+| Migração | `AddMultiTenantArchitecture` | Tabelas `Tenants`, `MarketplaceAccounts`, colunas `TenantId` |
+
+```
+Request autenticado
+    → CurrentTenantService (TenantId + ShopId opcional)
+    → AppDbContext query filter (isolamento automático)
+    → Repositório: consolidado (ShopId null) OU ForShop(shopId)
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
-*Sincronizado com pastas físicas em 04/06/2026 (Fase 5 — domínio afiliados).*  
+*Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  
 *Próximo:* [README.md](../README.md) · [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) · [INDICE_COMPLETO.md](./INDICE_COMPLETO.md)

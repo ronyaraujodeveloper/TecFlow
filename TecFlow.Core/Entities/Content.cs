@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 
 [Table("Conteudos")]
-public class Content : BaseEntity
+public class Content : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("Nome")]
     public string Name { get; set; } = string.Empty;
 

@@ -5,9 +5,17 @@ using Microsoft.Extensions.Hosting;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Data;
+using TecFlow.Infrastructure.Security;
 using TecFlow.Infrastructure.Services.Repositories;
 using TecFlow.Infrastructure.Services.Security;
+using TecFlow.Business.Domain.Sales;
+using TecFlow.Business.Interfaces.Sales;
+using TecFlow.Business.Interfaces.Inventory;
+using TecFlow.Infrastructure.Services.Stock;
+using TecFlow.Infrastructure.Services.Sales;
+using TecFlow.Infrastructure.Services.Tenancy;
 using TecFlow.Util.Security;
 
 namespace TecFlow.Infrastructure.Services
@@ -51,6 +59,9 @@ namespace TecFlow.Infrastructure.Services
                 services.AddTecFlowEncryption(configuration);
             }
 
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+
             services.AddDbContext<AppDbContext>(options =>
             {
                 if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
@@ -78,6 +89,16 @@ namespace TecFlow.Infrastructure.Services
             services.AddScoped<IMarketplaceTokenRepository, MarketplaceTokenRepository>();
             services.AddScoped<IMarketplaceOrderRepository, MarketplaceOrderRepository>();
             services.AddScoped<IUserDeviceTokenRepository, UserDeviceTokenRepository>();
+            services.AddScoped<IMarketplaceAccountRepository, MarketplaceAccountRepository>();
+            services.AddScoped<ICustomerRepository, CustomerRepository>();
+            services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+            services.AddScoped<IOrderStateMachine, OrderStateMachine>();
+            services.AddScoped<ISalesOrderService, SalesOrderService>();
+            services.AddScoped<IInvoiceOrchestrator, InvoiceOrchestrator>();
+            services.AddScoped<IInventoryRepository, InventoryRepository>();
+            services.AddScoped<IInventoryService, InventoryService>();
+            services.AddScoped<IInventoryAlertHook, LoggingInventoryAlertHook>();
+            services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
             services.AddScoped<IAffiliateRepository, AffiliateRepository>();
             services.AddScoped<IMetricRepository, MetricRepository>();
             services.AddScoped<IDataService, DataService>();

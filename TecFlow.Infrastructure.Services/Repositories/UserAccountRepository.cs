@@ -1,5 +1,6 @@
 using TecFlow.Core.Entities;
 using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,10 +9,20 @@ namespace TecFlow.Infrastructure.Services.Repositories
     public class UserAccountRepository : IUserAccountRepository
     {
         private readonly AppDbContext _context;
+        private readonly ITenantProvisioningService _tenantProvisioning;
 
-        public UserAccountRepository(AppDbContext context)
+        public UserAccountRepository(AppDbContext context, ITenantProvisioningService tenantProvisioning)
         {
             _context = context;
+            _tenantProvisioning = tenantProvisioning;
+        }
+
+        private async Task EnsureTenantAsync(UserAccount usuario)
+        {
+            if (usuario.TenantId == Guid.Empty)
+            {
+                await _tenantProvisioning.EnsureTenantForUserAsync(usuario);
+            }
         }
 
         public async Task<UserAccount?> GetByIdAsync(int id)
@@ -26,6 +37,7 @@ namespace TecFlow.Infrastructure.Services.Repositories
 
         public async Task AddAsync(UserAccount usuario)
         {
+            await EnsureTenantAsync(usuario);
             await _context.UserAccounts.AddAsync(usuario);
             await _context.SaveChangesAsync();
         }
@@ -59,6 +71,7 @@ namespace TecFlow.Infrastructure.Services.Repositories
             usuario.CreatedAt = DateTime.UtcNow;
             usuario.UpdatedAt = DateTime.UtcNow;
 
+            await EnsureTenantAsync(usuario);
             _context.UserAccounts.Add(usuario);
             await _context.SaveChangesAsync(); // Salva no BD e o EF Core popula o ID gerado.
 
@@ -72,6 +85,7 @@ namespace TecFlow.Infrastructure.Services.Repositories
         }
         public async Task<UserAccount> CreateAsync(UserAccount usuario)
         {
+            await EnsureTenantAsync(usuario);
             _context.UserAccounts.Add(usuario);
             await _context.SaveChangesAsync();
             return usuario;

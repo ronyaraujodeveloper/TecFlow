@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Abstractions;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Core.Entities;
 
 [Table("Produtos")]
-public class Product : BaseEntity
+public class Product : BaseEntity, ITenantScopedEntity
 {
+    public Guid TenantId { get; set; }
+
     [Column("Nome")]
     public string Name { get; set; } = string.Empty;
 

@@ -96,6 +96,6 @@ public class AffiliateAnalyticsServiceTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        return new AppDbContext(options, encryption.Object);
+        return new AppDbContext(options, encryption.Object, new TecFlow.Database.MultiTenancy.NullCurrentTenantService());
     }
 }

@@ -13,4 +13,8 @@ public interface IMarketplaceOrderRepository
         MarketplaceType marketplaceType);
 
     Task<MarketplaceOrder> CreateAsync(MarketplaceOrder order);
+
+    Task<IReadOnlyList<MarketplaceOrder>> ListConsolidatedForCurrentTenantAsync();
+
+    Task<IReadOnlyList<MarketplaceOrder>> ListForShopAsync(string shopId);
 }

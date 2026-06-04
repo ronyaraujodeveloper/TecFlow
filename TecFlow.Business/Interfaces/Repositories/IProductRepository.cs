@@ -14,6 +14,10 @@ public interface IProductRepository
     Task<Product?> GetByIdIncludingOwnerAsync(int id);
     Task<IEnumerable<Product>> GetByOwnerIdAsync(int ownerId);
 
+    Task<IReadOnlyList<Product>> ListConsolidatedForCurrentTenantAsync();
+
+    Task<IReadOnlyList<Product>> ListForShopAsync(string shopId);
+
     Task<Product?> GetByMarketplaceSkuAsync(
         string shopId,
         MarketplaceType marketplaceType,

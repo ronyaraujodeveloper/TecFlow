@@ -19,4 +19,6 @@ public class ProductFilter : IPagedFilter
     public double? Rating { get; set; }
     public int? Stock { get; set; }
     public int? OwnerId { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? ShopId { get; set; }
 }

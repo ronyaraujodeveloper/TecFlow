@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using TecFlow.SharedUi.Security;
+using TecFlow.Core.Security;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.State;
 

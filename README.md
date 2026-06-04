@@ -102,28 +102,40 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 
 
 ### Fase 5: Visão de Negócio - Plataforma de Automação e Inteligência para Afiliados de Alta Escala 🚀
-Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend `TecFlow.WebUi` para controle, auditoria e monitoramento em produção.
+**[x] Revisado e validado (jun/2026)** — domínio base, enums globais e contratos de orquestração consolidados em `TecFlow.Core` e `TecFlow.Business` para API, Worker, Orquestrador e WebUi.
+
+Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend `TecFlow.WebUi` / `TecFlow.SharedUi` / `TecFlow.Mobile` para controle, auditoria e monitoramento em produção.
+
+- [x] 5.0. Fundação de domínio e contratos (Core + Business)
+  - [x] Enums: `SocialMediaType`, `EngagementStatus`, `CommissionStatus`.
+  - [x] Entidade conceitual `AffiliateLink` (produto, link original, variações Shopee/TikTok Shop).
+  - [x] Modelos de orquestração: `SocialEngagementEvent`, `EngagementOrchestrationResult`, `CommissionAuditLine`, `CommissionConciliationResult`.
+  - [x] Contratos: `IEngagementOrchestrator`, `ICommissionConciliator` (implementação prática na Fase 6).
+  - [x] DTOs: `AffiliateLinkDto`, `AffiliateLinkResponseDto`.
 
 ### Fase 6: Engenharia e Infraestrutura para Afiliados, Mensageria e Escala 🛠️
-- [ ] 6.1. Sistema de Filas e Mensageria (Foco em Automação de Engajamento)
-  - [ ] Implementar infraestrutura com RabbitMQ ou Azure Service Bus no ecossistema TecFlow.
-  - [ ] Criar Webhooks/BackgroundServices para monitorar em tempo real mensagens e comentários postados em suas publicações nas redes/marketplaces.
-  - [ ] Estruturar fila de processamento assíncrono para triagem de palavras-chave (ex: identificar comentários como "eu quero" ou "link") e preparar a entrega automatizada do link de afiliado correto sem sobrecarregar o banco de dados.
+- [x] 6.1. Sistema de Filas e Mensageria (Foco em Automação de Engajamento)
+  - [x] Implementar infraestrutura com RabbitMQ (MassTransit) compartilhada entre API, Worker e Orquestrador.
+  - [x] Webhook `POST /api/webhooks/social-media/comments` publica `SocialMediaCommentReceivedEvent` e responde **202 Accepted**.
+  - [x] Consumidor `SocialMediaCommentConsumer` no Worker com triagem por palavras-chave configuráveis e entrega simulada de link por `PostId`.
+  - [x] Retry automático e fila de erro (DLQ) `social-media-comment-received-error`.
 
-- [ ] 6.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi)
-  - [ ] Criar módulo visual no 'TecFlow.WebUi' focado no rastreio e auditoria de comissões de afiliado.
-  - [ ] Integrar com as APIs de performance de afiliados da Shopee e TikTok Shop para buscar o relatório de cliques, conversões e comissões geradas.
-  - [ ] Desenvolver lógica de conciliação para bater as vendas rastreadas pelos seus links com os pagamentos reais efetuados pelas plataformas, detalhando quais produtos divulgados geraram a comissão correta e alertando sobre divergências de valores.
+- [x] 6.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi / SharedUi)
+  - [x] Página `ConciliacaoFinanceira.razor` mobile-first (KPIs em grid, tabela desktop / cards mobile com badges de divergência).
+  - [x] `IAffiliateAnalyticsService` — importação de relatórios Shopee/TikTok (tokens válidos) + fallback pedidos locais.
+  - [x] `ReconcileCommissionsAsync` — cruza rastreio local vs. repasse marketplace e classifica divergências (`CommissionDiscrepancyReportDto`).
+  - [x] API Orquestrador: `GET /api/afiliados/analytics/conciliacao`.
 
-- [ ] 6.3. Mecanismo de Mapeamento de Produtos e Atributos Globais para Propaganda
-  - [ ] Adaptar a estrutura de catálogos para mapear "Produtos de Propaganda/Divulgação" em vez de estoque físico próprio.
-  - [ ] Criar uma estrutura de "Dados Globais do Produto" (Nome Amigável, Categoria Global, Imagens de Destaque, Preço Médio e Seus Links de Afiliado Shopee/TikTok).
-  - [ ] Desenvolver um gerador de metadados baseado nesses atributos para alimentar automaticamente suas ferramentas de postagem, garantindo que as informações do produto saiam padronizadas e corretas em qualquer canal de divulgação.
+- [x] 6.3. Mecanismo de Mapeamento de Produtos e Atributos Globais para Propaganda
+  - [x] Entidades `GlobalAdvertisingProduct` + `MarketplaceAffiliateLink` (EF + migração PostgreSQL).
+  - [x] `IAdvertisingProductService` — cadastro global, geração de links parametrizados e `GenerateOptimizedPayloadForPostAsync`.
+  - [x] API `api/propaganda/produtos` e página `ProdutosPropaganda.razor` (mobile-first, copiar link Shopee/TikTok).
 
-- [ ] 6.4. Observabilidade e Telemetria (Monitoramento de Produção)
-  - [ ] Instalar o OpenTelemetry nos projetos centrais do TecFlow.
-  - [ ] Configurar exportadores de logs e métricas (como Seq ou Prometheus/Grafana) para monitorar a saúde do ecossistema em produção.
-  - [ ] Criar um mini-dashboard de saúde técnica para acompanhar taxas de sucesso das requisições de webhook de comentários, tempo de resposta das APIs de comissão e alertas de falhas em segundo plano.
+- [x] 6.4. Observabilidade e Telemetria (Monitoramento de Produção)
+  - [x] Projeto `TecFlow.Observability` com `AddTecFlowTelemetry` (traces, métricas OTLP/Console/Prometheus, logs OpenTelemetry).
+  - [x] Métricas de negócio: `comentarios_processados_total`, `links_enviados_sucesso`, `erros_conciliacao_contagem`.
+  - [x] Instrumentação em API, Worker e Orquestrador (HTTP Shopee/TikTok, consumer de engajamento, conciliação).
+  - [x] Painel `PainelSaude.razor` + `GET /api/saude/dashboard` (DB, RabbitMQ, APIs, erros recentes).
 
 ### Fase 7: Módulo de Vendas Diretas e Gestão de Estoque (Futuro) 📦
 - [ ] 7.1. Arquitetura Multi-Tenant / Multi-Conta por Marketplace (SaaS Ready)

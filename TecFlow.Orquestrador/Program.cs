@@ -12,6 +12,8 @@ using TecFlow.Infrastructure.Services;
 
 using TecFlow.Infrastructure.Services.Security;
 
+using TecFlow.Observability;
+
 using TecFlow.Orquestrador.Extensions;
 
 
@@ -47,6 +49,9 @@ builder.Services.AddTecFlowInfrastructureServices(builder.Configuration);
 builder.Services.AddTecFlowInfrastructureData(builder.Configuration);
 
 builder.Services.AddTecFlowApplicationServices();
+builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.Infrastructure.Services.Messaging.TecFlowMessagingRole.Publisher);
+
+builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.Orquestrador", enableAspNetCoreInstrumentation: true);
 
 
 
@@ -66,9 +71,9 @@ if (args.Contains("--reencrypt-credentials"))
 
 
 
-    Console.WriteLine($"Usuários verificados: {result.UsersScanned}");
+    Console.WriteLine($"Usu?rios verificados: {result.UsersScanned}");
 
-    Console.WriteLine($"Usuários atualizados: {result.UsersUpdated}");
+    Console.WriteLine($"Usu?rios atualizados: {result.UsersUpdated}");
 
     Console.WriteLine($"Campos criptografados: {result.FieldsEncrypted}");
 
@@ -78,7 +83,7 @@ if (args.Contains("--reencrypt-credentials"))
 
     {
 
-        Console.WriteLine("(dry-run — nenhuma alteração foi persistida)");
+        Console.WriteLine("(dry-run ? nenhuma altera??o foi persistida)");
 
     }
 
@@ -202,7 +207,7 @@ if (jwtSection.Exists())
 
 var app = builder.Build();
 
-
+app.UseTecFlowTelemetry();
 
 await app.ApplyDatabaseMigrationsAsync();
 await app.SeedDevelopmentDataAsync();
@@ -259,13 +264,13 @@ if (app.Environment.IsDevelopment())
 
         <html lang="pt-BR">
 
-        <head><meta charset="utf-8"><title>TecFlow Orquestrador — API</title></head>
+        <head><meta charset="utf-8"><title>TecFlow Orquestrador ? API</title></head>
 
         <body style="font-family:Segoe UI,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem;">
 
           <h1>TecFlow.Orquestrador (API + PostgreSQL)</h1>
 
-          <p>Backend hospedável em Render / Railway.</p>
+          <p>Backend hosped?vel em Render / Railway.</p>
 
           <ul>
 
@@ -273,7 +278,7 @@ if (app.Environment.IsDevelopment())
 
             <li><a href="/health">Health check</a></li>
 
-            <li><a href="https://localhost:7259">Portal — https://localhost:7259</a></li>
+            <li><a href="https://localhost:7259">Portal ? https://localhost:7259</a></li>
 
           </ul>
 

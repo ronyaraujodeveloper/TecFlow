@@ -7,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.Extensions.Http;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Infrastructure.Services.Advertising;
+using TecFlow.Infrastructure.Services.Analytics;
+using TecFlow.Infrastructure.Services.Health;
 using TecFlow.Infrastructure.Services.ExternalServices;
 using TecFlow.Infrastructure.Services.Service.ExternalServices;
 
@@ -21,6 +24,9 @@ namespace TecFlow.Infrastructure.Services
             services.AddTecFlowExternalApiClient<ITikTokAdsApiService, TikTokAdsApiService>();
             services.AddTecFlowExternalApiClient<IGeminiService, GeminiService>();
             services.AddTecFlowExternalApiClient<IAIService, OpenAIService>();
+            services.AddScoped<IAffiliateAnalyticsService, AffiliateAnalyticsService>();
+            services.AddScoped<IAdvertisingProductService, AdvertisingProductService>();
+            services.AddScoped<IPlatformHealthService, PlatformHealthService>();
 
             return services;
         }

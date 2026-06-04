@@ -1,0 +1,260 @@
+@page "/conciliacao/financeira"
+@attribute [Authorize]
+@using System.Globalization
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Filter
+@using TecFlow.SharedUi.Services.Analytics
+@inject IAffiliateAnalyticsApiService AnalyticsApi
+<PageTitle>Conciliação financeira — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Conciliação financeira</h1>
+            <p class="text-muted small mb-0">Auditoria de comissões Shopee e TikTok Shop vs. rastreio local.</p>
+        </div>
+        <div class="dashboard-toolbar">
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_loading" @onclick="LoadAsync">
+                @(_loading ? "A carregar…" : "Atualizar")
+            </button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="affiliateId">Código afiliado</label>
+                    <input id="affiliateId" class="form-control btn-touch" @bind="_filter.AffiliateId" placeholder="AffiliateCode" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small fw-semibold" for="startDate">Início</label>
+                    <InputDate id="startDate" class="form-control btn-touch" @bind-Value="_startDate" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small fw-semibold" for="endDate">Fim</label>
+                    <InputDate id="endDate" class="form-control btn-touch" @bind-Value="_endDate" />
+                </div>
+                <div class="col-12 col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-primary btn-touch w-100" disabled="@_loading" @onclick="ApplyFilterAndLoadAsync">
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    @if (_performance is not null)
+    {
+        <div class="conciliation-kpi-grid mb-4">
+            <article class="conciliation-kpi-card">
+                <span class="conciliation-kpi-label">Cliques totais</span>
+                <strong class="conciliation-kpi-value">@_performance.TotalClicks.ToString("N0", PtBr)</strong>
+            </article>
+            <article class="conciliation-kpi-card">
+                <span class="conciliation-kpi-label">Comissão acumulada</span>
+                <strong class="conciliation-kpi-value text-success">@_performance.PaidCommission.ToString("C2", PtBr)</strong>
+                <span class="conciliation-kpi-hint">Estimada: @_performance.EstimatedCommission.ToString("C2", PtBr)</span>
+            </article>
+            <article class="conciliation-kpi-card">
+                <span class="conciliation-kpi-label">Valores retidos</span>
+                <strong class="conciliation-kpi-value text-warning">@_performance.RetainedAmount.ToString("C2", PtBr)</strong>
+            </article>
+            <article class="conciliation-kpi-card @(_performance.DiscrepancyCount > 0 ? "has-alert" : "")">
+                <span class="conciliation-kpi-label">Alertas de divergência</span>
+                <strong class="conciliation-kpi-value @(_performance.DiscrepancyCount > 0 ? "text-danger" : "")">
+                    @_performance.DiscrepancyCount
+                </strong>
+                <span class="conciliation-kpi-hint">CVR @_performance.ConversionRate.ToString("F2", PtBr)%</span>
+            </article>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+                <h2 class="h6 fw-semibold mb-0">Itens divergentes</h2>
+                <span class="badge text-bg-light text-dark">@_discrepancies.Count</span>
+            </div>
+            <div class="card-body p-0">
+                @if (_discrepancies.Count == 0)
+                {
+                    <div class="p-4 text-center text-muted">
+                        <p class="mb-0">Nenhuma divergência no período selecionado.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="responsive-data-table">
+                        <div class="data-cards-mobile">
+                            @foreach (var item in _discrepancies)
+                            {
+                                <article class="data-list-card @(item.IsDivergent ? "data-list-card--danger" : "")">
+                                    <div class="data-list-card-header">
+                                        <h3 class="data-list-card-title">Pedido @item.ExternalOrderId</h3>
+                                        <span class="badge @GetStatusBadgeClass(item.Status)">@item.Status</span>
+                                    </div>
+                                    <dl>
+                                        <dt>Marketplace</dt>
+                                        <dd>@item.Marketplace</dd>
+                                        <dt>Esperado</dt>
+                                        <dd>@item.ExpectedCommission.ToString("C2", PtBr)</dd>
+                                        <dt>Pago</dt>
+                                        <dd>@item.PaidCommission.ToString("C2", PtBr)</dd>
+                                        <dt>Diferença</dt>
+                                        <dd class="text-danger">@item.Difference.ToString("C2", PtBr)</dd>
+                                        <dt>Motivo</dt>
+                                        <dd class="small">@item.Reason</dd>
+                                    </dl>
+                                    <a href="@($"/conciliacao/detalhes/{item.LineId}?affiliateId={Uri.EscapeDataString(_filter.AffiliateId ?? "")}")" class="btn btn-sm btn-outline-secondary btn-touch w-100 mt-2">
+                                        Ver detalhe
+                                    </a>
+                                </article>
+                            }
+                        </div>
+
+                        <div class="data-table-desktop table-responsive">
+                            <table class="table table-hover align-middle mb-0 dashboard-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Marketplace</th>
+                                        <th class="text-end">Esperado</th>
+                                        <th class="text-end">Pago</th>
+                                        <th class="text-end">Diferença</th>
+                                        <th>Estado</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _discrepancies)
+                                    {
+                                        <tr class="@(item.IsDivergent ? "table-danger" : "")">
+                                            <td class="fw-medium">
+                                                @item.ExternalOrderId
+                                                @if (!string.IsNullOrWhiteSpace(item.ProductSku))
+                                                {
+                                                    <span class="small text-muted d-block">SKU @item.ProductSku</span>
+                                                }
+                                            </td>
+                                            <td>@item.Marketplace</td>
+                                            <td class="text-end">@item.ExpectedCommission.ToString("C2", PtBr)</td>
+                                            <td class="text-end">@item.PaidCommission.ToString("C2", PtBr)</td>
+                                            <td class="text-end text-danger">@item.Difference.ToString("C2", PtBr)</td>
+                                            <td><span class="badge @GetStatusBadgeClass(item.Status)">@item.Status</span></td>
+                                            <td>
+                                                <a href="@($"/conciliacao/detalhes/{item.LineId}?affiliateId={Uri.EscapeDataString(_filter.AffiliateId ?? "")}")" class="btn btn-sm btn-outline-primary btn-touch">
+                                                    Detalhe
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (_paging is { TotalPages: > 1 })
+                    {
+                        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="small text-muted">
+                                Página @_paging.CurrentPage de @_paging.TotalPages (@_paging.TotalCount itens)
+                            </span>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm btn-touch"
+                                        disabled="@(_paging.CurrentPage <= 1 || _loading)"
+                                        @onclick="() => ChangePage(_paging.CurrentPage - 1)">
+                                    Anterior
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm btn-touch"
+                                        disabled="@(!_paging.HasNextPage || _loading)"
+                                        @onclick="() => ChangePage(_paging.CurrentPage + 1)">
+                                    Seguinte
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly AffiliateReconciliationFilter _filter = new() { PageSize = 20 };
+    private DateTime? _startDate = DateTime.UtcNow.Date.AddDays(-30);
+    private DateTime? _endDate = DateTime.UtcNow.Date;
+    private bool _loading;
+    private string? _errorMessage;
+    private AffiliatePerformanceDto? _performance;
+    private List<CommissionDiscrepancyReportDto> _discrepancies = [];
+    private PagingInfoDto? _paging;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task ApplyFilterAndLoadAsync()
+    {
+        _filter.Page = 1;
+        _filter.StartDate = _startDate?.ToUniversalTime();
+        _filter.EndDate = _endDate?.ToUniversalTime().Date.AddDays(1).AddTicks(-1);
+        await LoadAsync();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        _filter.Page = page;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_filter.AffiliateId))
+        {
+            _errorMessage = "Informe o código do afiliado para carregar a conciliação.";
+            _performance = null;
+            _discrepancies = [];
+            return;
+        }
+
+        _loading = true;
+        _errorMessage = null;
+        _filter.StartDate ??= _startDate?.ToUniversalTime();
+        _filter.EndDate ??= _endDate?.ToUniversalTime();
+
+        try
+        {
+            var result = await AnalyticsApi.GetReconciliationAsync(_filter);
+            if (!result.Success || result.Data is null || !result.Data.Status)
+            {
+                _errorMessage = result.Data?.Descricao ?? result.ErrorMessage ?? "Falha ao carregar conciliação.";
+                return;
+            }
+
+            _performance = result.Data.Performance;
+            _discrepancies = result.Data.Discrepancies ?? [];
+            _paging = result.Data.Paging;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetStatusBadgeClass(CommissionStatus status) => status switch
+    {
+        CommissionStatus.Pago => "text-bg-success",
+        CommissionStatus.Rastreado => "text-bg-primary",
+        CommissionStatus.Retido => "text-bg-warning",
+        CommissionStatus.Cancelado => "text-bg-secondary",
+        _ => "text-bg-danger"
+    };
+}

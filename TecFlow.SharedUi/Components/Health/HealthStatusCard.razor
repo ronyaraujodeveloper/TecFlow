@@ -1,0 +1,42 @@
+@using TecFlow.Business.Dto
+
+<article class="health-status-card @GetLevelClass(Component.Level)">
+    <div class="health-status-card__header">
+        <h3 class="health-status-card__title">@Title</h3>
+        <span class="badge @GetBadgeClass(Component.Level)">@GetLevelLabel(Component.Level)</span>
+    </div>
+    <p class="health-status-card__message small mb-1">@Component.Message</p>
+    @if (Component.ResponseTimeMs.HasValue)
+    {
+        <p class="mb-0 small text-muted">@Component.ResponseTimeMs.Value.ToString("F0") ms</p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public ComponentHealthDto Component { get; set; } = new();
+
+    private static string GetLevelClass(HealthStatusLevel level) => level switch
+    {
+        HealthStatusLevel.Healthy => "health-status-card--ok",
+        HealthStatusLevel.Degraded => "health-status-card--warn",
+        HealthStatusLevel.Unhealthy => "health-status-card--error",
+        _ => ""
+    };
+
+    private static string GetBadgeClass(HealthStatusLevel level) => level switch
+    {
+        HealthStatusLevel.Healthy => "text-bg-success",
+        HealthStatusLevel.Degraded => "text-bg-warning",
+        HealthStatusLevel.Unhealthy => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    private static string GetLevelLabel(HealthStatusLevel level) => level switch
+    {
+        HealthStatusLevel.Healthy => "OK",
+        HealthStatusLevel.Degraded => "Atenção",
+        HealthStatusLevel.Unhealthy => "Falha",
+        _ => "?"
+    };
+}

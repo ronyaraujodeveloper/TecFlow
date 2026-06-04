@@ -7,6 +7,7 @@ using TecFlow.Infrastructure.Services.Integrations;
 using TecFlow.Infrastructure.Services.Integrations.Auth;
 using TecFlow.Infrastructure.Services.Integrations.Catalog;
 using TecFlow.Infrastructure.Services.Integrations.Orders;
+using TecFlow.Infrastructure.Services.Messaging;
 
 
 namespace TecFlow.Infrastructure.Services
@@ -32,5 +33,12 @@ namespace TecFlow.Infrastructure.Services
 
             return services;
         }
+
+        /// <summary>Registra MassTransit/RabbitMQ para publicação ou consumo de engajamento.</summary>
+        public static IServiceCollection AddTecFlowEngagementMessaging(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            TecFlowMessagingRole role) =>
+            EngagementMessagingRegistrationExtensions.AddTecFlowEngagementMessaging(services, configuration, role);
     }
 }

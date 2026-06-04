@@ -743,7 +743,227 @@ sequenceDiagram
 
 ---
 
+## 🚀 DIAGRAMA 5: Afiliados — Engajamento, Comissões e Links (Fase 5)
+
+Visão macro do fluxo de dados da plataforma de automação para afiliados de alta escala. Contratos em `TecFlow.Business/Interfaces/Orchestration/`; persistência de `AffiliateLink` e filas entram na Fase 6.
+
+```mermaid
+flowchart TB
+  subgraph Entrada["Entrada — Redes e Marketplaces"]
+    SM[Instagram · TikTok · YouTube · Facebook]
+    MP[Shopee · TikTok Shop APIs]
+    WH[Webhooks marketplace]
+  end
+
+  subgraph Ingestao["Ingestão assíncrona"]
+    API[TecFlow.API]
+    WRK[TecFlow.Worker]
+    WH --> API
+    SM -->|comentários / DMs| WRK
+    MP -->|pedidos · comissões| WH
+  end
+
+  subgraph Orq["Orquestração — TecFlow.Orquestrador"]
+    ENG[IEngagementOrchestrator]
+    CON[ICommissionConciliator]
+    AL[AffiliateLink + Product]
+  end
+
+  subgraph Saida["Saída — Operador e afiliado"]
+    PUSH[FCM/APNs + deep links]
+    WEB[TecFlow.WebUi / SharedUi / Mobile]
+    LINK[Disparo automático de link rastreável]
+  end
+
+  WRK --> ENG
+  API --> ENG
+  ENG -->|SocialEngagementEvent| AL
+  AL -->|ShopeeTrackedUrl / TikTokShopTrackedUrl| LINK
+  LINK --> SM
+  MP --> CON
+  CON -->|CommissionConciliationResult| WEB
+  ENG --> PUSH
+  PUSH --> WEB
+```
+
+| Camada | Artefatos principais |
+|--------|----------------------|
+| `TecFlow.Core/Enums` | `SocialMediaType`, `EngagementStatus`, `CommissionStatus`, `MarketplaceType` |
+| `TecFlow.Core/Entities` | `AffiliateLink`, `Product`, `MarketplaceOrder`, `Conversion` |
+| `TecFlow.Business/Domain` | `Engagement/*`, `Commission/*` |
+| `TecFlow.Business/Interfaces/Orchestration` | `IEngagementOrchestrator`, `ICommissionConciliator` |
+
+```
+Redes Sociais / Marketplaces
+        │
+        ▼
+Webhooks (API) ──────────────┐
+Worker (polling / filas*)    ├──► Orquestrador
+        │                    │         ├── IEngagementOrchestrator → link afiliado
+        │                    │         └── ICommissionConciliator → auditoria comissões
+        ▼                    │
+MarketplaceTokens / Orders   │
+        │                    ▼
+        └────────────► WebUi · Mobile (fila engajamento, painel conciliação)
+
+* filas RabbitMQ — **implementado (Fase 6.1)**
+```
+
+---
+
+## 📡 DIAGRAMA 6.4: Observabilidade (OpenTelemetry + Painel de saúde)
+
+```mermaid
+flowchart TB
+  subgraph Hosts
+    API[TecFlow.API]
+    WRK[TecFlow.Worker]
+    ORQ[TecFlow.Orquestrador]
+  end
+
+  subgraph OTel[TecFlow.Observability]
+    TR[Traces AspNetCore + HttpClient]
+    MT[Metrics comentarios / links / conciliacao]
+    LG[Logs OTLP + Console]
+  end
+
+  subgraph Export
+    PROM[/metrics Prometheus]
+    OTLP[OTLP Collector / Seq]
+  end
+
+  UI[PainelSaude.razor] --> ORQ
+  ORQ --> HealthAPI[GET /api/saude/dashboard]
+
+  API --> OTel
+  WRK --> OTel
+  ORQ --> OTel
+  OTel --> PROM
+  OTel --> OTLP
+```
+
+| Métrica | Origem |
+|---------|--------|
+| `comentarios_processados_total` | `SocialMediaCommentConsumer` |
+| `links_enviados_sucesso` | Triagem positiva + entrega simulada |
+| `erros_conciliacao_contagem` | Falhas em relatórios marketplace |
+
+---
+
+## 📦 DIAGRAMA 6.3: Catálogo global de propaganda e links
+
+```mermaid
+erDiagram
+  GlobalAdvertisingProduct ||--o{ MarketplaceAffiliateLink : possui
+  GlobalAdvertisingProduct {
+    int Id
+    guid GlobalProductUid
+    string FriendlyName
+    string GlobalCategory
+    decimal AveragePrice
+  }
+  MarketplaceAffiliateLink {
+    int Id
+    enum MarketplaceType
+    string OriginalProductUrl
+    string GeneratedAffiliateLink
+    string CustomTrackingParameters
+  }
+```
+
+```
+ProdutosPropaganda.razor (WebUi/SharedUi)
+        │ POST/GET api/propaganda/produtos
+        ▼
+AdvertisingProductService
+        ├── CreateGlobalProductAsync → DB ProdutosPropagandaGlobal
+        ├── gera links Shopee/TikTok (sub_id / campaign)
+        └── GenerateOptimizedPayloadForPostAsync → robô engajamento (6.1)
+```
+
+| Entidade legada | Nova modelagem 6.3 |
+|-----------------|-------------------|
+| `Product` (estoque) | `GlobalAdvertisingProduct` (divulgação) |
+| `AffiliateLink` (conceitual) | `MarketplaceAffiliateLink` (persistido) |
+
+---
+
+## 💰 DIAGRAMA 6.2: Conciliação financeira de afiliado
+
+```mermaid
+flowchart LR
+  UI[SharedUi ConciliacaoFinanceira]
+  ORQ[TecFlow.Orquestrador]
+  SVC[AffiliateAnalyticsService]
+  AUTH[MarketplaceAuthService]
+  SHP[Shopee Affiliate Report API]
+  TTS[TikTok Affiliate Performance API]
+  DB[(PostgreSQL Orders Conversions Affiliates)]
+
+  UI -->|GET conciliacao?affiliateId| ORQ
+  ORQ --> SVC
+  SVC --> AUTH
+  AUTH --> SHP
+  AUTH --> TTS
+  SVC --> DB
+  SVC -->|CommissionDiscrepancyReportDto| ORQ
+  ORQ --> UI
+```
+
+| DTO | Uso |
+|-----|-----|
+| `AffiliatePerformanceDto` | KPIs no topo do painel |
+| `CommissionDiscrepancyReportDto` | Tabela/cards de divergências |
+| `AffiliateReconciliationResponseDto` | Envelope API + `PagingInfoDto` |
+
+---
+
+## 📨 DIAGRAMA 6.1: Mensageria — Comentários e Triagem (RabbitMQ + MassTransit)
+
+```mermaid
+sequenceDiagram
+  participant Rede as Rede Social (webhook)
+  participant API as TecFlow.API
+  participant Bus as RabbitMQ
+  participant WRK as TecFlow.Worker
+  participant Tri as CommentKeywordTriage
+  participant Del as AffiliateLinkDeliveryNotifier
+
+  Rede->>API: POST /api/webhooks/social-media/comments
+  API->>Bus: Publish SocialMediaCommentReceivedEvent
+  API-->>Rede: 202 Accepted
+  Bus->>WRK: SocialMediaCommentConsumer
+  WRK->>Tri: IsEligibleForAffiliateLink(text)
+  alt palavra-chave encontrada
+    Tri-->>WRK: matched (eu quero, link, ...)
+    WRK->>Del: NotifyDeliveryRequestedAsync (simulado)
+  else sem match
+    WRK-->>WRK: descarta / log debug
+  end
+```
+
+| Componente | Fila / política |
+|------------|-----------------|
+| Fila principal | `social-media-comment-received` |
+| DLQ (erro após retries) | `social-media-comment-received-error` |
+| Retry | `RetryCount` × intervalo (`RetryIntervalSeconds`) |
+| Publicador | API, Orquestrador (`TecFlowMessagingRole.Publisher`) |
+| Consumidor | Worker (`TecFlowMessagingRole.Consumer`) |
+
+```
+Instagram/TikTok/... webhook
+        │
+        ▼
+TecFlow.API ──publish──► RabbitMQ ──consume──► TecFlow.Worker
+                              │                      │
+                              │                      ├── triagem Keywords (appsettings)
+                              │                      └── link simulado por PostId
+                              └──► DLQ (falha persistente)
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
-*Sincronizado com pastas físicas em 04/06/2026 (Fase 4.1 mobile-first).*  
+*Sincronizado com pastas físicas em 04/06/2026 (Fase 5 — domínio afiliados).*  
 *Próximo:* [README.md](../README.md) · [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) · [INDICE_COMPLETO.md](./INDICE_COMPLETO.md)

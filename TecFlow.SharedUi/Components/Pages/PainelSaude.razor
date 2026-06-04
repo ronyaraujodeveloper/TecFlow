@@ -1,0 +1,112 @@
+@page "/saude/painel"
+@attribute [Authorize]
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Health
+@inject IPlatformHealthApiService HealthApi
+
+<PageTitle>Saúde do sistema — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Painel de saúde técnica</h1>
+            <p class="text-muted small mb-0">Conectividade, filas, APIs externas e erros recentes.</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-touch" disabled="@_loading" @onclick="LoadAsync">
+            @(_loading ? "A verificar…" : "Atualizar")
+        </button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    @if (_dashboard is not null)
+    {
+        <div class="health-status-grid mb-4">
+            <HealthStatusCard Title="PostgreSQL" Component="_dashboard.Database" />
+            <HealthStatusCard Title="RabbitMQ" Component="_dashboard.RabbitMq" />
+            <HealthStatusCard Title="Shopee API" Component="_dashboard.ShopeeApi" />
+            <HealthStatusCard Title="TikTok Shop API" Component="_dashboard.TikTokShopApi" />
+        </div>
+
+        <div class="health-metrics-grid mb-4">
+            <article class="conciliation-kpi-card">
+                <span class="conciliation-kpi-label">Comentários processados</span>
+                <strong class="conciliation-kpi-value">@_dashboard.Metrics.ComentariosProcessadosTotal</strong>
+            </article>
+            <article class="conciliation-kpi-card">
+                <span class="conciliation-kpi-label">Links enviados</span>
+                <strong class="conciliation-kpi-value text-success">@_dashboard.Metrics.LinksEnviadosSucessoTotal</strong>
+            </article>
+            <article class="conciliation-kpi-card has-alert">
+                <span class="conciliation-kpi-label">Erros conciliação</span>
+                <strong class="conciliation-kpi-value text-danger">@_dashboard.Metrics.ErrosConciliacaoContagem</strong>
+            </article>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-3 px-3">
+                <h2 class="h6 fw-semibold mb-0">Erros recentes</h2>
+            </div>
+            <div class="card-body p-0 health-error-scroll">
+                @if (_dashboard.RecentErrors.Count == 0)
+                {
+                    <div class="p-4 text-center text-muted small">Nenhum erro registado nesta instância.</div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var err in _dashboard.RecentErrors)
+                        {
+                            <li class="list-group-item health-error-item">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <span class="badge @GetSourceBadgeClass(err.Source)">@err.Source</span>
+                                    <time class="small text-muted">@err.OccurredAtUtc.ToLocalTime().ToString("g")</time>
+                                </div>
+                                <p class="mb-0 mt-2 fw-medium">@err.Message</p>
+                                @if (!string.IsNullOrWhiteSpace(err.Detail))
+                                {
+                                    <p class="mb-0 small text-muted">@err.Detail</p>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private string? _errorMessage;
+    private HealthDashboardDto? _dashboard;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _errorMessage = null;
+        var result = await HealthApi.GetDashboardAsync();
+        _loading = false;
+
+        if (!result.Success || result.Data is null)
+        {
+            _errorMessage = result.ErrorMessage ?? "Falha ao carregar painel de saúde.";
+            return;
+        }
+
+        _dashboard = result.Data;
+    }
+
+    private static string GetSourceBadgeClass(string source) => source switch
+    {
+        "Database" => "text-bg-danger",
+        "RabbitMQ" => "text-bg-warning",
+        "HTTP" => "text-bg-secondary",
+        _ => "text-bg-dark"
+    };
+}

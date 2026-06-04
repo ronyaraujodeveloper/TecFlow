@@ -296,6 +296,203 @@ html, body {
     margin: 0;
 }
 
+.health-status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .health-status-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1200px) {
+    .health-status-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.health-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 992px) {
+    .health-metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.health-status-card {
+    background: var(--tecso-card);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 1rem;
+    min-height: 6.5rem;
+}
+
+.health-status-card--ok { border-left: 4px solid #198754; }
+.health-status-card--warn { border-left: 4px solid #ffc107; }
+.health-status-card--error { border-left: 4px solid #dc3545; }
+
+.health-status-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.health-status-card__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.health-error-scroll {
+    max-height: min(50vh, 28rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.health-error-item {
+    padding: 0.85rem 1rem;
+    min-height: 44px;
+}
+
+.conciliation-kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 576px) {
+    .conciliation-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .conciliation-kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.conciliation-kpi-card {
+    background: var(--tecso-card);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0.75rem;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 5.5rem;
+}
+
+.conciliation-kpi-card.has-alert {
+    border-color: rgba(220, 53, 69, 0.35);
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.08);
+}
+
+.conciliation-kpi-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+}
+
+.conciliation-kpi-value {
+    font-size: 1.35rem;
+    line-height: 1.2;
+}
+
+.conciliation-kpi-hint {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.propaganda-form-grid {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 992px) {
+    .propaganda-form-grid {
+        display: block;
+    }
+}
+
+.propaganda-product-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 576px) {
+    .propaganda-product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1200px) {
+    .propaganda-product-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.propaganda-product-card {
+    background: var(--tecso-card);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0.85rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0.25rem 1rem rgba(15, 23, 42, 0.06);
+}
+
+.propaganda-product-card__image {
+    height: 10rem;
+    background-size: cover;
+    background-position: center;
+}
+
+.propaganda-product-card__image--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #e8eef8, #f4f6fb);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #6c757d;
+}
+
+.propaganda-product-card__body {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.propaganda-product-card__title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
+.propaganda-copy-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.65rem 1rem;
+}
+
+.data-list-card--danger {
+    border-color: rgba(220, 53, 69, 0.4);
+    background: rgba(220, 53, 69, 0.04);
+}
+
 .data-list-card dd {
     margin: 0;
     font-weight: 500;

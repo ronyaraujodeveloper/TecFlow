@@ -12,6 +12,7 @@
     <ProjectReference Include="..\TecFlow.Core\TecFlow.Core.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj" />
+    <ProjectReference Include="..\TecFlow.Observability\TecFlow.Observability.csproj" />
   </ItemGroup>
 
   <ItemGroup>

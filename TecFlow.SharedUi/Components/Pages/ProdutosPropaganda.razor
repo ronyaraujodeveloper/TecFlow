@@ -1,0 +1,264 @@
+@page "/propaganda/produtos"
+@attribute [Authorize]
+@using System.Globalization
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Entities
+@using TecFlow.Core.Enums
+@using TecFlow.SharedUi.Services.Advertising
+@inject IAdvertisingProductApiService AdvertisingApi
+@inject IJSRuntime Js
+
+<PageTitle>Produtos de propaganda — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Produtos de propaganda</h1>
+            <p class="text-muted small mb-0">Catálogo global com links Shopee e TikTok Shop parametrizados.</p>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-touch" @onclick="ToggleForm">
+            @(_showForm ? "Fechar formulário" : "Novo produto")
+        </button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_toastMessage))
+    {
+        <div class="alert @(_toastSuccess ? "alert-success" : "alert-info") py-2 small" role="status">@_toastMessage</div>
+    }
+
+    @if (_showForm)
+    {
+        <div class="card border-0 shadow-sm mb-4 propaganda-form-card">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Cadastro</h2>
+                <div class="row g-3 propaganda-form-grid">
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small fw-semibold">Nome amigável</label>
+                        <input class="form-control btn-touch" @bind="_form.FriendlyName" />
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small fw-semibold">Categoria global</label>
+                        <input class="form-control btn-touch" @bind="_form.GlobalCategory" placeholder="Beleza, Tech..." />
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small fw-semibold">Preço médio (R$)</label>
+                        <input type="number" step="0.01" min="0" class="form-control btn-touch" @bind="_form.AveragePrice" />
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small fw-semibold">URL imagem principal</label>
+                        <input class="form-control btn-touch" @bind="_form.MainImageUrl" placeholder="https://..." />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Descrição</label>
+                        <textarea class="form-control btn-touch" rows="3" @bind="_form.Description"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <h3 class="h6 fw-semibold mt-2">Shopee</h3>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small">URL produto Shopee</label>
+                        <input class="form-control btn-touch" @bind="_shopeeUrl" placeholder="https://shopee..." />
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small">ID produto / sub-id campanha</label>
+                        <input class="form-control btn-touch" @bind="_shopeeProductId" placeholder="item_id ou JSON tracking" />
+                    </div>
+                    <div class="col-12">
+                        <h3 class="h6 fw-semibold mt-2">TikTok Shop</h3>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small">URL produto TikTok</label>
+                        <input class="form-control btn-touch" @bind="_tikTokUrl" placeholder="https://..." />
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small">ID produto / sub-id campanha</label>
+                        <input class="form-control btn-touch" @bind="_tikTokProductId" />
+                    </div>
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary btn-touch w-100 w-md-auto" disabled="@_saving" @onclick="SaveAsync">
+                            @(_saving ? "A guardar…" : "Salvar produto global")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    @if (_loading)
+    {
+        <p class="text-muted">A carregar produtos…</p>
+    }
+    else if (_products.Count == 0)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted py-5">
+                <p class="mb-0">Nenhum produto de propaganda cadastrado.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="propaganda-product-grid">
+            @foreach (var product in _products)
+            {
+                var shopee = product.MarketplaceLinks.FirstOrDefault(l => l.MarketplaceType == MarketplaceType.Shopee);
+                var tiktok = product.MarketplaceLinks.FirstOrDefault(l => l.MarketplaceType == MarketplaceType.TikTokShop);
+
+                <article class="propaganda-product-card">
+                    @if (!string.IsNullOrWhiteSpace(product.MainImageUrl))
+                    {
+                        <div class="propaganda-product-card__image" style="background-image: url('@product.MainImageUrl')"></div>
+                    }
+                    else
+                    {
+                        <div class="propaganda-product-card__image propaganda-product-card__image--placeholder">
+                            <span>@GetInitials(product.FriendlyName)</span>
+                        </div>
+                    }
+                    <div class="propaganda-product-card__body">
+                        <h3 class="propaganda-product-card__title">@product.FriendlyName</h3>
+                        <p class="propaganda-product-card__category small text-muted mb-1">@product.GlobalCategory</p>
+                        <p class="propaganda-product-card__price fw-semibold text-success mb-3">
+                            @product.AveragePrice.ToString("C2", PtBr)
+                        </p>
+                        <div class="d-flex flex-column gap-2">
+                            @if (shopee is not null)
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-danger btn-touch propaganda-copy-btn"
+                                        @onclick="@(() => CopyLinkAsync(shopee.GeneratedAffiliateLink, "Shopee"))">
+                                    Copiar link Shopee
+                                </button>
+                            }
+                            @if (tiktok is not null)
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-dark btn-touch propaganda-copy-btn"
+                                        @onclick="@(() => CopyLinkAsync(tiktok.GeneratedAffiliateLink, "TikTok"))">
+                                    Copiar link TikTok
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly GlobalAdvertisingProductDto _form = new();
+    private string _shopeeUrl = string.Empty;
+    private string _shopeeProductId = string.Empty;
+    private string _tikTokUrl = string.Empty;
+    private string _tikTokProductId = string.Empty;
+
+    private List<GlobalAdvertisingProduct> _products = [];
+    private bool _loading = true;
+    private bool _saving;
+    private bool _showForm = true;
+    private string? _errorMessage;
+    private string? _toastMessage;
+    private bool _toastSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private void ToggleForm() => _showForm = !_showForm;
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _errorMessage = null;
+        var result = await AdvertisingApi.ListAsync();
+        _loading = false;
+
+        if (!result.Success || result.Data is null || !result.Data.Status)
+        {
+            _errorMessage = result.Data?.Descricao ?? result.ErrorMessage ?? "Falha ao listar produtos.";
+            _products = [];
+            return;
+        }
+
+        _products = result.Data.DataList ?? [];
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _errorMessage = null;
+        _form.MarketplaceLinks = [];
+
+        if (!string.IsNullOrWhiteSpace(_shopeeUrl))
+        {
+            _form.MarketplaceLinks.Add(new MarketplaceAffiliateLinkDto
+            {
+                MarketplaceType = MarketplaceType.Shopee,
+                OriginalProductUrl = _shopeeUrl.Trim(),
+                PlatformProductId = string.IsNullOrWhiteSpace(_shopeeProductId) ? null : _shopeeProductId.Trim(),
+                CustomTrackingParameters = _shopeeProductId.Contains('{') ? _shopeeProductId.Trim() : null
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(_tikTokUrl))
+        {
+            _form.MarketplaceLinks.Add(new MarketplaceAffiliateLinkDto
+            {
+                MarketplaceType = MarketplaceType.TikTokShop,
+                OriginalProductUrl = _tikTokUrl.Trim(),
+                PlatformProductId = string.IsNullOrWhiteSpace(_tikTokProductId) ? null : _tikTokProductId.Trim(),
+                CustomTrackingParameters = _tikTokProductId.Contains('{') ? _tikTokProductId.Trim() : null
+            });
+        }
+
+        var result = await AdvertisingApi.CreateAsync(_form);
+        _saving = false;
+
+        if (!result.Success || result.Data is null || !result.Data.Status)
+        {
+            _errorMessage = result.Data?.Descricao ?? result.ErrorMessage ?? "Falha ao salvar.";
+            return;
+        }
+
+        _form.FriendlyName = string.Empty;
+        _form.Description = string.Empty;
+        _form.GlobalCategory = string.Empty;
+        _form.MainImageUrl = null;
+        _form.AveragePrice = 0;
+        _shopeeUrl = _shopeeProductId = _tikTokUrl = _tikTokProductId = string.Empty;
+        _showForm = false;
+        await LoadAsync();
+        await ShowToastAsync("Produto salvo com sucesso.", true);
+    }
+
+    private async Task CopyLinkAsync(string link, string platform)
+    {
+        var ok = await Js.InvokeAsync<bool>("tecFlowClipboard.copyText", link);
+        await ShowToastAsync(ok ? $"Link {platform} copiado." : $"Não foi possível copiar o link {platform}.", ok);
+    }
+
+    private async Task ShowToastAsync(string message, bool success)
+    {
+        _toastMessage = message;
+        _toastSuccess = success;
+        StateHasChanged();
+        await Task.Delay(2500);
+        _toastMessage = null;
+        StateHasChanged();
+    }
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 0 ? "?" : string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+    }
+}

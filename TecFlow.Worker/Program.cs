@@ -4,6 +4,7 @@ using Serilog;
 using TecFlow.Business.Service.Application;
 using TecFlow.Infrastructure;
 using TecFlow.Infrastructure.Services;
+using TecFlow.Observability;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((_, configurationBuilder) =>
@@ -19,6 +20,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTecFlowInfrastructureServices(context.Configuration);
         services.AddTecFlowInfrastructureData(context.Configuration);
         services.AddTecFlowApplicationServices();
+        services.AddTecFlowEngagementMessaging(context.Configuration, TecFlow.Infrastructure.Services.Messaging.TecFlowMessagingRole.Consumer);
+        services.AddTecFlowTelemetry(context.Configuration, "TecFlow.Worker");
         services.AddHostedService<WorkerService>();
     })
     .Build();

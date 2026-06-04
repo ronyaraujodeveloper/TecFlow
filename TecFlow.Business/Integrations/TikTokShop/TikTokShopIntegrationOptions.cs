@@ -15,6 +15,7 @@ public class TikTokShopIntegrationOptions
     public string ProductsSearchPath { get; set; } = "api/v1/products/search";
     public string OrdersSearchPath { get; set; } = "api/v1/orders/search";
     public string UpdateStocksPath { get; set; } = "api/v1/products/stocks";
+    public string AffiliatePerformanceReportPath { get; set; } = "api/v1/affiliate/performance";
     public string? WebhookSecret { get; set; }
     public int TimeoutSeconds { get; set; } = 100;
     public bool EnableRequestLogging { get; set; } = true;

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TecFlow.Business\TecFlow.Business.csproj" />
+    <ProjectReference Include="..\TecFlow.Observability\TecFlow.Observability.csproj" />
     <ProjectReference Include="..\TecFlow.Core\TecFlow.Core.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj" />
     <ProjectReference Include="..\TecFlow.Util\TecFlow.Util.csproj" />
@@ -34,5 +35,7 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Net.Http.Json" Version="10.0.8" />
     <PackageReference Include="FirebaseAdmin" Version="3.2.0" />
+    <PackageReference Include="MassTransit" Version="8.3.4" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
   </ItemGroup>
 </Project>

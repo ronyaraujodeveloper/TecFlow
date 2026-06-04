@@ -64,6 +64,75 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **Components/Dashboard/CampaignsWidget.razor** / **MetricsWidget.razor** — leem `*ResponseDto.DataList` diretamente.
 - [x] **Components/Pages/Dashboard.razor** — orquestra filtros, listagens e criação padronizados.
 
+### Fase 6.4 — Observabilidade e telemetria (jun/2026)
+
+- [x] **TecFlow.Observability/** — `AddTecFlowTelemetry`, `UseTecFlowTelemetry`, `TecFlowBusinessMetrics`, `TelemetryRecentErrorRecorder`, `TelemetryErrorRecordingMiddleware`.
+- [x] **Pacotes:** OpenTelemetry (Hosting, AspNetCore, Http, Runtime), OTLP, Console, Prometheus.AspNetCore, Serilog.Sinks.Seq.
+- [x] **TecFlow.API/Program.cs**, **TecFlow.Worker/Program.cs**, **TecFlow.Orquestrador/Program.cs** — telemetria ativada por host.
+- [x] **appsettings.json** (API, Worker, Orquestrador) — seção `Telemetry`.
+- [x] **TecFlow.Infrastructure.Services/Health/PlatformHealthService.cs** — health checks DB/RabbitMQ/Shopee/TikTok.
+- [x] **TecFlow.Orquestrador/Controllers/HealthDashboardController.cs** — `GET /api/saude/dashboard`.
+- [x] **TecFlow.SharedUi/Components/Pages/PainelSaude.razor**, **Components/Health/HealthStatusCard.razor**.
+- [x] Instrumentação: **SocialMediaCommentConsumer**, **AffiliateAnalyticsService**.
+
+### Fase 6.3 — Produtos globais de propaganda (jun/2026)
+
+- [x] **TecFlow.Core/Entities/GlobalAdvertisingProduct.cs** — FriendlyName, GlobalCategory, MainImageUrl, AveragePrice, `GlobalProductUid`.
+- [x] **TecFlow.Core/Entities/MarketplaceAffiliateLink.cs** — vínculos Shopee/TikTok com links gerados e tracking JSON.
+- [x] **TecFlow.Infrastructure/Migrations/*AddGlobalAdvertisingProducts*** — tabelas `ProdutosPropagandaGlobal`, `MarketplaceAffiliateLinks`.
+- [x] **TecFlow.Database/AppDbContext.cs** — DbSets + índices/relacionamentos.
+- [x] **TecFlow.Business/Dto/** — `GlobalAdvertisingProductDto`, `MarketplaceAffiliateLinkDto`, `OptimizedPostPayloadDto`, `GlobalAdvertisingProductResponseDto`.
+- [x] **TecFlow.Business/Interfaces/Services/IAdvertisingProductService.cs**.
+- [x] **TecFlow.Infrastructure.Services/Advertising/AdvertisingProductService.cs**.
+- [x] **TecFlow.Orquestrador/Controllers/AdvertisingProductsController.cs**.
+- [x] **TecFlow.SharedUi/Components/Pages/ProdutosPropaganda.razor** — formulário 1 col (mobile) / 2 cols (desktop), cards com copiar link.
+- [x] **TecFlow.SharedUi/wwwroot/tecflow-clipboard.js** — área de transferência Web/Mobile.
+- [x] **TecFlow.Tests/Unit/Advertising/AdvertisingProductServiceTests.cs**.
+
+### Fase 6.2 — Painel de conciliação financeira de afiliado (jun/2026)
+
+- [x] **TecFlow.Business/Dto/AffiliatePerformanceDto.cs** — cliques, conversões, CVR, comissão estimada/paga, retidos.
+- [x] **TecFlow.Business/Dto/CommissionDiscrepancyReportDto.cs** — divergências marketplace vs. TecFlow.
+- [x] **TecFlow.Business/Dto/MarketplaceCommissionLineDto.cs**, **AffiliateReconciliationResponseDto.cs**.
+- [x] **TecFlow.Database/Filter/AffiliateReconciliationFilter.cs** — período, affiliateId, paginação.
+- [x] **TecFlow.Business/Interfaces/Services/IAffiliateAnalyticsService.cs**.
+- [x] **TecFlow.Infrastructure.Services/Analytics/AffiliateAnalyticsService.cs** — fetch APIs + reconciliação.
+- [x] **TecFlow.Orquestrador/Controllers/AffiliateAnalyticsController.cs** — `api/afiliados/analytics/conciliacao`.
+- [x] **TecFlow.SharedUi/Components/Pages/ConciliacaoFinanceira.razor** — painel KPI + lista responsiva.
+- [x] **TecFlow.SharedUi/Components/Pages/ConciliacaoDetalhes.razor** — detalhe de linha divergente.
+- [x] **TecFlow.SharedUi/Services/Analytics/** — `IAffiliateAnalyticsApiService`, `AffiliateAnalyticsApiService`.
+- [x] **TecFlow.SharedUi/wwwroot/app.css** — `.conciliation-kpi-grid`, `.data-list-card--danger`.
+- [x] **TecFlow.Tests/Unit/Analytics/AffiliateAnalyticsServiceTests.cs**.
+
+### Fase 6.1 — Filas RabbitMQ e automação de engajamento (jun/2026)
+
+- [x] **TecFlow.Business/Messaging/** — `SocialMediaCommentReceivedEvent`, `AffiliateLinkDeliveryRequestedEvent`, `RabbitMqOptions`, `EngagementKeywordTriageOptions`.
+- [x] **TecFlow.Business/Interfaces/Messaging/** — `IEngagementEventPublisher`, `ICommentKeywordTriageService`, `IAffiliateLinkDeliveryNotifier`.
+- [x] **TecFlow.Business/Dto/SocialMediaCommentWebhookRequest.cs** — payload do webhook.
+- [x] **TecFlow.Infrastructure.Services/Messaging/** — `EngagementMessagingRegistrationExtensions`, `MassTransitEngagementEventPublisher`, `CommentKeywordTriageService`, `AffiliateLinkDeliveryNotifier`.
+- [x] **TecFlow.Infrastructure.Services/Messaging/Consumers/SocialMediaCommentConsumer.cs** — triagem e disparo simulado de link.
+- [x] **TecFlow.API/Controllers/SocialMediaWebhookController.cs** — `POST /api/webhooks/social-media/comments` → 202 + publicação na fila.
+- [x] **TecFlow.API/Program.cs**, **TecFlow.Worker/Program.cs**, **TecFlow.Orquestrador/Program.cs** — DI MassTransit (Publisher / Consumer).
+- [x] **appsettings.json** (API, Worker, Orquestrador) — seções `RabbitMq` e `EngagementTriage`.
+- [x] **TecFlow.Orquestrador/docker-compose.yml** — serviço `rabbitmq` (5672 / 15672).
+- [x] **TecFlow.Tests/Unit/Messaging/CommentKeywordTriageServiceTests.cs**, **SocialMediaWebhookControllerTests.cs**.
+
+### Fase 5.0 — Domínio afiliados e contratos de orquestração (jun/2026)
+
+- [x] **TecFlow.Core/Enums/SocialMediaType.cs** — Instagram, TikTok, YouTube, Facebook.
+- [x] **TecFlow.Core/Enums/EngagementStatus.cs** — Pendente, Processado, LinkEnviado, Falhou.
+- [x] **TecFlow.Core/Enums/CommissionStatus.cs** — Rastreado, Retido, Pago, Cancelado.
+- [x] **TecFlow.Core/Entities/AffiliateLink.cs** — produto de divulgação, `OriginalUrl`, `ShopeeTrackedUrl`, `TikTokShopTrackedUrl`, IDs externos e `TrackingCode`.
+- [x] **TecFlow.Business/Domain/Engagement/SocialEngagementEvent.cs** — evento de comentário/mensagem para triagem.
+- [x] **TecFlow.Business/Domain/Engagement/EngagementOrchestrationResult.cs** — resultado do disparo de link.
+- [x] **TecFlow.Business/Domain/Commission/CommissionAuditLine.cs** — linha de auditoria marketplace vs. local.
+- [x] **TecFlow.Business/Domain/Commission/CommissionConciliationResult.cs** — envelope da conciliação.
+- [x] **TecFlow.Business/Interfaces/Orchestration/IEngagementOrchestrator.cs** — contrato Orquestrador (engajamento).
+- [x] **TecFlow.Business/Interfaces/Orchestration/ICommissionConciliator.cs** — contrato Orquestrador (comissões).
+- [x] **TecFlow.Business/Dto/AffiliateLinkDto.cs**, **AffiliateLinkResponseDto.cs** — contratos API/UI futuros.
+- [x] **TecFlow.Database** — `MarketplaceAffiliateLink` persistido (Fase 6.3); `AffiliateLink` legado permanece conceitual.
+- [ ] **TecFlow.Orquestrador** — implementações concretas de `IEngagementOrchestrator` / `ICommissionConciliator` (Fase 6).
+
 ### Fase 4.3 — Push FCM/APNs + Deep Links (jun/2026)
 
 - [x] **TecFlow.Core/Entities/UserDeviceToken.cs** — registo de tokens por utilizador.

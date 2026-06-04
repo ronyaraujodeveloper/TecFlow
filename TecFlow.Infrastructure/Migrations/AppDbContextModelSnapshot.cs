@@ -213,6 +213,114 @@ namespace TecFlow.Infrastructure.Migrations
                     b.ToTable("Conversaos");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.GlobalAdvertisingProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AveragePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("PrecoMedio");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Descricao");
+
+                    b.Property<string>("FriendlyName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("NomeAmigavel");
+
+                    b.Property<string>("GlobalCategory")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("CategoriaGlobal");
+
+                    b.Property<Guid>("GlobalProductUid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MainImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("UrlImagemPrincipal");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GlobalProductUid")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("ProdutosPropagandaGlobal");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAffiliateLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomTrackingParameters")
+                        .HasColumnType("text")
+                        .HasColumnName("ParametrosRastreio");
+
+                    b.Property<string>("GeneratedAffiliateLink")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("LinkAfiliadoGerado");
+
+                    b.Property<int>("GlobalProductId")
+                        .HasColumnType("integer")
+                        .HasColumnName("ProdutoGlobalId");
+
+                    b.Property<int>("MarketplaceType")
+                        .HasColumnType("integer")
+                        .HasColumnName("Marketplace");
+
+                    b.Property<string>("OriginalProductUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("UrlProdutoOriginal");
+
+                    b.Property<string>("PlatformProductId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("IdProdutoPlataforma");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GlobalProductId", "MarketplaceType")
+                        .IsUnique();
+
+                    b.ToTable("MarketplaceAffiliateLinks");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrder", b =>
                 {
                     b.Property<int>("Id")
@@ -709,6 +817,28 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.GlobalAdvertisingProduct", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.UserAccount", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceAffiliateLink", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.GlobalAdvertisingProduct", "GlobalProduct")
+                        .WithMany("MarketplaceLinks")
+                        .HasForeignKey("GlobalProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GlobalProduct");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrderLine", b =>
                 {
                     b.HasOne("TecFlow.Core.Entities.MarketplaceOrder", "MarketplaceOrder")
@@ -763,6 +893,11 @@ namespace TecFlow.Infrastructure.Migrations
             modelBuilder.Entity("TecFlow.Core.Entities.Content", b =>
                 {
                     b.Navigation("Affiliates");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.GlobalAdvertisingProduct", b =>
+                {
+                    b.Navigation("MarketplaceLinks");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrder", b =>

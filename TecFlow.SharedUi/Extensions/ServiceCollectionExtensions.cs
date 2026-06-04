@@ -2,6 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TecFlow.SharedUi.Configuration;
 using TecFlow.SharedUi.Services.Auth;
+using TecFlow.SharedUi.Services.Advertising;
+using TecFlow.SharedUi.Services.Health;
+using TecFlow.SharedUi.Services.Analytics;
 using TecFlow.SharedUi.Services.Dashboard;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.State;
@@ -34,6 +37,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<ILoadingService, LoadingService>();
         services.AddScoped<IDashboardApiService, DashboardApiService>();
+        services.AddScoped<IAffiliateAnalyticsApiService, AffiliateAnalyticsApiService>();
+        services.AddScoped<IAdvertisingProductApiService, AdvertisingProductApiService>();
+        services.AddScoped<IPlatformHealthApiService, PlatformHealthApiService>();
         services.AddSingleton<INavigationIntentService, NavigationIntentService>();
         services.AddScoped<IDeviceRegistrationApiService, DeviceRegistrationApiService>();
 

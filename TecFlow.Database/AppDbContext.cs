@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<MarketplaceOrder> MarketplaceOrders { get; set; } = null!;
     public DbSet<MarketplaceOrderLine> MarketplaceOrderLines { get; set; } = null!;
     public DbSet<UserDeviceToken> UserDeviceTokens { get; set; } = null!;
+    public DbSet<GlobalAdvertisingProduct> GlobalAdvertisingProducts { get; set; } = null!;
+    public DbSet<MarketplaceAffiliateLink> MarketplaceAffiliateLinks { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -104,6 +106,24 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserDeviceToken>()
             .Property(t => t.DeviceId)
             .HasMaxLength(128);
+
+        modelBuilder.Entity<GlobalAdvertisingProduct>()
+            .Property(p => p.AveragePrice)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<GlobalAdvertisingProduct>()
+            .HasIndex(p => p.GlobalProductUid)
+            .IsUnique();
+
+        modelBuilder.Entity<GlobalAdvertisingProduct>()
+            .HasMany(p => p.MarketplaceLinks)
+            .WithOne(l => l.GlobalProduct)
+            .HasForeignKey(l => l.GlobalProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MarketplaceAffiliateLink>()
+            .HasIndex(l => new { l.GlobalProductId, l.MarketplaceType })
+            .IsUnique();
     }
 
     private void ConfigureSensitiveData(ModelBuilder modelBuilder)

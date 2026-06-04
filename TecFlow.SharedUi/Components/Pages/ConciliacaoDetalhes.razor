@@ -1,23 +1,130 @@
 @page "/conciliacao/detalhes/{Id:int}"
 @attribute [Authorize]
+@using System.Globalization
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Filter
+@using TecFlow.SharedUi.Services.Analytics
+@inject IAffiliateAnalyticsApiService AnalyticsApi
 
 <PageTitle>Conciliação #@Id — TecFlow</PageTitle>
 
 <div class="dashboard-page">
-    <h1 class="h3 fw-bold mb-3">Conciliação de comissões</h1>
-    <p class="text-muted mb-4">
-        Detalhe da conciliação <strong>#@Id</strong>.
-        Deep link: <code>tecflow://conciliacao/detalhes/@Id</code>
-    </p>
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <p class="mb-0 small text-muted">
-                Placeholder para painel financeiro — dados virão da API de comissões/afiliados.
-            </p>
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="/conciliacao/financeira">Conciliação financeira</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Detalhe #@Id</li>
+        </ol>
+    </nav>
+
+    <h1 class="h3 fw-bold mb-3">Detalhe da divergência</h1>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-warning">@_errorMessage</div>
+    }
+    else if (_line is not null)
+    {
+        <div class="card border-0 shadow-sm @( _line.IsDivergent ? "border-danger" : "")">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Pedido @(_line.ExternalOrderId)</h2>
+                        <span class="badge @GetStatusBadgeClass(_line.Status)">@(_line.Status)</span>
+                    </div>
+                    @if (_line.IsDivergent)
+                    {
+                        <span class="badge text-bg-danger">Divergente</span>
+                    }
+                </div>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Marketplace</dt>
+                    <dd class="col-sm-8">@(_line.Marketplace)</dd>
+                    <dt class="col-sm-4">Rastreio</dt>
+                    <dd class="col-sm-8"><code>@(_line.TrackingCode)</code></dd>
+                    <dt class="col-sm-4">Comissão esperada</dt>
+                    <dd class="col-sm-8">@(_line.ExpectedCommission.ToString("C2", PtBr))</dd>
+                    <dt class="col-sm-4">Comissão paga</dt>
+                    <dd class="col-sm-8">@(_line.PaidCommission.ToString("C2", PtBr))</dd>
+                    <dt class="col-sm-4">Diferença</dt>
+                    <dd class="col-sm-8 text-danger fw-semibold">@(_line.Difference.ToString("C2", PtBr))</dd>
+                    <dt class="col-sm-4">Motivo</dt>
+                    <dd class="col-sm-8">@(_line.Reason)</dd>
+                    @if (!string.IsNullOrWhiteSpace(_line.ProductSku))
+                    {
+                        <dt class="col-sm-4">SKU</dt>
+                        <dd class="col-sm-8">@(_line.ProductSku)</dd>
+                    }
+                    <dt class="col-sm-4">Data</dt>
+                    <dd class="col-sm-8">@(_line.OccurredAtUtc.ToLocalTime().ToString("g", PtBr))</dd>
+                </dl>
+            </div>
         </div>
-    </div>
+    }
+    else if (_loading)
+    {
+        <p class="text-muted">A carregar…</p>
+    }
 </div>
 
 @code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
     [Parameter] public int Id { get; set; }
+    [SupplyParameterFromQuery] public string? AffiliateId { get; set; }
+
+    private bool _loading = true;
+    private string? _errorMessage;
+    private CommissionDiscrepancyReportDto? _line;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _errorMessage = null;
+        _line = null;
+
+        if (string.IsNullOrWhiteSpace(AffiliateId))
+        {
+            _errorMessage = "Abra este detalhe a partir do painel de conciliação ou acrescente ?affiliateId= ao URL.";
+            _loading = false;
+            return;
+        }
+
+        var result = await AnalyticsApi.GetReconciliationAsync(new AffiliateReconciliationFilter
+        {
+            AffiliateId = AffiliateId,
+            StartDate = DateTime.UtcNow.AddDays(-90),
+            EndDate = DateTime.UtcNow,
+            Page = 1,
+            PageSize = 30
+        });
+
+        _loading = false;
+
+        if (!result.Success || result.Data?.Discrepancies is null)
+        {
+            _errorMessage = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível carregar o detalhe.";
+            return;
+        }
+
+        _line = result.Data.Discrepancies.FirstOrDefault(d => d.LineId == Id);
+        if (_line is null)
+        {
+            _errorMessage = $"Linha #{Id} não encontrada no relatório atual.";
+        }
+    }
+
+    private static string GetStatusBadgeClass(CommissionStatus status) => status switch
+    {
+        CommissionStatus.Pago => "text-bg-success",
+        CommissionStatus.Rastreado => "text-bg-primary",
+        CommissionStatus.Retido => "text-bg-warning",
+        CommissionStatus.Cancelado => "text-bg-secondary",
+        _ => "text-bg-danger"
+    };
 }

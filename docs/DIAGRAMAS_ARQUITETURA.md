@@ -78,11 +78,9 @@ Tecso.AutomacaoCusor/
 │   ├── Program.cs               # DI alinhado à API
 │   └── OrquestradorPrincipal.cs
 │
-├── TecFlow.Portal/              # Blazor UI
-│   ├── Components/, Services/, Models/, wwwroot/, …
-│
-├── TecFlow.Dashboard/           # MVC/Razor legado
-│   ├── Controllers/, Pages/, Views/, wwwroot/
+├── TecFlow.WebUi/               # Blazor UI canônico (Fase 3)
+│   ├── Components/, Services/, Extensions/, Models/, wwwroot/, …
+│   └── → TecFlow.Business (*ResponseDto, DashboardSummaryDto)
 │
 ├── TecFlow.Worker/              # Program.cs, WorkerService.cs
 ├── TecFlow.Tests/               # Mock/, Integration/, Unit/, Services/, …
@@ -97,8 +95,7 @@ flowchart TB
   subgraph hosts [Hosts]
     API[TecFlow.API]
     ORQ[TecFlow.Orquestrador]
-    POR[TecFlow.Portal]
-    DASH[TecFlow.Dashboard]
+    WEBUI[TecFlow.WebUi]
     WRK[TecFlow.Worker]
   end
   APP[TecFlow.Application]
@@ -131,7 +128,9 @@ flowchart TB
   INFSVC --> CORE
   INFSVC --> INF
   INFSVC --> UTIL
-  POR --> CORE
+  WEBUI --> BUS
+  WEBUI --> DB
+  WEBUI --> UTIL
   WRK --> INFSVC
 ```
 
@@ -147,7 +146,7 @@ flowchart TB
 | `Infrastructure/Data/AppDbContext` | **Movido** — `TecFlow.Database/AppDbContext.cs` |
 | `API/Middleware/ExceptionMiddleware` | **Removido da API** — único em `Core/Exceptions/` |
 | `Orquestrador` "Hello World" | **Obsoleto** — `Program.cs` completo com DI |
-| `TecFlow.Portal` ausente | **Incluir** — host Blazor na solution |
+| `TecFlow.Portal` / `TecFlow.Dashboard` | **Removidos** — UI canônica em `TecFlow.WebUi` |
 | 4 arquivos `*RegistrationExtensions` | **Ainda separados** — consolidação pendente |
 | `Infrastructure.Services/Interfaces/*.cs` | **Fantasmas** — excluídos do compile, ainda no disco |
 
@@ -377,7 +376,7 @@ TecFlow.Infrastructure.Services/Interfaces/
     ├────────────────────────────┤
     │ TecFlow.API                   │
     │ TecFlow.Orquestrador          │
-    │ TecFlow.Dashboard             │
+    │ TecFlow.WebUi                 │
     │ TecFlow.Worker (se usar)      │
     └────────────────────────────┘
 
@@ -451,6 +450,51 @@ TecFlow.Infrastructure.Services/Interfaces/
 | 🔴 | Status crítico |
 | △ | Fluxo ascendente |
 | ▼ | Fluxo descendente |
+
+---
+
+## 🖥️ DIAGRAMA 4: FLUXO WebUi — Filter / Dto / ResponseDto (Fase 3)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TecFlow.WebUi (Blazor Server)                                            │
+│  CampaignFilterForm ──bind──► CampaignFilter                             │
+│  MetricFilterForm   ──bind──► MetricFilter                               │
+│  CampaignCreateForm ──bind──► CampaignDto                                  │
+│  Dashboard.razor → IDashboardApiService → HttpService + query string    │
+└───────────────────────────────┬──────────────────────────────────────────┘
+                                │ HTTP + Bearer
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TecFlow.Orquestrador / TecFlow.API                                       │
+│  GET  api/Campanhas?[CampaignFilter]  → CampaignResponseDto              │
+│  GET  api/Metricas?[MetricFilter]     → MetricResponseDto                │
+│  POST api/Campanhas (CampaignDto)     → CampaignResponseDto              │
+│  POST api/Metricas  (MetricDto)       → MetricResponseDto                │
+└───────────────────────────────┬──────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Widgets leem ResponseDto.DataList (Campaign, Metric) + Status/Descricao   │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+```mermaid
+sequenceDiagram
+  participant Form as CampaignFilterForm
+  participant Page as Dashboard.razor
+  participant Svc as DashboardApiService
+  participant HTTP as HttpService
+  participant API as Orquestrador/API
+
+  Form->>Page: @bind CampaignFilter
+  Page->>Svc: GetCampaignsByFilterAsync(filter)
+  Svc->>HTTP: GET api/Campanhas?Name=...&StartDate=...
+  HTTP->>API: [FromQuery] CampaignFilter
+  API-->>HTTP: CampaignResponseDto
+  HTTP-->>Page: ApiResult CampaignResponseDto
+  Page->>Page: CampaignsWidget(Response.DataList)
+```
 
 ---
 

@@ -1,6 +1,6 @@
 // Versionar
 git add .
-git commit -m "Atualizalçao do diagrama de arquitetura e arquivo todo foi excluido"
+git commit -m "migração do portal para webUI"
 git push
 
 //Cursor a atualizar Git

@@ -1,0 +1,63 @@
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-0 pt-3 px-3">
+        <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" @onclick="Toggle">
+            @(IsExpanded ? "Ocultar" : "Nova campanha")
+        </button>
+    </div>
+    @if (IsExpanded)
+    {
+        <div class="card-body pt-0">
+            <EditForm Model="Model" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small">Nome</label>
+                        <InputText class="form-control form-control-sm" @bind-Value="Model.Name" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Descrição</label>
+                        <InputText class="form-control form-control-sm" @bind-Value="Model.Description" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Orçamento</label>
+                        <InputNumber class="form-control form-control-sm" @bind-Value="Model.Budget" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Início</label>
+                        <InputDate class="form-control form-control-sm" @bind-Value="Model.StartDate" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Fim</label>
+                        <InputDate class="form-control form-control-sm" @bind-Value="Model.EndDate" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-success w-100" disabled="@IsBusy">Salvar</button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    <p class="small mt-2 mb-0 @(IsSuccess ? "text-success" : "text-danger")">@StatusMessage</p>
+                }
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CampaignDto Model { get; set; } = new()
+    {
+        StartDate = DateTime.UtcNow.Date,
+        EndDate = DateTime.UtcNow.Date.AddMonths(1)
+    };
+
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public bool IsSuccess { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    private bool IsExpanded { get; set; }
+
+    private void Toggle() => IsExpanded = !IsExpanded;
+
+    private Task HandleSubmit() => OnSubmit.InvokeAsync();
+}

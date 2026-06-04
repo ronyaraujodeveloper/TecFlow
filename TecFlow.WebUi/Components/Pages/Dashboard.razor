@@ -1,0 +1,273 @@
+@page "/dashboard"
+
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+@inject ISessionStateService SessionState
+@inject IAuthCookieService AuthCookie
+@inject IDashboardApiService DashboardApi
+@inject ILoadingService LoadingService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Painel — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Painel</h1>
+            <p class="text-muted mb-0">
+                Bem-vindo, <strong>@_displayName</strong>
+                @if (_platform is not null)
+                {
+                    <span class="badge text-bg-primary ms-2">@_platform</span>
+                }
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" disabled="@_isLoading" @onclick="ReloadAsync">
+                Atualizar
+            </button>
+            <a href="/" class="btn btn-outline-secondary">Início</a>
+            <a href="/auth/logout" class="btn btn-outline-danger">Terminar sessão</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_globalError))
+    {
+        <ErrorAlert Message="@_globalError" IsOffline="@_isOffline" OnDismiss="@(EventCallback.Factory.Create(this, ClearGlobalError))" />
+    }
+
+    <div class="row g-3 mb-4">
+        <MetricsSummaryCards Stats="@_stats" />
+    </div>
+
+    <CampaignCreateForm Model="_campaignDto"
+                        IsBusy="_isSavingCampaign"
+                        StatusMessage="_campaignSaveMessage"
+                        IsSuccess="_campaignSaveSuccess"
+                        OnSubmit="CreateCampaignAsync" />
+
+    <CampaignFilterForm Filter="_campaignFilter"
+                        IsBusy="_isLoading"
+                        OnSearch="LoadCampaignsAsync"
+                        OnClear="ClearCampaignFiltersAsync" />
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <CampaignsWidget Response="@_campaignResponse" ErrorMessage="@_campaignsError" />
+        </div>
+        <div class="col-lg-4">
+            <PipelineStatusWidget Status="@_pipelineStatus"
+                                  IsLoading="@_pipelineLoading"
+                                  ErrorMessage="@_pipelineError" />
+        </div>
+    </div>
+
+    <MetricFilterForm Filter="_metricFilter"
+                      IsBusy="_isLoading"
+                      OnSearch="LoadMetricsAsync"
+                      OnClear="ClearMetricFiltersAsync" />
+
+    <MetricsWidget Response="@_metricResponse" ErrorMessage="@_metricsError" />
+</div>
+
+@code {
+    private string? _displayName;
+    private string? _platform;
+
+    private readonly CampaignFilter _campaignFilter = new();
+    private readonly MetricFilter _metricFilter = new();
+    private readonly CampaignDto _campaignDto = new()
+    {
+        StartDate = DateTime.UtcNow.Date,
+        EndDate = DateTime.UtcNow.Date.AddMonths(1)
+    };
+
+    private DashboardSummaryDto? _stats;
+    private CampaignResponseDto? _campaignResponse;
+    private MetricResponseDto? _metricResponse;
+    private PipelineStatusDto? _pipelineStatus;
+
+    private string? _globalError;
+    private string? _campaignsError;
+    private string? _metricsError;
+    private string? _pipelineError;
+    private string? _campaignSaveMessage;
+    private bool _campaignSaveSuccess;
+    private bool _isOffline;
+    private bool _isLoading;
+    private bool _isSavingCampaign;
+    private bool _pipelineLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Navigation.NavigateTo("/", replace: true);
+            return;
+        }
+
+        AuthCookie.SyncSessionFromPrincipal(user);
+
+        _displayName = user.Identity?.Name ?? SessionState.DisplayName ?? "Utilizador";
+        _platform = user.FindFirst(TecFlow.WebUi.Security.TecFlowClaimTypes.Platform)?.Value
+            ?? SessionState.ActivePlatform?.ToString();
+
+        await LoadDashboardDataAsync();
+    }
+
+    private async Task ReloadAsync() => await LoadDashboardDataAsync();
+
+    private async Task LoadDashboardDataAsync()
+    {
+        ClearGlobalError();
+        _campaignsError = null;
+        _metricsError = null;
+        _pipelineError = null;
+        _isLoading = true;
+        _pipelineLoading = true;
+
+        using var scope = LoadingService.BeginScope("A atualizar painel...");
+
+        var statsTask = DashboardApi.GetStatsAsync();
+        var campaignsTask = LoadCampaignsInternalAsync();
+        var metricsTask = LoadMetricsInternalAsync();
+        var pipelineTask = DashboardApi.GetPipelineStatusAsync();
+
+        await Task.WhenAll(statsTask, campaignsTask, metricsTask, pipelineTask);
+
+        ApplyStatsResult(await statsTask);
+        ApplyPipelineResult(await pipelineTask);
+
+        _isLoading = false;
+        _pipelineLoading = false;
+    }
+
+    private Task LoadCampaignsAsync() => LoadCampaignsInternalAsync();
+
+    private Task LoadMetricsAsync() => LoadMetricsInternalAsync();
+
+    private async Task LoadCampaignsInternalAsync()
+    {
+        var result = await DashboardApi.GetCampaignsByFilterAsync(_campaignFilter);
+
+        if (result.IsApiSuccess(out var response))
+        {
+            _campaignResponse = response;
+            _campaignsError = null;
+            return;
+        }
+
+        _campaignResponse = null;
+        _campaignsError = result.ResolveErrorMessage("Erro ao carregar campanhas.");
+        if (result.IsOffline)
+        {
+            SetGlobalError(result.ErrorMessage, result.IsOffline);
+        }
+    }
+
+    private async Task LoadMetricsInternalAsync()
+    {
+        var result = await DashboardApi.GetMetricsByFilterAsync(_metricFilter);
+
+        if (result.IsApiSuccess(out var response))
+        {
+            _metricResponse = response;
+            _metricsError = null;
+            return;
+        }
+
+        _metricResponse = null;
+        _metricsError = result.ResolveErrorMessage("Erro ao carregar métricas.");
+        if (result.IsOffline)
+        {
+            SetGlobalError(result.ErrorMessage, result.IsOffline);
+        }
+    }
+
+    private async Task CreateCampaignAsync()
+    {
+        _isSavingCampaign = true;
+        _campaignSaveMessage = null;
+
+        var result = await DashboardApi.CreateCampaignAsync(_campaignDto);
+
+        if (result.IsApiSuccess(out var response))
+        {
+            _campaignSaveSuccess = true;
+            _campaignSaveMessage = response!.Descricao;
+            _campaignDto.Name = string.Empty;
+            _campaignDto.Description = string.Empty;
+            _campaignDto.Budget = 0;
+            await LoadCampaignsInternalAsync();
+        }
+        else
+        {
+            _campaignSaveSuccess = false;
+            _campaignSaveMessage = result.ResolveErrorMessage("Não foi possível criar a campanha.");
+        }
+
+        _isSavingCampaign = false;
+    }
+
+    private async Task ClearCampaignFiltersAsync()
+    {
+        _campaignFilter.Name = null;
+        _campaignFilter.Description = null;
+        _campaignFilter.StartDate = null;
+        _campaignFilter.EndDate = null;
+        _campaignFilter.Budget = null;
+        await LoadCampaignsInternalAsync();
+    }
+
+    private async Task ClearMetricFiltersAsync()
+    {
+        _metricFilter.CampaignId = null;
+        _metricFilter.Views = null;
+        _metricFilter.Revenue = null;
+        _metricFilter.Clicks = null;
+        _metricFilter.Sales = null;
+        _metricFilter.Investment = null;
+        await LoadMetricsInternalAsync();
+    }
+
+    private void ApplyStatsResult(Models.ApiResult<DashboardSummaryDto> result)
+    {
+        if (result.Success)
+        {
+            _stats = result.Data ?? new DashboardSummaryDto();
+            return;
+        }
+
+        SetGlobalError(result.ErrorMessage, result.IsOffline);
+    }
+
+    private void ApplyPipelineResult(Models.ApiResult<PipelineStatusDto> result)
+    {
+        if (result.Success)
+        {
+            _pipelineStatus = result.Data;
+            return;
+        }
+
+        _pipelineError = result.ErrorMessage ?? "Não foi possível obter o estado do pipeline.";
+    }
+
+    private void SetGlobalError(string? message, bool isOffline)
+    {
+        _globalError = message;
+        _isOffline = isOffline;
+    }
+
+    private void ClearGlobalError()
+    {
+        _globalError = null;
+        _isOffline = false;
+    }
+}
+

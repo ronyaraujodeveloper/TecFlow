@@ -1,0 +1,53 @@
+@using TecFlow.WebUi.Models.Enums
+@inject IOAuthProviderRegistry OAuthRegistry
+@inject NavigationManager Navigation
+
+<button type="button"
+        class="btn @BtnClass btn-lg auth-provider-btn"
+        disabled="@(!_isEnabled)"
+        title="@_tooltip"
+        @onclick="StartOAuthAsync">
+    <span class="provider-icon @IconClass">@((MarkupString)IconContent)</span> @Label
+</button>
+
+@code {
+    [Parameter, EditorRequired] public AuthProvider Provider { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string IconClass { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string IconContent { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string BtnClass { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public LoginPlatform Platform { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private bool _isEnabled;
+    private string? _tooltip;
+
+    protected override void OnInitialized()
+    {
+        _isEnabled = OAuthRegistry.IsEnabled(Provider);
+        _tooltip = _isEnabled
+            ? $"Entrar com {Label}"
+            : $"Configure Authentication:OAuth:{GetConfigSectionName()} em appsettings";
+    }
+
+    private Task StartOAuthAsync()
+    {
+        if (!_isEnabled)
+        {
+            return OnError.InvokeAsync(
+                $"OAuth {Label} não configurado. Preencha ClientId/Secret em appsettings.");
+        }
+
+        var path = OAuthRegistry.GetChallengePath(Provider, Platform);
+        Navigation.NavigateTo(path, forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private string GetConfigSectionName() => Provider switch
+    {
+        AuthProvider.Google => "Google",
+        AuthProvider.Facebook => "Facebook",
+        AuthProvider.ICloud => "Apple",
+        _ => Provider.ToString()
+    };
+}

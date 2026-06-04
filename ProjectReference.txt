@@ -12,11 +12,9 @@ Arquivo CSProj: TecFlow.Application.csproj
 Arquivo CSProj: TecFlow.Core.csproj
   (Nenhuma ProjectReference encontrada neste csproj)
 
-Arquivo CSProj: TecFlow.Dashboard.csproj
-  - ..\TecFlow.Application\TecFlow.Application.csproj
-  - ..\TecFlow.Core\TecFlow.Core.csproj
-  - ..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj
-  - ..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj
+Arquivo CSProj: TecFlow.WebUi.csproj
+  - ..\TecFlow.Business\TecFlow.Business.csproj
+  - ..\TecFlow.Util\TecFlow.Util.csproj
 
 Arquivo CSProj: TecFlow.Infrastructure.Services.csproj
   - ..\TecFlow.Core\TecFlow.Core.csproj
@@ -41,3 +39,4 @@ Arquivo CSProj: TecFlow.Tests.csproj
 Arquivo CSProj: TecFlow.Util.csproj
   (Nenhuma ProjectReference encontrada neste csproj)
 
+// Removidos da solution (jun/2026): TecFlow.Portal, TecFlow.Dashboard

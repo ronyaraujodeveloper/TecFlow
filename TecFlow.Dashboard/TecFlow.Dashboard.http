@@ -1,6 +1,0 @@
-@TecFlow.Dashboard_HostAddress = http://localhost:5216
-
-GET {{TecFlow.Dashboard_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -4,7 +4,7 @@
 
 **Data**: 26 de Maio de 2026 | **Atualização de caminhos**: 3 de junho de 2026 | **Status**: ✅ Exploração Completa (referência histórica + gaps atuais)
 
-> **Árvore atual na raiz da solution** (`Tecso.AutomacaoCusor/`): hosts (`TecFlow.API`, `TecFlow.Orquestrador`, `TecFlow.Portal`, …), domínio em `TecFlow.Core/Entities` e `TecFlow.Core/Exceptions`, contratos e DTOs em **`TecFlow.Business/`**, persistência em **`TecFlow.Database/`** (`AppDbContext`, `Filter/`, `Entity/`, `Pagin/`), implementações em `TecFlow.Infrastructure` + `TecFlow.Infrastructure.Services`. Para duplicatas e limpeza pós-migração, use **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)** (estado de jun/2026).
+> **Árvore atual na raiz da solution** (`Tecso.AutomacaoCusor/`): hosts (`TecFlow.API`, `TecFlow.Orquestrador`, **`TecFlow.WebUi`**, `TecFlow.Worker`), domínio em `TecFlow.Core/Entities` e `TecFlow.Core/Exceptions`, contratos e DTOs em **`TecFlow.Business/`**, persistência em **`TecFlow.Database/`** (`AppDbContext`, `Filter/`, `Entity/`, `Pagin/`), implementações em `TecFlow.Infrastructure` + `TecFlow.Infrastructure.Services`. **`TecFlow.Portal`** e **`TecFlow.Dashboard`** foram descontinuados (jun/2026) — UI canônica em WebUi. Para duplicatas e limpeza pós-migração, use **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)**.
 
 ---
 
@@ -25,7 +25,7 @@
 
 ### 🎯 Visão Geral
 - **Total de Projetos**: 9 principais + 1 utilidades = 10 projetos
-- **Arquitetura**: Camadas (Core → Application → Infrastructure → API/Dashboard/Orquestrador)
+- **Arquitetura**: Camadas (Core → Application → Infrastructure → API/WebUi/Orquestrador)
 - **Framework**: .NET 8 | ASP.NET Core | Entity Framework Core
 - **Banco**: SQL Server
 
@@ -307,23 +307,29 @@ TecFlow.API/
 
 ---
 
-### 6️⃣ **TecFlow.Dashboard** - Apresentação (MVC/Razor)
-**Responsabilidade**: Interface web com MVC
+### 6️⃣ **TecFlow.WebUi** - Apresentação (Blazor Server)
+**Responsabilidade**: Interface web canônica — login OAuth, painel e consumo da API/Orquestrador via `*ResponseDto`
 
 ```
-TecFlow.Dashboard/
+TecFlow.WebUi/
 ├── Program.cs
-├── Controllers/ (não detalhados)
-├── Pages/ (Razor Pages)
-├── Views/ (MVC Views)
-├── Properties/
-├── wwwroot/ (assets estáticos)
-├── appsettings.json
-├── appsettings.Development.json
-└── TecFlow.Dashboard.csproj
+├── Components/
+│   ├── Pages/ (Home, Dashboard, Login TikTok/Shopee, Error)
+│   ├── Dashboard/ (CampaignsWidget, MetricsWidget, MetricsSummaryCards, PipelineStatusWidget)
+│   ├── Auth/, Layout/, Shared/
+│   └── App.razor, Routes.razor
+├── Services/
+│   ├── Dashboard/ (DashboardApiService → CampaignResponseDto, MetricResponseDto)
+│   ├── Auth/, Http/, State/, UI/
+├── Extensions/ (CampaignExtensions, Authentication, DI)
+├── Models/ (ApiResult, enums, PipelineStatusDto — sem DTOs duplicados de Business)
+├── Configuration/, Security/, wwwroot/
+├── appsettings.json, appsettings.Development.json
+└── TecFlow.WebUi.csproj
+    └── Referências: TecFlow.Business, TecFlow.Util
 ```
 
-**Status**: 🟡 Estrutura padrão ASP.NET MVC, pouco explorado
+**Status**: 🟢 Frontend ativo; substitui `TecFlow.Portal` e `TecFlow.Dashboard` (removidos jun/2026)
 
 ---
 
@@ -485,8 +491,8 @@ TEST CLASSES:      6+
 - 4 Pipeline files
 - **Total: 8 arquivos**
 
-**Dashboard + Worker + Tests + Util**
-- Dashboard: ~10+ arquivos
+**WebUi + Worker + Tests + Util**
+- WebUi: ~55+ arquivos (Blazor Server)
 - Worker: 1 arquivo
 - Tests: 6+ classes
 - Util: 1 csproj

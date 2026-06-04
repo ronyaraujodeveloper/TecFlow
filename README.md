@@ -7,7 +7,7 @@ Plataforma de automação e orquestração de processos (como gerenciamento de r
 
 ## 🛠️ Stack Tecnológica Definida
 - **Backend:** .NET 8.0 Web API (C#)
-- **Frontend:** Blazor WebApp / ASP.NET Core (.NET 8.0)
+- **Frontend:** Blazor WebApp — projeto **`TecFlow.WebUi`** (ASP.NET Core .NET 8.0)
 - **Banco de Dados:** PostgreSQL (Instalado localmente via EDB, Porta 5432)
 - **ORM:** Entity Framework Core (EF Core) com Npgsql
 
@@ -67,9 +67,9 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 
 ### Fase 3: Regras de Negócio, Telas e APIs Externas 🔄
 - [x] Refatorar Controllers para arquitetura de 3 objetos (Filter / Dto / ResponseDto) e remover Create/Update Dtos redundantes.
-- [ ] Migrar o projeto 'TecFlow.Portal' Adaptar o projeto `TecFlow.WebUi` para consumir os novos Services que retornam o padrão `ResponseDto`.
-- [ ] avaliar se preciso ter esse projeto 'TecFlow.Dashboard', se posso migrar para o `TecFlow.WebUi`
-- [ ] Integrar os componentes de tela aos filtros de listagem compostos pela pasta `Filter`.
+- [x] Migrar o projeto 'TecFlow.Portal' e adaptar o projeto `TecFlow.WebUi` para consumir os novos Services que retornam o padrão `ResponseDto`.
+- [x] Descontinuar `TecFlow.Portal` e `TecFlow.Dashboard`; **`TecFlow.WebUi`** é o frontend canônico (Blazor).
+- [x] Integrar os componentes de tela aos filtros de listagem compostos pela pasta `Filter`.
 - [ ] Integração real com as APIs de produção do TikTok Shop e Shopee.
 
  ## 📚 Documentação Complementar

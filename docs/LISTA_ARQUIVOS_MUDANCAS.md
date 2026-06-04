@@ -2,7 +2,7 @@
 
 **Última varredura:** 3 de junho de 2026  
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
-**Solution:** `TecFlow.sln` — 13 projetos (`TecFlow.*` + `Tecso.LerArquivos` externo)
+**Solution:** `TecFlow.sln` — 12 projetos `TecFlow.*` + `Tecso.LerArquivos` externo (Portal e Dashboard **removidos**)
 
 > **Nota de varredura:** Esta lista deve ser usada para eliminar **resíduos das pastas antigas** (*Tecso* / camadas pré-refatoração) que ainda geram conflitos de compilação — por exemplo, cópias de `ExceptionMiddleware` na API, interfaces fantasma em `Infrastructure.Services/Interfaces`, artefatos `bin/`/`obj/` versionados e namespaces legados (`TecFlow.API.Middlewares` em arquivos do Core). Priorize itens da seção **🚨 Conflitos** antes de novas features.
 
@@ -40,7 +40,29 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### DTOs espelhados (Portal vs Business)
 
-- [ ] **MetricDto.cs**, **CampaignDto.cs**, **DashboardSummaryDto.cs** — `TecFlow.Business/Dto/` e `TecFlow.Portal/Models/Responses/`. (Ação: Portal consumir DTOs de `TecFlow.Business` (referência de projeto) ou mapear explicitamente; evitar divergência de contrato.)
+- [x] **MetricDto.cs**, **CampaignDto.cs**, **DashboardSummaryDto.cs** — DTOs locais removidos de `TecFlow.Portal/Models/Responses/` e `TecFlow.WebUi/Models/Responses/`; UI consome `TecFlow.Business/Dto/` (`*ResponseDto`, `DashboardSummaryDto`) e entidades `TecFlow.Core.Entities` (`Campaign`, `Metric`).
+
+### Migração Portal → WebUi (Fase 3)
+
+- [x] **TecFlow.WebUi/** — projeto Blazor canônico na solution com referência a `TecFlow.Business`.
+- [x] **DashboardApiService.cs** (WebUi) — deserializa `CampaignResponseDto` / `MetricResponseDto` e expõe `DataList` para os widgets.
+- [x] **CampaignExtensions.cs** — helper `IsActive()` para entidade `Campaign`.
+- [x] DTOs locais removidos: `CampaignDto.cs`, `MetricDto.cs`, `DashboardSummaryDto.cs` (WebUi).
+- [x] **TecFlow.Portal/** — removido da solution e excluído do disco (substituído por WebUi).
+- [x] **TecFlow.Dashboard/** — removido da solution e excluído do disco (scaffold MVC obsoleto).
+
+### WebUi — arquitetura Filter / Dto / ResponseDto (Fase 3)
+
+- [x] **TecFlow.WebUi.csproj** — referência explícita a `TecFlow.Database` (tipos `*Filter`).
+- [x] **Extensions/FilterQueryStringExtensions.cs** — serializa `*Filter` em query string para GET.
+- [x] **Extensions/ResponseDtoExtensions.cs** — valida `Status`/`Descricao` dos envelopes na UI.
+- [x] **Services/Http/HttpService.cs** — `GetAsync(url, filter)`, `PutAsync` para POST/PUT com Dto.
+- [x] **Services/Dashboard/DashboardApiService.cs** — `Get*ByFilterAsync(CampaignFilter|MetricFilter)`, `Create*Async(CampaignDto|MetricDto)`.
+- [x] **Components/Dashboard/CampaignFilterForm.razor** — data binding → `CampaignFilter`.
+- [x] **Components/Dashboard/MetricFilterForm.razor** — data binding → `MetricFilter`.
+- [x] **Components/Dashboard/CampaignCreateForm.razor** — formulário POST com `CampaignDto`.
+- [x] **Components/Dashboard/CampaignsWidget.razor** / **MetricsWidget.razor** — leem `*ResponseDto.DataList` diretamente.
+- [x] **Components/Pages/Dashboard.razor** — orquestra filtros, listagens e criação padronizados.
 
 ### Colisão semântica (nome enganoso)
 
@@ -114,8 +136,8 @@ Arquivos já no projeto físico correto, mas com `namespace` desalinhado da past
 
 - [ ] `TecFlow.API/WeatherForecast.cs` + `Controllers/WeatherForecastController.cs`  
 - [ ] `TecFlow.API/Controllers/TestController.cs`  
-- [ ] `TecFlow.Dashboard/WeatherForecast.cs` + `Controllers/WeatherForecastController.cs`  
-(Ação: excluir se não usados em produção.)
+- [x] `TecFlow.Dashboard/` — projeto removido (WeatherForecast scaffold eliminado com a pasta).
+(Ação API: excluir scaffolds se não usados em produção.)
 
 ### Projeto Application quase vazio
 
@@ -179,8 +201,10 @@ TecFlow.sln
 ├── TecFlow.Application/             # ⚠ quase vazio — 1 arquivo stub
 ├── TecFlow.API/                     # Host HTTP principal
 ├── TecFlow.Orquestrador/            # Host orquestração (controllers espelhados)
-├── TecFlow.Portal/                  # Blazor/UI — DTOs locais duplicados
-├── TecFlow.Dashboard/               # Scaffold
+├── TecFlow.WebUi/                   # Blazor UI canônico → Business + Database (Filter)
+│   ├── Components/Dashboard/        # FilterForm, CreateForm, Widgets (ResponseDto)
+│   ├── Extensions/                  # FilterQueryString, ResponseDto, Campaign
+│   └── Services/Dashboard/          # Filter → API → ResponseDto
 ├── TecFlow.Worker/
 ├── TecFlow.Tests/
 ├── TecFlow.Util/                    # ValidationHelper, Encryption, CEP
@@ -190,7 +214,7 @@ TecFlow.sln
 ### Grafo de referências (simplificado)
 
 ```
-API / Orquestrador / Worker / Dashboard
+API / Orquestrador / Worker / WebUi
   → Application (quase vazio)
   → Business → Core, Database
   → Infrastructure.Services → Infrastructure → Business, Core, Database, Util
@@ -212,7 +236,7 @@ API / Orquestrador / Worker / Dashboard
 | 5 | Alinhar Migrations com `TecFlow.Database` | Alto — schema/EF |
 | 6 | `dotnet clean` + `.gitignore` para bin/obj/Tecso.* | Baixo — higiene Git |
 | 7 | Unificar `ValidationHelper` | Baixo |
-| 8 | Portal usar DTOs de Business | Médio — contrato API |
+| 8 | WebUi usar DTOs de Business | Concluído |
 
 ---
 

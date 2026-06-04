@@ -4,6 +4,10 @@
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
 **Solution:** `TecFlow.sln` — 13 projetos (`TecFlow.*` + `Tecso.LerArquivos` externo)
 
+> **Nota de varredura:** Esta lista deve ser usada para eliminar **resíduos das pastas antigas** (*Tecso* / camadas pré-refatoração) que ainda geram conflitos de compilação — por exemplo, cópias de `ExceptionMiddleware` na API, interfaces fantasma em `Infrastructure.Services/Interfaces`, artefatos `bin/`/`obj/` versionados e namespaces legados (`TecFlow.API.Middlewares` em arquivos do Core). Priorize itens da seção **🚨 Conflitos** antes de novas features.
+
+**Navegação:** [« Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md)
+
 Use esta lista como painel de controle para garantir que nenhuma classe antiga ficou duplicada e que todos os namespaces estejam nos projetos corretos.
 
 ---

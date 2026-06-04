@@ -1,0 +1,8 @@
+// Versionar
+git add .
+git commit -m "Atualizalçao do diagrama de arquitetura e arquivo todo foi excluido"
+git push
+
+//Cursor a atualizar Git
+Use o atalho Ctrl + Shift + P
+Digite Developer: Reload Window e pressione Enter.

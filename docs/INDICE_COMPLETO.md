@@ -1,15 +1,17 @@
-# 📑 ÍNDICE COMPLETO - EXPLORAÇÃO TecFlow.AUTOMACAO
+# 📑 ÍNDICE COMPLETO - EXPLORAÇÃO TecFlow
 
-**Data:** 26 de Maio de 2026  
+**Data:** 26 de Maio de 2026 · **Atualização de links:** 3 de junho de 2026  
 **Status:** ✅ Exploração Completa  
-**Total de Documentos:** 5  
+**Total de Documentos:** 5 (+ README na raiz)  
 **Total de Páginas:** ~100+  
+
+[Ir para o README Principal](../README.md)
 
 ---
 
 ## 📋 DOCUMENTOS GERADOS
 
-### 1️⃣ **RESUMO_EXECUTIVO.md** (Este documento)
+### 1️⃣ **[RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md)**
 **Tipo**: Sumário de alta nível  
 **Público**: Qualquer um  
 **Tempo de Leitura**: 10 minutos  
@@ -26,7 +28,7 @@
 
 ---
 
-### 2️⃣ **ANALISE_WORKSPACE_COMPLETA.md** (PRINCIPAL)
+### 2️⃣ **[ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md)** (PRINCIPAL)
 **Tipo**: Análise profunda detalhada  
 **Público**: Arquitetos, líderes técnicos  
 **Tempo de Leitura**: 60-90 minutos  
@@ -51,7 +53,7 @@
 
 ---
 
-### 3️⃣ **LISTA_ARQUIVOS_MUDANCAS.md** (EXECUTIVA)
+### 3️⃣ **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)** (EXECUTIVA)
 **Tipo**: Plano de ação detalha e passo-a-passo  
 **Público**: Desenvolvedores, arquitetos  
 **Tempo de Leitura**: 45 minutos  
@@ -81,7 +83,7 @@
 
 ---
 
-### 4️⃣ **DIAGRAMAS_ARQUITETURA.md** (VISUAL)
+### 4️⃣ **[DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md)** (VISUAL)
 **Tipo**: Visualizações e diagramas ASCII  
 **Público**: Todos (especialmente visual learners)  
 **Tempo de Leitura**: 30 minutos  
@@ -101,7 +103,7 @@
 
 ---
 
-### 5️⃣ **ÍNDICE_COMPLETO.md** (Este arquivo)
+### 5️⃣ **INDICE_COMPLETO.md** (este arquivo)
 **Tipo**: Guia de navegação  
 **Público**: Todos  
 **Tempo de Leitura**: 5 minutos  
@@ -120,19 +122,19 @@
 ### Se você quer...
 
 **... entender RAPIDAMENTE o problema**
-→ Leia: [RESUMO_EXECUTIVO.md](#1-resumo_executivomd) (10 min)
+→ Leia: [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
 
 **... entender em PROFUNDIDADE o problema**
-→ Leia: [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd) (60 min)
+→ Leia: [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min)
 
 **... VER VISUALMENTE o problema**
-→ Leia: [DIAGRAMAS_ARQUITETURA.md](#4-diagramas_arquiteturamd) (30 min)
+→ Leia: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) (30 min)
 
 **... começar A IMPLEMENTAR a solução**
-→ Leia: [LISTA_ARQUIVOS_MUDANCAS.md](#3-lista_arquivos_mudancasmd) (45 min)
+→ Leia: [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) (45 min)
 
 **... aprender sobre um PROJETO ESPECÍFICO**
-→ Abra [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd) e procure por:
+→ Abra [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) e procure por:
 - "TecFlow.Core" - Seção 🏗️ ESTRUTURA DE PROJETOS
 - "TecFlow.Application" - Seção 🏗️ ESTRUTURA DE PROJETOS
 - "TecFlow.Infrastructure" - Seção 🏗️ ESTRUTURA DE PROJETOS
@@ -145,38 +147,39 @@
 - Tipo de problema (ex: "DUPLICATA")
 
 **... ver a LISTA DE MUDANÇAS**
-→ Abra [LISTA_ARQUIVOS_MUDANCAS.md](#3-lista_arquivos_mudancasmd)
-→ Seção "CHECKLIST DE IMPLEMENTAÇÃO"
+→ Abra [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)
+→ Seções **🚨 Conflitos**, **🚚 Namespace** e **🧹 Resíduos**
 
 ---
 
 ## 🎓 RECOMENDAÇÕES POR PERFIL
 
 ### 👨‍💼 GERENTE / LÍDER
-1. Leia [RESUMO_EXECUTIVO.md](#1-resumo_executivomd) (10 min)
+1. Leia [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
 2. Foque em: "Problemas Críticos" + "ROI"
 3. Decisão: Autorizar as 6 horas de refatoração
 
 ### 👨‍🏫 ARQUITETO
-1. Leia [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd) (60 min)
-2. Leia [DIAGRAMAS_ARQUITETURA.md](#4-diagramas_arquiteturamd) (30 min)
+1. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min)
+2. Leia [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) (30 min)
 3. Foque em: "Mapeamento Interface × Implementação" + "Estrutura Proposta"
 4. Valide a solução proposta
 
 ### 👨‍💻 DESENVOLVEDOR (Vai Implementar)
-1. Leia [RESUMO_EXECUTIVO.md](#1-resumo_executivomd) (10 min)
-2. Leia [LISTA_ARQUIVOS_MUDANCAS.md](#3-lista_arquivos_mudancasmd) (45 min)
-3. Ref: [DIAGRAMAS_ARQUITETURA.md](#4-diagramas_arquiteturamd) durante implementação
+1. Leia [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
+2. Leia [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) (45 min)
+3. Ref: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) durante implementação
 4. Execute o CHECKLIST fase por fase
 
 ### 👨‍💻 DESENVOLVEDOR (Code Review)
-1. Leia [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd) (60 min) - IMPORTANTE!
-2. Ref: [DIAGRAMAS_ARQUITETURA.md](#4-diagramas_arquiteturamd) durante review
+1. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min) - IMPORTANTE!
+2. Ref: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) durante review
 3. Validar: Nenhum novo problema foi introduzido
 
 ### 📚 NOVO NO PROJETO
-1. Leia [RESUMO_EXECUTIVO.md](#1-resumo_executivomd) (10 min)
-2. Leia [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd) - Seção "🏗️ ESTRUTURA DE PROJETOS" (30 min)
+1. Leia [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
+2. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) - Seção "🏗️ ESTRUTURA DE PROJETOS" (30 min)
+3. Leia [README principal](../README.md) — regras de código e roadmap
 3. Explore os 10 projetos no seu IDE
 4. Volte e leia completo quando tiver tempo
 
@@ -248,7 +251,7 @@
 - [ ] Leu LISTA_ARQUIVOS_MUDANCAS.md
 - [ ] Visualizou DIAGRAMAS_ARQUITETURA.md
 - [ ] Fez backup de Git (`git commit -m "backup before refactoring"`)
-- [ ] Tem editor aberto em TecFlow.Automacao
+- [ ] Tem editor aberto em `Tecso.AutomacaoCusor` (raiz do `TecFlow.sln`)
 - [ ] Criou branch novo (`git checkout -b refactor/service-registration`)
 - [ ] Pronto para começar FASE 1
 
@@ -306,29 +309,38 @@
 
 **Dúvidas sobre:**
 
-- **Um específico problema** → Procure em [ANALISE_WORKSPACE_COMPLETA.md](#2-analise_workspace_completamd)
-- **Como implementar** → Use [LISTA_ARQUIVOS_MUDANCAS.md](#3-lista_arquivos_mudancasmd)
-- **Visualizar arquitetura** → Consulte [DIAGRAMAS_ARQUITETURA.md](#4-diagramas_arquiteturamd)
-- **Decisões gerenciais** → Leia [RESUMO_EXECUTIVO.md](#1-resumo_executivomd)
+- **Um específico problema** → [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md)
+- **Como implementar** → [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)
+- **Visualizar arquitetura** → [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md)
+- **Decisões gerenciais** → [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md)
+- **Roadmap e padrões de código** → [README principal](../README.md)
 
 ---
 
 ## 📚 ESTRUTURA DE DOCUMENTOS
 
 ```
-ROOT: c:\Programacao\TecFlow.Automacao\
+ROOT: c:\Programacao\Tecso.AutomacaoCusor\
 │
-├── 📑 RESUMO_EXECUTIVO.md ..................... [10 min - START HERE]
-├── 📊 ANALISE_WORKSPACE_COMPLETA.md .......... [60 min - DEEP DIVE]
-├── 📋 LISTA_ARQUIVOS_MUDANCAS.md ........... [45 min - ACTION PLAN]
-├── 🏗️ DIAGRAMAS_ARQUITETURA.md ............. [30 min - VISUAL]
-├── 📑 INDICE_COMPLETO.md ................... [THIS FILE]
+├── README.md ............................... [Roadmap, regras, links para docs]
+├── TecFlow.sln ............................. [13 projetos TecFlow.*]
+├── docs/
+│   ├── 📑 RESUMO_EXECUTIVO.md .............. [10 min - START HERE]
+│   ├── 📊 ANALISE_WORKSPACE_COMPLETA.md .... [60 min - DEEP DIVE]
+│   ├── 📋 LISTA_ARQUIVOS_MUDANCAS.md ....... [45 min - ACTION PLAN / varredura]
+│   ├── 🏗️ DIAGRAMAS_ARQUITETURA.md ......... [30 min - VISUAL]
+│   ├── 📑 INDICE_COMPLETO.md ............... [este arquivo]
+│   └── ComandosGit.txt ..................... [comandos Git — sem tokens no arquivo]
 │
-└── [10 projetos .NET com ~140 arquivos]
+├── TecFlow.Business/ ....................... [Dto, Interfaces, Service, Pipelines]
+├── TecFlow.Database/ ....................... [AppDbContext, Filter, Entity, Pagin]
+├── TecFlow.Core/ ........................... [Entities, Exceptions]
+├── TecFlow.API/ ............................ [host HTTP]
+└── [demais projetos: Orquestrador, Portal, Infrastructure, …]
 ```
 
 ---
 
 **Documentação Completa e Pronta Para Usar ✅**
 
-*Gerado em 26/05/2026 - Exploração TecFlow.Automacao*
+*Gerado em 26/05/2026 · Links atualizados em 03/06/2026 — pasta `docs/`*

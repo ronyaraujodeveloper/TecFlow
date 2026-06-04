@@ -1,4 +1,0 @@
-// Versionar
-git add .
-git commit -m "Refatoração de locais de classes em seus devidos projetos e Warning"
-git push

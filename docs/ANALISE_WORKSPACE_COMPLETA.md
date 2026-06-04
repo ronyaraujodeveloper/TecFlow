@@ -1,6 +1,10 @@
-# 📊 ANÁLISE PROFUNDA COMPLETA - WORKSPACE TecFlow.AUTOMACAO
+# 📊 ANÁLISE PROFUNDA COMPLETA - WORKSPACE TecFlow
 
-**Data**: 26 de Maio de 2026 | **Status**: ✅ Exploração Completa
+[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
+
+**Data**: 26 de Maio de 2026 | **Atualização de caminhos**: 3 de junho de 2026 | **Status**: ✅ Exploração Completa (referência histórica + gaps atuais)
+
+> **Árvore atual na raiz da solution** (`Tecso.AutomacaoCusor/`): hosts (`TecFlow.API`, `TecFlow.Orquestrador`, `TecFlow.Portal`, …), domínio em `TecFlow.Core/Entities` e `TecFlow.Core/Exceptions`, contratos e DTOs em **`TecFlow.Business/`**, persistência em **`TecFlow.Database/`** (`AppDbContext`, `Filter/`, `Entity/`, `Pagin/`), implementações em `TecFlow.Infrastructure` + `TecFlow.Infrastructure.Services`. Para duplicatas e limpeza pós-migração, use **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)** (estado de jun/2026).
 
 ---
 
@@ -1058,7 +1062,7 @@ TecFlow.Orquestrador/
 ## 🎯 CONCLUSÃO
 
 ### Situação Atual
-O workspace TecFlow.Automacao possui uma arquitetura bem pensada em **camadas**, mas com **implementação problemática** em termos de:
+O workspace `Tecso.AutomacaoCusor` (solution **TecFlow.sln**) possui uma arquitetura bem pensada em **camadas**, mas com **implementação problemática** em termos de:
 - Duplicação massiva de configuração de dependências
 - Organização inconsistente de arquivos
 - Falta de consolidação de service registration
@@ -1080,4 +1084,5 @@ O workspace TecFlow.Automacao possui uma arquitetura bem pensada em **camadas**,
 ---
 
 **FIM DA ANÁLISE COMPLETA**
-*Próximo passo: Confirmar plano de reorganização e começar PHASE 1*
+
+*Próximo passo:* [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) (checklist atualizado) · [INDICE_COMPLETO.md](./INDICE_COMPLETO.md)

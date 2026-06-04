@@ -3,7 +3,7 @@
 > **Painel principal do projeto** (antigo `TODO.md`). Tarefas, regras de código e links para `docs/`. A IA deve marcar checkboxes aqui ao concluir implementações (ver `.cursorrules`).
 
 ## 🎯 Objetivo do Projeto
-Plataforma de automação e orquestração de processos (como gerenciamento de rotinas, controle de hardware e integrações). O ecossistema contará com um backend robusto em C# e um frontend web amigável para controle e monitoramento.
+Plataforma de **automação e inteligência para afiliados de alta escala**: orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend **`TecFlow.WebUi`** para controle, auditoria e monitoramento em produção.
 
 ## 🛠️ Stack Tecnológica Definida
 - **Backend:** .NET 8.0 Web API (C#)
@@ -70,9 +70,47 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 - [x] Migrar o projeto 'TecFlow.Portal' e adaptar o projeto `TecFlow.WebUi` para consumir os novos Services que retornam o padrão `ResponseDto`.
 - [x] Descontinuar `TecFlow.Portal` e `TecFlow.Dashboard`; **`TecFlow.WebUi`** é o frontend canônico (Blazor).
 - [x] Integrar os componentes de tela aos filtros de listagem compostos pela pasta `Filter`.
-- [ ] Integração real com as APIs de produção do TikTok Shop e Shopee.
+  - [ ] Integração real com as APIs de produção do TikTok Shop e Shopee.
+  - [x] 3.1. Infraestrutura Core de Integração: Criar os HttpClient específicos, handlers de resiliência (Polly) e logs de requisições.
+  - [x] 3.2. Fluxo de Autenticação & OAuth2: Implementar a geração de URL de autorização, captura do Authorization Code e armazenamento seguro/renovação automática do Access Token e Refresh Token para ambas as plataformas.
+  - [x] 3.3. Sincronização de Catálogo (Produtos): Implementar mapeamento de payloads, busca de produtos das plataformas e conversão para o nosso padrão [Nome]ResponseDto.
+  - [x] 3.4. Gestão de Pedidos & Estoque: Estruturar os endpoints/serviços para receber webhooks ou realizar polling de novos pedidos e atualizar estoque de forma bidirecional.
 
- ## 📚 Documentação Complementar
+### Fase 4: Inteligência para Afiliados, Mensageria e Escala 🚀
+- [ ] 4.1. Sistema de Filas e Mensageria (Foco em Automação de Engajamento)
+  - [ ] Implementar infraestrutura com RabbitMQ ou Azure Service Bus no ecossistema TecFlow.
+  - [ ] Criar Webhooks/BackgroundServices para monitorar em tempo real mensagens e comentários postados em suas publicações nas redes/marketplaces.
+  - [ ] Estruturar fila de processamento assíncrono para triagem de palavras-chave (ex: identificar comentários como "eu quero" ou "link") e preparar a entrega automatizada do link de afiliado correto sem sobrecarregar o banco de dados.
+
+- [ ] 4.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi)
+  - [ ] Criar módulo visual no 'TecFlow.WebUi' focado no rastreio e auditoria de comissões de afiliado.
+  - [ ] Integrar com as APIs de performance de afiliados da Shopee e TikTok Shop para buscar o relatório de cliques, conversões e comissões geradas.
+  - [ ] Desenvolver lógica de conciliação para bater as vendas rastreadas pelos seus links com os pagamentos reais efetuados pelas plataformas, detalhando quais produtos divulgados geraram a comissão correta e alertando sobre divergências de valores.
+
+- [ ] 4.3. Mecanismo de Mapeamento de Produtos e Atributos Globais para Propaganda
+  - [ ] Adaptar a estrutura de catálogos para mapear "Produtos de Propaganda/Divulgação" em vez de estoque físico próprio.
+  - [ ] Criar uma estrutura de "Dados Globais do Produto" (Nome Amigável, Categoria Global, Imagens de Destaque, Preço Médio e Seus Links de Afiliado Shopee/TikTok).
+  - [ ] Desenvolver um gerador de metadados baseado nesses atributos para alimentar automaticamente suas ferramentas de postagem, garantindo que as informações do produto saiam padronizadas e corretas em qualquer canal de divulgação.
+
+- [ ] 4.4. Observabilidade e Telemetria (Monitoramento de Produção)
+  - [ ] Instalar o OpenTelemetry nos projetos centrais do TecFlow.
+  - [ ] Configurar exportadores de logs e métricas (como Seq ou Prometheus/Grafana) para monitorar a saúde do ecossistema em produção.
+  - [ ] Criar um mini-dashboard de saúde técnica para acompanhar taxas de sucesso das requisições de webhook de comentários, tempo de resposta das APIs de comissão e alertas de falhas em segundo plano.
+
+### Fase 5: Módulo de Vendas Diretas e Gestão de Estoque (Futuro) 📦
+- [ ] 5.1. Arquitetura Multi-Tenant / Multi-Conta por Marketplace (SaaS Ready)
+  - [ ] Ajustar a modelagem do banco de dados na camada 'Database' para suportar o conceito de inquilinos (Tenants) e vinculação de múltiplos 'ShopId' por usuário.
+  - [ ] Adaptar as queries e repositórios para isolar os dados de cada loja, permitindo que o lojista gerencie múltiplos CNPJs/Contas da Shopee e TikTok Shop no mesmo painel.
+
+- [ ] 5.2. Core de Vendas, Faturamento e ERP Local
+  - [ ] Criar entidades de 'Pedido de Venda' (Order), 'Cliente' (Customer) e 'Item do Pedido' para registrar vendas próprias.
+  - [ ] Estruturar o fluxo de estados do pedido (Pendente, Pago, Faturado, Enviado, Concluído) e preparar ganchos para futura integração com emissão de Notas Fiscais Eletrônicas (NF-e).
+
+- [ ] 5.3. Controle Avançado de Estoque Próprio (Estoque Físico)
+  - [ ] Implementar tabelas de movimentação de estoque (Entradas por compra, Saídas por venda, Ajustes manuais, Estoque Mínimo e Alertas).
+  - [ ] Desenvolver serviço de reserva de estoque para garantir que, no momento em que um pedido de venda direta for gerado, as unidades fiquem bloqueadas temporariamente até a confirmação do pagamento, evitando o Overbooking (vender o que não tem).
+
+## 📚 Documentação Complementar
 * Veja a [Lista de Mudanças de Arquivos](./docs/LISTA_ARQUIVOS_MUDANCAS.md)
 * Veja a [ANALISE WORKSPACE COMPLETA](./docs/ANALISE_WORKSPACE_COMPLETA.md)
 * Veja a [INDICE COMPLETO](./docs/INDICE_COMPLETO.md)

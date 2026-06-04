@@ -19,7 +19,15 @@ builder.Host.UseSerilog((context, configuration) => configuration
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
 
 builder.Services.AddTecFlowCoreServices();
 builder.Services.AddTecFlowInfrastructureServices(builder.Configuration);
@@ -63,11 +71,13 @@ var app = builder.Build();
 app.UseTecFlowTelemetry();
 app.UseMiddleware<ExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// Homologação/IIS: exposto globalmente para diagnóstico (restringir por ambiente após validação).
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TecFlow.API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseStaticFiles();
 app.UseRouting();

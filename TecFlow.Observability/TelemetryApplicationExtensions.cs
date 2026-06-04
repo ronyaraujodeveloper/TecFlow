@@ -20,6 +20,7 @@ public static class TelemetryApplicationExtensions
 
         if (options.EnablePrometheusEndpoint)
         {
+            // Requer AddPrometheusExporter() em AddTecFlowTelemetry → WithMetrics.
             app.UseOpenTelemetryPrometheusScrapingEndpoint(options.PrometheusEndpointPath);
         }
 

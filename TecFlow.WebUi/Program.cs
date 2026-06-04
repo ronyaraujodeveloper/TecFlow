@@ -12,6 +12,9 @@ builder.Services.AddWebUiAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
+// wwwroot, _content (RCL) e *.styles.css devem ser atendidos antes de auth/rotas Blazor.
+app.UseStaticFiles();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -19,7 +22,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();

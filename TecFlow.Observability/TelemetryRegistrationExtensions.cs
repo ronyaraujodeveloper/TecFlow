@@ -89,6 +89,11 @@ public static class TelemetryRegistrationExtensions
                 {
                     metrics.AddOtlpExporter(exp => exp.Endpoint = new Uri(options.OtlpEndpoint));
                 }
+
+                if (options.EnablePrometheusEndpoint)
+                {
+                    metrics.AddPrometheusExporter();
+                }
             });
 
         services.AddLogging(logging =>

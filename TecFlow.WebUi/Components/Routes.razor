@@ -1,6 +1,8 @@
-<Router AppAssembly="typeof(Program).Assembly">
+@using TecFlow.SharedUi.Extensions
+
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(ServiceCollectionExtensions).Assembly }">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(TecFlow.SharedUi.Components.Layout.MainLayout)">
             <NotAuthorized>
                 @if (context.User.Identity?.IsAuthenticated != true)
                 {

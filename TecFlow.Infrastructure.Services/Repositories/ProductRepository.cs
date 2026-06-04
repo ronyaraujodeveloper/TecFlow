@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Infrastructure.Configuration;
 using TecFlow.Database;
@@ -84,6 +85,47 @@ namespace TecFlow.Infrastructure.Services.Repositories
             _context.Products.Add(produto);
             await _context.SaveChangesAsync();
             return produto;
+        }
+
+        public async Task<Product?> GetByMarketplaceSkuAsync(
+            string shopId,
+            MarketplaceType marketplaceType,
+            string externalSkuId)
+        {
+            if (string.IsNullOrWhiteSpace(externalSkuId))
+            {
+                return null;
+            }
+
+            return await _context.Products.FirstOrDefaultAsync(p =>
+                p.MarketplaceShopId == shopId &&
+                p.MarketplaceSource == marketplaceType &&
+                (p.SkuCode == externalSkuId || p.ExternalProductId == externalSkuId));
+        }
+
+        public async Task<int> AdjustStockAsync(
+            int productId,
+            int delta,
+            CancellationToken cancellationToken = default)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
+
+            if (product is null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return -1;
+            }
+
+            product.Stock = Math.Max(0, product.Stock + delta);
+            product.ModifiedOn = DateTime.UtcNow;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return product.Stock;
         }
     }
 }

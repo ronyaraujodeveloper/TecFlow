@@ -75,6 +75,10 @@ namespace TecFlow.Infrastructure.Services
             services.AddScoped<ICampaignRepository, CampaignRepository>();
             services.AddScoped<IContentRepository, ContentRepository>();
             services.AddScoped<IUserAccountRepository, UserAccountRepository>();
+            services.AddScoped<IMarketplaceTokenRepository, MarketplaceTokenRepository>();
+            services.AddScoped<IMarketplaceOrderRepository, MarketplaceOrderRepository>();
+            services.AddScoped<IUserDeviceTokenRepository, UserDeviceTokenRepository>();
+            services.AddScoped<IAffiliateRepository, AffiliateRepository>();
             services.AddScoped<IMetricRepository, MetricRepository>();
             services.AddScoped<IDataService, DataService>();
             services.AddScoped<LegacyCredentialReEncryptService>();

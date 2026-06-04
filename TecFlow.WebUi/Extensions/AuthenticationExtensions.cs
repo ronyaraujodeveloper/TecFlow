@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using TecFlow.WebUi.Configuration;
+using TecFlow.SharedUi.Configuration;
 using TecFlow.WebUi.Security;
 
 namespace TecFlow.WebUi.Extensions;

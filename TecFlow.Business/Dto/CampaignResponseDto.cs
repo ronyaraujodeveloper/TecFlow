@@ -8,4 +8,5 @@ public class CampaignResponseDto
     public string Descricao { get; set; } = string.Empty;
     public Campaign? Data { get; set; }
     public List<Campaign>? DataList { get; set; }
+    public PagingInfoDto? Paging { get; set; }
 }

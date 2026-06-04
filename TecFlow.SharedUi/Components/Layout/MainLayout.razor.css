@@ -1,0 +1,7 @@
+.portal-nav-toggle-icon {
+    display: block;
+    width: 1.25rem;
+    height: 2px;
+    background: currentColor;
+    box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor;
+}

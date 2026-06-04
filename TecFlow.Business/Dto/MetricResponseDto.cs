@@ -8,4 +8,5 @@ public class MetricResponseDto
     public string Descricao { get; set; } = string.Empty;
     public Metric? Data { get; set; }
     public List<Metric>? DataList { get; set; }
+    public PagingInfoDto? Paging { get; set; }
 }

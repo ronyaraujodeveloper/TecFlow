@@ -5,6 +5,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Database.Filter;
+using TecFlow.Database.Pagin;
 using TecFlow.Util.Validation;
 
 namespace TecFlow.API.Controllers;
@@ -31,15 +32,15 @@ public class AffiliatesController : ControllerBase
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         filter.OwnerId ??= userId;
 
-        var items = (await _affiliateRepository.GetByOwnerIdAsync(userId))
-            .ApplyFilter(filter)
-            .ToList();
+        var filtered = (await _affiliateRepository.GetByOwnerIdAsync(userId)).ApplyFilter(filter);
+        var (items, meta) = PagedListHelper.Slice(filtered, filter);
 
         return Ok(new AffiliateResponseDto
         {
             Status = true,
             Descricao = "OK",
-            DataList = items
+            DataList = items,
+            Paging = PagingInfoDto.FromMeta(meta)
         });
     }
 

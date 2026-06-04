@@ -4,6 +4,7 @@ using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Database.Filter;
+using TecFlow.Database.Pagin;
 
 namespace TecFlow.Orquestrador.Controllers;
 
@@ -29,11 +30,16 @@ public class CampaignsController : ControllerBase
 
         filter.OwnerId ??= userId;
 
-        var campaigns = (await _campaignRepository.GetByOwnerIdAsync(userId))
-            .ApplyFilter(filter)
-            .ToList();
+        var filtered = (await _campaignRepository.GetByOwnerIdAsync(userId)).ApplyFilter(filter);
+        var (items, meta) = PagedListHelper.Slice(filtered, filter);
 
-        return Ok(new CampaignResponseDto { Status = true, Descricao = "OK", DataList = campaigns });
+        return Ok(new CampaignResponseDto
+        {
+            Status = true,
+            Descricao = "OK",
+            DataList = items,
+            Paging = PagingInfoDto.FromMeta(meta)
+        });
     }
 
     [HttpGet("{id:int}")]

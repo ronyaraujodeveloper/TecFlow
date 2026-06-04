@@ -1,0 +1,23 @@
+@page "/conciliacao/detalhes/{Id:int}"
+@attribute [Authorize]
+
+<PageTitle>Conciliação #@Id — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <h1 class="h3 fw-bold mb-3">Conciliação de comissões</h1>
+    <p class="text-muted mb-4">
+        Detalhe da conciliação <strong>#@Id</strong>.
+        Deep link: <code>tecflow://conciliacao/detalhes/@Id</code>
+    </p>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <p class="mb-0 small text-muted">
+                Placeholder para painel financeiro — dados virão da API de comissões/afiliados.
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+}

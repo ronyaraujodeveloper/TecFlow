@@ -8,6 +8,174 @@
 
 ---
 
+## 🔌 INTEGRAÇÕES EXTERNAS — TikTok Shop & Shopee (Fase 3)
+
+> **Estratégia de acoplamento (jun/2026):** contratos e opções de configuração ficam em **`TecFlow.Business/Integrations/`**; implementações HTTP (HttpClient nomeado, Polly, logging handler) ficam em **`TecFlow.Infrastructure.Services/Integrations/`**. Os serviços legados em `Business/Interfaces/Services/` (`ITikTokShopApi`, `IShopeeApi`) serão gradualmente adaptados para delegar aos novos *Integration Clients* nas fases 3.2–3.4.
+
+```
+TecFlow.Business/Integrations/
+├── Common/                          # Opções compartilhadas, nomes de HttpClient
+├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
+└── Shopee/                          # IShopeeIntegrationClient + Options (PartnerId/PartnerKey)
+
+TecFlow.Infrastructure.Services/Integrations/
+├── Common/                          # ExternalApiLoggingHandler, políticas Polly
+├── TikTokShop/                      # TikTokShopIntegrationClient
+├── Shopee/                          # ShopeeIntegrationClient
+└── IntegrationHttpClientRegistrationExtensions.cs  # DI: AddTecFlowIntegrationHttpClients()
+```
+
+```mermaid
+flowchart LR
+  API[TecFlow.API / Orquestrador]
+  BUS[TecFlow.Business Integrations]
+  INFSVC[TecFlow.Infrastructure.Services Integrations]
+  TTS[TikTok Shop API]
+  SHP[Shopee Open API]
+
+  API --> BUS
+  API --> INFSVC
+  INFSVC --> BUS
+  INFSVC -->|HttpClient + Polly + Logs| TTS
+  INFSVC -->|HttpClient + Polly + Logs| SHP
+```
+
+**Configuração:** seção `Integrations` em `appsettings.json` (hosts API/Orquestrador/Worker) — chaves de produção via variáveis de ambiente ou User Secrets, nunca commitadas.
+
+### Fluxo OAuth2 (Fase 3.2)
+
+```mermaid
+sequenceDiagram
+  participant Lojista
+  participant API as TecFlow.API
+  participant Auth as MarketplaceAuthService
+  participant MP as TikTok/Shopee OAuth
+  participant DB as MarketplaceTokens
+
+  Lojista->>API: GET /api/marketplace-auth/authorize-url
+  API->>Auth: GenerateAuthorizationUrl + HMAC sign (Shopee)
+  Auth-->>Lojista: authorizationUrl
+  Lojista->>MP: Autoriza app TecFlow
+  MP-->>API: GET /callback?code=&shopId=
+  API->>Auth: CallbackAndGenerateTokensAsync
+  Auth->>MP: POST token/get (assinado)
+  Auth->>DB: Upsert Access/Refresh (criptografado)
+  API->>Auth: GetValidTokenAsync (refresh se expirado)
+```
+
+### Fluxo de catálogo — Sincronização de produtos (Fase 3.3)
+
+```mermaid
+sequenceDiagram
+  participant UI as WebUi / API
+  participant Cat as MarketplaceProductService
+  participant Auth as MarketplaceAuthService
+  participant HC as HttpClient Shopee/TikTok
+  participant MP as Marketplace API
+
+  UI->>Cat: FetchProductsFromPlatformAsync(shopId, type, page)
+  Cat->>Auth: GetValidTokenAsync
+  Auth-->>Cat: access_token
+  alt Shopee
+    Cat->>HC: GET get_item_list (sign + token)
+    HC->>MP: Lista item_id
+    Cat->>HC: GET get_item_base_info (+ get_model_list se has_model)
+  else TikTok Shop
+    Cat->>HC: POST products/search (sign + body)
+  end
+  MP-->>Cat: Payload JSON (DTOs Payloads/)
+  Cat->>Cat: ConvertToInternalProductDto → Product
+  Cat-->>UI: ProductResponseDto (DataList padronizado)
+```
+
+```
+TecFlow.Business/Integrations/
+├── Catalog/                     # IMarketplaceProductService
+├── Shopee/Payloads/             # get_item_list, get_item_base_info, get_model_list
+└── TikTokShop/Payloads/         # products/search
+
+TecFlow.Infrastructure.Services/Integrations/Catalog/
+├── MarketplaceProductService.cs
+├── MarketplaceProductMapper.cs
+└── MarketplaceProductRegistrationExtensions.cs
+```
+
+### Fluxo Pedidos & Estoque (Fase 3.4)
+
+```mermaid
+sequenceDiagram
+  participant MP as Shopee/TikTok
+  participant WH as Webhook Controller
+  participant Sig as WebhookSignatureVerifier
+  participant Ord as MarketplaceOrderService
+  participant DB as MarketplaceOrders + Produtos
+  participant Stk as MarketplaceStockService
+  participant API as Marketplace API
+
+  MP->>WH: POST webhook (raw JSON + signature)
+  WH->>Sig: Verify HMAC (PartnerKey/AppSecret)
+  alt assinatura inválida
+    WH-->>MP: 401 Unauthorized
+  end
+  WH->>Ord: ProcessWebhookOrderAsync
+  Ord->>DB: Exists ExternalOrderId? (idempotência)
+  alt já processado
+    Ord-->>WH: AlreadyProcessed
+  end
+  Ord->>API: get_order_detail / orders/search (polling)
+  Ord->>Stk: DeductLocalStockAsync (gate por SKU)
+  Stk->>DB: AdjustStock FOR UPDATE (transação)
+  Stk->>API: update_stock / products/stocks
+  Ord->>DB: Insert MarketplaceOrder + Lines
+  WH-->>MP: 200 OK
+```
+
+**Endpoints públicos (webhooks):**
+
+| Método | Rota | Validação |
+|--------|------|-----------|
+| POST | `/api/webhooks/shopee` | Header `Authorization` = HMAC-SHA256(`WebhookCallbackUrl\|body`, PartnerKey) |
+| POST | `/api/webhooks/tiktokshop` | Header `Webhook-Signature` ou `Tiktok-Signature` (HMAC com AppSecret/WebhookSecret) |
+
+**Endpoints autenticados:**
+
+| Método | Rota | Função |
+|--------|------|--------|
+| POST | `/api/marketplace-orders/poll` | Polling de contingência (`get_order_list` / `orders/search`) |
+| PUT | `/api/Produtos/{id}` | Estoque local alterado → `UpdatePlatformStockAsync` se SKU vinculado |
+
+**Concorrência:** `StockConcurrencyGate` serializa por `marketplace:shopId:sku`; `AdjustStockAsync` usa transação no PostgreSQL.
+
+### Cobertura de testes automatizados (TecFlow.Tests)
+
+```mermaid
+flowchart TB
+  TST[TecFlow.Tests xUnit + Moq]
+  TST --> SIG[MarketplaceSignatureHelper / WebhookVerifier]
+  TST --> AUTH[MarketplaceAuthService]
+  TST --> CAT[MarketplaceProductService Convert]
+  TST --> ORD[MarketplaceOrderService + StockService]
+  TST --> API[Controllers: Products / Auth / Webhooks]
+  TST --> FLT[ProductFilter → ProductResponseDto]
+
+  SIG -.->|sem HTTP real| BUS[TecFlow.Business]
+  AUTH -.->|StubHttpMessageHandler| INFSVC[TecFlow.Infrastructure.Services]
+  CAT --> INFSVC
+  ORD --> INFSVC
+  API --> TecFlow.API
+```
+
+| Área Fase 3 | Classes de teste | Caminho feliz | Caminho triste |
+|-------------|------------------|---------------|----------------|
+| Assinatura HMAC | `MarketplaceSignatureHelperTests`, `MarketplaceWebhookSignatureVerifierTests` | assinatura válida | header ausente / expirado |
+| OAuth | `MarketplaceAuthServiceTests` | URL + token válido + refresh | redirect vazio / token ausente |
+| Catálogo | `MarketplaceProductServiceTests` | Shopee item/variante, TikTok SKU | `shopId` vazio |
+| Pedidos | `MarketplaceOrderServiceTests` | webhook + baixa estoque | JSON inválido / idempotência |
+| Estoque | `MarketplaceStockServiceTests` | dedução local | SKU não vinculado |
+| API 3 objetos | `ProductsControllerResponseDtoTests`, `ProductFilterExtensionsTests` | `DataList` / NotFound | filtro sem match |
+
+---
+
 ## 📊 DIAGRAMA 1: ESTRUTURA FÍSICA ATUAL (fiel ao disco)
 
 ```
@@ -19,10 +187,16 @@ Tecso.AutomacaoCusor/
 │
 ├── TecFlow.Core/
 │   ├── Entities/                # 11 entidades de domínio (Campaign, Product, …)
+│   ├── Enums/                   # MarketplaceType (Shopee, TikTokShop)
 │   └── Exceptions/              # BaseCustomException, NotFound, Unauthorized, ExceptionMiddleware
 │
 ├── TecFlow.Business/
 │   ├── Dto/                     # *Dto, *ResponseDto, ResponseDto, Auth/
+│   ├── Integrations/            # Contratos + Options + Auth (TikTokShop, Shopee)
+│   │   ├── Auth/                # IMarketplaceAuthService, IMarketplaceSignatureService
+│   │   ├── Common/              # MarketplaceSignatureHelper, HttpClient names
+│   │   ├── TikTokShop/
+│   │   └── Shopee/
 │   ├── Enum/                    # (pasta reservada — vazia no momento)
 │   ├── Interfaces/
 │   │   ├── Repositories/        # I*Repository (7 contratos)
@@ -55,6 +229,7 @@ Tecso.AutomacaoCusor/
 │   └── Services/Security/       # LegacyCredentialReEncrypt*
 │
 ├── TecFlow.Infrastructure.Services/
+│   ├── Integrations/            # HttpClients, Polly, ExternalApiLoggingHandler — Fase 3.1+
 │   ├── Repositories/            # 6 repositórios (Affiliate, Campaign, Content, …)
 │   ├── Service/ExternalServices/ # Gemini, OpenAI, Shopee, TikTok*, Ranking, …
 │   ├── Interfaces/              # ⚠️ fantasmas (vários Compile Remove no csproj)
@@ -78,7 +253,9 @@ Tecso.AutomacaoCusor/
 │   ├── Program.cs               # DI alinhado à API
 │   └── OrquestradorPrincipal.cs
 │
-├── TecFlow.WebUi/               # Blazor UI canônico (Fase 3)
+├── TecFlow.SharedUi/            # RCL UI compartilhada (Fase 4.2)
+├── TecFlow.WebUi/               # Host Blazor Server + OAuth (Fase 3/4)
+├── TecFlow.Mobile/              # MAUI Blazor Hybrid (Fase 4.2)
 │   ├── Components/, Services/, Extensions/, Models/, wwwroot/, …
 │   └── → TecFlow.Business (*ResponseDto, DashboardSummaryDto)
 │
@@ -453,6 +630,73 @@ TecFlow.Infrastructure.Services/Interfaces/
 
 ---
 
+## 🔔 DIAGRAMA 4d: Push + Deep Links (Fase 4.3)
+
+```
+Mobile App                          TecFlow.API
+──────────                          ──────────
+FCM/APNs token ──POST──► /api/devices/register ──► UserDeviceTokens (DB)
+                              ▲
+Worker/Webhook event ──► NotificationHubService (Firebase Admin)
+                              │
+                              └──► FCM data: { route, title, body }
+                                        │
+Mobile: TecFlowFirebaseMessagingService / iOS UNCenter
+        └──► PushNotificationBridge ──► NavigationIntentService
+                    └──► Blazor: /engajamento/fila | /conciliacao/detalhes/{id}
+
+Deep link: tecflow://engajamento/fila
+           tecflow://conciliacao/detalhes/42
+```
+
+---
+
+## 📱 DIAGRAMA 4c: Multiplataforma WebUi + MAUI (Fase 4.2)
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   TecFlow.WebUi     │     │   TecFlow.Mobile    │
+│ Blazor Server host  │     │ MAUI BlazorWebView  │
+│ OAuth + cookies     │     │ sessão em memória   │
+└──────────┬──────────┘     └──────────┬──────────┘
+           │  AddAdditionalAssemblies   │  Root: Routes (RCL)
+           └────────────┬───────────────┘
+                        ▼
+           ┌────────────────────────────┐
+           │     TecFlow.SharedUi       │
+           │  Pages · Layout · Widgets  │
+           │  AddTecFlowClientServices  │
+           └────────────┬───────────────┘
+                        │ HttpClient "Orquestrador"
+                        ▼
+           ┌────────────────────────────┐
+           │ TecFlow.Orquestrador / API │
+           └────────────────────────────┘
+```
+
+---
+
+## 📱 DIAGRAMA 4b: WebUi Mobile-First (Fase 4.1)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ viewport < 768px                                                         │
+│  MainLayout: [☰] TecFlow ── SessionBadge                                 │
+│  sidebar off-canvas (transform) + backdrop tap-to-close                  │
+│  CampaignsWidget / MetricsWidget: .data-cards-mobile (stack)           │
+│  breakpoint ≥ 768px: .data-table-desktop (tabela)                        │
+│  botões/filtros: min-height 44px (.btn-touch)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+| Breakpoint | Comportamento |
+|------------|----------------|
+| &lt; 768px | Tabelas ocultas; cards empilhados; menu lateral off-canvas |
+| ≥ 768px | Tabelas visíveis; sidebar fixa (≥ 992px) |
+| Filtros GET | `Page`, `PageSize` (máx. 30) → `PagingInfoDto` em `*ResponseDto` |
+
+---
+
 ## 🖥️ DIAGRAMA 4: FLUXO WebUi — Filter / Dto / ResponseDto (Fase 3)
 
 ```
@@ -467,8 +711,9 @@ TecFlow.Infrastructure.Services/Interfaces/
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ TecFlow.Orquestrador / TecFlow.API                                       │
-│  GET  api/Campanhas?[CampaignFilter]  → CampaignResponseDto              │
-│  GET  api/Metricas?[MetricFilter]     → MetricResponseDto                │
+│  GET  api/Campanhas?[CampaignFilter&Page&PageSize] → CampaignResponseDto │
+│       + PagingInfoDto (TotalCount, HasNextPage)                          │
+│  GET  api/Metricas?[MetricFilter&Page&PageSize]    → MetricResponseDto   │
 │  POST api/Campanhas (CampaignDto)     → CampaignResponseDto              │
 │  POST api/Metricas  (MetricDto)       → MetricResponseDto                │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -500,5 +745,5 @@ sequenceDiagram
 
 **FIM DOS DIAGRAMAS**
 
-*Sincronizado com pastas físicas em 03/06/2026.*  
+*Sincronizado com pastas físicas em 04/06/2026 (Fase 4.1 mobile-first).*  
 *Próximo:* [README.md](../README.md) · [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) · [INDICE_COMPLETO.md](./INDICE_COMPLETO.md)

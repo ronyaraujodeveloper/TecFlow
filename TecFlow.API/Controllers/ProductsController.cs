@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Orders;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Service.Application;
 using TecFlow.Core.Entities;
 using TecFlow.Database.Filter;
+using TecFlow.Database.Pagin;
 
 namespace TecFlow.API.Controllers;
 
@@ -15,15 +17,18 @@ namespace TecFlow.API.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly IProductRepository _productRepository;
+    private readonly IMarketplaceStockService _marketplaceStockService;
     private readonly ILogger<ProductsController> _logger;
     private readonly AIApplicationService _aiService;
 
     public ProductsController(
         IProductRepository productRepository,
+        IMarketplaceStockService marketplaceStockService,
         ILogger<ProductsController> logger,
         AIApplicationService aiService)
     {
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
+        _marketplaceStockService = marketplaceStockService;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
     }
@@ -34,11 +39,16 @@ public class ProductsController : ControllerBase
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         filter.OwnerId ??= userId;
 
-        var items = (await _productRepository.GetByOwnerIdAsync(userId))
-            .ApplyFilter(filter)
-            .ToList();
+        var filtered = (await _productRepository.GetByOwnerIdAsync(userId)).ApplyFilter(filter);
+        var (items, meta) = PagedListHelper.Slice(filtered, filter);
 
-        return Ok(new ProductResponseDto { Status = true, Descricao = "OK", DataList = items });
+        return Ok(new ProductResponseDto
+        {
+            Status = true,
+            Descricao = "OK",
+            DataList = items,
+            Paging = PagingInfoDto.FromMeta(meta)
+        });
     }
 
     [HttpGet("{id:int}")]
@@ -144,12 +154,26 @@ public class ProductsController : ControllerBase
         product.SalesVolume = dto.SalesVolume;
         product.Rating = dto.Rating;
         product.Material = dto.Material;
+        var previousStock = product.Stock;
         product.Stock = dto.Stock;
         product.Color = dto.Color;
         product.ModifiedOn = DateTime.UtcNow;
         product.UpdatedAt = DateTime.UtcNow;
 
         await _productRepository.UpdateAsync(product);
+
+        if (previousStock != product.Stock &&
+            product.MarketplaceSource.HasValue &&
+            !string.IsNullOrWhiteSpace(product.MarketplaceShopId) &&
+            !string.IsNullOrWhiteSpace(product.SkuCode))
+        {
+            await _marketplaceStockService.UpdatePlatformStockAsync(
+                product.MarketplaceShopId,
+                product.SkuCode,
+                product.Stock,
+                product.MarketplaceSource.Value);
+        }
+
         return Ok(new ProductResponseDto { Status = true, Descricao = "Atualizado com sucesso.", Data = product });
     }
 

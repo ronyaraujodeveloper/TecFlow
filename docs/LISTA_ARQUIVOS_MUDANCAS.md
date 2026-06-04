@@ -1,6 +1,6 @@
 # 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
 
-**Última varredura:** 3 de junho de 2026  
+**Última varredura:** 4 de junho de 2026  
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
 **Solution:** `TecFlow.sln` — 12 projetos `TecFlow.*` + `Tecso.LerArquivos` externo (Portal e Dashboard **removidos**)
 
@@ -63,6 +63,121 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **Components/Dashboard/CampaignCreateForm.razor** — formulário POST com `CampaignDto`.
 - [x] **Components/Dashboard/CampaignsWidget.razor** / **MetricsWidget.razor** — leem `*ResponseDto.DataList` diretamente.
 - [x] **Components/Pages/Dashboard.razor** — orquestra filtros, listagens e criação padronizados.
+
+### Fase 4.3 — Push FCM/APNs + Deep Links (jun/2026)
+
+- [x] **TecFlow.Core/Entities/UserDeviceToken.cs** — registo de tokens por utilizador.
+- [x] **TecFlow.Infrastructure/Migrations/*AddUserDeviceTokens*** — tabela `UserDeviceTokens`.
+- [x] **TecFlow.Business/** — `INotificationHubService`, DTOs `DeviceRegisterDto`, `PushNotificationDto`, `FirebaseOptions`.
+- [x] **TecFlow.Infrastructure.Services/Integrations/Notifications/NotificationHubService.cs** — Firebase Admin SDK (FCM).
+- [x] **TecFlow.API/Controllers/DevicesController.cs** — `POST /api/devices/register`.
+- [x] **TecFlow.SharedUi/Navigation/DeepLinkRoutes.cs** — esquema `tecflow://` → rotas Blazor.
+- [x] **TecFlow.SharedUi/Components/Shared/DeepLinkListener.razor** — navegação a partir de push/deep link.
+- [x] **TecFlow.SharedUi/Components/Pages/EngajamentoFila.razor**, **ConciliacaoDetalhes.razor**.
+- [x] **TecFlow.Mobile/Platforms/Android/TecFlowFirebaseMessagingService.cs** — FCM foreground/background.
+- [x] **TecFlow.Mobile/Platforms/iOS/AppDelegate.cs** — `UNUserNotificationCenter` + URL scheme.
+- [x] **TecFlow.Mobile/Platforms/Android/MainActivity.cs** — intent-filter `tecflow://`.
+- [x] **TecFlow.Tests/Unit/Controllers/DevicesControllerTests.cs**.
+
+### Fase 4.2 — Shell MAUI Blazor Hybrid + RCL SharedUi (jun/2026)
+
+- [x] **TecFlow.SharedUi/** — Razor Class Library: componentes (Layout, Dashboard, Pages, Auth), `wwwroot/app.css`, serviços HTTP/API, extensões Filter/ResponseDto.
+- [x] **TecFlow.SharedUi/Extensions/ServiceCollectionExtensions.cs** — `AddTecFlowClientServices()` (HttpClient Orquestrador, Dashboard, sessão, auth bridges).
+- [x] **TecFlow.SharedUi/Services/Http/IAccessTokenProvider.cs** — abstração de token para Web e MAUI.
+- [x] **TecFlow.WebUi/** — host fino: OAuth/cookies (`AuthCookieService`, `WebAccessTokenProvider`), `Routes.razor` com `AdditionalAssemblies` → SharedUi.
+- [x] **TecFlow.Mobile/** — MAUI Blazor Hybrid (`MainPage.xaml` + `BlazorWebView` → `Routes` SharedUi).
+- [x] **TecFlow.Mobile/MauiProgram.cs** — DI compartilhada + `MobileAuthenticationStateProvider` + `SessionAuthCookieService`.
+- [x] **TecFlow.Mobile/Platforms/Android/AndroidManifest.xml** — permissões `INTERNET` e `ACCESS_NETWORK_STATE`.
+- [x] **TecFlow.Mobile/Platforms/iOS/Info.plist** — `NSAppTransportSecurity` / rede local.
+- [x] **TecFlow.Mobile/appsettings.json** — URL do Orquestrador (emulador Android `10.0.2.2`).
+- [x] **docs/TecFlow_MOBILE_BUILD.md** — comandos `dotnet publish` Android/iOS/Windows.
+
+### Fase 4.1 — Mobile-First WebUi e contratos paginados (jun/2026)
+
+- [x] **TecFlow.WebUi/Components/Layout/MainLayout.razor** — shell com sidebar colapsável (hambúrguer &lt; 992px), backdrop e navegação touch-friendly.
+- [x] **TecFlow.WebUi/Components/Layout/MainLayout.razor.css** — ícone do menu.
+- [x] **TecFlow.WebUi/wwwroot/app.css** — breakpoints mobile-first, `.btn-touch` (44px), `.responsive-data-table` (tabela ↔ cards), sidebar e toolbar do painel.
+- [x] **TecFlow.WebUi/Components/Dashboard/CampaignsWidget.razor** — listagem em cards no mobile + rodapé de paginação.
+- [x] **TecFlow.WebUi/Components/Dashboard/MetricsWidget.razor** — idem métricas/comissões.
+- [x] **TecFlow.WebUi/Components/Dashboard/CampaignFilterForm.razor** — colunas `col-12` em mobile, botões touch.
+- [x] **TecFlow.WebUi/Components/Dashboard/MetricFilterForm.razor** — idem.
+- [x] **TecFlow.WebUi/Components/Dashboard/CampaignCreateForm.razor** — formulário responsivo.
+- [x] **TecFlow.WebUi/Components/Pages/Dashboard.razor** — toolbar responsiva, âncoras `#campanhas` / `#metricas`.
+- [x] **TecFlow.WebUi/Components/Pages/Home.razor** — botões de plataforma touch-friendly.
+- [x] **TecFlow.Database/Filter/IPagedFilter.cs** — contrato `Page` / `PageSize` nos filtros de listagem.
+- [x] **TecFlow.Database/Filter/CampaignFilter.cs**, **MetricFilter.cs**, **ProductFilter.cs**, **AffiliateFilter.cs** — implementam `IPagedFilter`.
+- [x] **TecFlow.Database/Pagin/PagedListHelper.cs** — fatia listas (máx. 30 itens/página).
+- [x] **TecFlow.Business/Dto/PagingInfoDto.cs** — metadados no envelope `*ResponseDto`.
+- [x] **TecFlow.Business/Dto/CampaignResponseDto.cs**, **MetricResponseDto.cs**, **ProductResponseDto.cs**, **AffiliateResponseDto.cs** — propriedade `Paging`.
+- [x] **TecFlow.API/Controllers/** — `CampaignsController`, `MetricsController`, `ProductsController`, `AffiliatesController` com paginação.
+- [x] **TecFlow.Orquestrador/Controllers/CampaignsController.cs**, **MetricsController.cs** — alinhados ao padrão `*Filter` → `*ResponseDto` + `Paging` (WebUi).
+- [x] **TecFlow.Tests/Unit/Database/PagedListHelperTests.cs**, **ProductsControllerPagingTests.cs**.
+
+### Integrações TikTok Shop & Shopee — Fase 3.1 (Infraestrutura Core)
+
+- [x] **TecFlow.Business/Integrations/Common/** — `IExternalIntegrationClient`, `IntegrationHttpClientNames`, `IntegrationResilienceOptions`.
+- [x] **TecFlow.Business/Integrations/TikTokShop/** — `ITikTokShopIntegrationClient`, `TikTokShopIntegrationOptions` (AppKey/AppSecret).
+- [x] **TecFlow.Business/Integrations/Shopee/** — `IShopeeIntegrationClient`, `ShopeeIntegrationOptions` (PartnerId/PartnerKey).
+- [x] **TecFlow.Infrastructure.Services/Integrations/Common/** — `ExternalApiLoggingHandler`, `IntegrationResiliencePolicies` (Polly retry + circuit breaker).
+- [x] **TecFlow.Infrastructure.Services/Integrations/TikTokShop/TikTokShopIntegrationClient.cs** — implementação HTTP.
+- [x] **TecFlow.Infrastructure.Services/Integrations/Shopee/ShopeeIntegrationClient.cs** — implementação HTTP.
+- [x] **IntegrationHttpClientRegistrationExtensions.cs** — `AddTecFlowIntegrationHttpClients()` registrado em `ServiceRegistrationExtensions`.
+- [x] **appsettings.json** (API + Orquestrador) — seção `Integrations` com chaves de produção (vazias; usar User Secrets/env).
+
+### Integrações TikTok Shop & Shopee — Fase 3.2 (OAuth2)
+
+- [x] **TecFlow.Core/Entities/MarketplaceToken.cs** — persistência de tokens por loja (`ShopId`, `MarketplaceType`, `AccessToken`, `RefreshToken`, `ExpiresAt`, `RefreshExpiresAt`).
+- [x] **TecFlow.Core/Enums/MarketplaceType.cs** — `Shopee`, `TikTokShop`.
+- [x] **TecFlow.Business/Integrations/Auth/** — `IMarketplaceAuthService`, `IMarketplaceSignatureService`, `MarketplaceTokenResult`.
+- [x] **TecFlow.Business/Integrations/Common/MarketplaceSignatureHelper.cs** — HMAC-SHA256 Shopee e TikTok Shop.
+- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — authorize URL, callback, refresh automático.
+- [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceTokenRepository.cs** — upsert por `ShopId` + `MarketplaceType`.
+- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** — `api/marketplace-auth/*`.
+- [x] **Migration AddMarketplaceTokens** — tabela `MarketplaceTokens` com tokens criptografados no `AppDbContext`.
+
+### Integrações TikTok Shop & Shopee — Fase 3.3 (Catálogo / Produtos)
+
+- [x] **TecFlow.Core/Entities/Product.cs** — campos `[NotMapped]` `ExternalProductId`, `SkuCode`, `MarketplaceSource` para sincronização.
+- [x] **TecFlow.Business/Integrations/Catalog/IMarketplaceProductService.cs** — `FetchProductsFromPlatformAsync`, `ConvertToInternalProductDto` (Shopee/TikTok).
+- [x] **TecFlow.Business/Integrations/Shopee/Payloads/** — envelopes e DTOs `get_item_list`, `get_item_base_info`, `get_model_list`.
+- [x] **TecFlow.Business/Integrations/TikTokShop/Payloads/** — envelope e DTOs `products/search` (categorias, attributes, skus, price, stock).
+- [x] **ShopeeIntegrationOptions** / **TikTokShopIntegrationOptions** — paths de catálogo configuráveis.
+- [x] **MarketplaceProductService.cs** — HTTP resiliente + token OAuth + assinatura HMAC + adapter → `ProductResponseDto`.
+- [x] **MarketplaceProductMapper.cs** — conversão unificada (ID externo, SKU, nome, descrição, preço, estoque, origem).
+- [x] **MarketplaceProductRegistrationExtensions.cs** — `AddTecFlowMarketplaceCatalog()` em `ServiceRegistrationExtensions`.
+- [x] **TecFlow.API/Controllers/MarketplaceProductsController.cs** — `GET api/marketplace-products/sync`.
+
+### Integrações TikTok Shop & Shopee — Fase 3.4 (Pedidos & Estoque)
+
+- [x] **TecFlow.Core/Entities/MarketplaceOrder.cs** / **MarketplaceOrderLine.cs** — pedidos externos com índice único (idempotência).
+- [x] **Product.cs** — colunas persistidas `IdExterno`, `SkuCodigo`, `MarketplaceOrigem`, `MarketplaceShopId`.
+- [x] **IMarketplaceOrderRepository** / **MarketplaceOrderRepository.cs**
+- [x] **IProductRepository** — `GetByMarketplaceSkuAsync`, `AdjustStockAsync` (transação).
+- [x] **Payloads Shopee/TikTok** — webhooks, `get_order_list`/`get_order_detail`, `orders/search`, `update_stock`/`products/stocks`.
+- [x] **IMarketplaceWebhookSignatureVerifier** — HMAC Shopee (`callbackUrl|body`) e TikTok (`AppSecret` / `Webhook-Signature`).
+- [x] **IMarketplaceOrderService** / **MarketplaceOrderService** — webhook + polling + idempotência.
+- [x] **IMarketplaceStockService** / **MarketplaceStockService** — baixa local + push marketplace com `StockConcurrencyGate`.
+- [x] **ShopeeWebhookController** — `POST /api/webhooks/shopee`
+- [x] **TikTokShopWebhookController** — `POST /api/webhooks/tiktokshop`
+- [x] **MarketplaceOrdersController** — `POST /api/marketplace-orders/poll`
+- [x] **ProductsController** — propaga alteração de estoque para marketplace quando SKU vinculado.
+- [x] **Migration AddMarketplaceOrdersAndProductSku**
+
+### TecFlow.Tests — Cobertura Fase 3 (Integrações & ResponseDto)
+
+- [x] **Helpers/StubHttpMessageHandler.cs** — mock HTTP sem chamadas externas.
+- [x] **Helpers/MarketplaceTestOptionsFactory.cs** — opções Shopee/TikTok para testes.
+- [x] **Unit/Integrations/MarketplaceSignatureHelperTests.cs** — HMAC e comparação de assinatura.
+- [x] **Unit/Integrations/MarketplaceWebhookSignatureVerifierTests.cs** — webhooks válidos/inválidos/expirados.
+- [x] **Unit/Integrations/MarketplaceAuthServiceTests.cs** — URL OAuth, token válido, refresh automático.
+- [x] **Unit/Integrations/MarketplaceProductServiceTests.cs** — conversão Shopee/TikTok → `ProductResponseDto`.
+- [x] **Unit/Integrations/MarketplaceOrderServiceTests.cs** — webhook, idempotência, baixa de estoque.
+- [x] **Unit/Integrations/MarketplaceStockServiceTests.cs** — dedução local e push de estoque.
+- [x] **Unit/Controllers/ProductsControllerResponseDtoTests.cs** — `Filter` + `ProductResponseDto` + sync estoque.
+- [x] **Unit/Controllers/MarketplaceAuthControllerTests.cs** — authorize-url e callback com falha.
+- [x] **Unit/Controllers/MarketplaceWebhookControllerTests.cs** — 401 assinatura inválida / 200 OK.
+- [x] **Unit/Database/ProductFilterExtensionsTests.cs** — `ProductFilter` → `DataList` padronizado.
+- [x] **TecFlow.Tests.csproj** — referências `TecFlow.API`, `TecFlow.Database`, `Microsoft.AspNetCore.Mvc.Testing`.
 
 ### Colisão semântica (nome enganoso)
 

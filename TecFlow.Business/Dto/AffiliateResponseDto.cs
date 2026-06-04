@@ -8,4 +8,5 @@ public class AffiliateResponseDto
     public string Descricao { get; set; } = string.Empty;
     public Affiliate? Data { get; set; }
     public List<Affiliate>? DataList { get; set; }
+    public PagingInfoDto? Paging { get; set; }
 }

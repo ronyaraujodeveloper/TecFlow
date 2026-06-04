@@ -213,6 +213,135 @@ namespace TecFlow.Infrastructure.Migrations
                     b.ToTable("Conversaos");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalOrderId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("MarketplaceType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ShopId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("StockDeducted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalOrderId", "MarketplaceType", "ShopId")
+                        .IsUnique();
+
+                    b.ToTable("MarketplaceOrders");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrderLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalProductId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ExternalSkuId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("MarketplaceOrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SkuCode")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarketplaceOrderId");
+
+                    b.ToTable("MarketplaceOrderLines");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MarketplaceType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RefreshExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShopId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShopId", "MarketplaceType")
+                        .IsUnique();
+
+                    b.ToTable("MarketplaceTokens");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>
                 {
                     b.Property<int>("Id")
@@ -305,6 +434,11 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("Descricao");
 
+                    b.Property<string>("ExternalProductId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("IdExterno");
+
                     b.Property<string>("Features")
                         .IsRequired()
                         .HasColumnType("text")
@@ -318,6 +452,15 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Property<string>("MainImageUrl")
                         .HasColumnType("text")
                         .HasColumnName("UrlImagemPrincipal");
+
+                    b.Property<string>("MarketplaceShopId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("MarketplaceShopId");
+
+                    b.Property<int?>("MarketplaceSource")
+                        .HasColumnType("integer")
+                        .HasColumnName("MarketplaceOrigem");
 
                     b.Property<string>("Material")
                         .HasColumnType("text");
@@ -346,6 +489,11 @@ namespace TecFlow.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("SkuCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("SkuCodigo");
+
                     b.Property<int>("Stock")
                         .HasColumnType("integer")
                         .HasColumnName("Estoque");
@@ -366,6 +514,9 @@ namespace TecFlow.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("SkuCode", "MarketplaceSource", "MarketplaceShopId")
+                        .HasFilter("\"SkuCodigo\" IS NOT NULL AND \"MarketplaceOrigem\" IS NOT NULL");
 
                     b.ToTable("Produtos");
                 });
@@ -418,6 +569,48 @@ namespace TecFlow.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.UserDeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "Token")
+                        .IsUnique();
+
+                    b.ToTable("UserDeviceTokens");
                 });
 
             modelBuilder.Entity("TecFlow.Database.Entity.UserEntity", b =>
@@ -516,6 +709,17 @@ namespace TecFlow.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrderLine", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.MarketplaceOrder", "MarketplaceOrder")
+                        .WithMany("Lines")
+                        .HasForeignKey("MarketplaceOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MarketplaceOrder");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>
                 {
                     b.HasOne("TecFlow.Core.Entities.Campaign", "Campaign")
@@ -559,6 +763,11 @@ namespace TecFlow.Infrastructure.Migrations
             modelBuilder.Entity("TecFlow.Core.Entities.Content", b =>
                 {
                     b.Navigation("Affiliates");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.MarketplaceOrder", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>

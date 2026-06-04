@@ -8,4 +8,5 @@ public class ProductResponseDto
     public string Descricao { get; set; } = string.Empty;
     public Product? Data { get; set; }
     public List<Product>? DataList { get; set; }
+    public PagingInfoDto? Paging { get; set; }
 }

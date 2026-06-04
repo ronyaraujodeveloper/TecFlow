@@ -1,0 +1,22 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Erro — TecFlow</PageTitle>
+
+<h1 class="text-danger">Erro</h1>
+<h2 class="text-danger">Ocorreu um erro ao processar o pedido.</h2>
+
+@if (ShowRequestId)
+{
+    <p>
+        <strong>ID:</strong> <code>@RequestId</code>
+    </p>
+}
+
+@code {
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id;
+}

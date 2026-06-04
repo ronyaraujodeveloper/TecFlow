@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.Core.Entities;
 
@@ -53,4 +55,19 @@ public class Product : BaseEntity
 
     public int OwnerId { get; set; }
     public UserAccount? Owner { get; set; }
+
+    [Column("IdExterno")]
+    [MaxLength(128)]
+    public string? ExternalProductId { get; set; }
+
+    [Column("SkuCodigo")]
+    [MaxLength(128)]
+    public string? SkuCode { get; set; }
+
+    [Column("MarketplaceOrigem")]
+    public MarketplaceType? MarketplaceSource { get; set; }
+
+    [Column("MarketplaceShopId")]
+    [MaxLength(128)]
+    public string? MarketplaceShopId { get; set; }
 }

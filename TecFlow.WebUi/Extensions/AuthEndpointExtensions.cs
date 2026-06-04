@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using static TecFlow.WebUi.Extensions.AuthenticationExtensions;
-using TecFlow.WebUi.Models.Enums;
-using TecFlow.WebUi.Models.Requests;
-using TecFlow.WebUi.Services.Auth;
+using TecFlow.SharedUi.Models.Enums;
+using TecFlow.SharedUi.Models.Requests;
+using TecFlow.SharedUi.Services.Auth;
 
 namespace TecFlow.WebUi.Extensions;
 

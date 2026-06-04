@@ -1,0 +1,28 @@
+@implements IDisposable
+@inject INavigationIntentService NavigationIntent
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationIntent.NavigateRequested += OnNavigateRequested;
+
+        if (!string.IsNullOrWhiteSpace(NavigationIntent.PendingRoute))
+        {
+            NavigateTo(NavigationIntent.PendingRoute);
+        }
+    }
+
+    private void OnNavigateRequested(string route) => NavigateTo(route);
+
+    private void NavigateTo(string route)
+    {
+        Navigation.NavigateTo(route, forceLoad: false);
+        NavigationIntent.ClearPending();
+    }
+
+    public void Dispose()
+    {
+        NavigationIntent.NavigateRequested -= OnNavigateRequested;
+    }
+}

@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TecFlow.Business\TecFlow.Business.csproj" />
     <ProjectReference Include="..\TecFlow.Core\TecFlow.Core.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj" />
     <ProjectReference Include="..\TecFlow.Util\TecFlow.Util.csproj" />
@@ -32,5 +33,6 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Net.Http.Json" Version="10.0.8" />
+    <PackageReference Include="FirebaseAdmin" Version="3.2.0" />
   </ItemGroup>
 </Project>

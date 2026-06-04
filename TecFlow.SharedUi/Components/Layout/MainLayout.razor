@@ -1,0 +1,120 @@
+@inherits LayoutComponentBase
+
+<div class="portal-shell min-vh-100 d-flex flex-column">
+    <header class="portal-header py-2 py-md-3">
+        <div class="container-fluid portal-header-inner d-flex align-items-center gap-2">
+            <button type="button"
+                    class="btn btn-outline-secondary portal-nav-toggle btn-touch d-lg-none"
+                    aria-expanded="@_navOpen"
+                    aria-controls="portal-sidebar"
+                    aria-label="@(_navOpen ? "Fechar menu" : "Abrir menu")"
+                    @onclick="ToggleNav">
+                <span class="portal-nav-toggle-icon" aria-hidden="true"></span>
+            </button>
+
+            <a href="/" class="navbar-brand fw-bold text-decoration-none text-dark mb-0 flex-grow-1">
+                TecFlow
+            </a>
+
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/dashboard" class="btn btn-primary btn-touch d-none d-sm-inline-flex">
+                            Painel
+                        </a>
+                    </Authorized>
+                </AuthorizeView>
+                <SessionStatusBadge />
+            </div>
+        </div>
+    </header>
+
+    <div class="portal-body flex-grow-1 d-flex">
+        @if (_navOpen)
+        {
+            <button type="button"
+                    class="portal-sidebar-backdrop d-lg-none"
+                    aria-label="Fechar menu"
+                    @onclick="CloseNav"></button>
+        }
+
+        <aside id="portal-sidebar"
+               class="portal-sidebar @(_navOpen ? "is-open" : "")"
+               aria-label="Navega??o principal">
+            <nav class="portal-sidebar-nav">
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/dashboard" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="CloseNavOnMobile">
+                            Painel
+                        </a>
+                        <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="CloseNavOnMobile">
+                            Campanhas
+                        </a>
+                        <a href="/dashboard#metricas" class="portal-nav-link" @onclick="CloseNavOnMobile">
+                            M?tricas / Comiss?es
+                        </a>
+                        <a href="/engajamento/fila" class="portal-nav-link @GetActiveClass("/engajamento/fila")" @onclick="CloseNavOnMobile">
+                            Fila de engajamento
+                        </a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="CloseNavOnMobile">
+                            Entrar
+                        </a>
+                        <a href="/login/tiktok" class="portal-nav-link" @onclick="CloseNavOnMobile">
+                            TikTok
+                        </a>
+                        <a href="/login/shopee" class="portal-nav-link" @onclick="CloseNavOnMobile">
+                            Shopee
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+                <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="CloseNavOnMobile">
+                    In?cio
+                </a>
+            </nav>
+        </aside>
+
+        <main class="portal-main flex-grow-1 container-fluid py-3 py-md-4">
+            @Body
+        </main>
+    </div>
+
+    <footer class="portal-footer py-3 text-center text-muted small">
+        &copy; @DateTime.UtcNow.Year TecFlow ? integrado com TecFlow.Orquestrador
+    </footer>
+</div>
+
+<DeepLinkListener />
+<LoadingOverlay />
+
+<div id="blazor-error-ui" class="blazor-error-ui-custom">
+    Ocorreu um erro inesperado.
+    <a href="" class="reload">Recarregar</a>
+    <button type="button" class="btn-close btn-close-white float-end btn-touch" aria-label="Fechar"></button>
+</div>
+
+@code {
+    private bool _navOpen;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private void ToggleNav() => _navOpen = !_navOpen;
+
+    private void CloseNav() => _navOpen = false;
+
+    private void CloseNavOnMobile()
+    {
+        if (_navOpen)
+        {
+            _navOpen = false;
+        }
+    }
+
+    private string GetActiveClass(string path)
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var current = string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
+        return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
+}

@@ -1,7 +1,12 @@
+using TecFlow.Database.Pagin;
+
 namespace TecFlow.Database.Filter;
 
-public class AffiliateFilter
+public class AffiliateFilter : IPagedFilter
 {
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = PagedListHelper.DefaultPageSize;
+
     public int? Id { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

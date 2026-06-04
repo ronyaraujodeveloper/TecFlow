@@ -23,6 +23,10 @@ public class AppDbContext : DbContext
     public DbSet<Content> Contents { get; set; } = null!;
     public DbSet<Conversion> Conversions { get; set; } = null!;
     public DbSet<UserAccount> UserAccounts { get; set; } = null!;
+    public DbSet<MarketplaceToken> MarketplaceTokens { get; set; } = null!;
+    public DbSet<MarketplaceOrder> MarketplaceOrders { get; set; } = null!;
+    public DbSet<MarketplaceOrderLine> MarketplaceOrderLines { get; set; } = null!;
+    public DbSet<UserDeviceToken> UserDeviceTokens { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -66,6 +70,40 @@ public class AppDbContext : DbContext
             .HasOne(a => a.Content)
             .WithMany(c => c.Affiliates)
             .HasForeignKey(a => a.ContentId);
+
+        modelBuilder.Entity<MarketplaceToken>()
+            .HasIndex(t => new { t.ShopId, t.MarketplaceType })
+            .IsUnique();
+
+        modelBuilder.Entity<MarketplaceOrder>()
+            .HasIndex(o => new { o.ExternalOrderId, o.MarketplaceType, o.ShopId })
+            .IsUnique();
+
+        modelBuilder.Entity<MarketplaceOrder>()
+            .HasMany(o => o.Lines)
+            .WithOne(l => l.MarketplaceOrder)
+            .HasForeignKey(l => l.MarketplaceOrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Product>()
+            .HasIndex(p => new { p.SkuCode, p.MarketplaceSource, p.MarketplaceShopId })
+            .HasFilter("\"SkuCodigo\" IS NOT NULL AND \"MarketplaceOrigem\" IS NOT NULL");
+
+        modelBuilder.Entity<UserDeviceToken>()
+            .HasIndex(t => new { t.OwnerId, t.Token })
+            .IsUnique();
+
+        modelBuilder.Entity<UserDeviceToken>()
+            .Property(t => t.Token)
+            .HasMaxLength(512);
+
+        modelBuilder.Entity<UserDeviceToken>()
+            .Property(t => t.Platform)
+            .HasMaxLength(32);
+
+        modelBuilder.Entity<UserDeviceToken>()
+            .Property(t => t.DeviceId)
+            .HasMaxLength(128);
     }
 
     private void ConfigureSensitiveData(ModelBuilder modelBuilder)
@@ -82,6 +120,14 @@ public class AppDbContext : DbContext
             .HasConversion(encryptedNullableString);
 
         userAccount.Property(u => u.TikTokRefreshToken)
+            .HasConversion(encryptedNullableString);
+
+        var marketplaceToken = modelBuilder.Entity<MarketplaceToken>();
+
+        marketplaceToken.Property(t => t.AccessToken)
+            .HasConversion(encryptedString);
+
+        marketplaceToken.Property(t => t.RefreshToken)
             .HasConversion(encryptedNullableString);
 
         var user = modelBuilder.Entity<UserEntity>();

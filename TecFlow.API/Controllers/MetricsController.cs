@@ -5,6 +5,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Database.Filter;
+using TecFlow.Database.Pagin;
 
 namespace TecFlow.API.Controllers;
 
@@ -26,11 +27,16 @@ public class MetricsController : ControllerBase
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         filter.OwnerId ??= userId;
 
-        var items = (await _repository.GetByOwnerIdAsync(userId))
-            .ApplyFilter(filter)
-            .ToList();
+        var filtered = (await _repository.GetByOwnerIdAsync(userId)).ApplyFilter(filter);
+        var (items, meta) = PagedListHelper.Slice(filtered, filter);
 
-        return Ok(new MetricResponseDto { Status = true, Descricao = "OK", DataList = items });
+        return Ok(new MetricResponseDto
+        {
+            Status = true,
+            Descricao = "OK",
+            DataList = items,
+            Paging = PagingInfoDto.FromMeta(meta)
+        });
     }
 
     [HttpPost]

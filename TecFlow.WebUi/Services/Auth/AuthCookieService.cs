@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using TecFlow.WebUi.Models.Enums;
-using TecFlow.WebUi.Models.Responses;
-using TecFlow.WebUi.Security;
-using TecFlow.WebUi.Services.State;
+using TecFlow.SharedUi.Models.Enums;
+using TecFlow.SharedUi.Models.Responses;
+using TecFlow.SharedUi.Security;
+using TecFlow.SharedUi.Services.Auth;
+using TecFlow.SharedUi.Services.State;
 
 namespace TecFlow.WebUi.Services.Auth;
 

@@ -8,9 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TecFlow.Business\TecFlow.Business.csproj" />
-    <ProjectReference Include="..\TecFlow.Database\TecFlow.Database.csproj" />
-    <ProjectReference Include="..\TecFlow.Util\TecFlow.Util.csproj" />
+    <ProjectReference Include="..\TecFlow.SharedUi\TecFlow.SharedUi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.11" />

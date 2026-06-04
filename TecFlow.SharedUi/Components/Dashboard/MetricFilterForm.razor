@@ -1,0 +1,47 @@
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small mb-1" for="metric-campaign-filter">Campanha (ID)</label>
+                <InputNumber id="metric-campaign-filter"
+                             class="form-control form-control-sm"
+                             @bind-Value="Filter.CampaignId"
+                             TValue="int?" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small mb-1" for="metric-views-filter">Views (mín.)</label>
+                <InputNumber id="metric-views-filter"
+                             class="form-control form-control-sm"
+                             @bind-Value="Filter.Views"
+                             TValue="int?" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small mb-1" for="metric-revenue-filter">Receita (mín.)</label>
+                <InputNumber id="metric-revenue-filter"
+                             class="form-control form-control-sm"
+                             @bind-Value="Filter.Revenue"
+                             TValue="decimal?" />
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="filter-form-actions">
+                    <button type="button" class="btn btn-primary" disabled="@IsBusy" @onclick="OnSearchClicked">
+                        Buscar
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="OnClearClicked">
+                        Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MetricFilter Filter { get; set; } = new();
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnSearch { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+
+    private Task OnSearchClicked() => OnSearch.InvokeAsync();
+    private Task OnClearClicked() => OnClear.InvokeAsync();
+}

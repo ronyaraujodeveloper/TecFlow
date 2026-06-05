@@ -11,6 +11,23 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 - **Banco de Dados:** PostgreSQL (Instalado localmente via EDB, Porta 5432)
 - **ORM:** Entity Framework Core (EF Core) com Npgsql
 
+---
+
+### 🌐 Diretrizes de Codificação, Localização e Encoding (Padrão Obrigatório)
+
+Para evitar que a acentuação em PT-BR fique quebrada (ex: exibir '??' ou caracteres corrompidos no portal ou banco de dados), todo desenvolvedor e IA parceira deve seguir rigorosamente estas regras:
+
+1. **Encoding de Arquivos (UTF-8 com BOM):**
+   - Todos os arquivos de código-fonte criados ou modificados (`.razor`, `.cs`, `.html`, `.css`, `.json`) **DEVEM** ser salvos explicitamente utilizando a codificação **UTF-8 com assinatura (BOM)**. Isso garante que o IIS e o compilador do .NET processem os acentos corretamente em ambientes Windows/Server.
+
+2. **Cultura e Localização Nativa (PT-BR):**
+   - O portal frontend `TecFlow.WebUi` opera sob a cultura `pt-BR`. O pipeline de inicialização configura globalmente as propriedades `DefaultThreadCurrentCulture` e `DefaultThreadCurrentUICulture` para garantir consistência em formatações de data, moeda e decodificação textual.
+
+3. **Persistência de Dados (PostgreSQL):**
+   - Todas as comunicações com o banco de dados via driver `Npgsql` devem explicitar os parâmetros de encoding na Connection String (`Client Encoding=UTF8;Encoding=UTF8;`), garantindo que strings enviadas via Entity Framework Core preservem a acentuação original no armazenamento físico.
+
+---
+
 ## 📚 Documentação Complementar
 * Veja a [Lista de Mudanças de Arquivos](./docs/LISTA_ARQUIVOS_MUDANCAS.md)
 * Veja a [ANALISE WORKSPACE COMPLETA](./docs/ANALISE_WORKSPACE_COMPLETA.md)

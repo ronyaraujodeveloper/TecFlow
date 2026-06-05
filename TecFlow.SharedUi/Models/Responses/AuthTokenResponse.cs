@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Models.Responses;
+﻿namespace TecFlow.SharedUi.Models.Responses;
 
 public class AuthTokenResponse
 {

@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Dto;
+﻿namespace TecFlow.Business.Dto;
 
 /// <summary>Contrato base opcional; preferir [Nome]ResponseDto por entidade.</summary>
 public class ResponseDto

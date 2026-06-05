@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Entities
+﻿namespace TecFlow.Core.Entities
 {
     public class RankedItem
     {

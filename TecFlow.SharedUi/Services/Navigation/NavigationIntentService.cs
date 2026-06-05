@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Services.Navigation;
+﻿namespace TecFlow.SharedUi.Services.Navigation;
 
 public class NavigationIntentService : INavigationIntentService
 {

@@ -1,7 +1,7 @@
-namespace TecFlow.Infrastructure
+ï»¿namespace TecFlow.Infrastructure
 {
     public class AIProvider
     {
-        // Implementação de IA provider (placeholder)
+        // Implementaï¿½ï¿½o de IA provider (placeholder)
     }
 }

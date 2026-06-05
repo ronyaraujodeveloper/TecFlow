@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Webhooks;
+﻿namespace TecFlow.Business.Integrations.Webhooks;
 
 public interface IMarketplaceWebhookSignatureVerifier
 {

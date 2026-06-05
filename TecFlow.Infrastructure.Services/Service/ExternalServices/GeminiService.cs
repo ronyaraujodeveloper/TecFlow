@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Infrastructure\Services\ExternalServices\GeminiService.cs
+﻿// Caminho Completo: TecFlow.Infrastructure\Services\ExternalServices\GeminiService.cs
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

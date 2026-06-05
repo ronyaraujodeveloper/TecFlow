@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Models;
+﻿namespace TecFlow.SharedUi.Models;
 
 public sealed class ApiResult<T>
 {

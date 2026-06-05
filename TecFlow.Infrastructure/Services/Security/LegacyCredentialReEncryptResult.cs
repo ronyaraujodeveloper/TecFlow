@@ -1,4 +1,4 @@
-namespace TecFlow.Infrastructure.Services.Security;
+﻿namespace TecFlow.Infrastructure.Services.Security;
 
 public sealed class LegacyCredentialReEncryptResult
 {

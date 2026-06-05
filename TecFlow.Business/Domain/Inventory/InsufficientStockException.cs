@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Domain.Inventory;
+﻿namespace TecFlow.Business.Domain.Inventory;
 
 public class InsufficientStockException : InvalidOperationException
 {

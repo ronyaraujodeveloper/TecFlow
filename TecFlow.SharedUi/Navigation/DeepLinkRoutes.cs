@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Navigation;
+﻿namespace TecFlow.SharedUi.Navigation;
 
 public static class DeepLinkRoutes
 {

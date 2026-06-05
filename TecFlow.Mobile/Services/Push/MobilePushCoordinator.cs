@@ -1,4 +1,4 @@
-using TecFlow.SharedUi.Services.Devices;
+﻿using TecFlow.SharedUi.Services.Devices;
 using TecFlow.SharedUi.Services.Navigation;
 using TecFlow.SharedUi.Services.State;
 

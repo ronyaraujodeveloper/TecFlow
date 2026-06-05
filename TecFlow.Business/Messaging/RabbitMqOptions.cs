@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Messaging;
+﻿namespace TecFlow.Business.Messaging;
 
 public class RabbitMqOptions
 {

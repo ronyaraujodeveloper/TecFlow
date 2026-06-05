@@ -1,7 +1,7 @@
-namespace TecFlow.Infrastructure.API.Shopee
+ï»¿namespace TecFlow.Infrastructure.API.Shopee
 {
     public class ShopeeApi
     {
-        // Implementação placeholder para Shopee API
+        // Implementaï¿½ï¿½o placeholder para Shopee API
     }
 }

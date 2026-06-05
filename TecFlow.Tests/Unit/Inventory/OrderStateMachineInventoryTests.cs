@@ -1,4 +1,4 @@
-using TecFlow.Business.Domain.Sales;
+﻿using TecFlow.Business.Domain.Sales;
 
 namespace TecFlow.Tests.Unit.Inventory;
 

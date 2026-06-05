@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Enums;
+﻿namespace TecFlow.Core.Enums;
 
 public enum MarketplaceType
 {

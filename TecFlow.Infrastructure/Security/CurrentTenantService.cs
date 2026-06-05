@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using TecFlow.Database.MultiTenancy;
 using TecFlow.Core.Security;

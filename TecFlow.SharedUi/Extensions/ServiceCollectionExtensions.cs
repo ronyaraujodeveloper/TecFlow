@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TecFlow.SharedUi.Configuration;
 using TecFlow.SharedUi.Services.Auth;

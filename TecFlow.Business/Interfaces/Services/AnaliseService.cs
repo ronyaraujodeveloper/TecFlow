@@ -1,4 +1,4 @@
-// TecFlow.Core.Services\AnaliseService.cs
+﻿// TecFlow.Core.Services\AnaliseService.cs
 // Nenhuma alteração é necessária neste arquivo.
 
 using Microsoft.Extensions.Logging;

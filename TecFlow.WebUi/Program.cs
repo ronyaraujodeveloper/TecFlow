@@ -1,6 +1,10 @@
-using TecFlow.SharedUi.Extensions;
+﻿using TecFlow.SharedUi.Extensions;
 using TecFlow.WebUi.Components;
 using TecFlow.WebUi.Extensions;
+
+var cultureInfo = new System.Globalization.CultureInfo("pt-BR");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 var builder = WebApplication.CreateBuilder(args);
 

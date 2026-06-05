@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Dto;
+﻿namespace TecFlow.Business.Dto;
 
 /// <summary>Metadados de paginação no envelope ResponseDto (scroll infinito / toque).</summary>
 public class PagingInfoDto

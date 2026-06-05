@@ -1,4 +1,4 @@
-// Em TecFlow.Core.Interfaces/IAIService.cs
+﻿// Em TecFlow.Core.Interfaces/IAIService.cs
 using System.Threading.Tasks;
 using TecFlow.Core.Entities;
 

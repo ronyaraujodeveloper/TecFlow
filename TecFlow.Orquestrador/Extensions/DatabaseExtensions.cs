@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TecFlow.Database;
 
 namespace TecFlow.Orquestrador.Extensions;

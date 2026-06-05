@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Dto.Auth;
+﻿namespace TecFlow.Business.Dto.Auth;
 
 public class AuthTokenDto
 {

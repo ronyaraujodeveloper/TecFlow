@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Enums;
+﻿namespace TecFlow.Core.Enums;
 
 /// <summary>Ciclo de vida do pedido de venda direta (ERP local).</summary>
 public enum OrderStatus

@@ -1,4 +1,4 @@
-namespace TecFlow.Database.MultiTenancy;
+﻿namespace TecFlow.Database.MultiTenancy;
 
 /// <summary>Implementação de design-time / testes sem contexto HTTP.</summary>
 public sealed class NullCurrentTenantService : ICurrentTenantService

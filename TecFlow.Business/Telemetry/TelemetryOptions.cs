@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Telemetry;
+﻿namespace TecFlow.Business.Telemetry;
 
 public class TelemetryOptions
 {

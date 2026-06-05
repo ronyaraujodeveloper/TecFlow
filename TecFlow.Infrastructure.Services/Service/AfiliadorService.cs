@@ -1,7 +1,7 @@
-namespace TecFlow.Infrastructure.Services.Service
+ï»¿namespace TecFlow.Infrastructure.Services.Service
 {
     public class AfiliadorService
     {
-        // Implementação placeholder para o serviço de afiliados
+        // Implementaï¿½ï¿½o placeholder para o serviï¿½o de afiliados
     }
 }

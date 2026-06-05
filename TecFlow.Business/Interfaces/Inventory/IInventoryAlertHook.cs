@@ -1,4 +1,4 @@
-using TecFlow.Business.Domain.Inventory;
+﻿using TecFlow.Business.Domain.Inventory;
 
 namespace TecFlow.Business.Interfaces.Inventory;
 

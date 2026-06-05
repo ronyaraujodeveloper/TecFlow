@@ -1,8 +1,0 @@
-// Versionar
-git add .
-git commit -m "migração do portal para webUI"
-git push
-
-//Cursor a atualizar Git
-Use o atalho Ctrl + Shift + P
-Digite Developer: Reload Window e pressione Enter.

@@ -1,4 +1,4 @@
-using Firebase.Messaging;
+﻿using Firebase.Messaging;
 using TecFlow.Mobile.Services.Push;
 
 namespace TecFlow.Mobile.Platforms.Android.Push;

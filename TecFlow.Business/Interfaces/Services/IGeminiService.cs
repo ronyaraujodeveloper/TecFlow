@@ -1,4 +1,4 @@
-// TecFlow.Core\Interfaces\Services\IGeminiService.cs
+﻿// TecFlow.Core\Interfaces\Services\IGeminiService.cs
 
 using TecFlow.Core.Entities;
 using System.Collections.Generic;

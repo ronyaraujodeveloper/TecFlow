@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Domain.Inventory;
+﻿namespace TecFlow.Business.Domain.Inventory;
 
 /// <summary>Evento de alerta quando o estoque disponível fica abaixo do mínimo configurado.</summary>
 public sealed class InventoryMinimumStockAlert

@@ -1,4 +1,4 @@
-using TecFlow.Business.Domain.Sales;
+﻿using TecFlow.Business.Domain.Sales;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Tests.Unit.Sales;

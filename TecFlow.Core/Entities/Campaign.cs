@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;

@@ -1,4 +1,4 @@
-namespace TecFlow.Database.Filter;
+﻿namespace TecFlow.Database.Filter;
 
 public class UserAccountFilter
 {

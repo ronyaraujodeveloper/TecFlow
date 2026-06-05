@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Infrastructure.Services.ExternalServices/TikTokShopApiService.cs
+﻿// Arquivo: TecFlow.Infrastructure.Services.ExternalServices/TikTokShopApiService.cs
 // CORRIGINDO A IMPLEMENTAÇÃO DA INTERFACE ITikTokShopApi
 
 using Microsoft.Extensions.Configuration;

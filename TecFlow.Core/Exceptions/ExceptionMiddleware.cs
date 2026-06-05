@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.API\Middleware\ExceptionMiddleware.cs
+﻿// Caminho Completo: TecFlow.API\Middleware\ExceptionMiddleware.cs
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

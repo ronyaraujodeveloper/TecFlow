@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.TikTokShop;
+﻿namespace TecFlow.Business.Integrations.TikTokShop;
 
 /// <summary>Credenciais e endpoints da TikTok Shop Open API (produção).</summary>
 public class TikTokShopIntegrationOptions

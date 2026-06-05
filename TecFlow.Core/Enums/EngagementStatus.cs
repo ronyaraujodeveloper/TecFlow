@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Enums;
+﻿namespace TecFlow.Core.Enums;
 
 /// <summary>Ciclo de vida do processamento de um evento de engajamento (comentário, DM, etc.).</summary>
 public enum EngagementStatus

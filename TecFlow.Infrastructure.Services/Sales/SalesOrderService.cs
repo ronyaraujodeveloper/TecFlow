@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Domain.Inventory;
 using TecFlow.Business.Domain.Sales;

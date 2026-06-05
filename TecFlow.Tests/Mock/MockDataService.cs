@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Tests.Mock\MockDataService.cs
+﻿// Arquivo: TecFlow.Tests.Mock\MockDataService.cs
 
 using System;
 using System.Collections.Generic;

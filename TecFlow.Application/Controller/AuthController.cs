@@ -1,4 +1,4 @@
-namespace TecFlow.Application.Controller;
+﻿namespace TecFlow.Application.Controller;
 
 public class AuthController
 {

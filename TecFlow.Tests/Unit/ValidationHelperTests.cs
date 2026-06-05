@@ -1,4 +1,4 @@
-using TecFlow.Util.Validation;
+﻿using TecFlow.Util.Validation;
 
 namespace TecFlow.Tests.Unit;
 

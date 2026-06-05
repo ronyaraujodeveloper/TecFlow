@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using TecFlow.Database.Data;
 using TecFlow.Database.MultiTenancy;
 using TecFlow.Util.Security;
 
@@ -19,15 +20,18 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddJsonFile("appsettings.Homologacao.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("DefaultConnection não configurada.");
+        var connectionString = PostgreSqlConnectionStringExtensions.EnsureUtf8Encoding(
+            configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("DefaultConnection não configurada."));
 
         var encryptionService = EncryptionServiceCollectionExtensions.CreateEncryptionService(configuration);
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.AddInterceptors(new NpgsqlUtf8ClientEncodingInterceptor());
         optionsBuilder.UseNpgsql(connectionString, npgsql =>
             npgsql.MigrationsAssembly("TecFlow.Infrastructure"));
 

@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Dto;
+﻿namespace TecFlow.Business.Dto;
 
 /// <summary>Payload estruturado mockado para futura fila/gateway de NF-e.</summary>
 public class InvoicePayloadDto

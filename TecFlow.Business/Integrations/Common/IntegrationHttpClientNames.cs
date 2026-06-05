@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Common;
+﻿namespace TecFlow.Business.Integrations.Common;
 
 /// <summary>Nomes dos HttpClient registrados via IHttpClientFactory.</summary>
 public static class IntegrationHttpClientNames

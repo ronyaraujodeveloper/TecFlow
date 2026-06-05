@@ -1,5 +1,5 @@
-// Arquivo: TecFlow.Core/Services/AnaliseCalculoService.cs
-// Implementando o método faltante e corrigindo a referência a Users.
+ï»¿// Arquivo: TecFlow.Core/Services/AnaliseCalculoService.cs
+// Implementando o mï¿½todo faltante e corrigindo a referï¿½ncia a Users.
 
 using Microsoft.EntityFrameworkCore; // Para .CountAsync(), .ToListAsync()
 using Microsoft.Extensions.Logging;
@@ -15,7 +15,7 @@ using TecFlow.Business.Dto;
 namespace TecFlow.Infrastructure.Services.Services
 {
     // --- VERIFIQUE O NAMESPACE DESTA CLASSE ---
-    // Se for diferente, ajuste os 'using' statements onde ela é referenciada.
+    // Se for diferente, ajuste os 'using' statements onde ela ï¿½ referenciada.
 
     public class AnaliseCalculoService : IAnaliseCalculoService
     {
@@ -33,10 +33,10 @@ namespace TecFlow.Infrastructure.Services.Services
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             // _metricRepository = metricaRepository ?? throw new ArgumentNullException(nameof(metricaRepository));
 
-            // --- CORREÇÃO CRÍTICA: ENTIDADE 'USERS' NO AppDbContext ---
-            // Se a entidade 'Users' não estiver definida corretamente no models do AppDbContext
-            // ou se o DbContext não carrega as entidades relevantes, o erro "'AppDbContext' does not contain a definition for 'Users'"
-            // ocorrerá. Verifique o arquivo AppDbContext.cs para garantir que 'Users' é um DbSet<User>.
+            // --- CORREï¿½ï¿½O CRï¿½TICA: ENTIDADE 'USERS' NO AppDbContext ---
+            // Se a entidade 'Users' nï¿½o estiver definida corretamente no models do AppDbContext
+            // ou se o DbContext nï¿½o carrega as entidades relevantes, o erro "'AppDbContext' does not contain a definition for 'Users'"
+            // ocorrerï¿½. Verifique o arquivo AppDbContext.cs para garantir que 'Users' ï¿½ um DbSet<User>.
             // Se for um DbSet<ApplicationUser>, o acesso seria _dbContext.ApplicationUsers.
             // Assumindo um DbSet<User> chamado 'Users'.
         }
@@ -72,14 +72,14 @@ namespace TecFlow.Infrastructure.Services.Services
 
         public async Task<IEnumerable<Metric>> CalculateConsolidatedMetricsAsync(IEnumerable<Metric> inputMetrics)
         {
-            _logger.LogInformation("Iniciando consolidação de {Count} métricas.", inputMetrics?.Count() ?? 0);
+            _logger.LogInformation("Iniciando consolidaï¿½ï¿½o de {Count} mï¿½tricas.", inputMetrics?.Count() ?? 0);
 
             if (inputMetrics == null || !inputMetrics.Any())
                 return Enumerable.Empty<Metric>();
 
             try
             {
-                // Agrupa por CampanhaId para retornar uma média/soma consolidada (Exemplo de lógica)
+                // Agrupa por CampanhaId para retornar uma mï¿½dia/soma consolidada (Exemplo de lï¿½gica)
                 var consolidadas = inputMetrics
                     .GroupBy(m => m.CampaignId)
                     .Select(g => new Metric
@@ -96,7 +96,7 @@ namespace TecFlow.Infrastructure.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao consolidar métricas.");
+                _logger.LogError(ex, "Erro ao consolidar mï¿½tricas.");
                 throw;
             }
         }

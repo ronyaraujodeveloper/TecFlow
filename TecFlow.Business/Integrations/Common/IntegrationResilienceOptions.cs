@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Common;
+﻿namespace TecFlow.Business.Integrations.Common;
 
 /// <summary>Políticas de resiliência compartilhadas entre integrações externas.</summary>
 public class IntegrationResilienceOptions

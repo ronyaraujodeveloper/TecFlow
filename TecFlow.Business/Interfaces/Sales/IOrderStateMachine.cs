@@ -1,4 +1,4 @@
-using TecFlow.Core.Enums;
+﻿using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Interfaces.Sales;
 

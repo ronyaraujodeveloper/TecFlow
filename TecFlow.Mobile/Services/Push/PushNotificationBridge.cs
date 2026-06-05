@@ -1,4 +1,4 @@
-using TecFlow.SharedUi.Navigation;
+﻿using TecFlow.SharedUi.Navigation;
 using TecFlow.SharedUi.Services.Navigation;
 
 namespace TecFlow.Mobile.Services.Push;

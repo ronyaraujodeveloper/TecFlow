@@ -1,10 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database;
+using TecFlow.Database.Data;
 using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Data;
 using TecFlow.Infrastructure.Security;
@@ -26,8 +27,9 @@ namespace TecFlow.Infrastructure.Services
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+            var connectionString = PostgreSqlConnectionStringExtensions.EnsureUtf8Encoding(
+                configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured."));
 
             var provider = configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
 
@@ -70,6 +72,7 @@ namespace TecFlow.Infrastructure.Services
                         "SqlServer foi descontinuado neste projeto. Configure Database:Provider=PostgreSQL.");
                 }
 
+                options.AddInterceptors(new NpgsqlUtf8ClientEncodingInterceptor());
                 options.UseNpgsql(connectionString, npgsql =>
                     npgsql.MigrationsAssembly("TecFlow.Infrastructure"));
 

@@ -1,7 +1,7 @@
-namespace TecFlow.Infrastructure.API.TikTok
+ï»¿namespace TecFlow.Infrastructure.API.TikTok
 {
     public class TikTokAdsApi
     {
-        // Implementação placeholder para TikTok Ads API
+        // Implementaï¿½ï¿½o placeholder para TikTok Ads API
     }
 }

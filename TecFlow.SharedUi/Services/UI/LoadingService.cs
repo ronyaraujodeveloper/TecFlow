@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Services.UI;
+﻿namespace TecFlow.SharedUi.Services.UI;
 
 public class LoadingService : ILoadingService
 {

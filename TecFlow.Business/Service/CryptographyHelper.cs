@@ -1,4 +1,4 @@
-// Conteúdo original do CryptographyHelper
+﻿// Conteúdo original do CryptographyHelper
 
 namespace TecFlow.Business.Service
 {

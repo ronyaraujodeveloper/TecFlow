@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Security;
+﻿namespace TecFlow.Core.Security;
 
 public static class TecFlowClaimTypes
 {

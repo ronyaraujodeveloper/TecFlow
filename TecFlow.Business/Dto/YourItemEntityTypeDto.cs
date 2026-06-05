@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Dto;
+﻿namespace TecFlow.Business.Dto;
 
 public class YourItemEntityTypeDto
 {

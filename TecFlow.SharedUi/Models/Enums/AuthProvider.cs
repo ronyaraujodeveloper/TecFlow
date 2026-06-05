@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Models.Enums;
+﻿namespace TecFlow.SharedUi.Models.Enums;
 
 public enum AuthProvider
 {

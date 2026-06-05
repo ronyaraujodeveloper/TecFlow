@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Notifications;
+﻿namespace TecFlow.Business.Integrations.Notifications;
 
 public class FirebaseOptions
 {

@@ -1,5 +1,5 @@
-// Arquivo: TecFlow.Infrastructure/Services/AppConfiguration.cs (ITEM 117)
-// Correção para implementar todas as propriedades da interface IAppConfiguration atualizada.
+ï»¿// Arquivo: TecFlow.Infrastructure/Services/AppConfiguration.cs (ITEM 117)
+// Correï¿½ï¿½o para implementar todas as propriedades da interface IAppConfiguration atualizada.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging; // Importar para o _logger
@@ -12,7 +12,7 @@ using TecFlow.Infrastructure.Interfaces; // Interface atualizada
 
 namespace TecFlow.Infrastructure.Services
 {
-    // Adicionado ILogger como dependência
+    // Adicionado ILogger como dependï¿½ncia
     public class AppConfiguration : IAppConfiguration
     {
         private readonly IConfiguration _configuration;
@@ -37,9 +37,9 @@ namespace TecFlow.Infrastructure.Services
         // TikTok Shop
         public string TikTokShop_AccessToken => _configuration["TikTokShop:AccessToken"] ?? throw new InvalidOperationException("TikTok Shop Access Token is missing.");
         public string TikTokShop_ShopId => _configuration["TikTokShop:ShopId"] ?? throw new InvalidOperationException("TikTok Shop Shop ID is missing.");
-        // A Shopee_ApiBaseUrl já é existente, mas vamos reclassificar a chave para TikTokShop_ApiBaseUrl, conforme pode ter sido discutido
-        // Se a Shopee_ApiBaseUrl configurada for a MESMA base para TikTok Shop, então ela já está coberta.
-        // Se for diferente, precisamos adicionar uma nova. Assumindo que Shopee_ApiBaseUrl é **apenas** para Shopee.
+        // A Shopee_ApiBaseUrl jï¿½ ï¿½ existente, mas vamos reclassificar a chave para TikTokShop_ApiBaseUrl, conforme pode ter sido discutido
+        // Se a Shopee_ApiBaseUrl configurada for a MESMA base para TikTok Shop, entï¿½o ela jï¿½ estï¿½ coberta.
+        // Se for diferente, precisamos adicionar uma nova. Assumindo que Shopee_ApiBaseUrl ï¿½ **apenas** para Shopee.
         public string TikTokShop_ApiBaseUrl => _configuration["TikTokShop:ApiBaseUrl"] ?? throw new InvalidOperationException("TikTok Shop API Base URL is missing.");
 
 
@@ -49,7 +49,7 @@ namespace TecFlow.Infrastructure.Services
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger)); // Inicializa o logger
 
-            // Validações das propriedades existentes (chamando os getters para forçar a validação)
+            // Validaï¿½ï¿½es das propriedades existentes (chamando os getters para forï¿½ar a validaï¿½ï¿½o)
             _ = DatabaseProvider;
             _ = DatabaseConnectionString;
             _ = OpenAI_ApiKey;
@@ -59,7 +59,7 @@ namespace TecFlow.Infrastructure.Services
             _ = AzureKeyVaultUri;
             _ = Shopee_ApiBaseUrl;
 
-            // Validações das NOVAS propriedades
+            // Validaï¿½ï¿½es das NOVAS propriedades
             _ = TikTokAds_AccessToken;
             _ = TikTokAds_ApiBaseUrl;
             _ = TikTokShop_AccessToken;
@@ -69,7 +69,7 @@ namespace TecFlow.Infrastructure.Services
             _logger.LogInformation("AppConfiguration loaded successfully with all required settings.");
         }
 
-        // O método GetSetting já existe
+        // O mï¿½todo GetSetting jï¿½ existe
         public string? GetSetting(string key)
         {
             return _configuration[key];

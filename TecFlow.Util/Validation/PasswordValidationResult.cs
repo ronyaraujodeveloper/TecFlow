@@ -1,4 +1,4 @@
-namespace TecFlow.Util.Validation;
+﻿namespace TecFlow.Util.Validation;
 
 /// <summary>
 /// Resultado da validação de força de senha.

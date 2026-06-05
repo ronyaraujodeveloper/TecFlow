@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Models.Requests;
+﻿namespace TecFlow.SharedUi.Models.Requests;
 
 public class PlatformAuthRequest
 {

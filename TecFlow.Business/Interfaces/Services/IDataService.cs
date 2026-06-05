@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Core.Interfaces\IDataService.cs
+﻿// Arquivo: TecFlow.Core.Interfaces\IDataService.cs
 
 using System;
 using System.Collections.Generic;

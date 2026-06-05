@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Domain.Commission;
+﻿namespace TecFlow.Business.Domain.Commission;
 
 public class CommissionConciliationResult
 {

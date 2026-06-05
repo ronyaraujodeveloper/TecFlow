@@ -1,4 +1,4 @@
-using TecFlow.Core.Abstractions;
+﻿using TecFlow.Core.Abstractions;
 
 namespace TecFlow.Core.Entities;
 

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using TecFlow.SharedUi.Models.Enums;
 using TecFlow.SharedUi.Models.Responses;
 using TecFlow.Core.Security;

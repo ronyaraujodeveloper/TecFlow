@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Domain.Sales;
+﻿namespace TecFlow.Business.Domain.Sales;
 
 public class OrderTransitionException : InvalidOperationException
 {

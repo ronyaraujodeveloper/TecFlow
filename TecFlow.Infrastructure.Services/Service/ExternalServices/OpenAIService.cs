@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Infrastructure\Services\ExternalServices\OpenAIService.cs
+﻿// Caminho Completo: TecFlow.Infrastructure\Services\ExternalServices\OpenAIService.cs
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

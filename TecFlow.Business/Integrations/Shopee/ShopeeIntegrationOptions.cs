@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Shopee;
+﻿namespace TecFlow.Business.Integrations.Shopee;
 
 /// <summary>Credenciais e endpoints da Shopee Open Platform (produção).</summary>
 public class ShopeeIntegrationOptions

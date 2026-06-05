@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Interfaces.Telemetry;
+﻿namespace TecFlow.Business.Interfaces.Telemetry;
 
 public interface ITelemetryRecentErrorRecorder
 {

@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Infrastructure\Data\Repositories\AffiliateRepository.cs
+﻿// Arquivo: TecFlow.Infrastructure\Data\Repositories\AffiliateRepository.cs
 
 //using System.Collections.Generic;
 //using System.Linq;

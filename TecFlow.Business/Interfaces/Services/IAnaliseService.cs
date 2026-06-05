@@ -1,4 +1,4 @@
-using System.Threading; // Certifique-se de ter este using
+﻿using System.Threading; // Certifique-se de ter este using
 using System.Threading.Tasks;
 
 namespace TecFlow.Business.Interfaces.Services

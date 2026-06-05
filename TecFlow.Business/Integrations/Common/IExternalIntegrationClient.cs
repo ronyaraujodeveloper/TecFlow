@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Common;
+﻿namespace TecFlow.Business.Integrations.Common;
 
 /// <summary>Contrato base para clientes HTTP de plataformas externas de e-commerce.</summary>
 public interface IExternalIntegrationClient

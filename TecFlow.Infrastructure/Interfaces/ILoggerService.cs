@@ -1,4 +1,4 @@
-namespace TecFlow.Infrastructure.Interfaces
+﻿namespace TecFlow.Infrastructure.Interfaces
 {
     public interface ILoggerService
     {

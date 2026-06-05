@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Integrations.Auth;

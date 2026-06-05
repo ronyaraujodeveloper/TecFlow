@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Core\Exceptions\NotFoundException.cs
+﻿// Caminho Completo: TecFlow.Core\Exceptions\NotFoundException.cs
 
 using System;
 using System.Net; // Necessário para HttpStatusCode (ENUM)

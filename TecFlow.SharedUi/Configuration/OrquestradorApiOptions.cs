@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Configuration;
+﻿namespace TecFlow.SharedUi.Configuration;
 
 public class OrquestradorApiOptions
 {

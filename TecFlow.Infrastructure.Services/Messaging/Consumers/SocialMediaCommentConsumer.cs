@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Messaging;

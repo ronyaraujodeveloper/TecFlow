@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+ï»¿using System.ComponentModel.DataAnnotations;
 using TecFlow.Util.Validation;
 
 namespace TecFlow.Business.Dto;
@@ -6,7 +6,7 @@ namespace TecFlow.Business.Dto;
 public class LoginDto
 {
     [Required]
-    [ValidEmail(ErrorMessage = "E-mail inválido.")]
+    [ValidEmail(ErrorMessage = "E-mail invï¿½lido.")]
     public string Email { get; set; } = string.Empty;
 
     [Required]

@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Extensions;
+﻿namespace TecFlow.SharedUi.Extensions;
 
 /// <summary>Helpers para envelopes ResponseDto consumidos pela UI.</summary>
 public static class ResponseDtoExtensions

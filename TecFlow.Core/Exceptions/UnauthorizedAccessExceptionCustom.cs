@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Core\Exceptions\UnauthorizedAccessExceptionCustom.cs
+﻿// Caminho Completo: TecFlow.Core\Exceptions\UnauthorizedAccessExceptionCustom.cs
 
 using System;
 using System.Net; // Necessário para HttpStatusCode (ENUM)

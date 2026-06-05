@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;      // Essencial para ConfigurationBuilder e GetConnectionString
+﻿using Microsoft.Extensions.Configuration;      // Essencial para ConfigurationBuilder e GetConnectionString
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection; // Essencial para ServiceCollection e AddDbContext
 using Microsoft.Extensions.Logging;            // Essencial para ILoggingBuilder e ClearProviders

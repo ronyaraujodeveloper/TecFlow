@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Interfaces.Inventory;
+﻿namespace TecFlow.Business.Interfaces.Inventory;
 
 public interface IInventoryService
 {

@@ -1,4 +1,4 @@
-using TecFlow.Core.Enums;
+﻿using TecFlow.Core.Enums;
 using TecFlow.Core.Entities;
 
 namespace TecFlow.Business.Interfaces.Repositories;

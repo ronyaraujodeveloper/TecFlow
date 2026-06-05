@@ -1,4 +1,4 @@
-using TecFlow.Core.Entities;
+﻿using TecFlow.Core.Entities;
 using TecFlow.Database.Filter;
 
 namespace TecFlow.Tests.Unit.Database;

@@ -1,4 +1,4 @@
-using MassTransit;
+﻿using MassTransit;
 using TecFlow.Business.Interfaces.Messaging;
 using TecFlow.Business.Messaging;
 

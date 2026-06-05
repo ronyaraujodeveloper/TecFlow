@@ -1,4 +1,4 @@
-namespace TecFlow.Orquestrador.Pipelines
+﻿namespace TecFlow.Orquestrador.Pipelines
 {
     internal class FileName
     {

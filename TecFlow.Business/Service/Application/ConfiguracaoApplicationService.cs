@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 
 namespace TecFlow.Business.Service.Application
@@ -11,7 +11,7 @@ namespace TecFlow.Business.Service.Application
 
         public string? GetSetting(string key) => _settings.TryGetValue(key, out var value) ? value : null;
 
-        // Opcional: carrega configurações padrão para facilitar testes
+        // Opcional: carrega configuraï¿½ï¿½es padrï¿½o para facilitar testes
         public void LoadDefaults()
         {
             SetSetting("OpenAI_ApiKey", "default-openai-key");

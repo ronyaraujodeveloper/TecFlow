@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Core.Services/RankingService.cs
+﻿// Arquivo: TecFlow.Core.Services/RankingService.cs
 
 using Microsoft.Extensions.Logging;
 using TecFlow.Infrastructure.Configuration;

@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Infrastructure.ExternalServices\ServiceRegistrationExtensions.cs
+﻿// Arquivo: TecFlow.Infrastructure.ExternalServices\ServiceRegistrationExtensions.cs
 // ... usings como Microsoft.Extensions.DependencyInjection ...
 using System;
 using System.Net.Http;

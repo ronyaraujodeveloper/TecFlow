@@ -1,4 +1,4 @@
-namespace TecFlow.SharedUi.Services.Http;
+﻿namespace TecFlow.SharedUi.Services.Http;
 
 public interface IAccessTokenProvider
 {

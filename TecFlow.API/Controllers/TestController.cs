@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TecFlow.API.Controllers
@@ -11,7 +11,7 @@ namespace TecFlow.API.Controllers
         [HttpGet]
         public IActionResult Test()
         {
-            return Ok(new { message = "Swagger está funcionando!" });
+            return Ok(new { message = "Swagger estï¿½ funcionando!" });
         }
     }
 }

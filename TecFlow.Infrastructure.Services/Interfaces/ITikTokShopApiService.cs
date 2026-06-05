@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Core\Interfaces\Services\ITikTokShopApiService.cs
+﻿// Caminho Completo: TecFlow.Core\Interfaces\Services\ITikTokShopApiService.cs
 
 using System.Collections.Generic;
 using System.Threading.Tasks;

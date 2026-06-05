@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Enums;
+﻿namespace TecFlow.Core.Enums;
 
 /// <summary>Tipo de movimentação no kardex de estoque físico.</summary>
 public enum InventoryMovementType

@@ -1,4 +1,4 @@
-namespace TecFlow.Database.Filter;
+﻿namespace TecFlow.Database.Filter;
 
 /// <summary>Parâmetros de paginação para listagens consumidas por WebUi e clientes móveis.</summary>
 public interface IPagedFilter

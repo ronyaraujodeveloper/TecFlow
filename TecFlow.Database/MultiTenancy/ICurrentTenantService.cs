@@ -1,4 +1,4 @@
-namespace TecFlow.Database.MultiTenancy;
+﻿namespace TecFlow.Database.MultiTenancy;
 
 /// <summary>Contexto do inquilino e loja ativos (JWT / cabeçalho HTTP).</summary>
 public interface ICurrentTenantService

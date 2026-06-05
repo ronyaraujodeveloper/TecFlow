@@ -1,4 +1,4 @@
-// Conteúdo original do ValidationHelper
+﻿// Conteúdo original do ValidationHelper
 
 namespace TecFlow.Business.Service
 {

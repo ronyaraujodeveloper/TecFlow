@@ -1,4 +1,4 @@
-namespace TecFlow.Util.Validation;
+﻿namespace TecFlow.Util.Validation;
 
 public static partial class ValidationHelper
 {

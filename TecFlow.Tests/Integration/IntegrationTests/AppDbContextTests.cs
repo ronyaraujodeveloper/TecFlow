@@ -1,4 +1,4 @@
-namespace TecFlow.Tests.Integration.IntegrationTests
+﻿namespace TecFlow.Tests.Integration.IntegrationTests
 {
     public class AppDbContextTests
     {

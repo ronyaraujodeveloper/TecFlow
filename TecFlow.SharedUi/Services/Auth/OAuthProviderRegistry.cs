@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using TecFlow.SharedUi.Configuration;
 using TecFlow.SharedUi.Models.Enums;
 

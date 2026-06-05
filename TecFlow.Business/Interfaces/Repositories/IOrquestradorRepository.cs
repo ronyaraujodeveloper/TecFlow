@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Interfaces.Repositories
+﻿namespace TecFlow.Business.Interfaces.Repositories
 {
     public interface IOrquestradorRepository
     {

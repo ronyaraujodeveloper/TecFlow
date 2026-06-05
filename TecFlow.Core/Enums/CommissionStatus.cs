@@ -1,4 +1,4 @@
-namespace TecFlow.Core.Enums;
+﻿namespace TecFlow.Core.Enums;
 
 /// <summary>Estado da comissão de afiliado na conciliação financeira com marketplaces.</summary>
 public enum CommissionStatus

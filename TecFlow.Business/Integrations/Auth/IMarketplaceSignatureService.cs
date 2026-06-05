@@ -1,4 +1,4 @@
-namespace TecFlow.Business.Integrations.Auth;
+﻿namespace TecFlow.Business.Integrations.Auth;
 
 /// <summary>Gera assinaturas HMAC-SHA256 exigidas pelas APIs de produção Shopee e TikTok Shop.</summary>
 public interface IMarketplaceSignatureService

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Catalog;

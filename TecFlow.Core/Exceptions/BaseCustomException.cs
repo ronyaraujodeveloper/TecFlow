@@ -1,4 +1,4 @@
-// Caminho Completo: TecFlow.Core\Exceptions\BaseCustomException.cs
+﻿// Caminho Completo: TecFlow.Core\Exceptions\BaseCustomException.cs
 
 using System;
 using System.Net; // Importamos o namespace para poder usar o enum HttpStatusCode

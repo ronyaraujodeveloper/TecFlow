@@ -1,7 +1,7 @@
-namespace TecFlow.Infrastructure.API.TikTok
+ï»¿namespace TecFlow.Infrastructure.API.TikTok
 {
     public class TikTokShopApi
     {
-        // Implementação placeholder para TikTok Shop API
+        // Implementaï¿½ï¿½o placeholder para TikTok Shop API
     }
 }

@@ -1,4 +1,4 @@
-namespace TecFlow.Mobile.Services.Push;
+﻿namespace TecFlow.Mobile.Services.Push;
 
 public static class PushBootstrap
 {

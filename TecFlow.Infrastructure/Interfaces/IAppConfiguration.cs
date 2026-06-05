@@ -1,4 +1,4 @@
-// Arquivo: TecFlow.Infrastructure/Interfaces/IAppConfiguration.cs
+ï»¿// Arquivo: TecFlow.Infrastructure/Interfaces/IAppConfiguration.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +14,10 @@ namespace TecFlow.Infrastructure.Interfaces
         string DatabaseConnectionString { get; }
         string OpenAI_ApiKey { get; }
         string Gemini_ApiKey { get; }
-        string TikTok_ClientId { get; } // Já existia e foi validada
-        string Shopee_PartnerId { get; } // Já existia e foi validada
+        string TikTok_ClientId { get; } // Jï¿½ existia e foi validada
+        string Shopee_PartnerId { get; } // Jï¿½ existia e foi validada
         string AzureKeyVaultUri { get; }
-        string Shopee_ApiBaseUrl { get; } // Já existia e foi validada
+        string Shopee_ApiBaseUrl { get; } // Jï¿½ existia e foi validada
 
         // --- NOVAS PROPRIEDADES ADICIONADAS CONFORME ITEM 2.1 ---
 
@@ -25,14 +25,14 @@ namespace TecFlow.Infrastructure.Interfaces
         string TikTokAds_AccessToken { get; }
         string TikTokAds_ApiBaseUrl { get; }
 
-        // TikTok Shop (propriedades adicionais além do ShopId já presente em outras configurações)
+        // TikTok Shop (propriedades adicionais alï¿½m do ShopId jï¿½ presente em outras configuraï¿½ï¿½es)
         string TikTokShop_AccessToken { get; }
-        string TikTokShop_ShopId { get; } // Já está implicitamente usado em ShopeeApiService, mas vamos adicionar aqui para clareza se necessário
+        string TikTokShop_ShopId { get; } // Jï¿½ estï¿½ implicitamente usado em ShopeeApiService, mas vamos adicionar aqui para clareza se necessï¿½rio
         string TikTokShop_ApiBaseUrl { get; }
 
-        // --- Método Existente ---
+        // --- Mï¿½todo Existente ---
         /// <summary>
-        /// Obtém uma configuração específica pelo nome da chave. Útil para chaves adicionais não mapeadas diretamente.
+        /// Obtï¿½m uma configuraï¿½ï¿½o especï¿½fica pelo nome da chave. ï¿½til para chaves adicionais nï¿½o mapeadas diretamente.
         /// </summary>
         string? GetSetting(string key);
     }

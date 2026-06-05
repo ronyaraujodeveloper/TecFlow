@@ -1,4 +1,4 @@
-namespace TecFlow.Util.Security;
+﻿namespace TecFlow.Util.Security;
 
 public interface IEncryptionService
 {

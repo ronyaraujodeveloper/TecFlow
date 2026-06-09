@@ -1,0 +1,156 @@
+﻿@page "/cadastro"
+@page "/register"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IUserRegistrationApiService RegistrationApi
+@inject NavigationManager Navigation
+
+<PageTitle>TecFlow — Cadastre-se</PageTitle>
+
+<div class="login-page unified-login-page">
+    <div class="unified-login-shell mx-auto">
+        <header class="text-center mb-4 mb-md-5">
+            <a href="/" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
+                &larr; Voltar ao login
+            </a>
+            <h1 class="h3 fw-bold mt-3 mb-2">Crie sua conta</h1>
+            <p class="text-muted small mb-0 mx-auto unified-login-lead">
+                Preencha os dados abaixo para acessar o TecFlow e gerenciar suas campanhas de afiliados.
+            </p>
+        </header>
+
+        <div class="card shadow-lg border-0 login-card unified-login-card">
+            <div class="card-body p-3 p-sm-4 p-lg-5">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <div class="alert alert-danger small py-2" role="alert">
+                        @_errorMessage
+                    </div>
+                }
+
+                @if (_passwordsMismatch)
+                {
+                    <div class="alert alert-warning small py-2" role="alert">
+                        As senhas informadas não coincidem. Verifique e tente novamente.
+                    </div>
+                }
+
+                <EditForm Model="_registerModel" OnValidSubmit="SubmitRegisterAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger small mb-3" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="register-email">E-mail</label>
+                        <InputText id="register-email"
+                                   class="form-control form-control-lg"
+                                   @bind-Value="_registerModel.Email"
+                                   @bind-Value:after="OnFormChanged"
+                                   placeholder="seu@email.com"
+                                   autocomplete="email"
+                                   inputmode="email" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="register-password">Senha</label>
+                        <InputText id="register-password"
+                                   type="password"
+                                   class="form-control form-control-lg"
+                                   @bind-Value="_registerModel.Password"
+                                   @bind-Value:after="OnFormChanged"
+                                   placeholder="Crie uma senha segura"
+                                   autocomplete="new-password" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="register-confirm-password">Confirmar senha</label>
+                        <InputText id="register-confirm-password"
+                                   type="password"
+                                   class="form-control form-control-lg"
+                                   @bind-Value="_registerModel.ConfirmPassword"
+                                   @bind-Value:after="OnFormChanged"
+                                   placeholder="Repita a senha"
+                                   autocomplete="new-password" />
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary btn-lg w-100 btn-touch fw-semibold"
+                            disabled="@(_isSubmitting || _passwordsMismatch || _passwordsIncomplete)">
+                        @(_isSubmitting ? "Cadastrando..." : "Concluir cadastro")
+                    </button>
+                </EditForm>
+
+                <div class="text-center mt-3">
+                    <span class="text-muted small">Já possui conta?</span>
+                    <a href="/" class="login-register-link ms-1 fw-semibold text-decoration-none">
+                        Entrar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly RegisterFormModel _registerModel = new();
+    private string? _errorMessage;
+    private bool _isSubmitting;
+    private bool _passwordsMismatch;
+    private bool _passwordsIncomplete = true;
+
+    private void OnFormChanged()
+    {
+        _passwordsIncomplete = string.IsNullOrWhiteSpace(_registerModel.Password)
+            || string.IsNullOrWhiteSpace(_registerModel.ConfirmPassword);
+
+        _passwordsMismatch = !_passwordsIncomplete
+            && !string.Equals(_registerModel.Password, _registerModel.ConfirmPassword, StringComparison.Ordinal);
+    }
+
+    private async Task SubmitRegisterAsync()
+    {
+        _errorMessage = null;
+        OnFormChanged();
+
+        if (_passwordsMismatch || _passwordsIncomplete)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var request = new UserDto
+            {
+                Email = _registerModel.Email.Trim(),
+                PasswordHash = _registerModel.Password
+            };
+
+            var response = await RegistrationApi.RegisterAsync(request);
+
+            if (!response.Status)
+            {
+                _errorMessage = response.Descricao;
+                return;
+            }
+
+            Navigation.NavigateTo("/?registered=1", replace: true);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class RegisterFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "E-mail é obrigatório.")]
+        [ValidEmail(ErrorMessage = "E-mail inválido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Senha é obrigatória.")]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Confirmação de senha é obrigatória.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

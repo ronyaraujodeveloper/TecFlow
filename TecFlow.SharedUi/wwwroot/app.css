@@ -76,6 +76,30 @@ html, body {
     text-decoration: underline !important;
 }
 
+.login-form-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+.login-register-link {
+    text-align: center;
+}
+
+@media (min-width: 576px) {
+    .login-form-actions {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .login-register-link {
+        flex: 0 0 auto;
+        min-width: 9.5rem;
+    }
+}
+
 @media (min-width: 576px) {
     .unified-login-page {
         padding: 2rem 0 3rem;

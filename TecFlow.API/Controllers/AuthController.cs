@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Dto.Auth;
 using TecFlow.Business.Interfaces.Services;
 
@@ -88,6 +89,16 @@ public class AuthController : ControllerBase
         }
 
         var result = await _platformAuthService.ChangePasswordAsync(userId.Value, request, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<ActionResult<UserResponseDto>> RegisterAsync(
+        [FromBody] UserDto request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _platformAuthService.RegisterAsync(request, cancellationToken);
         return result.Status ? Ok(result) : BadRequest(result);
     }
 

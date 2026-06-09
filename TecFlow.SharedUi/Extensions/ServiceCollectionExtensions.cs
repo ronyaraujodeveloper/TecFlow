@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOAuthProviderRegistry, OAuthProviderRegistry>();
         services.AddScoped<ITikTokAuthService, TikTokAuthService>();
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
+        services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<ILoadingService, LoadingService>();
         services.AddScoped<IDashboardApiService, DashboardApiService>();

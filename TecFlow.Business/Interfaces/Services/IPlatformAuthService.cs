@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Dto.Auth;
+﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Dto.Auth;
 
 namespace TecFlow.Business.Interfaces.Services;
 
@@ -22,5 +23,9 @@ public interface IPlatformAuthService
     Task<AuthProviderResponseDto> ChangePasswordAsync(
         int userId,
         ChangePasswordDto request,
+        CancellationToken cancellationToken = default);
+
+    Task<UserResponseDto> RegisterAsync(
+        UserDto request,
         CancellationToken cancellationToken = default);
 }

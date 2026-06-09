@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Dto.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -192,6 +193,85 @@ public class PlatformAuthService : IPlatformAuthService
 
         return await BuildProviderResponseAsync(user, "Senha atualizada com sucesso.", cancellationToken);
     }
+
+    public async Task<UserResponseDto> RegisterAsync(
+        UserDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return FailRegister("E-mail é obrigatório.");
+        }
+
+        var email = request.Email.Trim();
+
+        // REGRA 6: validação centralizada de formato de e-mail.
+        if (!ValidationHelper.IsValidEmail(email))
+        {
+            return FailRegister("E-mail inválido.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.PasswordHash))
+        {
+            return FailRegister("Senha é obrigatória.");
+        }
+
+        // REGRA 6: política de força de senhas do ecossistema TecFlow.
+        var passwordValidation = ValidationHelper.ValidatePasswordStrength(request.PasswordHash);
+        if (!passwordValidation.IsValid)
+        {
+            return FailRegister(passwordValidation.Errors.FirstOrDefault() ?? "Senha não atende aos critérios de segurança.");
+        }
+
+        var existingUser = await _userAccountRepository.GetByEmailAsync(email);
+        if (existingUser is not null)
+        {
+            return FailRegister("Este e-mail já está cadastrado no sistema.");
+        }
+
+        var displayName = string.IsNullOrWhiteSpace(request.Name)
+            ? email.Split('@')[0]
+            : request.Name.Trim();
+
+        var user = new UserAccount
+        {
+            Name = displayName,
+            Email = email,
+            PasswordHash = string.Empty,
+            Plan = "Free",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, request.PasswordHash);
+
+        var tenant = await _tenantProvisioningService.EnsureTenantForUserAsync(user);
+        user.TenantId = tenant.Id;
+
+        await _userAccountRepository.AddAsync(user);
+
+        return new UserResponseDto
+        {
+            Status = true,
+            Descricao = "Conta criada com sucesso.",
+            Data = MapUserDto(user)
+        };
+    }
+
+    private static UserResponseDto FailRegister(string message) =>
+        new()
+        {
+            Status = false,
+            Descricao = message
+        };
+
+    private static UserDto MapUserDto(UserAccount user) =>
+        new()
+        {
+            Name = user.Name,
+            Email = user.Email,
+            PhoneNumber = user.WhatsAppPhone,
+            IsActive = true
+        };
 
     private async Task<(bool Success, AuthTokenDto? Token, string? ErrorMessage, string? ErrorCode)> LoginWithEmailPasswordAsync(
         string platform,

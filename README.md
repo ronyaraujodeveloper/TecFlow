@@ -191,6 +191,8 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] 9.1. Reformulação Visual da Tela de Login Principal
   - Remover os botões iniciais de login direto por marketplace (TikTok/Shopee) da página de entrada.
   - Redesenhar a interface utilizando abordagem Mobile-First com botões de provedores sociais centrais (Google, Apple, Facebook) e o formulário tradicional de E-mail/Senha com link para recuperação de senha.
+  - Integrar autorregistro de usuários via portal (`/cadastro`) com endpoint `POST /api/auth/register`, validação centralizada (`ValidationHelper`) e persistência no PostgreSQL.
+  - Adicionar a opção "Cadastre-se" na tela de login e criar a nova página de registro conectada diretamente ao banco de dados PostgreSQL via API é um passo natural.
 
 - [ ] 9.2. Central de Contas e Segurança de Acesso do Usuário
   - Criar a página interna "Minha Conta / Segurança" contendo a aba de métodos de acesso (exibindo quais redes estão conectadas) e o formulário Blazor para alteração de senha.

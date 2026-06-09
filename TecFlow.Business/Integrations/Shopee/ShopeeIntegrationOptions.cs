@@ -18,6 +18,10 @@ public class ShopeeIntegrationOptions
     public string GetOrderDetailPath { get; set; } = "order/get_order_detail";
     public string UpdateStockPath { get; set; } = "product/update_stock";
     public string AffiliateCommissionReportPath { get; set; } = "affiliate/get_conversion_report";
+    public string AffiliateApiBaseUrl { get; set; } = "https://open-api.affiliate.shopee.com.br";
+    public string GenerateCustomLinkPath { get; set; } = "api/v1/custom_link/generate";
+    public string? AffiliateAppId { get; set; }
+    public string? AffiliateSecret { get; set; }
     public string WebhookCallbackUrl { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 100;
     public bool EnableRequestLogging { get; set; } = true;

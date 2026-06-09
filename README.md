@@ -204,17 +204,17 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Desenvolver um componente de Dropdown persistente e fluido na barra superior do sistema carregando dinamicamente as lojas conectadas do usuário.
   - Persistir o estado da loja selecionada no escopo global do Blazor. Ao alternar a loja no topo, disparar o recarregamento dos componentes da página ativa injetando o novo `lojaId`.
 
-### Fase 10: Motor Agnóstico de Geração e Encurtamento de Links de Afiliado (Backend) 🔗
-- [ ] 10.1. Arquitetura Base e Padrão Strategy para Múltiplos Marketplaces
+### Fase 10: Mecanismo Omnichannel de Geração e Encurtamento de Links de Afiliado (Backend) 🔗
+- [x] 10.1. Arquitetura Base e Padrão Strategy para Múltiplos Marketplaces
   - Criar a interface `IPlatformLinkStrategy` com métodos para validação de domínio e geração de Deep Links.
   - Implementar o `PlatformLinkResolver` para identificar dinamicamente qual provedor deve processar a URL com base no domínio (suportando nativamente TikTok e Shopee, e preparado para Mercado Livre, Amazon, Magalu, etc.).
   - Criar o DTO unificado `GerarLinkAfiliadoDto` recebendo a URL bruta e o escopo de identificação.
 
-- [ ] 10.2. Implementação dos Provedores e Integração com as APIs Core
+- [x] 10.2. Implementação dos Provedores e Integração com as APIs Core
   - Desenvolver as classes de estratégia iniciais consumindo os SDKs/APIs correspondentes de Afiliados.
   - Tratar payloads de links já encurtados pelas plataformas de origem (ex: links do tipo `s.shopee.com.br` ou encurtados de redes sociais), realizando o *unshorten* (rastreamento do redirecionamento HTTP) se necessário para extrair o ID real do produto antes de re-parametrizar.
 
-- [ ] 10.3. Encurtador Interno Multi-Plataforma e Telemetria de Cliques
+- [x] 10.3. Encurtador Interno Multi-Plataforma e Telemetria de Cliques
   - Criar o mecanismo de redirecionamento dinâmico do TecFlow (ex: `tflow.link/xyz`).
   - Modelar a tabela `LinkClickLog` para registrar a telemetria de acessos (data, hora, IP, localização simulada, dispositivo e plataforma de origem do produto).
 

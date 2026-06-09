@@ -45,6 +45,8 @@ public class AppDbContext : DbContext
     public DbSet<Inventory> Inventories { get; set; } = null!;
     public DbSet<InventoryMovement> InventoryMovements { get; set; } = null!;
     public DbSet<IntegracaoLoja> IntegracaoLojas { get; set; } = null!;
+    public DbSet<ShortAffiliateLink> ShortAffiliateLinks { get; set; } = null!;
+    public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -265,6 +267,24 @@ public class AppDbContext : DbContext
             .WithMany(i => i.Movements)
             .HasForeignKey(m => m.InventoryId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ShortAffiliateLink>(entity =>
+        {
+            entity.HasIndex(link => link.ShortCode).IsUnique();
+            entity.HasIndex(link => link.AffiliateLinkId).IsUnique();
+            entity.HasIndex(link => new { link.UserId, link.CreatedAt });
+        });
+
+        modelBuilder.Entity<LinkClickLog>(entity =>
+        {
+            entity.HasIndex(log => log.AffiliateLinkId);
+            entity.HasIndex(log => log.ClickedAt);
+            entity.HasOne(log => log.AffiliateLink)
+                .WithMany()
+                .HasForeignKey(log => log.AffiliateLinkId)
+                .HasPrincipalKey(link => link.AffiliateLinkId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

@@ -8,6 +8,7 @@ using TecFlow.Infrastructure.Services.Integrations.Auth;
 using TecFlow.Infrastructure.Services.Integrations.Catalog;
 using TecFlow.Infrastructure.Services.Integrations.Orders;
 using TecFlow.Infrastructure.Services.Messaging;
+using TecFlow.Infrastructure.Services.ShortLinks;
 
 
 namespace TecFlow.Infrastructure.Services
@@ -30,6 +31,7 @@ namespace TecFlow.Infrastructure.Services
             services.AddTecFlowMarketplaceOrders();
             services.AddTecFlowExternalServices();
             services.AddTecFlowPushNotifications(configuration);
+            services.AddTecFlowShortLinkServices(configuration);
 
             return services;
         }

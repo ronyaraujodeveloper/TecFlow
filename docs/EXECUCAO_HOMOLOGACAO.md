@@ -22,7 +22,6 @@ dotnet ef database update --project .\Tecso.Infrastructure\Tecso.Infrastructure.
 
 1.3. Recompilar a Solution (Clean e Build)
 ```powershell
-dotnet clean
 dotnet build
 
 📦 FASE 2: Publicação e Deploy Limpo no IIS

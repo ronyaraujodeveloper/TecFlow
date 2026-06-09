@@ -5,6 +5,8 @@ using System.Text;
 using TecFlow.API.Middlewares;
 using TecFlow.API.Extensions;
 using TecFlow.Business.Service.Application;
+using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Infrastructure.Services.LinkStrategies;
 using TecFlow.Infrastructure;
 using TecFlow.Infrastructure.Services;
 using TecFlow.Observability;
@@ -34,6 +36,8 @@ builder.Services.AddTecFlowCoreServices();
 builder.Services.AddTecFlowInfrastructureServices(builder.Configuration);
 builder.Services.AddTecFlowInfrastructureData(builder.Configuration);
 builder.Services.AddTecFlowApplicationServices();
+builder.Services.AddAffiliateLinkInfrastructureServices();
+builder.Services.AddAffiliateLinkStrategyServices();
 builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.Infrastructure.Services.Messaging.TecFlowMessagingRole.Publisher);
 builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.API", enableAspNetCoreInstrumentation: true);
 

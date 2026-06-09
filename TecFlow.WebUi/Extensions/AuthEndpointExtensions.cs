@@ -16,6 +16,7 @@ public static class AuthEndpointExtensions
 
         group.MapGet("/challenge/{provider}", ChallengeExternalProvider);
         group.MapGet("/finish-oauth", FinishOAuthAsync);
+        group.MapGet("/complete-signin", CompleteSignInAsync);
         group.MapGet("/logout", LogoutAsync);
 
         return endpoints;
@@ -98,6 +99,37 @@ public static class AuthEndpointExtensions
 
         await authCookie.SignInFromAuthResponseAsync(result.Data, loginPlatform, authProvider, httpContext.RequestAborted);
         return Results.Redirect("/dashboard");
+    }
+
+    private static async Task<IResult> CompleteSignInAsync(
+        string ticket,
+        IAuthSignInTicketStore ticketStore,
+        IAuthCookieService authCookie,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("TecFlow.WebUi.Auth");
+
+        var payload = ticketStore.ConsumeTicket(ticket);
+        if (payload is null)
+        {
+            logger.LogWarning("Ticket de sign-in inválido ou expirado.");
+            return Results.Redirect("/?login=failed&message=" + Uri.EscapeDataString("Sessão de login expirada. Tente novamente."));
+        }
+
+        try
+        {
+            await authCookie.SignInFromAuthResponseAsync(
+                payload.Response,
+                payload.Platform,
+                payload.Provider);
+
+            return Results.Redirect("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Falha ao concluir sign-in por ticket.");
+            return Results.Redirect("/?login=failed&message=" + Uri.EscapeDataString("Não foi possível concluir o login."));
+        }
     }
 
     private static async Task<IResult> LogoutAsync(

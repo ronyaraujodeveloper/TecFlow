@@ -11,6 +11,8 @@ public static class WebUiServiceCollectionExtensions
     public static IServiceCollection AddWebUiServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddTecFlowClientServices(configuration);
+        services.AddMemoryCache();
+        services.AddSingleton<IAuthSignInTicketStore, AuthSignInTicketStore>();
         services.AddHttpContextAccessor();
         services.AddScoped<IAccessTokenProvider, WebAccessTokenProvider>();
         services.AddScoped<IAuthCookieService, AuthCookieService>();

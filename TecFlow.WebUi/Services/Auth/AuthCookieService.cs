@@ -82,6 +82,7 @@ public class AuthCookieService : IAuthCookieService
         _sessionState.SetSession(
             token,
             platform,
+            refreshToken: principal.FindFirstValue("TecFlow:refresh_token"),
             userId: principal.FindFirstValue(ClaimTypes.NameIdentifier),
             displayName: principal.FindFirstValue(ClaimTypes.Name));
     }
@@ -91,10 +92,20 @@ public class AuthCookieService : IAuthCookieService
         LoginPlatform platform,
         AuthProvider provider)
     {
+        if (string.IsNullOrWhiteSpace(response.Token))
+        {
+            throw new InvalidOperationException("Token de autenticação ausente na resposta da API.");
+        }
+
+        var userId = string.IsNullOrWhiteSpace(response.UserId) ? "0" : response.UserId.Trim();
+        var displayName = string.IsNullOrWhiteSpace(response.DisplayName)
+            ? "Utilizador TecFlow"
+            : response.DisplayName.Trim();
+
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, response.UserId ?? "0"),
-            new(ClaimTypes.Name, response.DisplayName ?? "Utilizador"),
+            new(ClaimTypes.NameIdentifier, userId),
+            new(ClaimTypes.Name, displayName),
             new(TecFlowClaimTypes.AccessToken, response.Token),
             new(TecFlowClaimTypes.Platform, platform.ToString()),
             new(TecFlowClaimTypes.AuthProvider, provider.ToString())

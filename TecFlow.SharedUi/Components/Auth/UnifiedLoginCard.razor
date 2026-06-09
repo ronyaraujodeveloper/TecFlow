@@ -1,7 +1,8 @@
 ﻿@using TecFlow.SharedUi.Models.Enums
 @inject ITikTokAuthService PortalAuthService
-@inject IAuthCookieService AuthCookie
+@inject IAuthSignInTicketStore SignInTicketStore
 @inject NavigationManager Navigation
+@inject ILogger<UnifiedLoginCard> Logger
 
 <div class="card shadow-lg border-0 login-card unified-login-card mx-auto w-100">
     <div class="card-body p-3 p-sm-4 p-lg-5">
@@ -133,6 +134,15 @@
             _errorMessage = null;
             _successMessage = "Conta criada com sucesso. Faça login com seu e-mail e senha.";
         }
+
+        if (query.TryGetValue("login", out var loginStatus)
+            && loginStatus.ToString().Equals("failed", StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage = null;
+            _errorMessage = query.TryGetValue("message", out var loginMessage)
+                ? Uri.UnescapeDataString(loginMessage.ToString())
+                : "Não foi possível concluir o login.";
+        }
     }
 
     private void ClearError()
@@ -164,13 +174,18 @@
 
             await HandleResultAsync(result, AuthProvider.EmailPassword);
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro inesperado ao submeter login por e-mail.");
+            _errorMessage = "Ocorreu um erro inesperado ao entrar. Tente novamente.";
+        }
         finally
         {
             _isSubmitting = false;
         }
     }
 
-    private async Task HandleResultAsync(
+    private Task HandleResultAsync(
         Models.ApiResult<Models.Responses.AuthTokenResponse> result,
         AuthProvider provider)
     {
@@ -178,11 +193,29 @@
         {
             _errorMessage = result.ErrorMessage ?? "Falha na autenticação.";
             _isOffline = result.IsOffline;
-            return;
+            return Task.CompletedTask;
         }
 
-        await AuthCookie.SignInFromAuthResponseAsync(result.Data, _portalPlatform, provider);
-        Navigation.NavigateTo("/dashboard", forceLoad: true);
+        if (string.IsNullOrWhiteSpace(result.Data.Token))
+        {
+            Logger.LogWarning("API retornou sucesso de login sem token JWT.");
+            _errorMessage = "Resposta de autenticação inválida (token ausente).";
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            // Sign-in via endpoint HTTP: HttpContext.SignInAsync quebra no circuito Blazor interativo.
+            var ticket = SignInTicketStore.CreateTicket(result.Data, _portalPlatform, provider);
+            Navigation.NavigateTo($"/auth/complete-signin?ticket={Uri.EscapeDataString(ticket)}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao preparar conclusão do login.");
+            _errorMessage = "Não foi possível concluir o login. Tente novamente.";
+        }
+
+        return Task.CompletedTask;
     }
 
     private sealed class EmailLoginModel

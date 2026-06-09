@@ -1,9 +1,10 @@
 ﻿@using TecFlow.SharedUi.Models.Enums
 @inject ITikTokAuthService TikTokAuthService
 @inject IShopeeAuthService ShopeeAuthService
-@inject IAuthCookieService AuthCookie
+@inject IAuthSignInTicketStore SignInTicketStore
 @inject IOAuthProviderRegistry OAuthRegistry
 @inject NavigationManager Navigation
+@inject ILogger<LoginMethodsCard> Logger
 
 <div class="card shadow-lg border-0 login-card">
     <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -115,14 +116,23 @@
     private async Task SubmitEmailLoginAsync()
     {
         ClearError();
-        var result = await LoginAsync(
-            AuthProvider.EmailPassword,
-            accessToken: null,
-            idToken: null,
-            _emailModel.Email,
-            _emailModel.Password);
 
-        await HandleResultAsync(result, AuthProvider.EmailPassword);
+        try
+        {
+            var result = await LoginAsync(
+                AuthProvider.EmailPassword,
+                accessToken: null,
+                idToken: null,
+                _emailModel.Email,
+                _emailModel.Password);
+
+            await HandleResultAsync(result, AuthProvider.EmailPassword);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro inesperado ao submeter login por e-mail para {Platform}.", Platform);
+            _errorMessage = "Ocorreu um erro inesperado ao entrar. Tente novamente.";
+        }
     }
 
     private async Task<Models.ApiResult<Models.Responses.AuthTokenResponse>> LoginAsync(
@@ -140,7 +150,7 @@
         };
     }
 
-    private async Task HandleResultAsync(
+    private Task HandleResultAsync(
         Models.ApiResult<Models.Responses.AuthTokenResponse> result,
         AuthProvider provider)
     {
@@ -148,11 +158,28 @@
         {
             _errorMessage = result.ErrorMessage ?? "Falha na autenticação.";
             _isOffline = result.IsOffline;
-            return;
+            return Task.CompletedTask;
         }
 
-        await AuthCookie.SignInFromAuthResponseAsync(result.Data, Platform, provider);
-        Navigation.NavigateTo("/dashboard", forceLoad: true);
+        if (string.IsNullOrWhiteSpace(result.Data.Token))
+        {
+            Logger.LogWarning("API retornou sucesso de login sem token JWT para {Platform}.", Platform);
+            _errorMessage = "Resposta de autenticação inválida (token ausente).";
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            var ticket = SignInTicketStore.CreateTicket(result.Data, Platform, provider);
+            Navigation.NavigateTo($"/auth/complete-signin?ticket={Uri.EscapeDataString(ticket)}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao preparar conclusão do login para {Platform}.", Platform);
+            _errorMessage = "Não foi possível concluir o login. Tente novamente.";
+        }
+
+        return Task.CompletedTask;
     }
 
     private sealed class EmailLoginModel

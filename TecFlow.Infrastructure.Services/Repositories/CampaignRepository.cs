@@ -74,11 +74,15 @@ namespace TecFlow.Infrastructure.Services.Repositories
                 .Where(x => x.OwnerId == ownerId)
                 .ToListAsync();
         }
-        public async Task<IEnumerable<Campaign>> GetByOwnerIdAsync(int ownerId)
+        public async Task<IEnumerable<Campaign>> GetByOwnerIdAsync(int ownerId, int? lojaId = null)
         {
-            return await _context.Campaigns
-                .Where(c => c.OwnerId == ownerId)
-                .ToListAsync();
+            var query = _context.Campaigns.Where(c => c.OwnerId == ownerId);
+            if (lojaId.HasValue)
+            {
+                query = query.Where(c => c.LojaId == lojaId.Value);
+            }
+
+            return await query.ToListAsync();
         }
         public async Task<Campaign> CreateAsync(Campaign campanha)
         {

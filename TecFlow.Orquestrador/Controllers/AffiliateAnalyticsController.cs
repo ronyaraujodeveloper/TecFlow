@@ -54,6 +54,7 @@ public class AffiliateAnalyticsController : ControllerBase
                 affiliateId,
                 start,
                 end,
+                filter.LojaId,
                 cancellationToken);
 
             var (items, meta) = PagedListHelper.Slice(discrepancies, filter);
@@ -104,6 +105,7 @@ public class AffiliateAnalyticsController : ControllerBase
             filter.AffiliateId,
             start,
             end,
+            filter.LojaId,
             cancellationToken);
 
         return Ok(new AffiliateReconciliationResponseDto

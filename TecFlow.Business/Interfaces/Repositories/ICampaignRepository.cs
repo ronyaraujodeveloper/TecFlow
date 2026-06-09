@@ -10,5 +10,5 @@ public interface ICampaignRepository
     Task AddAsync(Campaign entity);
     Task UpdateAsync(Campaign entity);
     Task DeleteAsync(int id);
-    Task<IEnumerable<Campaign>> GetByOwnerIdAsync(int ownerId);
+    Task<IEnumerable<Campaign>> GetByOwnerIdAsync(int ownerId, int? lojaId = null);
 }

@@ -41,11 +41,20 @@ namespace TecFlow.Infrastructure.Services.Services
             // Assumindo um DbSet<User> chamado 'Users'.
         }
 
-        public async Task<DashboardSummaryDto?> CalculateDashboardStatisticsAsync(int? userId)
+        public async Task<DashboardSummaryDto?> CalculateDashboardStatisticsAsync(int? userId, int? lojaId = null)
         {
-            var metrics = await _dbContext.Metrics
-                .Where(m => userId == null || m.OwnerId == userId)
-                .ToListAsync();
+            var query = _dbContext.Metrics.AsQueryable();
+            if (userId.HasValue)
+            {
+                query = query.Where(m => m.OwnerId == userId.Value);
+            }
+
+            if (lojaId.HasValue)
+            {
+                query = query.Where(m => m.LojaId == lojaId.Value);
+            }
+
+            var metrics = await query.ToListAsync();
 
             if (!metrics.Any()) return new DashboardSummaryDto();
 

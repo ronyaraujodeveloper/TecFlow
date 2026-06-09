@@ -28,6 +28,9 @@ public class Metric : BaseEntity, ITenantScopedEntity
     [Column("Receita")]
     public decimal Revenue { get; set; }
 
+    /// <summary>Integração de loja marketplace (IntegracaoLoja.Id) para isolamento analítico.</summary>
+    public int? LojaId { get; set; }
+
     public int OwnerId { get; set; }
     public UserAccount? Owner { get; set; }
 

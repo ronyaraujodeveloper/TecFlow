@@ -6,7 +6,7 @@ namespace TecFlow.Infrastructure.Services.Services;
 
 public interface IAnaliseCalculoService
 {
-    Task<DashboardSummaryDto?> CalculateDashboardStatisticsAsync(int? userId);
+    Task<DashboardSummaryDto?> CalculateDashboardStatisticsAsync(int? userId, int? lojaId = null);
 
     Task<IEnumerable<Metric>> CalculateConsolidatedMetricsAsync(IEnumerable<Metric> inputMetrics);
 }

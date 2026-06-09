@@ -30,7 +30,7 @@ public class CampaignsController : ControllerBase
 
         filter.OwnerId ??= userId;
 
-        var filtered = (await _campaignRepository.GetByOwnerIdAsync(userId)).ApplyFilter(filter);
+        var filtered = (await _campaignRepository.GetByOwnerIdAsync(userId, filter.LojaId)).ApplyFilter(filter);
         var (items, meta) = PagedListHelper.Slice(filtered, filter);
 
         return Ok(new CampaignResponseDto

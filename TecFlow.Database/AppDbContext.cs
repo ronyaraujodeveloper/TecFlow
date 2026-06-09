@@ -106,6 +106,24 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<Campaign>()
+            .HasIndex(c => c.LojaId);
+
+        modelBuilder.Entity<Metric>()
+            .HasIndex(m => m.LojaId);
+
+        modelBuilder.Entity<Campaign>()
+            .HasOne<IntegracaoLoja>()
+            .WithMany()
+            .HasForeignKey(c => c.LojaId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Metric>()
+            .HasOne<IntegracaoLoja>()
+            .WithMany()
+            .HasForeignKey(m => m.LojaId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<Conversion>().Property(c => c.SaleAmount).HasPrecision(18, 2);
         modelBuilder.Entity<Affiliate>().Property(a => a.Commission).HasPrecision(18, 2);
         modelBuilder.Entity<Campaign>().Property(c => c.Budget).HasPrecision(18, 2);

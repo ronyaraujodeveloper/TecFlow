@@ -43,6 +43,7 @@ public static class FilterQueryExtensions
         if (filter.EndDate.HasValue) source = source.Where(x => x.EndDate <= filter.EndDate.Value);
         if (filter.Budget.HasValue) source = source.Where(x => x.Budget == filter.Budget.Value);
         if (filter.OwnerId.HasValue) source = source.Where(x => x.OwnerId == filter.OwnerId.Value);
+        if (filter.LojaId.HasValue) source = source.Where(x => x.LojaId == filter.LojaId.Value);
         return source;
     }
 
@@ -90,6 +91,7 @@ public static class FilterQueryExtensions
         if (filter.Revenue.HasValue) source = source.Where(x => x.Revenue == filter.Revenue.Value);
         if (filter.OwnerId.HasValue) source = source.Where(x => x.OwnerId == filter.OwnerId.Value);
         if (filter.ParentMetricId.HasValue) source = source.Where(x => x.ParentMetricId == filter.ParentMetricId.Value);
+        if (filter.LojaId.HasValue) source = source.Where(x => x.LojaId == filter.LojaId.Value);
         return source;
     }
 

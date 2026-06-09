@@ -183,7 +183,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Desenvolver o endpoint `POST /api/integracoes/vincular` para capturar o fluxo de callback do OAuth do marketplace, solicitar o Nome Amigável/Apelido da loja e persistir o novo registro de forma isolada.
   - Desenvolver o endpoint `DELETE /api/integracoes/lojas/{id}` para desvincular e remover uma loja específica.
 
-- [ ] 8.4. Refatoração dos Endpoints de Métricas do Dashboard para Escopo de Loja
+- [x] 8.4. Refatoração dos Endpoints de Métricas do Dashboard para Escopo de Loja
   - Ajustar os controladores e serviços que alimentam o Dashboard para exigir ou receber o parâmetro opcional `?lojaId=...`, garantindo que as queries apliquem o filtro de isolamento e retornem os dados da conta selecionada.
 
 

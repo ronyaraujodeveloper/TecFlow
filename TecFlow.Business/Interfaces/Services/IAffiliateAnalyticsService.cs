@@ -9,6 +9,7 @@ public interface IAffiliateAnalyticsService
         string affiliateId,
         DateTime startDateUtc,
         DateTime endDateUtc,
+        int? lojaId = null,
         CancellationToken cancellationToken = default);
 
     Task<(AffiliatePerformanceDto Performance, IReadOnlyList<CommissionDiscrepancyReportDto> Discrepancies)> ReconcileCommissionsAsync(
@@ -16,5 +17,6 @@ public interface IAffiliateAnalyticsService
         string affiliateId,
         DateTime startDateUtc,
         DateTime endDateUtc,
+        int? lojaId = null,
         CancellationToken cancellationToken = default);
 }

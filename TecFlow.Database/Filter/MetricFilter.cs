@@ -18,4 +18,5 @@ public class MetricFilter : IPagedFilter
     public decimal? Revenue { get; set; }
     public int? OwnerId { get; set; }
     public int? ParentMetricId { get; set; }
+    public int? LojaId { get; set; }
 }

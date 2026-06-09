@@ -23,6 +23,9 @@ public class Campaign : BaseEntity, ITenantScopedEntity
     [Column("Orcamento")]
     public decimal Budget { get; set; }
 
+    /// <summary>Integração de loja marketplace (IntegracaoLoja.Id) para isolamento analítico.</summary>
+    public int? LojaId { get; set; }
+
     public int OwnerId { get; set; }
     public UserAccount? Owner { get; set; }
 

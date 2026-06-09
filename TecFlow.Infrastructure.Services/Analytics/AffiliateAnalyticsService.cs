@@ -13,6 +13,7 @@ using TecFlow.Business.Interfaces.Telemetry;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
+using TecFlow.Database.Entity;
 
 namespace TecFlow.Infrastructure.Services.Analytics;
 
@@ -57,20 +58,32 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
         string affiliateId,
         DateTime startDateUtc,
         DateTime endDateUtc,
+        int? lojaId = null,
         CancellationToken cancellationToken = default)
     {
         var affiliate = await ResolveAffiliateAsync(ownerId, affiliateId, cancellationToken);
-        var shopIds = await _db.Products
-            .Where(p => p.OwnerId == ownerId && p.MarketplaceShopId != null)
-            .Select(p => p.MarketplaceShopId!)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+        var scopedLoja = await ResolveLojaScopeAsync(ownerId, lojaId, cancellationToken);
 
-        var tokens = shopIds.Count == 0
-            ? await _db.MarketplaceTokens.ToListAsync(cancellationToken)
-            : await _db.MarketplaceTokens
-                .Where(t => shopIds.Contains(t.ShopId))
+        var shopIds = scopedLoja is not null
+            ? new List<string> { scopedLoja.ShopId }
+            : await _db.Products
+                .Where(p => p.OwnerId == ownerId && p.MarketplaceShopId != null)
+                .Select(p => p.MarketplaceShopId!)
+                .Distinct()
                 .ToListAsync(cancellationToken);
+
+        var tokensQuery = _db.MarketplaceTokens.AsQueryable();
+        if (scopedLoja is not null)
+        {
+            tokensQuery = tokensQuery.Where(t =>
+                t.ShopId == scopedLoja.ShopId && t.MarketplaceType == scopedLoja.PlatformType);
+        }
+        else if (shopIds.Count > 0)
+        {
+            tokensQuery = tokensQuery.Where(t => shopIds.Contains(t.ShopId));
+        }
+
+        var tokens = await tokensQuery.ToListAsync(cancellationToken);
 
         var lines = new List<MarketplaceCommissionLineDto>();
 
@@ -94,6 +107,7 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
                 ownerId,
                 startDateUtc,
                 endDateUtc,
+                scopedLoja?.ShopId,
                 cancellationToken));
         }
 
@@ -116,16 +130,20 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
             string affiliateId,
             DateTime startDateUtc,
             DateTime endDateUtc,
+            int? lojaId = null,
             CancellationToken cancellationToken = default)
     {
         var affiliate = await ResolveAffiliateAsync(ownerId, affiliateId, cancellationToken)
             ?? throw new InvalidOperationException($"Afiliado '{affiliateId}' não encontrado para o utilizador {ownerId}.");
+
+        await ResolveLojaScopeAsync(ownerId, lojaId, cancellationToken);
 
         var marketplaceLines = await FetchMarketplaceCommissionsAsync(
             ownerId,
             affiliateId,
             startDateUtc,
             endDateUtc,
+            lojaId,
             cancellationToken);
 
         var conversions = await _db.Conversions
@@ -133,9 +151,15 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
             .Where(c => c.CreatedAt >= startDateUtc && c.CreatedAt <= endDateUtc)
             .ToListAsync(cancellationToken);
 
-        var metrics = await _db.Metrics
-            .Where(m => m.OwnerId == ownerId && m.CreatedAt >= startDateUtc && m.CreatedAt <= endDateUtc)
-            .ToListAsync(cancellationToken);
+        var metricsQuery = _db.Metrics
+            .Where(m => m.OwnerId == ownerId && m.CreatedAt >= startDateUtc && m.CreatedAt <= endDateUtc);
+
+        if (lojaId.HasValue)
+        {
+            metricsQuery = metricsQuery.Where(m => m.LojaId == lojaId.Value);
+        }
+
+        var metrics = await metricsQuery.ToListAsync(cancellationToken);
 
         var products = await _db.Products
             .Where(p => p.OwnerId == ownerId)
@@ -221,6 +245,27 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
         };
 
         return (performance, discrepancies);
+    }
+
+    private async Task<IntegracaoLoja?> ResolveLojaScopeAsync(
+        int ownerId,
+        int? lojaId,
+        CancellationToken cancellationToken)
+    {
+        if (!lojaId.HasValue)
+        {
+            return null;
+        }
+
+        var loja = await _db.IntegracaoLojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId.Value && l.UserId == ownerId, cancellationToken);
+
+        if (loja is null)
+        {
+            throw new InvalidOperationException("Loja informada não pertence ao usuário autenticado.");
+        }
+
+        return loja;
     }
 
     private async Task<Affiliate?> ResolveAffiliateAsync(
@@ -405,12 +450,19 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
         int ownerId,
         DateTime startUtc,
         DateTime endUtc,
+        string? shopId,
         CancellationToken cancellationToken)
     {
-        var orders = await _db.MarketplaceOrders
+        var ordersQuery = _db.MarketplaceOrders
             .Include(o => o.Lines)
-            .Where(o => o.ProcessedAt >= startUtc && o.ProcessedAt <= endUtc)
-            .ToListAsync(cancellationToken);
+            .Where(o => o.ProcessedAt >= startUtc && o.ProcessedAt <= endUtc);
+
+        if (!string.IsNullOrWhiteSpace(shopId))
+        {
+            ordersQuery = ordersQuery.Where(o => o.ShopId == shopId);
+        }
+
+        var orders = await ordersQuery.ToListAsync(cancellationToken);
 
         var lines = new List<MarketplaceCommissionLineDto>();
         foreach (var order in orders)

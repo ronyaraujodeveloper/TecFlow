@@ -43,19 +43,26 @@ namespace TecFlow.Infrastructure.Services.Repositories
             }
         }
 
-        public async Task<IEnumerable<Metric>> GetByOwnerIdAsync(int ownerId)
+        public async Task<IEnumerable<Metric>> GetByOwnerIdAsync(int ownerId, int? lojaId = null)
         {
-            return await _context.Metrics
-                .Where(x => x.OwnerId == ownerId)
-                .ToListAsync();
+            var query = _context.Metrics.Where(x => x.OwnerId == ownerId);
+            if (lojaId.HasValue)
+            {
+                query = query.Where(x => x.LojaId == lojaId.Value);
+            }
+
+            return await query.ToListAsync();
         }
 
-        // Implementação do método que o Orquestrador vai consumir
-        public async Task<IEnumerable<Metric>> GetByCampaignIdAsync(int campanhaId)
+        public async Task<IEnumerable<Metric>> GetByCampaignIdAsync(int campanhaId, int? lojaId = null)
         {
-            return await _context.Metrics
-                .Where(m => m.CampaignId == campanhaId)
-                .ToListAsync();
+            var query = _context.Metrics.Where(m => m.CampaignId == campanhaId);
+            if (lojaId.HasValue)
+            {
+                query = query.Where(m => m.LojaId == lojaId.Value);
+            }
+
+            return await query.ToListAsync();
         }
     }
 }

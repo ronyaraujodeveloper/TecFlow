@@ -16,4 +16,5 @@ public class CampaignFilter : IPagedFilter
     public DateTime? EndDate { get; set; }
     public decimal? Budget { get; set; }
     public int? OwnerId { get; set; }
+    public int? LojaId { get; set; }
 }

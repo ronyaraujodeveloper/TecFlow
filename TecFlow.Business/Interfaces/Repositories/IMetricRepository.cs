@@ -9,6 +9,6 @@ public interface IMetricRepository
     Task AddAsync(Metric entity);
     Task UpdateAsync(Metric entity);
     Task DeleteAsync(int id);
-    Task<IEnumerable<Metric>> GetByOwnerIdAsync(int ownerId);
-    Task<IEnumerable<Metric>> GetByCampaignIdAsync(int campaignId);
+    Task<IEnumerable<Metric>> GetByOwnerIdAsync(int ownerId, int? lojaId = null);
+    Task<IEnumerable<Metric>> GetByCampaignIdAsync(int campaignId, int? lojaId = null);
 }

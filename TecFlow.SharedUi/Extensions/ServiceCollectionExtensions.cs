@@ -11,6 +11,7 @@ using TecFlow.SharedUi.Services.State;
 using TecFlow.SharedUi.Services.Navigation;
 using TecFlow.SharedUi.Services.UI;
 using TecFlow.SharedUi.Services.Devices;
+using TecFlow.SharedUi.Services.Integrations;
 
 namespace TecFlow.SharedUi.Extensions;
 
@@ -35,7 +36,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITikTokAuthService, TikTokAuthService>();
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
+        services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
+        services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
+        services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();
         services.AddScoped<IDashboardApiService, DashboardApiService>();
         services.AddScoped<IAffiliateAnalyticsApiService, AffiliateAnalyticsApiService>();

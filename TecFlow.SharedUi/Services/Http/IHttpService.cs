@@ -18,4 +18,9 @@ public interface IHttpService
         string relativeUrl,
         TRequest body,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResult<TResponse>> DeleteAsync<TResponse>(
+        string relativeUrl,
+        object? queryFilter = null,
+        CancellationToken cancellationToken = default);
 }

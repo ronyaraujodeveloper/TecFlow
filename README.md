@@ -194,13 +194,13 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Integrar autorregistro de usuários via portal (`/cadastro`) com endpoint `POST /api/auth/register`, validação centralizada (`ValidationHelper`) e persistência no PostgreSQL.
   - Adicionar a opção "Cadastre-se" na tela de login e criar a nova página de registro conectada diretamente ao banco de dados PostgreSQL via API é um passo natural.
 
-- [ ] 9.2. Central de Contas e Segurança de Acesso do Usuário
-  - Criar a página interna "Minha Conta / Segurança" contendo a aba de métodos de acesso (exibindo quais redes estão conectadas) e o formulário Blazor para alteração de senha.
+- [x] 9.2. Central de Contas e Segurança de Acesso do Usuário
+  - Criar a página interna "Minha Conta / Segurança" (`/minha-conta`) com métodos de acesso (E-mail, Google, Facebook, Apple), vinculação/desvinculação OAuth e formulário de alteração de senha integrado à API (`GET/DELETE/PUT /api/auth/providers/*` e `change-password`).
 
-- [ ] 9.3. Painel de Gerenciamento Multi-Contas de Marketplaces
+- [x] 9.3. Painel de Gerenciamento Multi-Contas de Marketplaces
   - Desenvolver a interface "Minhas Lojas / Integrações" exibindo em cartões responsivos todas as contas integradas do TikTok/Shopee, seus respectivos status de conexão (Verde/Vermelho) e o botão para disparar o OAuth de uma nova conta (permitindo gerenciar 10 ou mais lojas).
 
-- [ ] 9.4. Seletor Global de Escopo no Topbar do Dashboard
+- [x] 9.4. Seletor Global de Escopo no Topbar do Dashboard
   - Desenvolver um componente de Dropdown persistente e fluido na barra superior do sistema carregando dinamicamente as lojas conectadas do usuário.
   - Persistir o estado da loja selecionada no escopo global do Blazor. Ao alternar a loja no topo, disparar o recarregamento dos componentes da página ativa injetando o novo `lojaId`.
 

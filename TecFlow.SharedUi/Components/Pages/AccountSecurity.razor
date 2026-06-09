@@ -1,0 +1,442 @@
+﻿@page "/minha-conta"
+@page "/account/security"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto.Auth
+@using TecFlow.SharedUi.Models.Enums
+@inject IAccountSecurityApiService SecurityApi
+@inject IOAuthProviderRegistry OAuthRegistry
+@inject NavigationManager Navigation
+@inject ILogger<AccountSecurity> Logger
+
+<PageTitle>Minha Conta / Segurança — TecFlow</PageTitle>
+
+<div class="account-security-page dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Minha Conta / Segurança</h1>
+            <p class="text-muted small mb-0">
+                Gerencie métodos de acesso, provedores sociais vinculados e sua senha de e-mail.
+            </p>
+        </div>
+        <div class="dashboard-toolbar">
+            <button type="button" class="btn btn-outline-primary btn-touch" disabled="@_isLoading" @onclick="ReloadAsync">
+                @(_isLoading ? "Atualizando..." : "Atualizar")
+            </button>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-touch">Voltar ao painel</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_pageMessage))
+    {
+        <div class="alert @(_pageMessageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">
+            @_pageMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorAlert Message="@_loadError" OnDismiss="@(EventCallback.Factory.Create(this, ClearLoadError))" />
+    }
+
+    <ul class="nav nav-pills account-security-tabs flex-column flex-sm-row gap-2 mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link btn-touch @(_activeTab == SecurityTab.Providers ? "active" : "")"
+                    @onclick="() => SelectTab(SecurityTab.Providers)">
+                Métodos de acesso
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link btn-touch @(_activeTab == SecurityTab.Password ? "active" : "")"
+                    @onclick="() => SelectTab(SecurityTab.Password)">
+                Alterar senha
+            </button>
+        </li>
+    </ul>
+
+    @if (_activeTab == SecurityTab.Providers)
+    {
+        <section aria-label="Provedores de identidade vinculados">
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <IdentityProviderCard Title="E-mail"
+                                          Description="Login tradicional com senha."
+                                          IconClass="email"
+                                          IconContent="@@"
+                                          IsConnected="@_hasPassword"
+                                          ShowLink="false"
+                                          ShowUnlink="false"
+                                          ConnectedHint="Use a aba Alterar senha para definir ou trocar sua senha."
+                                          IsBusy="@_isBusy" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <IdentityProviderCard Title="Google"
+                                          Description="Entrada rápida com conta Google."
+                                          IconClass="google"
+                                          IconContent="G"
+                                          IsConnected="@IsProviderLinked("Google")"
+                                          CanUnlink="@CanUnlinkProvider("Google")"
+                                          CanLink="@OAuthRegistry.IsEnabled(AuthProvider.Google)"
+                                          UnlinkTooltip="@GetUnlinkTooltip("Google")"
+                                          LinkTooltip="@GetLinkTooltip(AuthProvider.Google)"
+                                          UnavailableHint="Configure OAuth Google em appsettings para habilitar vinculação."
+                                          IsBusy="@_isBusy"
+                                          OnLink="@(() => LinkProviderAsync(AuthProvider.Google))"
+                                          OnUnlink="@(() => UnlinkProviderAsync("Google"))" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <IdentityProviderCard Title="Facebook"
+                                          Description="Entrada com perfil Facebook."
+                                          IconClass="facebook"
+                                          IconContent="f"
+                                          IsConnected="@IsProviderLinked("Facebook")"
+                                          CanUnlink="@CanUnlinkProvider("Facebook")"
+                                          CanLink="@OAuthRegistry.IsEnabled(AuthProvider.Facebook)"
+                                          UnlinkTooltip="@GetUnlinkTooltip("Facebook")"
+                                          LinkTooltip="@GetLinkTooltip(AuthProvider.Facebook)"
+                                          UnavailableHint="Configure OAuth Facebook em appsettings para habilitar vinculação."
+                                          IsBusy="@_isBusy"
+                                          OnLink="@(() => LinkProviderAsync(AuthProvider.Facebook))"
+                                          OnUnlink="@(() => UnlinkProviderAsync("Facebook"))" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <IdentityProviderCard Title="Apple (iCloud)"
+                                          Description="Entrada com Apple ID."
+                                          IconClass="icloud"
+                                          IconContent="&#63743;"
+                                          IsConnected="@IsProviderLinked("Apple")"
+                                          CanUnlink="@CanUnlinkProvider("Apple")"
+                                          CanLink="@OAuthRegistry.IsEnabled(AuthProvider.ICloud)"
+                                          UnlinkTooltip="@GetUnlinkTooltip("Apple")"
+                                          LinkTooltip="@GetLinkTooltip(AuthProvider.ICloud)"
+                                          UnavailableHint="Configure OAuth Apple em appsettings para habilitar vinculação."
+                                          IsBusy="@_isBusy"
+                                          OnLink="@(() => LinkProviderAsync(AuthProvider.ICloud))"
+                                          OnUnlink="@(() => UnlinkProviderAsync("Apple"))" />
+                </div>
+            </div>
+
+            @if (_activeMethodCount <= 1)
+            {
+                <p class="text-muted small mt-3 mb-0">
+                    Você precisa manter pelo menos um método de acesso ativo. Vincule outro provedor antes de desvincular o único método restante.
+                </p>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="card border-0 shadow-sm account-password-card" aria-label="Alteração de senha">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h5 fw-semibold mb-2">Alterar senha</h2>
+                <p class="text-muted small mb-4">
+                    @(_hasPassword
+                        ? "Informe a senha atual e escolha uma nova senha segura."
+                        : "Você ainda não definiu senha de e-mail. Preencha apenas a nova senha para criá-la.")
+                </p>
+
+                @if (_passwordsMismatch)
+                {
+                    <div class="alert alert-warning small py-2" role="alert">
+                        A confirmação da nova senha não coincide.
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_passwordMessage))
+                {
+                    <div class="alert @(_passwordMessageIsError ? "alert-danger" : "alert-success") small py-2" role="status">
+                        @_passwordMessage
+                    </div>
+                }
+
+                <EditForm Model="_passwordModel" OnValidSubmit="SubmitChangePasswordAsync">
+                    <DataAnnotationsValidator />
+
+                    @if (_hasPassword)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="current-password">Senha atual</label>
+                            <InputText id="current-password"
+                                       type="password"
+                                       class="form-control form-control-lg"
+                                       @bind-Value="_passwordModel.CurrentPassword"
+                                       autocomplete="current-password" />
+                            <ValidationMessage For="@(() => _passwordModel.CurrentPassword)" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="new-password">Nova senha</label>
+                        <InputText id="new-password"
+                                   type="password"
+                                   class="form-control form-control-lg"
+                                   @bind-Value="_passwordModel.NewPassword"
+                                   @bind-Value:after="OnPasswordFieldsChanged"
+                                   autocomplete="new-password" />
+                        <ValidationMessage For="@(() => _passwordModel.NewPassword)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="confirm-password">Confirmar nova senha</label>
+                        <InputText id="confirm-password"
+                                   type="password"
+                                   class="form-control form-control-lg"
+                                   @bind-Value="_passwordModel.ConfirmPassword"
+                                   @bind-Value:after="OnPasswordFieldsChanged"
+                                   autocomplete="new-password" />
+                        <ValidationMessage For="@(() => _passwordModel.ConfirmPassword)" />
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary btn-lg btn-touch w-100 w-md-auto px-md-5"
+                            disabled="@(_isSavingPassword || _passwordsMismatch || _passwordsIncomplete)">
+                        @(_isSavingPassword ? "Salvando..." : "Salvar nova senha")
+                    </button>
+                </EditForm>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private enum SecurityTab
+    {
+        Providers,
+        Password
+    }
+
+    private static readonly LoginPlatform _portalPlatform = LoginPlatform.TikTok;
+
+    private SecurityTab _activeTab = SecurityTab.Providers;
+    private AuthProviderInfoDto? _providerInfo;
+    private bool _hasPassword;
+    private int _activeMethodCount;
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private bool _isSavingPassword;
+    private bool _passwordsMismatch;
+    private bool _passwordsIncomplete = true;
+    private string? _loadError;
+    private string? _pageMessage;
+    private bool _pageMessageIsError;
+    private string? _passwordMessage;
+    private bool _passwordMessageIsError;
+    private readonly ChangePasswordFormModel _passwordModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseQueryMessages();
+        await ReloadAsync();
+    }
+
+    private void ParseQueryMessages()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("link", out var linkStatus))
+        {
+            _pageMessageIsError = linkStatus.ToString() != "success";
+            _pageMessage = linkStatus.ToString() switch
+            {
+                "success" => "Conta vinculada com sucesso.",
+                "not-configured" => "OAuth não configurado no ambiente de homologação.",
+                "failed" => query.TryGetValue("message", out var msg)
+                    ? Uri.UnescapeDataString(msg.ToString())
+                    : "Não foi possível vincular a conta.",
+                _ => null
+            };
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+
+        try
+        {
+            var response = await SecurityApi.GetProviderStatusAsync();
+            if (!response.Status || response.Data is null)
+            {
+                _loadError = response.Descricao;
+                return;
+            }
+
+            ApplyProviderInfo(response.Data);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao carregar status de provedores.");
+            _loadError = "Erro inesperado ao carregar métodos de acesso.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ApplyProviderInfo(AuthProviderInfoDto info)
+    {
+        _providerInfo = info;
+        _hasPassword = info.HasPassword;
+        _activeMethodCount = (_hasPassword ? 1 : 0) + (info.LinkedProviders?.Count ?? 0);
+    }
+
+    private bool IsProviderLinked(string provider) =>
+        _providerInfo?.LinkedProviders?.Any(name =>
+            string.Equals(name, provider, StringComparison.OrdinalIgnoreCase)) == true;
+
+    private bool CanUnlinkProvider(string provider) =>
+        IsProviderLinked(provider) && _activeMethodCount > 1;
+
+    private string GetUnlinkTooltip(string provider) =>
+        CanUnlinkProvider(provider)
+            ? "Remove o vínculo deste provedor social."
+            : "Não é possível remover o único método de acesso ativo.";
+
+    private string GetLinkTooltip(AuthProvider provider) =>
+        OAuthRegistry.IsEnabled(provider)
+            ? "Abrir fluxo OAuth para vincular este provedor."
+            : "OAuth não configurado para este provedor.";
+
+    private void SelectTab(SecurityTab tab) => _activeTab = tab;
+
+    private void ClearLoadError() => _loadError = null;
+
+    private Task LinkProviderAsync(AuthProvider provider)
+    {
+        if (!OAuthRegistry.IsEnabled(provider))
+        {
+            _pageMessageIsError = true;
+            _pageMessage = GetLinkTooltip(provider);
+            return Task.CompletedTask;
+        }
+
+        var path = OAuthRegistry.GetLinkChallengePath(provider, _portalPlatform);
+        Navigation.NavigateTo(path, forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task UnlinkProviderAsync(string provider)
+    {
+        if (!CanUnlinkProvider(provider))
+        {
+            _pageMessageIsError = true;
+            _pageMessage = GetUnlinkTooltip(provider);
+            return;
+        }
+
+        _isBusy = true;
+        _pageMessage = null;
+
+        try
+        {
+            var response = await SecurityApi.UnlinkProviderAsync(provider);
+            _pageMessageIsError = !response.Status;
+            _pageMessage = response.Descricao;
+
+            if (response.Status && response.Data is not null)
+            {
+                ApplyProviderInfo(response.Data);
+            }
+            else if (response.Status)
+            {
+                await ReloadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao desvincular provedor {Provider}.", provider);
+            _pageMessageIsError = true;
+            _pageMessage = "Erro inesperado ao desvincular provedor.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void OnPasswordFieldsChanged()
+    {
+        _passwordsIncomplete = string.IsNullOrWhiteSpace(_passwordModel.NewPassword)
+            || string.IsNullOrWhiteSpace(_passwordModel.ConfirmPassword);
+
+        _passwordsMismatch = !_passwordsIncomplete
+            && !string.Equals(_passwordModel.NewPassword, _passwordModel.ConfirmPassword, StringComparison.Ordinal);
+    }
+
+    private async Task SubmitChangePasswordAsync()
+    {
+        _passwordMessage = null;
+        OnPasswordFieldsChanged();
+
+        if (_passwordsMismatch || _passwordsIncomplete)
+        {
+            return;
+        }
+
+        if (_hasPassword && string.IsNullOrWhiteSpace(_passwordModel.CurrentPassword))
+        {
+            _passwordMessageIsError = true;
+            _passwordMessage = "Senha atual é obrigatória.";
+            return;
+        }
+
+        _isSavingPassword = true;
+
+        try
+        {
+            var request = new ChangePasswordDto
+            {
+                CurrentPassword = _passwordModel.CurrentPassword,
+                NewPassword = _passwordModel.NewPassword
+            };
+
+            var response = await SecurityApi.ChangePasswordAsync(request);
+            _passwordMessageIsError = !response.Status;
+            _passwordMessage = response.Descricao;
+
+            if (response.Status)
+            {
+                _passwordModel.CurrentPassword = string.Empty;
+                _passwordModel.NewPassword = string.Empty;
+                _passwordModel.ConfirmPassword = string.Empty;
+                _passwordsIncomplete = true;
+                _passwordsMismatch = false;
+
+                if (response.Data is not null)
+                {
+                    ApplyProviderInfo(response.Data);
+                }
+                else
+                {
+                    await ReloadAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao alterar senha.");
+            _passwordMessageIsError = true;
+            _passwordMessage = "Erro inesperado ao alterar senha.";
+        }
+        finally
+        {
+            _isSavingPassword = false;
+        }
+    }
+
+    private sealed class ChangePasswordFormModel
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nova senha é obrigatória.")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Confirmação da nova senha é obrigatória.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

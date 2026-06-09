@@ -1,0 +1,279 @@
+﻿@page "/minhas-lojas"
+@page "/account/integrations"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Entity
+@inject IIntegracaoLojaApiService IntegracaoApi
+@inject NavigationManager Navigation
+@inject ILogger<MinhasLojas> Logger
+
+<PageTitle>Minhas Lojas / Integrações — TecFlow</PageTitle>
+
+<div class="marketplace-stores-page dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Minhas Lojas / Integrações</h1>
+            <p class="text-muted small mb-0">
+                Gerencie contas TikTok Shop e Shopee vinculadas ao seu usuário.
+            </p>
+        </div>
+        <div class="dashboard-toolbar d-grid d-sm-flex gap-2">
+            <button type="button"
+                    class="btn btn-primary btn-touch"
+                    disabled="@_isBusy"
+                    @onclick="OpenConnectModal">
+                + Conectar nova loja
+            </button>
+            <button type="button"
+                    class="btn btn-outline-primary btn-touch"
+                    disabled="@_isLoading"
+                    @onclick="ReloadAsync">
+                @(_isLoading ? "Atualizando..." : "Atualizar")
+            </button>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-touch">Voltar ao painel</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_pageMessage))
+    {
+        <div class="alert @(_pageMessageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">
+            @_pageMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorAlert Message="@_loadError" OnDismiss="@(EventCallback.Factory.Create(this, ClearLoadError))" />
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center text-muted py-5">
+            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+            Carregando lojas integradas...
+        </div>
+    }
+    else if (_stores.Count == 0)
+    {
+        <section class="marketplace-stores-empty card border-0 shadow-sm text-center p-4 p-md-5">
+            <h2 class="h5 fw-semibold mb-2">Nenhuma loja conectada</h2>
+            <p class="text-muted small mb-4">
+                Conecte sua primeira conta de marketplace para sincronizar campanhas, métricas e comissões.
+            </p>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="OpenConnectModal">
+                + Conectar nova loja
+            </button>
+        </section>
+    }
+    else
+    {
+        <section class="marketplace-stores-grid" aria-label="Lojas conectadas">
+            @foreach (var store in _stores)
+            {
+                <MarketplaceStoreCard Store="store"
+                                      IsBusy="@_isBusy"
+                                      OnUnlink="UnlinkStoreAsync" />
+            }
+        </section>
+    }
+</div>
+
+<ConnectStoreModal Visible="@_connectModalVisible"
+                   IsBusy="@_isBusy"
+                   ErrorMessage="@_connectModalError"
+                   OnClose="CloseConnectModal"
+                   OnStartOAuth="StartOAuthAsync"
+                   OnManualLink="ManualLinkAsync" />
+
+@code {
+    private readonly List<IntegracaoLoja> _stores = [];
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private bool _connectModalVisible;
+    private string? _loadError;
+    private string? _pageMessage;
+    private bool _pageMessageIsError;
+    private string? _connectModalError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ApplyQueryFeedback();
+        await LoadStoresAsync();
+    }
+
+    private void ApplyQueryFeedback()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (!query.TryGetValue("link", out var linkResult))
+        {
+            return;
+        }
+
+        var link = linkResult.ToString();
+        if (string.Equals(link, "success", StringComparison.OrdinalIgnoreCase))
+        {
+            _pageMessage = "Loja vinculada com sucesso.";
+            _pageMessageIsError = false;
+        }
+        else if (string.Equals(link, "failed", StringComparison.OrdinalIgnoreCase))
+        {
+            _pageMessageIsError = true;
+            _pageMessage = query.TryGetValue("message", out var messageResult) && !string.IsNullOrWhiteSpace(messageResult)
+                ? messageResult.ToString()
+                : "Não foi possível vincular a loja.";
+        }
+
+        Navigation.NavigateTo("/minhas-lojas", replace: true);
+    }
+
+    private async Task LoadStoresAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+
+        try
+        {
+            var response = await IntegracaoApi.ListAsync();
+            _stores.Clear();
+
+            if (response.Status && response.DataList is { Count: > 0 })
+            {
+                _stores.AddRange(response.DataList.OrderByDescending(s => s.CreatedAt));
+            }
+            else if (!response.Status)
+            {
+                _loadError = string.IsNullOrWhiteSpace(response.Descricao)
+                    ? "Não foi possível carregar suas lojas integradas."
+                    : response.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao carregar lojas integradas.");
+            _loadError = "Erro inesperado ao carregar lojas integradas.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        ClearPageMessage();
+        await LoadStoresAsync();
+    }
+
+    private void OpenConnectModal()
+    {
+        _connectModalError = null;
+        _connectModalVisible = true;
+    }
+
+    private void CloseConnectModal()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _connectModalVisible = false;
+        _connectModalError = null;
+    }
+
+    private Task StartOAuthAsync((MarketplaceType Platform, string FriendlyName) payload)
+    {
+        var url =
+            $"/integracoes/oauth/start?platform={(int)payload.Platform}&friendlyName={Uri.EscapeDataString(payload.FriendlyName)}";
+
+        Navigation.NavigateTo(url, forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task ManualLinkAsync((MarketplaceType Platform, string FriendlyName, string AuthorizationCode, string ShopId) payload)
+    {
+        _isBusy = true;
+        _connectModalError = null;
+        ClearPageMessage();
+
+        try
+        {
+            var response = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
+            {
+                PlatformType = payload.Platform,
+                FriendlyName = payload.FriendlyName,
+                AuthorizationCode = payload.AuthorizationCode,
+                ShopId = payload.ShopId
+            });
+
+            if (response.Status)
+            {
+                _connectModalVisible = false;
+                _pageMessage = "Loja vinculada com sucesso.";
+                _pageMessageIsError = false;
+                await LoadStoresAsync();
+            }
+            else
+            {
+                _connectModalError = string.IsNullOrWhiteSpace(response.Descricao)
+                    ? "Não foi possível vincular a loja."
+                    : response.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao vincular loja manualmente.");
+            _connectModalError = "Erro inesperado ao vincular loja.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task UnlinkStoreAsync(int integrationId)
+    {
+        _isBusy = true;
+        ClearPageMessage();
+
+        try
+        {
+            var response = await IntegracaoApi.UnlinkAsync(integrationId);
+            if (response.Status)
+            {
+                _pageMessage = "Loja desconectada com sucesso.";
+                _pageMessageIsError = false;
+                await LoadStoresAsync();
+            }
+            else
+            {
+                _pageMessage = string.IsNullOrWhiteSpace(response.Descricao)
+                    ? "Não foi possível desconectar a loja."
+                    : response.Descricao;
+                _pageMessageIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao desconectar loja {IntegrationId}.", integrationId);
+            _pageMessage = "Erro inesperado ao desconectar loja.";
+            _pageMessageIsError = true;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void ClearLoadError() => _loadError = null;
+
+    private void ClearPageMessage()
+    {
+        _pageMessage = null;
+        _pageMessageIsError = false;
+    }
+}

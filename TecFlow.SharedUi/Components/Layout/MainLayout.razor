@@ -19,6 +19,7 @@
             <div class="d-flex align-items-center gap-2 flex-shrink-0">
                 <AuthorizeView>
                     <Authorized>
+                        <ActiveStoreScopeSelector />
                         <a href="/dashboard" class="btn btn-primary btn-touch d-none d-sm-inline-flex">
                             Painel
                         </a>
@@ -51,7 +52,7 @@
                             Campanhas
                         </a>
                         <a href="/dashboard#metricas" class="portal-nav-link" @onclick="CloseNavOnMobile">
-                            M?tricas / Comiss?es
+                            Métricas / Comissões
                         </a>
                         <a href="/engajamento/fila" class="portal-nav-link @GetActiveClass("/engajamento/fila")" @onclick="CloseNavOnMobile">
                             Fila de engajamento
@@ -64,6 +65,12 @@
                         </a>
                         <a href="/saude/painel" class="portal-nav-link @GetActiveClass("/saude/painel")" @onclick="CloseNavOnMobile">
                             Saúde do sistema
+                        </a>
+                        <a href="/minha-conta" class="portal-nav-link @GetActiveClass("/minha-conta")" @onclick="CloseNavOnMobile">
+                            Minha conta / Segurança
+                        </a>
+                        <a href="/minhas-lojas" class="portal-nav-link @GetActiveClass("/minhas-lojas")" @onclick="CloseNavOnMobile">
+                            Minhas lojas / Integrações
                         </a>
                     </Authorized>
                     <NotAuthorized>
@@ -121,6 +128,13 @@
     {
         var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
         var current = string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
+
+        if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
+            && current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase))
+        {
+            return "active";
+        }
+
         return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     }
 }

@@ -46,6 +46,15 @@ public class HttpService : IHttpService
         CancellationToken cancellationToken = default) =>
         SendAsync<TResponse>(HttpMethod.Put, relativeUrl, body, cancellationToken);
 
+    public Task<ApiResult<TResponse>> DeleteAsync<TResponse>(
+        string relativeUrl,
+        object? queryFilter = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = relativeUrl.AppendQueryString(queryFilter);
+        return SendAsync<TResponse>(HttpMethod.Delete, url, body: null, cancellationToken);
+    }
+
     private async Task<ApiResult<TResponse>> SendAsync<TResponse>(
         HttpMethod method,
         string relativeUrl,

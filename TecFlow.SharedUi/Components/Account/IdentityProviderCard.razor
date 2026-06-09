@@ -1,0 +1,70 @@
+﻿<div class="provider-card card border-0 shadow-sm h-100">
+    <div class="card-body d-flex flex-column gap-3">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <span class="provider-icon @IconClass" aria-hidden="true">@((MarkupString)IconContent)</span>
+                <div>
+                    <h3 class="h6 fw-semibold mb-1">@Title</h3>
+                    <p class="text-muted small mb-0">@Description</p>
+                </div>
+            </div>
+            <span class="badge @StatusBadgeClass">@StatusLabel</span>
+        </div>
+
+        <div class="provider-card-actions mt-auto d-grid gap-2">
+            @if (IsConnected)
+            {
+                @if (ShowUnlink)
+                {
+                    <button type="button"
+                            class="btn btn-outline-danger btn-touch"
+                            disabled="@IsBusy || !CanUnlink"
+                            title="@UnlinkTooltip"
+                            @onclick="OnUnlink">
+                        Desvincular
+                    </button>
+                }
+                else if (!string.IsNullOrWhiteSpace(ConnectedHint))
+                {
+                    <p class="text-muted small mb-0">@ConnectedHint</p>
+                }
+            }
+            else if (ShowLink)
+            {
+                <button type="button"
+                        class="btn btn-outline-primary btn-touch"
+                        disabled="@IsBusy || !CanLink"
+                        title="@LinkTooltip"
+                        @onclick="OnLink">
+                    Vincular conta
+                </button>
+            }
+            else
+            {
+                <p class="text-muted small mb-0">@UnavailableHint</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string IconClass { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string IconContent { get; set; } = string.Empty;
+    [Parameter] public bool IsConnected { get; set; }
+    [Parameter] public bool CanUnlink { get; set; } = true;
+    [Parameter] public bool CanLink { get; set; } = true;
+    [Parameter] public bool ShowLink { get; set; } = true;
+    [Parameter] public bool ShowUnlink { get; set; } = true;
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string ConnectedHint { get; set; } = string.Empty;
+    [Parameter] public string UnavailableHint { get; set; } = "Indisponível no momento.";
+    [Parameter] public string UnlinkTooltip { get; set; } = string.Empty;
+    [Parameter] public string LinkTooltip { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnLink { get; set; }
+    [Parameter] public EventCallback OnUnlink { get; set; }
+
+    private string StatusLabel => IsConnected ? "Conectado" : "Não vinculado";
+    private string StatusBadgeClass => IsConnected ? "text-bg-success" : "text-bg-secondary";
+}

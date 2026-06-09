@@ -1,0 +1,170 @@
+﻿@using TecFlow.Core.Enums
+
+@if (Visible)
+{
+    <div class="modal fade show d-block marketplace-connect-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="connect-store-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
+                        <p class="text-muted small mb-0">Escolha a plataforma, defina um apelido e inicie o OAuth.</p>
+                    </div>
+                    <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@IsBusy" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body pt-3">
+                    @if (!string.IsNullOrWhiteSpace(DisplayError))
+                    {
+                        <div class="alert alert-danger py-2 small" role="alert">@DisplayError</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Plataforma</label>
+                        <div class="marketplace-platform-picker d-grid gap-2">
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
+                                    disabled="@IsBusy"
+                                    @onclick="() => SelectPlatform(MarketplaceType.TikTokShop)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--tiktok">TikTok Shop</span>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Shopee)"
+                                    disabled="@IsBusy"
+                                    @onclick="() => SelectPlatform(MarketplaceType.Shopee)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--shopee">Shopee</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="friendly-name">Apelido / nome amigável</label>
+                        <input id="friendly-name"
+                               class="form-control"
+                               maxlength="256"
+                               placeholder="Ex.: Loja principal SP"
+                               @bind="_friendlyName"
+                               disabled="@IsBusy" />
+                    </div>
+
+                    <details class="marketplace-manual-link small">
+                        <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label" for="auth-code">Authorization code</label>
+                                <input id="auth-code" class="form-control form-control-sm" @bind="_authorizationCode" disabled="@IsBusy" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="shop-id">Shop ID</label>
+                                <input id="shop-id" class="form-control form-control-sm" @bind="_shopId" disabled="@IsBusy" />
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="modal-footer border-0 flex-column flex-sm-row gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="Close">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="ManualLinkAsync">
+                        @(IsBusy ? "Vinculando..." : "Vincular manualmente")
+                    </button>
+                    <button type="button" class="btn btn-primary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="StartOAuthAsync">
+                        @(IsBusy ? "Redirecionando..." : "Conectar via OAuth")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="Close"></div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
+    [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName, string AuthorizationCode, string ShopId)> OnManualLink { get; set; }
+
+    private MarketplaceType _platform = MarketplaceType.TikTokShop;
+    private string _friendlyName = string.Empty;
+    private string _authorizationCode = string.Empty;
+    private string _shopId = string.Empty;
+    private string? _formError;
+
+    private string? DisplayError => ErrorMessage ?? _formError;
+
+    protected override void OnParametersSet()
+    {
+        if (!Visible)
+        {
+            ResetForm();
+        }
+    }
+
+    private void SelectPlatform(MarketplaceType platform)
+    {
+        _platform = platform;
+        _formError = null;
+    }
+
+    private string GetPlatformOptionClass(MarketplaceType platform) =>
+        _platform == platform ? "marketplace-platform-option--selected" : string.Empty;
+
+    private async Task Close()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task StartOAuthAsync()
+    {
+        if (!ValidateFriendlyName())
+        {
+            return;
+        }
+
+        await OnStartOAuth.InvokeAsync((_platform, _friendlyName.Trim()));
+    }
+
+    private async Task ManualLinkAsync()
+    {
+        if (!ValidateFriendlyName())
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_authorizationCode) || string.IsNullOrWhiteSpace(_shopId))
+        {
+            _formError = "Informe authorization code e Shop ID para vinculação manual.";
+            return;
+        }
+
+        await OnManualLink.InvokeAsync((_platform, _friendlyName.Trim(), _authorizationCode.Trim(), _shopId.Trim()));
+    }
+
+    private bool ValidateFriendlyName()
+    {
+        if (!string.IsNullOrWhiteSpace(_friendlyName))
+        {
+            return true;
+        }
+
+        _formError = "Informe um apelido para identificar a loja.";
+        return false;
+    }
+
+    private void ResetForm()
+    {
+        _platform = MarketplaceType.TikTokShop;
+        _friendlyName = string.Empty;
+        _authorizationCode = string.Empty;
+        _shopId = string.Empty;
+        _formError = null;
+    }
+}

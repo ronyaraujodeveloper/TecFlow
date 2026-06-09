@@ -42,4 +42,17 @@ public class OAuthProviderRegistry : IOAuthProviderRegistry
 
         return $"/auth/challenge/{providerKey}?platform={platform}";
     }
+
+    public string GetLinkChallengePath(AuthProvider provider, LoginPlatform platform)
+    {
+        var providerKey = provider switch
+        {
+            AuthProvider.Google => "google",
+            AuthProvider.Facebook => "facebook",
+            AuthProvider.ICloud => "apple",
+            _ => throw new ArgumentOutOfRangeException(nameof(provider))
+        };
+
+        return $"/auth/challenge/{providerKey}?platform={platform}&link=true";
+    }
 }

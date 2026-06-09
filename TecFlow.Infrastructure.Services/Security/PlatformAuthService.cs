@@ -257,6 +257,19 @@ public class PlatformAuthService : IPlatformAuthService
         };
     }
 
+    public async Task<AuthProviderResponseDto> GetProviderStatusAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userAccountRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            return Fail("Usuário não encontrado.");
+        }
+
+        return await BuildProviderResponseAsync(user, "OK", cancellationToken);
+    }
+
     private static UserResponseDto FailRegister(string message) =>
         new()
         {

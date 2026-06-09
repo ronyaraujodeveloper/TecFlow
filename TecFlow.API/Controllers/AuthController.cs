@@ -102,6 +102,25 @@ public class AuthController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("providers/status")]
+    [Authorize]
+    public async Task<ActionResult<AuthProviderResponseDto>> GetProviderStatusAsync(
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        var result = await _platformAuthService.GetProviderStatusAsync(userId.Value, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     private async Task<IActionResult> LoginForPlatformAsync(
         string platform,
         PlatformAuthDto request,

@@ -15,8 +15,13 @@ public class DashboardApiService : IDashboardApiService
         _httpService = httpService;
     }
 
-    public Task<ApiResult<DashboardSummaryDto>> GetStatsAsync(CancellationToken cancellationToken = default) =>
-        _httpService.GetAsync<DashboardSummaryDto>("api/Dashboard/stats", cancellationToken: cancellationToken);
+    public Task<ApiResult<DashboardSummaryDto>> GetStatsAsync(
+        DashboardAnalyticsFilter? filter = null,
+        CancellationToken cancellationToken = default)
+    {
+        filter ??= new DashboardAnalyticsFilter();
+        return _httpService.GetAsync<DashboardSummaryDto>("api/Dashboard/stats", filter, cancellationToken);
+    }
 
     public Task<ApiResult<CampaignResponseDto>> GetCampaignsByFilterAsync(
         CampaignFilter filter,

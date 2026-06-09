@@ -5,7 +5,10 @@
 @using TecFlow.Core.Enums
 @using TecFlow.Database.Filter
 @using TecFlow.SharedUi.Services.Analytics
+@using TecFlow.SharedUi.Services.State
 @inject IAffiliateAnalyticsApiService AnalyticsApi
+@inject IActiveStoreScopeService StoreScope
+@implements IDisposable
 <PageTitle>Conciliação financeira — TecFlow</PageTitle>
 
 <div class="dashboard-page">
@@ -195,10 +198,36 @@
     private AffiliatePerformanceDto? _performance;
     private List<CommissionDiscrepancyReportDto> _discrepancies = [];
     private PagingInfoDto? _paging;
+    private bool _storeScopeSubscribed;
 
     protected override async Task OnInitializedAsync()
     {
+        StoreScope.OnStoreChanged += HandleStoreScopeChanged;
+        _storeScopeSubscribed = true;
+
+        await StoreScope.EnsureInitializedAsync();
+        ApplyActiveStoreScope();
+
         await LoadAsync();
+    }
+
+    private void HandleStoreScopeChanged()
+    {
+        ApplyActiveStoreScope();
+        _ = InvokeAsync(LoadAsync);
+    }
+
+    private void ApplyActiveStoreScope()
+    {
+        _filter.LojaId = StoreScope.ActiveStoreId;
+    }
+
+    public void Dispose()
+    {
+        if (_storeScopeSubscribed)
+        {
+            StoreScope.OnStoreChanged -= HandleStoreScopeChanged;
+        }
     }
 
     private async Task ApplyFilterAndLoadAsync()

@@ -653,3 +653,214 @@ html, body {
         min-height: var(--touch-target-min);
     }
 }
+
+.account-security-tabs .nav-link {
+    width: 100%;
+    text-align: center;
+    border-radius: 999px;
+    color: #495057;
+    font-weight: 600;
+}
+
+.account-security-tabs .nav-link.active {
+    background: #0d6efd;
+    color: #fff;
+}
+
+.provider-card {
+    background: var(--tecso-card);
+    border-radius: 1rem;
+    min-height: 100%;
+}
+
+.provider-card-actions .btn {
+    min-height: var(--touch-target-min);
+}
+
+.account-password-card {
+    border-radius: 1rem;
+    max-width: 36rem;
+}
+
+@media (min-width: 576px) {
+    .account-security-tabs .nav-link {
+        width: auto;
+        min-width: 11rem;
+    }
+}
+
+.marketplace-stores-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 576px) {
+    .marketplace-stores-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .marketplace-stores-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .marketplace-stores-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.marketplace-store-card {
+    border-radius: 1rem;
+    background: var(--tecso-card, #fff);
+}
+
+.marketplace-store-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.marketplace-store-meta dt {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+.marketplace-store-meta dd {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.marketplace-platform-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.marketplace-platform-badge--tiktok {
+    background: #010101;
+    color: #fff;
+}
+
+.marketplace-platform-badge--shopee {
+    background: #ee4d2d;
+    color: #fff;
+}
+
+.marketplace-platform-picker {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+    .marketplace-platform-picker {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.marketplace-platform-option {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.85rem;
+    background: #fff;
+    padding: 0.75rem;
+}
+
+.marketplace-platform-option--selected {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+}
+
+.marketplace-stores-empty {
+    border-radius: 1rem;
+}
+
+.marketplace-connect-modal .modal-footer .btn {
+    min-height: var(--touch-target-min);
+}
+
+.active-store-scope {
+    position: relative;
+}
+
+.active-store-scope-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: min(14rem, 42vw);
+    padding-inline: 0.65rem;
+}
+
+.active-store-scope-label,
+.active-store-scope-label-compact {
+    max-width: 8rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.active-store-scope-badge {
+    flex-shrink: 0;
+    min-width: 2rem;
+    justify-content: center;
+}
+
+.active-store-scope-menu {
+    min-width: min(18rem, 92vw);
+    max-height: 16rem;
+    overflow-y: auto;
+    z-index: 1080;
+}
+
+.active-store-scope-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: normal;
+}
+
+.active-store-scope-item-name {
+    flex: 1 1 auto;
+    text-align: left;
+}
+
+.active-store-scope-item-check {
+    color: #198754;
+    font-weight: 700;
+}
+
+.active-store-scope-backdrop {
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 1070;
+}
+
+.active-store-scope-empty {
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding-inline: 0.65rem;
+}
+
+.active-store-scope-icon {
+    font-weight: 700;
+    line-height: 1;
+}
+
+@media (min-width: 576px) {
+    .active-store-scope-toggle {
+        max-width: 18rem;
+    }
+}

@@ -7,9 +7,11 @@
 @inject ISessionStateService SessionState
 @inject IAuthCookieService AuthCookie
 @inject IDashboardApiService DashboardApi
+@inject IActiveStoreScopeService StoreScope
 @inject ILoadingService LoadingService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <PageTitle>Painel — TecFlow</PageTitle>
 
@@ -79,6 +81,7 @@
 
     private readonly CampaignFilter _campaignFilter = new();
     private readonly MetricFilter _metricFilter = new();
+    private readonly DashboardAnalyticsFilter _statsFilter = new();
     private readonly CampaignDto _campaignDto = new()
     {
         StartDate = DateTime.UtcNow.Date,
@@ -100,6 +103,7 @@
     private bool _isLoading;
     private bool _isSavingCampaign;
     private bool _pipelineLoading;
+    private bool _storeScopeSubscribed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,7 +122,45 @@
         _platform = user.FindFirst(TecFlow.Core.Security.TecFlowClaimTypes.Platform)?.Value
             ?? SessionState.ActivePlatform?.ToString();
 
+        StoreScope.OnStoreChanged += HandleStoreScopeChanged;
+        _storeScopeSubscribed = true;
+
+        await StoreScope.EnsureInitializedAsync();
+        ApplyActiveStoreScope();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await StoreScope.RestoreFromBrowserAsync();
+        ApplyActiveStoreScope();
         await LoadDashboardDataAsync();
+    }
+
+    private void HandleStoreScopeChanged()
+    {
+        ApplyActiveStoreScope();
+        _ = InvokeAsync(LoadDashboardDataAsync);
+    }
+
+    private void ApplyActiveStoreScope()
+    {
+        var lojaId = StoreScope.ActiveStoreId;
+        _statsFilter.LojaId = lojaId;
+        _campaignFilter.LojaId = lojaId;
+        _metricFilter.LojaId = lojaId;
+    }
+
+    public void Dispose()
+    {
+        if (_storeScopeSubscribed)
+        {
+            StoreScope.OnStoreChanged -= HandleStoreScopeChanged;
+        }
     }
 
     private async Task ReloadAsync() => await LoadDashboardDataAsync();
@@ -134,7 +176,7 @@
 
         using var scope = LoadingService.BeginScope("A atualizar painel...");
 
-        var statsTask = DashboardApi.GetStatsAsync();
+        var statsTask = DashboardApi.GetStatsAsync(_statsFilter);
         var campaignsTask = LoadCampaignsInternalAsync();
         var metricsTask = LoadMetricsInternalAsync();
         var pipelineTask = DashboardApi.GetPipelineStatusAsync();

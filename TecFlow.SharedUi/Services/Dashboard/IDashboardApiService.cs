@@ -8,7 +8,9 @@ namespace TecFlow.SharedUi.Services.Dashboard;
 
 public interface IDashboardApiService
 {
-    Task<ApiResult<DashboardSummaryDto>> GetStatsAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<DashboardSummaryDto>> GetStatsAsync(
+        DashboardAnalyticsFilter? filter = null,
+        CancellationToken cancellationToken = default);
 
     Task<ApiResult<CampaignResponseDto>> GetCampaignsByFilterAsync(
         CampaignFilter filter,

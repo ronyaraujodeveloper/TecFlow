@@ -6,4 +6,6 @@ public interface IOAuthProviderRegistry
 {
     bool IsEnabled(AuthProvider provider);
     string GetChallengePath(AuthProvider provider, LoginPlatform platform);
+
+    string GetLinkChallengePath(AuthProvider provider, LoginPlatform platform);
 }

@@ -1,0 +1,157 @@
+﻿@using TecFlow.Core.Enums
+@using TecFlow.Database.Entity
+@implements IDisposable
+@inject IActiveStoreScopeService StoreScope
+
+<AuthorizeView>
+    <Authorized>
+        @if (StoreScope.IsLoading && !StoreScope.IsInitialized)
+        {
+            <div class="active-store-scope active-store-scope--loading" aria-busy="true" aria-label="A carregar lojas">
+                <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+            </div>
+        }
+        else if (StoreScope.Stores.Count == 0)
+        {
+            <a href="/minhas-lojas"
+               class="btn btn-outline-secondary btn-touch active-store-scope-empty"
+               title="Conectar loja">
+                <span class="active-store-scope-icon" aria-hidden="true">+</span>
+                <span class="d-none d-md-inline">Conectar loja</span>
+            </a>
+        }
+        else
+        {
+            <div class="dropdown active-store-scope @(_menuOpen ? "show" : "")">
+                <button type="button"
+                        class="btn btn-outline-secondary dropdown-toggle active-store-scope-toggle btn-touch"
+                        aria-expanded="@_menuOpen"
+                        aria-haspopup="true"
+                        aria-label="Selecionar loja ativa"
+                        @onclick="ToggleMenu">
+                    @if (StoreScope.ActiveStore is not null)
+                    {
+                        <span class="marketplace-platform-badge @GetPlatformBadgeClass(StoreScope.ActiveStore.PlatformType) active-store-scope-badge">
+                            @GetPlatformShortLabel(StoreScope.ActiveStore.PlatformType)
+                        </span>
+                        <span class="active-store-scope-label d-none d-sm-inline text-truncate">
+                            @StoreScope.ActiveStore.FriendlyName
+                        </span>
+                        <span class="active-store-scope-label-compact d-inline d-sm-none">
+                            @GetCompactLabel(StoreScope.ActiveStore.FriendlyName)
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="active-store-scope-label">Selecionar loja</span>
+                    }
+                </button>
+
+                @if (_menuOpen)
+                {
+                    <ul class="dropdown-menu dropdown-menu-end show active-store-scope-menu">
+                        @foreach (var store in StoreScope.Stores)
+                        {
+                            var isActive = StoreScope.ActiveStore?.Id == store.Id;
+                            <li>
+                                <button type="button"
+                                        class="dropdown-item active-store-scope-item @(isActive ? "active" : "") btn-touch"
+                                        @onclick="() => SelectStoreAsync(store)">
+                                    <span class="marketplace-platform-badge @GetPlatformBadgeClass(store.PlatformType)">
+                                        @GetPlatformShortLabel(store.PlatformType)
+                                    </span>
+                                    <span class="active-store-scope-item-name">@store.FriendlyName</span>
+                                    @if (isActive)
+                                    {
+                                        <span class="active-store-scope-item-check" aria-hidden="true">✓</span>
+                                    }
+                                </button>
+                            </li>
+                        }
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <a class="dropdown-item btn-touch" href="/minhas-lojas" @onclick="CloseMenu">
+                                Gerenciar integrações
+                            </a>
+                        </li>
+                    </ul>
+                }
+            </div>
+
+            @if (_menuOpen)
+            {
+                <button type="button"
+                        class="active-store-scope-backdrop d-lg-none"
+                        aria-label="Fechar seletor de loja"
+                        @onclick="CloseMenu"></button>
+            }
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private bool _menuOpen;
+    private bool _subscribed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        StoreScope.OnStoreChanged += HandleStoreChanged;
+        _subscribed = true;
+        await StoreScope.EnsureInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !StoreScope.IsInitialized)
+        {
+            return;
+        }
+
+        await StoreScope.RestoreFromBrowserAsync();
+        StateHasChanged();
+    }
+
+    private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
+
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
+
+    private void CloseMenu() => _menuOpen = false;
+
+    private async Task SelectStoreAsync(IntegracaoLoja store)
+    {
+        CloseMenu();
+        await StoreScope.SetActiveStoreAsync(store);
+    }
+
+    private static string GetPlatformShortLabel(MarketplaceType platform) => platform switch
+    {
+        MarketplaceType.TikTokShop => "TT",
+        MarketplaceType.Shopee => "SP",
+        _ => platform.ToString()[..Math.Min(2, platform.ToString().Length)]
+    };
+
+    private static string GetPlatformBadgeClass(MarketplaceType platform) => platform switch
+    {
+        MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
+        MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
+        _ => string.Empty
+    };
+
+    private static string GetCompactLabel(string friendlyName)
+    {
+        if (string.IsNullOrWhiteSpace(friendlyName))
+        {
+            return "Loja";
+        }
+
+        return friendlyName.Length <= 8 ? friendlyName : $"{friendlyName[..7]}…";
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed)
+        {
+            StoreScope.OnStoreChanged -= HandleStoreChanged;
+        }
+    }
+}

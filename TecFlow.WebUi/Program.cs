@@ -33,6 +33,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapWebUiAuthEndpoints();
+app.MapIntegracoesEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddAdditionalAssemblies(typeof(ServiceCollectionExtensions).Assembly);

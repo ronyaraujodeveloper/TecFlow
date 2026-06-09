@@ -1,0 +1,56 @@
+﻿@using TecFlow.SharedUi.Helpers
+
+<div class="marketplace-chip @Definition.CssClass @GetStateClass()"
+     role="listitem"
+     aria-label="@GetAriaLabel()">
+    <span class="marketplace-chip-icon" aria-hidden="true">@Definition.ShortLabel</span>
+    <span class="marketplace-chip-name">@Definition.DisplayName</span>
+    @if (IsConnected)
+    {
+        <span class="marketplace-chip-status marketplace-chip-status--active" title="Conta conectada">
+            <span class="visually-hidden">Conectado</span>
+        </span>
+    }
+    else if (!Definition.IsBackendReady)
+    {
+        <span class="marketplace-chip-tag">Em breve</span>
+    }
+    else
+    {
+        <span class="marketplace-chip-tag marketplace-chip-tag--muted">Não conectado</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MarketplaceDefinition Definition { get; set; } = default!;
+    [Parameter] public bool IsConnected { get; set; }
+    [Parameter] public bool IsDetected { get; set; }
+
+    private string GetStateClass()
+    {
+        if (IsDetected)
+        {
+            return "marketplace-chip--detected";
+        }
+
+        if (IsConnected)
+        {
+            return "marketplace-chip--connected";
+        }
+
+        return Definition.IsBackendReady ? "marketplace-chip--idle" : "marketplace-chip--coming-soon";
+    }
+
+    private string GetAriaLabel()
+    {
+        var status = IsDetected
+            ? "plataforma detectada na URL"
+            : IsConnected
+                ? "conta conectada"
+                : Definition.IsBackendReady
+                    ? "aguardando conexão"
+                    : "em breve";
+
+        return $"{Definition.DisplayName}, {status}";
+    }
+}

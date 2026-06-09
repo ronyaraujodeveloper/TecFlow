@@ -12,6 +12,7 @@ using TecFlow.SharedUi.Services.Navigation;
 using TecFlow.SharedUi.Services.UI;
 using TecFlow.SharedUi.Services.Devices;
 using TecFlow.SharedUi.Services.Integrations;
+using TecFlow.SharedUi.Services.LinkGenerator;
 
 namespace TecFlow.SharedUi.Extensions;
 
@@ -38,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
+        services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

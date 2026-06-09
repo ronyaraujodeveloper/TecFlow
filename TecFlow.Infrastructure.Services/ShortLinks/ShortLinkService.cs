@@ -167,6 +167,7 @@ public static class ShortLinkServiceCollectionExtensions
         services.AddScoped<IShortAffiliateLinkRepository, ShortAffiliateLinkRepository>();
         services.AddScoped<ILinkClickLogRepository, LinkClickLogRepository>();
         services.AddScoped<IShortLinkService, ShortLinkService>();
+        services.AddScoped<IAffiliateLinkHistoryService, AffiliateLinkHistoryService>();
         services.AddSingleton<ILinkClickTelemetryService, LinkClickTelemetryService>();
 
         return services;

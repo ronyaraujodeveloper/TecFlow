@@ -1,0 +1,330 @@
+﻿@page "/gerador-links"
+@page "/comissao/gerar"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
+@using TecFlow.Core.Enums
+@using TecFlow.SharedUi.Components.LinkGenerator
+@using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.LinkGenerator
+@inject IIntegracaoLojaApiService IntegracaoApi
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject IActiveStoreScopeService StoreScope
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+@inject ILogger<GeradorLinks> Logger
+@implements IDisposable
+
+<PageTitle>Gerador de Links de Comissão — TecFlow</PageTitle>
+
+<div class="link-generator-page dashboard-page">
+    <header class="link-generator-hero text-center mb-4">
+        <span class="brand-badge mb-3">Comissões</span>
+        <h1 class="h3 fw-bold mb-2">Gerador de Links de Comissão</h1>
+        <p class="text-muted small mb-0 mx-auto link-generator-lead">
+            Cole o link do produto e gere sua URL encurtada com rastreio TecFlow.
+        </p>
+    </header>
+
+    <section class="link-generator-card card border-0 shadow-sm mx-auto">
+        <div class="card-body p-3 p-md-4">
+            <label class="form-label fw-semibold" for="product-url">
+                Link do produto
+            </label>
+
+            <div class="link-generator-input-wrap @GetInputWrapClass()">
+                <input id="product-url"
+                       class="form-control form-control-lg link-generator-input"
+                       placeholder="Cole aqui o link do produto da Shopee, TikTok, Amazon..."
+                       value="@_productUrl"
+                       @oninput="HandleUrlInput"
+                       @onblur="HandleUrlBlur"
+                       disabled="@_isGenerating"
+                       autocomplete="off"
+                       inputmode="url" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_detectionHint))
+            {
+                <p class="link-generator-hint @(_detectedPlatform is not null ? "text-success" : "text-muted") small mt-2 mb-0"
+                   role="status">
+                    @_detectionHint
+                </p>
+            }
+
+            <div class="link-generator-actions mt-4">
+                <button type="button"
+                        class="btn btn-primary btn-lg btn-touch w-100 link-generator-submit"
+                        disabled="@(!CanGenerate)"
+                        @onclick="GenerateLinkAsync">
+                    @(_isGenerating ? "Gerando link..." : "Gerar Link de Comissão")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_feedbackMessage) && _feedbackIsError)
+            {
+                <div class="alert alert-danger py-2 small mt-3 mb-0" role="status">
+                    @_feedbackMessage
+                </div>
+            }
+        </div>
+    </section>
+
+    <LinkGeneratorResultPanel Response="@_generatedResponse" />
+
+    <HistoricoLinks RefreshToken="@_historyRefreshToken" />
+
+    <section class="link-generator-platforms mt-4 mx-auto" aria-label="Marketplaces suportados">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
+            <h2 class="h6 fw-semibold mb-0">Marketplaces suportados</h2>
+            <a href="/minhas-lojas" class="btn btn-sm btn-outline-secondary btn-touch">
+                Gerenciar integrações
+            </a>
+        </div>
+
+        <div class="marketplace-chip-row" role="list">
+            @foreach (var platform in MarketplaceUrlDetector.All)
+            {
+                <MarketplacePlatformChip Definition="platform"
+                                           IsConnected="@IsPlatformConnected(platform)"
+                                           IsDetected="@IsPlatformDetected(platform)" />
+            }
+        </div>
+
+        <p class="text-muted small mt-3 mb-0 text-center text-sm-start">
+            Logos coloridas indicam contas conectadas. Ao colar um link, a plataforma detectada recebe destaque imediato.
+        </p>
+    </section>
+</div>
+
+@code {
+    private string _productUrl = string.Empty;
+    private string? _detectionHint;
+    private string? _feedbackMessage;
+    private bool _feedbackIsError;
+    private bool _isGenerating;
+    private bool _integrationsLoaded;
+    private MarketplaceDefinition? _detectedPlatform;
+    private GerarLinkAfiliadoResponseDto? _generatedResponse;
+    private int _historyRefreshToken;
+    private readonly HashSet<MarketplaceType> _connectedPlatforms = [];
+
+    private bool CanGenerate =>
+        !_isGenerating
+        && _integrationsLoaded
+        && _detectedPlatform is { IsBackendReady: true }
+        && IsPlatformConnected(_detectedPlatform)
+        && StoreScope.ActiveStoreId is > 0
+        && ActiveStoreMatchesDetectedPlatform()
+        && !string.IsNullOrWhiteSpace(_productUrl);
+
+    protected override async Task OnInitializedAsync()
+    {
+        StoreScope.OnStoreChanged += HandleStoreChanged;
+        await StoreScope.EnsureInitializedAsync();
+        await LoadIntegrationsAsync();
+        AnalyzeUrl(_productUrl);
+    }
+
+    public void Dispose()
+    {
+        StoreScope.OnStoreChanged -= HandleStoreChanged;
+    }
+
+    private void HandleStoreChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            ClearFeedback();
+            ClearGeneratedResult();
+            _historyRefreshToken++;
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadIntegrationsAsync()
+    {
+        _integrationsLoaded = false;
+
+        try
+        {
+            var response = await IntegracaoApi.ListAsync();
+            _connectedPlatforms.Clear();
+
+            if (response.Status && response.DataList is { Count: > 0 })
+            {
+                foreach (var store in response.DataList)
+                {
+                    if (store.Status == MarketplaceIntegrationStatus.Active)
+                    {
+                        _connectedPlatforms.Add(store.PlatformType);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao carregar integrações para o gerador de links.");
+        }
+        finally
+        {
+            _integrationsLoaded = true;
+        }
+    }
+
+    private void HandleUrlInput(ChangeEventArgs e)
+    {
+        _productUrl = e.Value?.ToString() ?? string.Empty;
+        ClearGeneratedResult();
+        AnalyzeUrl(_productUrl);
+    }
+
+    private void HandleUrlBlur(FocusEventArgs _) => AnalyzeUrl(_productUrl);
+
+    private void AnalyzeUrl(string? url)
+    {
+        _detectedPlatform = MarketplaceUrlDetector.Detect(url);
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _detectionHint = null;
+            return;
+        }
+
+        if (_detectedPlatform is null)
+        {
+            _detectionHint = "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre ou Magalu.";
+            return;
+        }
+
+        if (!_detectedPlatform.IsBackendReady)
+        {
+            _detectionHint = $"{_detectedPlatform.DisplayName} identificado. Integração em breve no TecFlow.";
+            return;
+        }
+
+        if (!IsPlatformConnected(_detectedPlatform))
+        {
+            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Conecte sua conta em Minhas Lojas para gerar o link.";
+            return;
+        }
+
+        if (StoreScope.ActiveStoreId is null or <= 0)
+        {
+            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Selecione uma loja ativa no topo do painel.";
+            return;
+        }
+
+        if (!ActiveStoreMatchesDetectedPlatform())
+        {
+            _detectionHint =
+                $"{_detectedPlatform.DisplayName} detectado, mas a loja selecionada no topo é de outra plataforma.";
+            return;
+        }
+
+        _detectionHint = $"{_detectedPlatform.DisplayName} identificado com sucesso. Pronto para gerar comissão.";
+    }
+
+    private async Task GenerateLinkAsync()
+    {
+        ClearFeedback();
+        ClearGeneratedResult();
+        AnalyzeUrl(_productUrl);
+
+        if (_detectedPlatform is null || StoreScope.ActiveStoreId is not int activeStoreId || activeStoreId <= 0)
+        {
+            ShowError("Verifique a URL e a loja ativa antes de gerar.");
+            return;
+        }
+
+        _isGenerating = true;
+
+        try
+        {
+            var request = new GerarLinkAfiliadoDto
+            {
+                OriginalUrl = _productUrl.Trim(),
+                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(activeStoreId)
+            };
+
+            var result = await AffiliateLinkApi.GenerateAsync(request);
+
+            if (result.Success && result.Data?.Success == true)
+            {
+                _generatedResponse = result.Data;
+                _feedbackMessage = null;
+                _feedbackIsError = false;
+                _historyRefreshToken++;
+                await ScrollToResultPanelAsync();
+            }
+            else
+            {
+                _generatedResponse = null;
+                ShowError(result.ErrorMessage ?? result.Data?.Message ?? "Não foi possível gerar o link de comissão.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro inesperado ao gerar link de comissão.");
+            ShowError("Erro inesperado ao gerar link de comissão.");
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private bool IsPlatformConnected(MarketplaceDefinition platform) =>
+        platform.IntegrationType is { } integrationType && _connectedPlatforms.Contains(integrationType);
+
+    private bool IsPlatformDetected(MarketplaceDefinition platform) =>
+        _detectedPlatform?.Key == platform.Key;
+
+    private bool ActiveStoreMatchesDetectedPlatform()
+    {
+        if (_detectedPlatform?.IntegrationType is not { } expectedType)
+        {
+            return false;
+        }
+
+        return StoreScope.ActiveStore?.PlatformType == expectedType;
+    }
+
+    private string GetInputWrapClass()
+    {
+        if (_detectedPlatform is null || string.IsNullOrWhiteSpace(_productUrl))
+        {
+            return string.Empty;
+        }
+
+        return $"link-generator-input-wrap--{_detectedPlatform.CssClass.Replace("marketplace-chip--", string.Empty)}";
+    }
+
+    private void ClearFeedback()
+    {
+        _feedbackMessage = null;
+        _feedbackIsError = false;
+    }
+
+    private void ClearGeneratedResult() => _generatedResponse = null;
+
+    private async Task ScrollToResultPanelAsync()
+    {
+        try
+        {
+            await Task.Delay(50);
+            await Js.InvokeVoidAsync("tecFlowAppInterop.scrollIntoViewById", "link-generator-result");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Não foi possível rolar até o painel de resultados.");
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _feedbackMessage = message;
+        _feedbackIsError = true;
+    }
+}

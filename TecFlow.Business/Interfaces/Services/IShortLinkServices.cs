@@ -1,5 +1,6 @@
 ﻿using TecFlow.Business.Dto;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Filter;
 
 namespace TecFlow.Business.Interfaces.Services;
 
@@ -23,6 +24,14 @@ public interface ILinkClickTelemetryService
         string? ipAddress,
         string? userAgent,
         string? referrerUrl);
+}
+
+public interface IAffiliateLinkHistoryService
+{
+    Task<AffiliateLinkHistoryResponseDto> ListByUserAsync(
+        int userId,
+        AffiliateLinkFilter filter,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ShortLinkCreateResult

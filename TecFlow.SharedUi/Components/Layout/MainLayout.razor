@@ -69,6 +69,9 @@
                         <a href="/minha-conta" class="portal-nav-link @GetActiveClass("/minha-conta")" @onclick="CloseNavOnMobile">
                             Minha conta / Segurança
                         </a>
+                        <a href="/gerador-links" class="portal-nav-link @GetActiveClass("/gerador-links")" @onclick="CloseNavOnMobile">
+                            Gerador de links
+                        </a>
                         <a href="/minhas-lojas" class="portal-nav-link @GetActiveClass("/minhas-lojas")" @onclick="CloseNavOnMobile">
                             Minhas lojas / Integrações
                         </a>
@@ -131,6 +134,12 @@
 
         if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
             && current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase))
+        {
+            return "active";
+        }
+
+        if (path.Equals("/gerador-links", StringComparison.OrdinalIgnoreCase)
+            && current.Equals("/comissao/gerar", StringComparison.OrdinalIgnoreCase))
         {
             return "active";
         }

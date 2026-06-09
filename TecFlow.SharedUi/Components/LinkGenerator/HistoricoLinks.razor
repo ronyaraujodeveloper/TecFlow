@@ -1,0 +1,256 @@
+﻿@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Filter
+@using TecFlow.SharedUi.Services.LinkGenerator
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject IActiveStoreScopeService StoreScope
+@inject ILogger<HistoricoLinks> Logger
+@implements IDisposable
+
+<section class="link-history-section mt-5 mx-auto" aria-label="Histórico de links de comissão">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
+        <div>
+            <h2 class="h5 fw-bold mb-1">Histórico de links</h2>
+            <p class="text-muted small mb-0">
+                @if (StoreScope.ActiveStore is { } activeStore)
+                {
+                    <span>Loja ativa: <strong>@activeStore.FriendlyName</strong></span>
+                }
+                else
+                {
+                    <span>Selecione uma loja no topo para filtrar o histórico.</span>
+                }
+            </p>
+        </div>
+        <button type="button"
+                class="btn btn-outline-primary btn-touch btn-sm align-self-start align-self-md-center"
+                disabled="@_isLoading"
+                @onclick="ReloadAsync">
+            @(_isLoading ? "Atualizando..." : "Atualizar lista")
+        </button>
+    </div>
+
+    <div class="link-history-filters d-flex flex-wrap gap-2 mb-3" role="toolbar" aria-label="Filtros por plataforma">
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(null)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(null)">
+            Todos
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.Shopee)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.Shopee)">
+            Shopee
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.TikTokShop)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.TikTokShop)">
+            TikTok
+        </button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorAlert Message="@_loadError" OnDismiss="@(EventCallback.Factory.Create(this, ClearLoadError))" />
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+            Carregando histórico...
+        </div>
+    }
+    else if (_items.Count == 0)
+    {
+        <div class="link-history-empty card border-0 shadow-sm text-center p-4">
+            <p class="text-muted small mb-0">
+                Nenhum link gerado ainda para esta loja e filtro selecionados.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="link-history-mobile d-md-none" role="list">
+            @foreach (var item in _items)
+            {
+                <article class="link-history-card card border-0 shadow-sm mb-3" role="listitem">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                            <span class="marketplace-platform-badge @GetPlatformBadgeClass(item.PlatformType)">
+                                @item.PlatformName
+                            </span>
+                            <time class="text-muted small" datetime="@item.CreatedAt.ToString("o")">
+                                @item.CreatedAt.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                            </time>
+                        </div>
+
+                        <h3 class="h6 fw-semibold mb-2 text-break">@item.DisplayTitle</h3>
+
+                        <p class="small text-muted mb-2 text-break">
+                            <span class="fw-semibold">Encurtado:</span>
+                            @item.ShortenedUrl
+                        </p>
+
+                        <div class="link-history-clicks">
+                            <span class="link-history-clicks-value">@item.ClickCount</span>
+                            <span class="link-history-clicks-label">cliques</span>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+
+        <div class="link-history-desktop d-none d-md-block card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 link-history-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Plataforma</th>
+                            <th scope="col">Link original</th>
+                            <th scope="col">Link encurtado</th>
+                            <th scope="col">Data</th>
+                            <th scope="col" class="text-end">Cliques</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _items)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="marketplace-platform-badge @GetPlatformBadgeClass(item.PlatformType)">
+                                        @item.PlatformName
+                                    </span>
+                                </td>
+                                <td class="small text-break" title="@item.OriginalUrl">
+                                    @TruncateUrl(item.OriginalUrl, 48)
+                                </td>
+                                <td class="small font-monospace text-break">
+                                    @item.ShortenedUrl
+                                </td>
+                                <td class="small text-nowrap">
+                                    @item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="text-end">
+                                    <span class="link-history-clicks-inline">@item.ClickCount</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int RefreshToken { get; set; }
+
+    private readonly List<AffiliateLinkHistoryItemDto> _items = [];
+    private MarketplaceType? _platformFilter;
+    private bool _isLoading = true;
+    private string? _loadError;
+    private int _lastRefreshToken = -1;
+    private int? _lastStoreId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        StoreScope.OnStoreChanged += HandleStoreChanged;
+        await StoreScope.EnsureInitializedAsync();
+        await LoadHistoryAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_lastRefreshToken != RefreshToken || _lastStoreId != StoreScope.ActiveStoreId)
+        {
+            _lastRefreshToken = RefreshToken;
+            _lastStoreId = StoreScope.ActiveStoreId;
+            await LoadHistoryAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        StoreScope.OnStoreChanged -= HandleStoreChanged;
+    }
+
+    private void HandleStoreChanged()
+    {
+        _ = InvokeAsync(LoadHistoryAsync);
+    }
+
+    private async Task SetPlatformFilterAsync(MarketplaceType? platform)
+    {
+        _platformFilter = platform;
+        await LoadHistoryAsync();
+    }
+
+    private Task ReloadAsync() => LoadHistoryAsync();
+
+    private async Task LoadHistoryAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+
+        try
+        {
+            var filter = new AffiliateLinkFilter
+            {
+                Page = 1,
+                PageSize = 30,
+                LojaId = StoreScope.ActiveStoreId,
+                PlatformType = _platformFilter
+            };
+
+            var response = await AffiliateLinkApi.ListHistoryAsync(filter);
+            _items.Clear();
+
+            if (response.Status && response.DataList is { Count: > 0 })
+            {
+                _items.AddRange(response.DataList);
+            }
+            else if (!response.Status)
+            {
+                _loadError = string.IsNullOrWhiteSpace(response.Descricao)
+                    ? "Não foi possível carregar o histórico."
+                    : response.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao carregar histórico de links de comissão.");
+            _loadError = "Erro inesperado ao carregar histórico.";
+        }
+        finally
+        {
+            _isLoading = false;
+            _lastRefreshToken = RefreshToken;
+            _lastStoreId = StoreScope.ActiveStoreId;
+        }
+    }
+
+    private string GetFilterButtonClass(MarketplaceType? platform) =>
+        _platformFilter == platform ? "btn-primary" : "btn-outline-secondary";
+
+    private static string GetPlatformBadgeClass(MarketplaceType platformType) => platformType switch
+    {
+        MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
+        MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
+        _ => string.Empty
+    };
+
+    private static string TruncateUrl(string url, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(url) || url.Length <= maxLength)
+        {
+            return url;
+        }
+
+        return url[..(maxLength - 3)] + "...";
+    }
+
+    private void ClearLoadError() => _loadError = null;
+}

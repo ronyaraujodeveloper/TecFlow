@@ -220,15 +220,15 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 
 ### Fase 11: Módulo Gerador de Links Omnichannel no Frontend (TecFlow.WebUi) 📱
-- [ ] 11.1. Tela Universal "Gerador de Links de Comissão" (Mobile-First)
+- [x] 11.1. Tela Universal "Gerador de Links de Comissão" (Mobile-First)
   - Desenvolver a interface Blazor (`GeradorLinks.razor`) com um campo de captura inteligente de URLs.
   - Exibir visualmente os logos de todos os marketplaces suportados pelo sistema (com sinalização de quais estão ativos ou configurados para a conta do usuário).
 
-- [ ] 11.2. Painel Dinâmico de Resultados e Compartilhamento Nativo
+- [x] 11.2. Painel Dinâmico de Resultados e Compartilhamento Nativo
   - Renderizar o link customizado gerado com feedback visual instantâneo e botão de cópia rápida.
   - Acoplar a Web Share API para permitir o envio direto do link gerado para canais como WhatsApp, Telegram e redes sociais em dispositivos móveis.
 
-- [ ] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
+- [x] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
   - Renderizar listagem responsiva contendo o histórico de links processados.
   - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
 

@@ -1,0 +1,178 @@
+﻿@using TecFlow.SharedUi.Models.Enums
+@inject ITikTokAuthService PortalAuthService
+@inject IAuthCookieService AuthCookie
+@inject NavigationManager Navigation
+
+<div class="card shadow-lg border-0 login-card unified-login-card mx-auto w-100">
+    <div class="card-body p-3 p-sm-4 p-lg-5">
+        <ErrorAlert Message="@_errorMessage"
+                    IsOffline="@_isOffline"
+                    OnDismiss="@(EventCallback.Factory.Create(this, ClearError))" />
+
+        <section class="login-social-section" aria-label="Entrar com redes sociais">
+            <p class="text-muted small text-center mb-3 mb-md-4">
+                Escolha um provedor para acessar o TecFlow com um toque.
+            </p>
+
+            <div class="d-grid gap-2 login-social-grid">
+                <OAuthProviderButton Provider="AuthProvider.Google"
+                                     Label="Google"
+                                     IconClass="google"
+                                     IconContent="G"
+                                     BtnClass="btn-outline-danger"
+                                     Platform="@_portalPlatform"
+                                     OnError="SetError" />
+
+                <OAuthProviderButton Provider="AuthProvider.ICloud"
+                                     Label="Apple (iCloud)"
+                                     IconClass="icloud"
+                                     IconContent="&#63743;"
+                                     BtnClass="btn-outline-dark"
+                                     Platform="@_portalPlatform"
+                                     OnError="SetError" />
+
+                <OAuthProviderButton Provider="AuthProvider.Facebook"
+                                     Label="Facebook"
+                                     IconClass="facebook"
+                                     IconContent="f"
+                                     BtnClass="btn-outline-primary"
+                                     Platform="@_portalPlatform"
+                                     OnError="SetError" />
+            </div>
+        </section>
+
+        <div class="login-divider my-4" role="separator" aria-label="Separador de métodos de login">
+            <span>ou use e-mail e senha</span>
+        </div>
+
+        <section class="login-form-section" aria-label="Entrar com e-mail e senha">
+            <EditForm Model="_emailModel" OnValidSubmit="SubmitEmailLoginAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger small mb-3" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="portal-email">E-mail</label>
+                    <InputText id="portal-email"
+                               class="form-control form-control-lg"
+                               @bind-Value="_emailModel.Email"
+                               placeholder="seu@email.com"
+                               autocomplete="email"
+                               inputmode="email" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="portal-password">Senha</label>
+                    <InputText id="portal-password"
+                               type="password"
+                               class="form-control form-control-lg"
+                               @bind-Value="_emailModel.Password"
+                               placeholder="Digite sua senha"
+                               autocomplete="current-password" />
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary btn-lg w-100 btn-touch fw-semibold"
+                        disabled="@_isSubmitting">
+                    @(_isSubmitting ? "Entrando..." : "Entrar")
+                </button>
+            </EditForm>
+
+            <div class="text-center mt-3">
+                <a href="/recuperar-senha"
+                   class="login-recovery-link small text-decoration-none">
+                    Esqueci minha senha / Alterar senha
+                </a>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Plataforma padrão do portal até existir endpoint unificado dedicado na API.
+    /// </summary>
+    private static readonly LoginPlatform _portalPlatform = LoginPlatform.TikTok;
+
+    private string? _errorMessage;
+    private bool _isOffline;
+    private bool _isSubmitting;
+    private readonly EmailLoginModel _emailModel = new();
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("oauth", out var oauthStatus))
+        {
+            _errorMessage = oauthStatus.ToString() switch
+            {
+                "not-configured" => "OAuth não configurado. Defina ClientId e ClientSecret em appsettings (Authentication:OAuth).",
+                "no-token" => "O provedor OAuth não devolveu token. Tente novamente.",
+                "failed" => query.TryGetValue("message", out var msg)
+                    ? Uri.UnescapeDataString(msg.ToString())
+                    : "Falha na autenticação OAuth.",
+                _ => null
+            };
+        }
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+        _isOffline = false;
+    }
+
+    private void SetError(string message)
+    {
+        _errorMessage = message;
+        _isOffline = false;
+    }
+
+    private async Task SubmitEmailLoginAsync()
+    {
+        ClearError();
+        _isSubmitting = true;
+
+        try
+        {
+            var result = await PortalAuthService.LoginAsync(
+                AuthProvider.EmailPassword,
+                accessToken: null,
+                idToken: null,
+                _emailModel.Email,
+                _emailModel.Password);
+
+            await HandleResultAsync(result, AuthProvider.EmailPassword);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task HandleResultAsync(
+        Models.ApiResult<Models.Responses.AuthTokenResponse> result,
+        AuthProvider provider)
+    {
+        if (!result.Success || result.Data is null)
+        {
+            _errorMessage = result.ErrorMessage ?? "Falha na autenticação.";
+            _isOffline = result.IsOffline;
+            return;
+        }
+
+        await AuthCookie.SignInFromAuthResponseAsync(result.Data, _portalPlatform, provider);
+        Navigation.NavigateTo("/dashboard", forceLoad: true);
+    }
+
+    private sealed class EmailLoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "E-mail é obrigatório.")]
+        [ValidEmail(ErrorMessage = "E-mail inválido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Senha é obrigatória.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

@@ -7,7 +7,8 @@
         disabled="@(!_isEnabled)"
         title="@_tooltip"
         @onclick="StartOAuthAsync">
-    <span class="provider-icon @IconClass">@((MarkupString)IconContent)</span> @Label
+    <span class="provider-icon @IconClass">@((MarkupString)IconContent)</span>
+    @(UseEntrarPrefix ? $"Entrar com {Label}" : Label)
 </button>
 
 @code {
@@ -17,6 +18,7 @@
     [Parameter, EditorRequired] public string IconContent { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string BtnClass { get; set; } = string.Empty;
     [Parameter, EditorRequired] public LoginPlatform Platform { get; set; }
+    [Parameter] public bool UseEntrarPrefix { get; set; } = true;
     [Parameter] public EventCallback<string> OnError { get; set; }
 
     private bool _isEnabled;

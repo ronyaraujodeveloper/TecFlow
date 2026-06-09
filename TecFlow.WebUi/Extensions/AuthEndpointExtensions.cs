@@ -35,7 +35,7 @@ public static class AuthEndpointExtensions
         var authProvider = MapProviderKey(provider);
         if (authProvider is null || !registry.IsEnabled(authProvider.Value))
         {
-            return Results.Redirect($"/login/{platform.ToLowerInvariant()}?oauth=not-configured");
+            return Results.Redirect("/?oauth=not-configured");
         }
 
         var scheme = GetAuthenticationScheme(provider);
@@ -79,7 +79,7 @@ public static class AuthEndpointExtensions
         if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(idToken))
         {
             logger.LogWarning("OAuth concluído sem tokens para {Provider}.", provider);
-            return Results.Redirect($"/login/{loginPlatform.ToString().ToLowerInvariant()}?oauth=no-token");
+            return Results.Redirect("/?oauth=no-token");
         }
 
         var request = new PlatformAuthRequest
@@ -93,7 +93,7 @@ public static class AuthEndpointExtensions
         if (!result.Success || result.Data is null)
         {
             var error = Uri.EscapeDataString(result.ErrorMessage ?? "Falha na autenticação.");
-            return Results.Redirect($"/login/{loginPlatform.ToString().ToLowerInvariant()}?oauth=failed&message={error}");
+            return Results.Redirect($"/?oauth=failed&message={error}");
         }
 
         await authCookie.SignInFromAuthResponseAsync(result.Data, loginPlatform, authProvider, httpContext.RequestAborted);

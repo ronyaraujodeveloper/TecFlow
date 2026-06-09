@@ -188,7 +188,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 
 ### Fase 9: Reformulação Visual e Componentes Multi-Contas no Frontend (TecFlow.WebUi) 🎨
-- [ ] 9.1. Reformulação Visual da Tela de Login Principal
+- [x] 9.1. Reformulação Visual da Tela de Login Principal
   - Remover os botões iniciais de login direto por marketplace (TikTok/Shopee) da página de entrada.
   - Redesenhar a interface utilizando abordagem Mobile-First com botões de provedores sociais centrais (Google, Apple, Facebook) e o formulário tradicional de E-mail/Senha com link para recuperação de senha.
 

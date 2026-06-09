@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
 using TecFlow.API.Middlewares;
+using TecFlow.API.Extensions;
 using TecFlow.Business.Service.Application;
 using TecFlow.Infrastructure;
 using TecFlow.Infrastructure.Services;
@@ -84,5 +85,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+await app.SeedHomologDemoUserAsync();
 
 app.Run();

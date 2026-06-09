@@ -31,4 +31,7 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     public string? TikTokShopAccessToken { get; set; }
     public string? TikTokRefreshToken { get; set; }
     public DateTime? TikTokTokenExpiresAt { get; set; }
+
+    /// <summary>Provedores sociais vinculados (AspNetUserLogins).</summary>
+    public ICollection<UserExternalLogin> ExternalLogins { get; set; } = new List<UserExternalLogin>();
 }

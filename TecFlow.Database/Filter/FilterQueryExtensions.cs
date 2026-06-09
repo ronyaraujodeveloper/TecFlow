@@ -178,4 +178,44 @@ public static class FilterQueryExtensions
         if (filter.CreatedTo.HasValue) source = source.Where(x => x.CreatedAt <= filter.CreatedTo.Value);
         return source;
     }
+
+    public static IEnumerable<IntegracaoLoja> ApplyFilter(this IEnumerable<IntegracaoLoja> source, IntegracaoLojaFilter filter)
+    {
+        if (filter.Id.HasValue)
+        {
+            source = source.Where(x => x.Id == filter.Id.Value);
+        }
+
+        if (filter.UserId.HasValue)
+        {
+            source = source.Where(x => x.UserId == filter.UserId.Value);
+        }
+
+        if (filter.TenantId.HasValue)
+        {
+            source = source.Where(x => x.TenantId == filter.TenantId.Value);
+        }
+
+        if (filter.PlatformType.HasValue)
+        {
+            source = source.Where(x => x.PlatformType == filter.PlatformType.Value);
+        }
+
+        if (filter.Status.HasValue)
+        {
+            source = source.Where(x => x.Status == filter.Status.Value);
+        }
+
+        if (HasText(filter.FriendlyName))
+        {
+            source = source.Where(x => x.FriendlyName.Contains(filter.FriendlyName!, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (HasText(filter.ShopId))
+        {
+            source = source.Where(x => x.ShopId == filter.ShopId);
+        }
+
+        return source;
+    }
 }

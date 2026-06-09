@@ -17,6 +17,7 @@ using TecFlow.Business.Interfaces.Inventory;
 using TecFlow.Infrastructure.Services.Stock;
 using TecFlow.Infrastructure.Services.Sales;
 using TecFlow.Infrastructure.Services.Tenancy;
+using TecFlow.Infrastructure.Services.Integrations;
 using TecFlow.Util.Security;
 
 namespace TecFlow.Infrastructure.Services
@@ -89,10 +90,12 @@ namespace TecFlow.Infrastructure.Services
             services.AddScoped<ICampaignRepository, CampaignRepository>();
             services.AddScoped<IContentRepository, ContentRepository>();
             services.AddScoped<IUserAccountRepository, UserAccountRepository>();
+            services.AddScoped<IUserLoginRepository, UserLoginRepository>();
             services.AddScoped<IMarketplaceTokenRepository, MarketplaceTokenRepository>();
             services.AddScoped<IMarketplaceOrderRepository, MarketplaceOrderRepository>();
             services.AddScoped<IUserDeviceTokenRepository, UserDeviceTokenRepository>();
             services.AddScoped<IMarketplaceAccountRepository, MarketplaceAccountRepository>();
+            services.AddScoped<IIntegracaoLojaRepository, IntegracaoLojaRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
             services.AddScoped<IOrderStateMachine, OrderStateMachine>();
@@ -106,6 +109,10 @@ namespace TecFlow.Infrastructure.Services
             services.AddScoped<IMetricRepository, MetricRepository>();
             services.AddScoped<IDataService, DataService>();
             services.AddScoped<LegacyCredentialReEncryptService>();
+
+            services.AddTecFlowIdentity();
+
+            services.AddScoped<IIntegracaoLojaService, IntegracaoLojaService>();
 
             return services;
         }

@@ -1,108 +1,130 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto.Auth;
-using TecFlow.Business.Interfaces.Repositories;
-using TecFlow.Infrastructure.Security;
-using TecFlow.Util.Validation;
+using TecFlow.Business.Interfaces.Services;
 
 namespace TecFlow.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[AllowAnonymous]
 public class AuthController : ControllerBase
 {
-    private readonly IUserAccountRepository _userAccountRepository;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IPlatformAuthService _platformAuthService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
-        IUserAccountRepository usuarioRepository,
-        JwtTokenService jwtTokenService,
+        IPlatformAuthService platformAuthService,
         ILogger<AuthController> logger)
     {
-        _userAccountRepository = usuarioRepository;
-        _jwtTokenService = jwtTokenService;
+        _platformAuthService = platformAuthService;
         _logger = logger;
     }
 
     [HttpPost("tiktok/login")]
+    [AllowAnonymous]
     public Task<IActionResult> TikTokLogin([FromBody] PlatformAuthDto request, CancellationToken cancellationToken)
         => LoginForPlatformAsync("TikTok", request, cancellationToken);
 
     [HttpPost("shopee/login")]
+    [AllowAnonymous]
     public Task<IActionResult> ShopeeLogin([FromBody] PlatformAuthDto request, CancellationToken cancellationToken)
         => LoginForPlatformAsync("Shopee", request, cancellationToken);
+
+    [HttpPost("providers/vincular")]
+    [Authorize]
+    public async Task<ActionResult<AuthProviderResponseDto>> LinkProviderAsync(
+        [FromBody] LinkProviderDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        var result = await _platformAuthService.LinkProviderAsync(userId.Value, request, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("providers/desvincular")]
+    [Authorize]
+    public async Task<ActionResult<AuthProviderResponseDto>> UnlinkProviderAsync(
+        [FromQuery] string provider,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        var result = await _platformAuthService.UnlinkProviderAsync(userId.Value, provider, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("change-password")]
+    [Authorize]
+    public async Task<ActionResult<AuthProviderResponseDto>> ChangePasswordAsync(
+        [FromBody] ChangePasswordDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        var result = await _platformAuthService.ChangePasswordAsync(userId.Value, request, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
 
     private async Task<IActionResult> LoginForPlatformAsync(
         string platform,
         PlatformAuthDto request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Provider))
+        var result = await _platformAuthService.LoginAsync(platform, request, cancellationToken);
+        if (!result.Success)
         {
-            return BadRequest(new { Message = "Provedor de autenticação é obrigatório.", ErrorCode = "PROVIDER_REQUIRED" });
+            _logger.LogWarning(
+                "Falha de login para {Platform}. Code={ErrorCode}",
+                platform,
+                result.ErrorCode);
+
+            return result.ErrorCode switch
+            {
+                "INVALID_CREDENTIALS" or "SOCIAL_TOKEN_INVALID" => Unauthorized(new
+                {
+                    Message = result.ErrorMessage,
+                    ErrorCode = result.ErrorCode
+                }),
+                _ => BadRequest(new
+                {
+                    Message = result.ErrorMessage,
+                    ErrorCode = result.ErrorCode
+                })
+            };
         }
 
-        var provider = request.Provider.Trim();
+        return Ok(result.Token);
+    }
 
-        if (string.Equals(provider, "EmailPassword", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-            {
-                return BadRequest(new { Message = "E-mail e senha são obrigatórios.", ErrorCode = "CREDENTIALS_REQUIRED" });
-            }
-
-            var email = request.Email.Trim();
-
-            if (!ValidationHelper.IsValidEmail(email))
-            {
-                return BadRequest(new { Message = "E-mail inválido.", ErrorCode = "INVALID_EMAIL" });
-            }
-
-            var usuario = await _userAccountRepository.GetByEmailAsync(email);
-            if (usuario is null)
-            {
-                return Unauthorized(new { Message = "Credenciais inválidas.", ErrorCode = "INVALID_CREDENTIALS" });
-            }
-
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, usuario.PasswordHash))
-            {
-                return Unauthorized(new { Message = "Credenciais inválidas.", ErrorCode = "INVALID_CREDENTIALS" });
-            }
-
-            var token = _jwtTokenService.GenerateToken(usuario);
-            return Ok(new AuthTokenDto
-            {
-                Token = token,
-                UserId = usuario.Id.ToString(),
-                DisplayName = usuario.Name,
-                Platform = platform,
-                ExpiresAt = DateTimeOffset.UtcNow.AddHours(8)
-            });
-        }
-
-        if (string.IsNullOrWhiteSpace(request.AccessToken))
-        {
-            return BadRequest(new
-            {
-                Message = $"Token do provedor {provider} é obrigatório para login social.",
-                ErrorCode = "SOCIAL_TOKEN_REQUIRED"
-            });
-        }
-
-        _logger.LogInformation(
-            "Login social recebido para {Platform} via {Provider}. Validação do token no provedor será implementada.",
-            platform,
-            provider);
-
-        return Ok(new AuthTokenDto
-        {
-            Token = Convert.ToBase64String(Guid.NewGuid().ToByteArray()),
-            Platform = platform,
-            DisplayName = $"{platform} ({provider})",
-            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
-            UserId = "pending-social-validation"
-        });
+    private int? GetCurrentUserId()
+    {
+        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(claimValue, out var userId) ? userId : null;
     }
 }

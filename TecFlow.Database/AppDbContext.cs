@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<Content> Contents { get; set; } = null!;
     public DbSet<Conversion> Conversions { get; set; } = null!;
     public DbSet<UserAccount> UserAccounts { get; set; } = null!;
+    public DbSet<UserExternalLogin> UserExternalLogins { get; set; } = null!;
     public DbSet<MarketplaceToken> MarketplaceTokens { get; set; } = null!;
     public DbSet<MarketplaceOrder> MarketplaceOrders { get; set; } = null!;
     public DbSet<MarketplaceOrderLine> MarketplaceOrderLines { get; set; } = null!;
@@ -43,6 +44,7 @@ public class AppDbContext : DbContext
     public DbSet<SalesOrderItem> SalesOrderItems { get; set; } = null!;
     public DbSet<Inventory> Inventories { get; set; } = null!;
     public DbSet<InventoryMovement> InventoryMovements { get; set; } = null!;
+    public DbSet<IntegracaoLoja> IntegracaoLojas { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -75,6 +77,34 @@ public class AppDbContext : DbContext
             .HasOne(u => u.Tenant)
             .WithMany()
             .HasForeignKey(u => u.TenantId);
+
+        modelBuilder.Entity<UserExternalLogin>(entity =>
+        {
+            entity.ToTable("AspNetUserLogins");
+            entity.HasKey(login => new { login.LoginProvider, login.ProviderKey });
+            entity.HasIndex(login => login.UserId);
+            entity.Property(login => login.LoginProvider).HasMaxLength(128);
+            entity.Property(login => login.ProviderKey).HasMaxLength(128);
+            entity.Property(login => login.ProviderDisplayName).HasMaxLength(256);
+            entity.HasOne(login => login.User)
+                .WithMany(user => user.ExternalLogins)
+                .HasForeignKey(login => login.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IntegracaoLoja>(entity =>
+        {
+            entity.ToTable("IntegracaoLoja");
+            entity.HasIndex(i => new { i.UserId, i.ShopId, i.PlatformType }).IsUnique();
+            entity.HasOne(i => i.User)
+                .WithMany()
+                .HasForeignKey(i => i.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(i => i.Tenant)
+                .WithMany()
+                .HasForeignKey(i => i.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
         modelBuilder.Entity<Conversion>().Property(c => c.SaleAmount).HasPrecision(18, 2);
         modelBuilder.Entity<Affiliate>().Property(a => a.Commission).HasPrecision(18, 2);
@@ -284,6 +314,14 @@ public class AppDbContext : DbContext
             .HasConversion(encryptedString);
 
         marketplaceAccount.Property(a => a.RefreshToken)
+            .HasConversion(encryptedNullableString);
+
+        var integracaoLoja = modelBuilder.Entity<IntegracaoLoja>();
+
+        integracaoLoja.Property(i => i.AccessToken)
+            .HasConversion(encryptedString);
+
+        integracaoLoja.Property(i => i.RefreshToken)
             .HasConversion(encryptedNullableString);
 
         var user = modelBuilder.Entity<UserEntity>();

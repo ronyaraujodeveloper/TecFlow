@@ -167,5 +167,68 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - [x] Implementar tabelas de movimentação de estoque (Entradas por compra, Saídas por venda, Ajustes manuais, Estoque Mínimo e Alertas).
   - [x] Desenvolver serviço de reserva de estoque para garantir que, no momento em que um pedido de venda direta for gerado, as unidades fiquem bloqueadas temporariamente até a confirmação do pagamento, evitando o Overbooking (vender o que não tem).
   
+  ### Fase 8: Nova Arquitetura de Autenticação e Multi-Contas no Backend 🔐
+- [x] 8.1. Esquema de Autenticação com Múltiplos Provedores (Identity Link)
+  - Configurar a tabela de logins do ASP.NET Core Identity (`AspNetUserLogins`) para suportar múltiplos provedores sociais (Google, Facebook, Apple) vinculados ao mesmo ID de usuário.
+  - Implementar lógica de *Auto-linking*: Se o login social autenticado usar um e-mail já existente no banco de dados, vincular o provedor social à conta existente em vez de gerar um usuário duplicado.
+
+- [x] 8.2. Endpoints de Gestão de Provedores de Login e Segurança de Credenciais
+  - Criar o endpoint `POST /api/auth/providers/vincular` para associar um novo método social com o usuário já logado no painel.
+  - Criar o endpoint `DELETE /api/auth/providers/desvincular` para remover um método social, aplicando a validação de segurança que exige que reste ao menos um método de autenticação ativo (senha ou outro social).
+  - Desenvolver o endpoint `PUT /api/auth/change-password` para troca de senha de e-mail e aplicar um bypass/script temporário para resetar a credencial do usuário de homologação `demo@tecso.local` (resolvendo o bloqueio de credenciais inválidas).
+
+- [x] 8.3. Modelagem Relacional e Endpoints para Múltiplas Lojas (1 para Muitos)
+  - Criar a entidade e migração PostgreSQL para a tabela `IntegracaoLoja` (`Id`, `IdUsuario`, `Plataforma` [TikTok/Shopee], `NomeAmigavel`, `AccessToken`, `RefreshToken`, `Status`), quebrando o acoplamento antigo de uma única conta por usuário.
+  - Desenvolver o endpoint `GET /api/integracoes/lojas` para listar todas as contas de marketplaces conectadas ao usuário logado.
+  - Desenvolver o endpoint `POST /api/integracoes/vincular` para capturar o fluxo de callback do OAuth do marketplace, solicitar o Nome Amigável/Apelido da loja e persistir o novo registro de forma isolada.
+  - Desenvolver o endpoint `DELETE /api/integracoes/lojas/{id}` para desvincular e remover uma loja específica.
+
+- [ ] 8.4. Refatoração dos Endpoints de Métricas do Dashboard para Escopo de Loja
+  - Ajustar os controladores e serviços que alimentam o Dashboard para exigir ou receber o parâmetro opcional `?lojaId=...`, garantindo que as queries apliquem o filtro de isolamento e retornem os dados da conta selecionada.
+
+
+### Fase 9: Reformulação Visual e Componentes Multi-Contas no Frontend (TecFlow.WebUi) 🎨
+- [ ] 9.1. Reformulação Visual da Tela de Login Principal
+  - Remover os botões iniciais de login direto por marketplace (TikTok/Shopee) da página de entrada.
+  - Redesenhar a interface utilizando abordagem Mobile-First com botões de provedores sociais centrais (Google, Apple, Facebook) e o formulário tradicional de E-mail/Senha com link para recuperação de senha.
+
+- [ ] 9.2. Central de Contas e Segurança de Acesso do Usuário
+  - Criar a página interna "Minha Conta / Segurança" contendo a aba de métodos de acesso (exibindo quais redes estão conectadas) e o formulário Blazor para alteração de senha.
+
+- [ ] 9.3. Painel de Gerenciamento Multi-Contas de Marketplaces
+  - Desenvolver a interface "Minhas Lojas / Integrações" exibindo em cartões responsivos todas as contas integradas do TikTok/Shopee, seus respectivos status de conexão (Verde/Vermelho) e o botão para disparar o OAuth de uma nova conta (permitindo gerenciar 10 ou mais lojas).
+
+- [ ] 9.4. Seletor Global de Escopo no Topbar do Dashboard
+  - Desenvolver um componente de Dropdown persistente e fluido na barra superior do sistema carregando dinamicamente as lojas conectadas do usuário.
+  - Persistir o estado da loja selecionada no escopo global do Blazor. Ao alternar a loja no topo, disparar o recarregamento dos componentes da página ativa injetando o novo `lojaId`.
+
+### Fase 10: Motor Agnóstico de Geração e Encurtamento de Links de Afiliado (Backend) 🔗
+- [ ] 10.1. Arquitetura Base e Padrão Strategy para Múltiplos Marketplaces
+  - Criar a interface `IPlatformLinkStrategy` com métodos para validação de domínio e geração de Deep Links.
+  - Implementar o `PlatformLinkResolver` para identificar dinamicamente qual provedor deve processar a URL com base no domínio (suportando nativamente TikTok e Shopee, e preparado para Mercado Livre, Amazon, Magalu, etc.).
+  - Criar o DTO unificado `GerarLinkAfiliadoDto` recebendo a URL bruta e o escopo de identificação.
+
+- [ ] 10.2. Implementação dos Provedores e Integração com as APIs Core
+  - Desenvolver as classes de estratégia iniciais consumindo os SDKs/APIs correspondentes de Afiliados.
+  - Tratar payloads de links já encurtados pelas plataformas de origem (ex: links do tipo `s.shopee.com.br` ou encurtados de redes sociais), realizando o *unshorten* (rastreamento do redirecionamento HTTP) se necessário para extrair o ID real do produto antes de re-parametrizar.
+
+- [ ] 10.3. Encurtador Interno Multi-Plataforma e Telemetria de Cliques
+  - Criar o mecanismo de redirecionamento dinâmico do TecFlow (ex: `tflow.link/xyz`).
+  - Modelar a tabela `LinkClickLog` para registrar a telemetria de acessos (data, hora, IP, localização simulada, dispositivo e plataforma de origem do produto).
+
+
+### Fase 11: Módulo Gerador de Links Omnichannel no Frontend (TecFlow.WebUi) 📱
+- [ ] 11.1. Tela Universal "Gerador de Links de Comissão" (Mobile-First)
+  - Desenvolver a interface Blazor (`GeradorLinks.razor`) com um campo de captura inteligente de URLs.
+  - Exibir visualmente os logos de todos os marketplaces suportados pelo sistema (com sinalização de quais estão ativos ou configurados para a conta do usuário).
+
+- [ ] 11.2. Painel Dinâmico de Resultados e Compartilhamento Nativo
+  - Renderizar o link customizado gerado com feedback visual instantâneo e botão de cópia rápida.
+  - Acoplar a Web Share API para permitir o envio direto do link gerado para canais como WhatsApp, Telegram e redes sociais em dispositivos móveis.
+
+- [ ] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
+  - Renderizar listagem responsiva contendo o histórico de links processados.
+  - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

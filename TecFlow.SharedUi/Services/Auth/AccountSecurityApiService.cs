@@ -43,7 +43,7 @@ public class AccountSecurityApiService : IAccountSecurityApiService
     public Task<AuthProviderResponseDto> GetProviderStatusAsync(CancellationToken cancellationToken = default)
     {
         using var _ = _loadingService.BeginScope("Carregando métodos de acesso...");
-        return SendEnvelopeAsync(HttpMethod.Get, "api/auth/providers/status", body: null, cancellationToken);
+        return SendEnvelopeAsync(HttpMethod.Get, "api/auth/status", body: null, cancellationToken);
     }
 
     public Task<AuthProviderResponseDto> UnlinkProviderAsync(

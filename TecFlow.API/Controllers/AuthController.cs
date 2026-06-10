@@ -102,6 +102,7 @@ public class AuthController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("status")]
     [HttpGet("providers/status")]
     [Authorize]
     public async Task<ActionResult<AuthProviderResponseDto>> GetProviderStatusAsync(

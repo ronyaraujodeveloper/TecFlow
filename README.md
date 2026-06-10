@@ -218,7 +218,6 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Criar o mecanismo de redirecionamento dinâmico do TecFlow (ex: `tflow.link/xyz`).
   - Modelar a tabela `LinkClickLog` para registrar a telemetria de acessos (data, hora, IP, localização simulada, dispositivo e plataforma de origem do produto).
 
-
 ### Fase 11: Módulo Gerador de Links Omnichannel no Frontend (TecFlow.WebUi) 📱
 - [x] 11.1. Tela Universal "Gerador de Links de Comissão" (Mobile-First)
   - Desenvolver a interface Blazor (`GeradorLinks.razor`) com um campo de captura inteligente de URLs.
@@ -231,6 +230,112 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
   - Renderizar listagem responsiva contendo o histórico de links processados.
   - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
+
+  ### Fase 12: Motor de Busca Cruzada e Comparador de Preços Multicloud (Backend) 🧠🔍
+- [ ] 12.1. Evolução da Interface Strategy e Extração de Scraping/Meta-dados
+  - Estender a interface `IPlatformLinkStrategy` para incluir o método `Task<ProductMetadataDto> ExtractProductMetadataAsync(string url)`.
+  - Implementar um extrator de metadados básico (via API oficial ou crawler leve/HtmlAgilityPack) para identificar o Título Comercial, Imagem e Preço Atual do link original colado pelo usuário.
+
+- [ ] 12.2. Implementação do Motor de Busca Cruzada em Paralelo (Cross-Search)
+  - Estender a interface `IPlatformLinkStrategy` para incluir o método `Task<List<ProductSearchMatchDto>> SearchProductByTitleAsync(string title, Guid storeId)`.
+  - Implementar nas classes especialistas (Shopee, TikTok, Amazon, Mercado Livre) a chamada de busca por palavra-chave nas respectivas APIs de afiliados.
+  - Criar o serviço `ProductArbitrageService` que dispara as buscas em paralelo (`Task.WhenAll`) em todas as plataformas conectadas e ativas do usuário, ignorando falhas individuais de APIs externas para não travar o fluxo.
+
+- [ ] 12.3. Algoritmo de Rankeamento, Filtragem por Menor Preço e Normalização
+  - Desenvolver lógica de higienização de strings para comparar os títulos (removendo termos ruidosos como "Frete Grátis", "Original", "Promoção").
+  - Filtrar os resultados para garantir que o preço encontrado nas plataformas concorrentes seja **menor** que o preço do link original.
+  - Ordenar o resultado de forma ascendente pelo preço e limitar o retorno a no máximo 3 sugestões alternativas, já gerando o link de comissão convertido para cada uma delas.
+
+### Fase 13: Painel de Otimização e Sugestões de Ofertas no Frontend (TecFlow.WebUi) 💸
+- [ ] 13.1. Componente Reativo "Sugestões de Melhor Preço" (UI/UX)
+  - Desenvolver uma seção dinâmica na página `GeradorLinks.razor` que exibe um *loader* de busca (ex: "Buscando preços melhores em outras plataformas...") logo após o link principal ser gerado.
+  - Renderizar até 3 cards de sugestões alternativas utilizando abordagem Mobile-First.
+
+- [ ] 13.2. Anatomia do Card de Sugestão e Ações Rápidas
+  - Cada card de sugestão deve exibir de forma clara:
+    * O logo do marketplace concorrente onde o produto mais barato foi encontrado.
+    * O novo preço em destaque comparado ao preço original (ex: * De R$ 100,00 por R$ 85,00 na Amazon*).
+    * Botões rápidos independentes de "Copiar Link Alternativo" e "Compartilhar".
+
+- [ ] 13.3. Telemetria de Conversão de Arbitragem
+  - Ajustar a tabela `LinkClickLog` para registrar quando um clique veio de um link de sugestão alternativa (arbitragem), permitindo que o usuário saiba no Dashboard se as sugestões de menor preço estão performando melhor que os links originais que ele cola.
+
+
+  Como Analista de Sistemas Sênior, vejo que chegamos no momento mais crítico da transição de um projeto de software: a Infraestrutura de Produção e Homologação Física. Sair do ambiente local e conectar com gigantes de tecnologia exige conformidade com segurança, DNS, políticas de privacidade e fluxos de consentimento (OAuth).
+
+Seu roteiro está excelente, mas para torná-lo um Guia de Produção Infalível, incluí 4 pontos cruciais que estavam faltando e que poderiam travar suas aprovações nas plataformas:
+
+1. Configuração de Segurança e Entregabilidade de E-mail (SPF, DKIM, DMARC): Essencial para o Gmail e iCloud não bloquearem as notificações e ativações de conta do TecFlow.
+
+2. Página de Política de Privacidade e Termos de Uso: O Facebook, TikTok e Google rejeitam aplicativos de desenvolvedor que não possuem esses links públicos no domínio oficial.
+
+3. SSL/TLS Rígido (HTTPS): Nenhuma API de marketplace aceita callbacks em HTTP.
+
+4. Criação de Usuários de Teste (SandBox): Antes de ir para a API pública da Shopee/TikTok, precisamos testar no ambiente de simulação deles.
+
+Aqui está o seu Roteiro de Infraestrutura e Homologação Omnichannel completo e revisado. Salve-o, pois vamos executá-lo item por item.
+
+🗺️ Roteiro de Infraestrutura, Credenciais e Homologação TecFlow
+Módulo A: Identidade Digital e Infraestrutura (O Alicerce)
+[ ] A.1. Registro e Apontamento do Domínio: * Registrar tecflow.com.br no Registro.br.
+
+Configurar os servidores de DNS (Cloudflare recomendada para proteção contra ataques e gerenciamento rápido).
+
+[ ] A.2. Configuração do Servidor e SSL:
+
+Configurar o servidor IIS/Linux de homologação apontando para o subdomínio homolog.tecflow.com.br.
+
+Instalar certificado SSL válido (Let's Encrypt) para garantir HTTPS obrigatório.
+
+[ ] A.3. Blindagem de E-mail (Entregabilidade):
+
+Configurar os apontamentos TXT de SPF, DKIM e DMARC no DNS do domínio para que os e-mails do sistema cheguem na caixa de entrada do Gmail e iCloud.
+
+[ ] A.4. Publicação dos Termos Legais (Obrigatório para APIs):
+
+Colocar no ar uma página simples em tecflow.com.br/privacidade e tecflow.com.br/termos (essencial para aprovação nos consoles de desenvolvedor).
+
+Módulo B: Consoles de Desenvolvedor e Credenciais (As Chaves)
+[ ] B.1. Google Cloud Console (Gmail e Login Social):
+
+Criar projeto no Google Cloud, configurar a tela de consentimento OAuth (adicionando os links de privacidade) e gerar o Client ID e Client Secret. Ativar a API do Gmail.
+
+[ ] B.2. Apple Developer Program (iCloud/Apple Login):
+
+Configurar o Identifiers, Service IDs e chaves privadas (.p8) para o botão "Entrar com Apple".
+
+[ ] B.3. Meta for Developers (Facebook Login):
+
+Criar aplicativo do tipo "Consumidor/Empresa", configurar o escopo de login e obter ID e Chave Secreta do App.
+
+[ ] B.4. Shopee Open Platform (Afiliados e Lojas):
+
+Criar conta de desenvolvedor na Shopee Open Platform. Solicitar acesso à Affiliate API e à V2 Open API (gerenciamento de lojas).
+
+[ ] B.5. TikTok Developer / TikTok Shop Academy:
+
+Cadastrar a empresa no console de desenvolvedor do TikTok para obter as credenciais do programa de afiliados e login de parceiro.
+
+[ ] B.6. OpenAI Developer Platform:
+
+Criar conta organizacional na OpenAI, configurar limites de faturamento e gerar as chaves de API secretas (sk-...) para o motor de IA.
+
+Módulo C: Homologação e Testes de Circuito Fechado (A Prova de Fogo)
+[ ] C.1. Teste de Autenticação Unificada e Auto-linking:
+
+Validar em ambiente de homologação se o login e registro via Google, Facebook e Apple associam o usuário corretamente no banco PostgreSQL sem duplicar contas.
+
+[ ] C.2. Simulação de Vínculo Multi-Lojas (OAuth Sandbox):
+
+Utilizar as ferramentas de teste (Console Sandbox) da Shopee e TikTok para simular o clique em "Conectar Loja", autorizar o acesso e validar se o token entra criptografado na tabela IntegracaoLoja.
+
+[ ] C.3. Teste de Estresse do Motor Strategy e Unshorten:
+
+Submeter links encurtados de teste (reais) para garantir que o backend expande a URL, descobre a plataforma correta e gera o novo link comissionável sem gargalos.
+
+[ ] C.4. Validação da Telemetria e Redirecionamento:
+
+Clicar nos links encurtados próprios gerados (tflow.link/...) através de um celular e de um computador. Validar se a tabela LinkClickLog captura os dados de dispositivo e se o redirecionamento joga o usuário na tela do produto com sucesso.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

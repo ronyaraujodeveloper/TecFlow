@@ -75,6 +75,7 @@ var app = builder.Build();
 
 app.UseTecFlowTelemetry();
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseHttpsRedirection();
 
 // Homologação/IIS: exposto globalmente para diagnóstico (restringir por ambiente após validação).
 app.UseSwagger();

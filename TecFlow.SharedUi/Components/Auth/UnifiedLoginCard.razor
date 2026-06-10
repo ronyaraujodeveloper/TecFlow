@@ -177,6 +177,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro inesperado ao submeter login por e-mail.");
+            Console.WriteLine(ex.ToString());
             _errorMessage = "Ocorreu um erro inesperado ao entrar. Tente novamente.";
         }
         finally

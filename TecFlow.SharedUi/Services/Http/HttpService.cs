@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Models;
 using TecFlow.SharedUi.Models.Responses;
@@ -16,13 +17,16 @@ public class HttpService : IHttpService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
+    private readonly ILogger<HttpService> _logger;
 
     public HttpService(
         IHttpClientFactory httpClientFactory,
-        IAccessTokenProvider accessTokenProvider)
+        IAccessTokenProvider accessTokenProvider,
+        ILogger<HttpService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _accessTokenProvider = accessTokenProvider;
+        _logger = logger;
     }
 
     public Task<ApiResult<TResponse>> GetAsync<TResponse>(
@@ -101,22 +105,39 @@ public class HttpService : IHttpService
             var message = apiError?.Message ?? $"Erro na API ({(int)response.StatusCode}).";
             return ApiResult<TResponse>.Fail(message, (int)response.StatusCode, apiError?.ErrorCode);
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            LogHttpFailure(ex, method, relativeUrl, "timeout");
             return ApiResult<TResponse>.Fail("Tempo limite excedido ao contactar o servidor.", isOffline: true);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is null or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
         {
+            LogHttpFailure(ex, method, relativeUrl, "indisponivel");
             return ApiResult<TResponse>.Fail("Servidor indisponível. Tente novamente em instantes.", isOffline: true);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            LogHttpFailure(ex, method, relativeUrl, "http");
             return ApiResult<TResponse>.Fail("Não foi possível contactar o servidor. Verifique se o Orquestrador está em execução.", isOffline: true);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogHttpFailure(ex, method, relativeUrl, "inesperado");
             return ApiResult<TResponse>.Fail("Ocorreu um erro inesperado ao comunicar com a API.");
         }
+    }
+
+    private void LogHttpFailure(Exception ex, HttpMethod method, string relativeUrl, string category)
+    {
+        var client = _httpClientFactory.CreateClient("Orquestrador");
+        _logger.LogError(
+            ex,
+            "Falha HTTP ({Category}) {Method} {BaseAddress}{RelativeUrl}",
+            category,
+            method,
+            client.BaseAddress,
+            relativeUrl);
+        Console.WriteLine(ex.ToString());
     }
 
     private string? ResolveAccessToken() => _accessTokenProvider.GetAccessToken();

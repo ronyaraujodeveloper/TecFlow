@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TecFlow.SharedUi.Models;
 using TecFlow.SharedUi.Models.Enums;
 using TecFlow.SharedUi.Models.Requests;
@@ -16,10 +17,14 @@ public class OrquestradorAuthBridge : IOrquestradorAuthBridge
     };
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<OrquestradorAuthBridge> _logger;
 
-    public OrquestradorAuthBridge(IHttpClientFactory httpClientFactory)
+    public OrquestradorAuthBridge(
+        IHttpClientFactory httpClientFactory,
+        ILogger<OrquestradorAuthBridge> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     public async Task<ApiResult<AuthTokenResponse>> LoginAsync(
@@ -54,20 +59,35 @@ public class OrquestradorAuthBridge : IOrquestradorAuthBridge
                 (int)response.StatusCode,
                 apiError?.ErrorCode);
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            LogAuthFailure(ex, endpoint, "timeout");
             return ApiResult<AuthTokenResponse>.Fail("Tempo limite excedido.", isOffline: true);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is null or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
         {
+            LogAuthFailure(ex, endpoint, "indisponivel");
             return ApiResult<AuthTokenResponse>.Fail("Servidor indisponível.", isOffline: true);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            LogAuthFailure(ex, endpoint, "http");
             return ApiResult<AuthTokenResponse>.Fail(
                 "Não foi possível contactar o Orquestrador.",
                 isOffline: true);
         }
+    }
+
+    private void LogAuthFailure(Exception ex, string endpoint, string category)
+    {
+        var client = _httpClientFactory.CreateClient("Orquestrador");
+        _logger.LogError(
+            ex,
+            "Falha OAuth/login ({Category}) {BaseAddress}{Endpoint}",
+            category,
+            client.BaseAddress,
+            endpoint);
+        Console.WriteLine(ex.ToString());
     }
 
     private static T? TryDeserialize<T>(string json)

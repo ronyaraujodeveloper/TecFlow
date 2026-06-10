@@ -125,7 +125,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Business/Dto/** — `TenantDto`, `TenantResponseDto`, `MarketplaceAccountDto`, `MarketplaceAccountResponseDto`.
 - [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** — callback OAuth exige `[Authorize]`.
 - [x] **TecFlow.API/Controllers/AuthController.cs** — `GET /api/auth/status` e `GET /api/auth/providers/status` (alias); login, register, vincular/desvincular provedores.
-- [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/`).
+- [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/` em dev Kestrel; `http://localhost:5001/` no IIS Homologacao).
 
 ### Fase 6.3 — Produtos globais de propaganda (jun/2026)
 

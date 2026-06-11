@@ -666,8 +666,10 @@ Deep link: tecflow://engajamento/fila
            │     TecFlow.SharedUi       │
            │  Pages · Layout · Widgets  │
            │  AddTecFlowClientServices  │
+           │  (SSL bypass dev/homolog)  │
            └────────────┬───────────────┘
                         │ HttpClient "Orquestrador"
+                        │ Development/Homologacao: ignora cert. autoassinado
                         ▼
            ┌────────────────────────────┐
            │ TecFlow.Orquestrador / API │

@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddWebUiServices(builder.Configuration);
+builder.Services.AddWebUiServices(builder.Configuration, builder.Environment);
 builder.Services.AddWebUiAuthentication(builder.Configuration);
 
 var app = builder.Build();

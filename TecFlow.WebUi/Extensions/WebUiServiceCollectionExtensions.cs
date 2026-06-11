@@ -1,4 +1,7 @@
-﻿using TecFlow.SharedUi.Extensions;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Services.Auth;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.Integrations;
@@ -12,9 +15,12 @@ namespace TecFlow.WebUi.Extensions;
 
 public static class WebUiServiceCollectionExtensions
 {
-    public static IServiceCollection AddWebUiServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWebUiServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        services.AddTecFlowClientServices(configuration);
+        services.AddTecFlowClientServices(configuration, environment);
         services.AddMemoryCache();
         services.AddSingleton<IAuthSignInTicketStore, AuthSignInTicketStore>();
         services.AddSingleton<IIntegracaoLojaPendingLinkStore, IntegracaoLojaPendingLinkStore>();

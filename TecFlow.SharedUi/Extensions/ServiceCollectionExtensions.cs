@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using TecFlow.SharedUi.Configuration;
 using TecFlow.SharedUi.Services.Auth;
 using TecFlow.SharedUi.Services.Advertising;
@@ -18,17 +19,30 @@ namespace TecFlow.SharedUi.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddTecFlowClientServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddTecFlowClientServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment? environment = null)
     {
         services.Configure<OrquestradorApiOptions>(configuration.GetSection(OrquestradorApiOptions.SectionName));
 
-        services.AddHttpClient("Orquestrador", (sp, client) =>
+        var orquestradorClient = services.AddHttpClient("Orquestrador", (sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OrquestradorApiOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
             client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
         });
+
+        if (environment is not null
+            && (environment.IsDevelopment() || environment.IsEnvironment("Homologacao")))
+        {
+            orquestradorClient.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        }
 
         services.AddScoped<IAccessTokenProvider, SessionAccessTokenProvider>();
         services.AddScoped<IHttpService, HttpService>();

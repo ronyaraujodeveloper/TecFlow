@@ -337,5 +337,21 @@ Submeter links encurtados de teste (reais) para garantir que o backend expande a
 
 Clicar nos links encurtados próprios gerados (tflow.link/...) através de um celular e de um computador. Validar se a tabela LinkClickLog captura os dados de dispositivo e se o redirecionamento joga o usuário na tela do produto com sucesso.
 
+
+## 🪵 BACKLOG DE INFRAESTRUTURA: TELEMETRIA E LOGS GLOBAIS
+
+### [ ] ETAPA 1: Infraestrutura de Logs do Servidor (IIS)
+- [ ] Criar script PowerShell `Configurar-Logs-IIS.ps1` para criar as pastas físicas de log e gerenciar permissões de escrita (`FullControl`) para o pool do IIS (`IIS_IUSRS` / `DefaultAppPool`).
+- [ ] Configurar o arquivo `web.config` do `TecFlow.WebUi` com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
+- [ ] Configurar o arquivo `web.config` da `TecFlow.API` seguindo o mesmo padrão, mapeando os logs para `C:\inetpub\tecflow\api\logs\stdout` orientado por flag de ativação.
+
+### [ ] ETAPA 2: Padronização do Log de Aplicação (.NET Serilog/ILogger)
+- [ ] Inspecionar o arquivo `Program.cs` da `TecFlow.API` e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
+- [ ] Inspecionar o arquivo `Program.cs` do `TecFlow.WebUi` (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas.
+- [ ] Configurar os arquivos `appsettings.Homologacao.json` de ambos os projetos para definir o nível mínimo de log como `Information` ou `Debug` para capturar os traces internos do framework.
+
+### [ ] ETAPA 3: Blindagem e Captura de Exceções Ocultas
+- [ ] Implementar ou revisar um Middleware Global de Exceções (`ExceptionHandlingMiddleware`) na API para capturar erros 500, estendendo o log com detalhes do payload (respeitando LGPD).
+- [ ] Validar que todos os blocos críticos de `try/catch` no fluxo de autenticação (OAuth Google, login tradicional, pontes de comunicação) invoquem explicitamente o `_logger.LogError(ex, ...)` em vez de engolirem a exceção em silêncio.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

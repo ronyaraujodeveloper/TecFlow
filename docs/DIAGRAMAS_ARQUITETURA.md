@@ -343,7 +343,7 @@ flowchart TB
     │ ✓ AddTecFlowInfrastructureData(config)  → DbContext + repos  │
     │ ✓ AddTecFlowApplicationServices()       → TecFlow.Business   │
     │ ✓ JWT (API) + Serilog + Controllers                        │
-    │ ✓ UseMiddleware<ExceptionMiddleware>()  → TecFlow.Core       │
+    │ ✓ UseMiddleware<ExceptionHandlingMiddleware>() → ProblemDetails   │
     └─────────────────────────────────────────────────────────────┘
                               │
          ┌────────────────────┼────────────────────┐
@@ -832,6 +832,8 @@ flowchart TB
   subgraph Export
     PROM[/metrics Prometheus]
     OTLP[OTLP Collector / Seq]
+    IISLOG[IIS stdout .\logs\stdout]
+    FILELOG[Serilog logs/app-.txt]
   end
 
   UI[PainelSaude.razor] --> ORQ
@@ -840,9 +842,18 @@ flowchart TB
   API --> OTel
   WRK --> OTel
   ORQ --> OTel
+  API --> IISLOG
+  API --> FILELOG
   OTel --> PROM
   OTel --> OTLP
 ```
+
+| Destino de log (Fase 14) | Host | Configuração |
+|--------------------------|------|--------------|
+| IIS stdout | API / WebUi | `web.config` → `stdoutLogEnabled`, `.\logs\stdout` |
+| Serilog arquivo | API / WebUi | `Program.cs` → `logs/app-.txt` (rolagem diária) |
+| Circuitos Blazor | WebUi | `BlazorCircuitLoggingHandler` (SignalR open/close/reconnect) |
+| Permissões IIS | `C:\inetpub\tecflow\*\logs` | `Configurar-Logs-IIS.ps1` |
 
 | Métrica | Origem |
 |---------|--------|

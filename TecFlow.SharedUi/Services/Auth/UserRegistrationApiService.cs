@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.SharedUi.Services.UI;
 
@@ -14,13 +15,16 @@ public class UserRegistrationApiService : IUserRegistrationApiService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILoadingService _loadingService;
+    private readonly ILogger<UserRegistrationApiService> _logger;
 
     public UserRegistrationApiService(
         IHttpClientFactory httpClientFactory,
-        ILoadingService loadingService)
+        ILoadingService loadingService,
+        ILogger<UserRegistrationApiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _loadingService = loadingService;
+        _logger = logger;
     }
 
     public async Task<UserResponseDto> RegisterAsync(UserDto request, CancellationToken cancellationToken = default)
@@ -45,20 +49,31 @@ public class UserRegistrationApiService : IUserRegistrationApiService
                 Descricao = "Não foi possível interpretar a resposta do servidor."
             };
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            _logger.LogError(ex, "Timeout no registro de usuario via api/auth/register.");
             return new UserResponseDto
             {
                 Status = false,
                 Descricao = "Tempo limite excedido ao contactar o servidor."
             };
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            _logger.LogError(ex, "Falha HTTP no registro de usuario via api/auth/register.");
             return new UserResponseDto
             {
                 Status = false,
                 Descricao = "Não foi possível contactar o servidor. Verifique se a API está em execução."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro inesperado no registro de usuario via api/auth/register.");
+            return new UserResponseDto
+            {
+                Status = false,
+                Descricao = "Ocorreu um erro inesperado ao criar a conta."
             };
         }
     }

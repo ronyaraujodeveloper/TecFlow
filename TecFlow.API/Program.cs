@@ -15,11 +15,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 DatabaseUrlConfiguration.ApplyCloudDatabaseUrl(builder.Configuration);
 
-builder.Host.UseSerilog((context, configuration) => configuration
+builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
-    .Enrich.FromLogContext());
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: Path.Combine(AppContext.BaseDirectory, "logs", "app-.txt"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        shared: true));
 
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -74,7 +82,7 @@ if (jwtSection.Exists())
 var app = builder.Build();
 
 app.UseTecFlowTelemetry();
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 
 // Homologação/IIS: exposto globalmente para diagnóstico (restringir por ambiente após validação).
@@ -93,4 +101,11 @@ app.MapControllers();
 
 await app.SeedHomologDemoUserAsync();
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    Log.CloseAndFlush();
+}

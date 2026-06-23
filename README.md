@@ -260,98 +260,54 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [ ] 13.3. Telemetria de Conversão de Arbitragem
   - Ajustar a tabela `LinkClickLog` para registrar quando um clique veio de um link de sugestão alternativa (arbitragem), permitindo que o usuário saiba no Dashboard se as sugestões de menor preço estão performando melhor que os links originais que ele cola.
 
+### [x] 14.1. Infraestrutura de Logs do Servidor (IIS)
+- [x] Criar script PowerShell `Configurar-Logs-IIS.ps1` para gerar as pastas físicas de log e gerenciar permissões de escrita (FullControl) para o pool do IIS (`IIS_IUSRS` / `DefaultAppPool`).
 
-  Como Analista de Sistemas Sênior, vejo que chegamos no momento mais crítico da transição de um projeto de software: a Infraestrutura de Produção e Homologação Física. Sair do ambiente local e conectar com gigantes de tecnologia exige conformidade com segurança, DNS, políticas de privacidade e fluxos de consentimento (OAuth).
+- [x] Configurar o arquivo `web.config` do TecFlow.WebUi com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
 
-Seu roteiro está excelente, mas para torná-lo um Guia de Produção Infalível, incluí 4 pontos cruciais que estavam faltando e que poderiam travar suas aprovações nas plataformas:
+- [x] Configurar o arquivo `web.config` da TecFlow.API seguindo o mesmo padrão, mapeando os logs para `.\logs\stdout` orientado por flag de ativação.
 
-1. Configuração de Segurança e Entregabilidade de E-mail (SPF, DKIM, DMARC): Essencial para o Gmail e iCloud não bloquearem as notificações e ativações de conta do TecFlow.
+### [x] 14.2. Padronização do Log de Aplicação (.NET Serilog/ILogger)
+- [x] Inspecionar o arquivo `Program.cs` da TecFlow.API e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
 
-2. Página de Política de Privacidade e Termos de Uso: O Facebook, TikTok e Google rejeitam aplicativos de desenvolvedor que não possuem esses links públicos no domínio oficial.
+- [x] Inspecionar o arquivo `Program.cs` do TecFlow.WebUi (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas (`BlazorCircuitLoggingHandler`, `UseSerilogRequestLogging`).
 
-3. SSL/TLS Rígido (HTTPS): Nenhuma API de marketplace aceita callbacks em HTTP.
+- [x] Configurar os arquivos `appsettings.Homologacao.json` de ambos os projetos para definir o nível mínimo de log como `Information` (traces internos do framework em homolog).
 
-4. Criação de Usuários de Teste (SandBox): Antes de ir para a API pública da Shopee/TikTok, precisamos testar no ambiente de simulação deles.
+### [x] 14.3. Blindagem e Captura de Exceções Ocultas
+- [x] Implementar ou revisar um Middleware Global de Exceções (`ExceptionHandlingMiddleware`) na API para capturar erros 500, estendendo o log com detalhes contextuais seguros (LGPD) e retornando `ProblemDetails` JSON.
 
-Aqui está o seu Roteiro de Infraestrutura e Homologação Omnichannel completo e revisado. Salve-o, pois vamos executá-lo item por item.
+- [x] Validar que todos os blocos críticos de `try/catch` no fluxo de autenticação (OAuth, login tradicional, pontes de comunicação) invoquem explicitamente `_logger.LogError(ex, ...)` em vez de engolirem a exceção em silêncio.
 
-🗺️ Roteiro de Infraestrutura, Credenciais e Homologação TecFlow
-Módulo A: Identidade Digital e Infraestrutura (O Alicerce)
-[ ] A.1. Registro e Apontamento do Domínio: * Registrar tecflow.com.br no Registro.br.
+🗺️ Fase 15: Identidade Digital e Infraestrutura de Produção (O Alicerce)
+[ ] 15.1. Registro e Apontamento do Domínio: Registrar tecflow.com.br no Registro.br e configurar os servidores de DNS na Cloudflare.
 
-Configurar os servidores de DNS (Cloudflare recomendada para proteção contra ataques e gerenciamento rápido).
+[ ] 15.2. Configuração do Servidor e SSL: Apontar o subdomínio homolog.tecflow.com.br para o servidor de homologação e instalar certificado SSL (Let's Encrypt).
 
-[ ] A.2. Configuração do Servidor e SSL:
+[ ] 15.3. Blindagem de E-mail (Entregabilidade): Configurar apontamentos TXT de SPF, DKIM e DMARC na zona de DNS para evitar bloqueios no Gmail e iCloud.
 
-Configurar o servidor IIS/Linux de homologação apontando para o subdomínio homolog.tecflow.com.br.
+[ ] 15.4. Publicação dos Termos Legais: Disponibilizar páginas institucionais em /privacidade e /termos para aprovação nas esteiras das Big Techs.
 
-Instalar certificado SSL válido (Let's Encrypt) para garantir HTTPS obrigatório.
+🔑 Fase 16: Consoles de Desenvolvedor e Credenciais de APIs
+[ ] 16.1. Google Cloud Console: Configurar a tela de consentimento OAuth, gerar Client ID/Secret e ativar a API do Gmail.
 
-[ ] A.3. Blindagem de E-mail (Entregabilidade):
+[ ] 16.2. Apple Developer Program: Mapear Identifiers, Service IDs e chaves privadas (.p8) para o fluxo "Entrar com Apple".
 
-Configurar os apontamentos TXT de SPF, DKIM e DMARC no DNS do domínio para que os e-mails do sistema cheguem na caixa de entrada do Gmail e iCloud.
+[ ] 16.3. Meta for Developers: Criar app tipo Consumidor/Empresa e obter credenciais de Login do Facebook.
 
-[ ] A.4. Publicação dos Termos Legais (Obrigatório para APIs):
+[ ] 16.4. Shopee Open Platform: Solicitar acesso à Affiliate API e à V2 Open API de gerenciamento de lojas.
 
-Colocar no ar uma página simples em tecflow.com.br/privacidade e tecflow.com.br/termos (essencial para aprovação nos consoles de desenvolvedor).
+[ ] 16.5. TikTok Developer / Shop Academy: Credenciamento empresarial para APIs de afiliados e login unificado.
 
-Módulo B: Consoles de Desenvolvedor e Credenciais (As Chaves)
-[ ] B.1. Google Cloud Console (Gmail e Login Social):
+[ ] 16.6. OpenAI Developer Platform: Gerar chaves secretas corporativas (sk-...) e travar limites de faturamento do motor de IA.
 
-Criar projeto no Google Cloud, configurar a tela de consentimento OAuth (adicionando os links de privacidade) e gerar o Client ID e Client Secret. Ativar a API do Gmail.
+🔥 Fase 17: Homologação e Testes de Circuito Fechado (A Prova de Fogo)
+[ ] 17.1. Teste de Autenticação Unificada e Auto-linking: Validar persistência e vínculo cruzado no PostgreSQL sem duplicar contas.
 
-[ ] B.2. Apple Developer Program (iCloud/Apple Login):
+[ ] 17.2. Simulação de Vínculo Multi-Lojas: Executar fluxos em Sandbox (Shopee/TikTok) e checar tokens criptografados na tabela IntegracaoLoja.
 
-Configurar o Identifiers, Service IDs e chaves privadas (.p8) para o botão "Entrar com Apple".
+[ ] 17.3. Teste de Estresse do Motor Strategy: Forçar expansão em lote de URLs encurtadas reais sem gargalo de processamento.
 
-[ ] B.3. Meta for Developers (Facebook Login):
-
-Criar aplicativo do tipo "Consumidor/Empresa", configurar o escopo de login e obter ID e Chave Secreta do App.
-
-[ ] B.4. Shopee Open Platform (Afiliados e Lojas):
-
-Criar conta de desenvolvedor na Shopee Open Platform. Solicitar acesso à Affiliate API e à V2 Open API (gerenciamento de lojas).
-
-[ ] B.5. TikTok Developer / TikTok Shop Academy:
-
-Cadastrar a empresa no console de desenvolvedor do TikTok para obter as credenciais do programa de afiliados e login de parceiro.
-
-[ ] B.6. OpenAI Developer Platform:
-
-Criar conta organizacional na OpenAI, configurar limites de faturamento e gerar as chaves de API secretas (sk-...) para o motor de IA.
-
-Módulo C: Homologação e Testes de Circuito Fechado (A Prova de Fogo)
-[ ] C.1. Teste de Autenticação Unificada e Auto-linking:
-
-Validar em ambiente de homologação se o login e registro via Google, Facebook e Apple associam o usuário corretamente no banco PostgreSQL sem duplicar contas.
-
-[ ] C.2. Simulação de Vínculo Multi-Lojas (OAuth Sandbox):
-
-Utilizar as ferramentas de teste (Console Sandbox) da Shopee e TikTok para simular o clique em "Conectar Loja", autorizar o acesso e validar se o token entra criptografado na tabela IntegracaoLoja.
-
-[ ] C.3. Teste de Estresse do Motor Strategy e Unshorten:
-
-Submeter links encurtados de teste (reais) para garantir que o backend expande a URL, descobre a plataforma correta e gera o novo link comissionável sem gargalos.
-
-[ ] C.4. Validação da Telemetria e Redirecionamento:
-
-Clicar nos links encurtados próprios gerados (tflow.link/...) através de um celular e de um computador. Validar se a tabela LinkClickLog captura os dados de dispositivo e se o redirecionamento joga o usuário na tela do produto com sucesso.
-
-
-## 🪵 BACKLOG DE INFRAESTRUTURA: TELEMETRIA E LOGS GLOBAIS
-
-### [ ] ETAPA 1: Infraestrutura de Logs do Servidor (IIS)
-- [ ] Criar script PowerShell `Configurar-Logs-IIS.ps1` para criar as pastas físicas de log e gerenciar permissões de escrita (`FullControl`) para o pool do IIS (`IIS_IUSRS` / `DefaultAppPool`).
-- [ ] Configurar o arquivo `web.config` do `TecFlow.WebUi` com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
-- [ ] Configurar o arquivo `web.config` da `TecFlow.API` seguindo o mesmo padrão, mapeando os logs para `C:\inetpub\tecflow\api\logs\stdout` orientado por flag de ativação.
-
-### [ ] ETAPA 2: Padronização do Log de Aplicação (.NET Serilog/ILogger)
-- [ ] Inspecionar o arquivo `Program.cs` da `TecFlow.API` e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
-- [ ] Inspecionar o arquivo `Program.cs` do `TecFlow.WebUi` (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas.
-- [ ] Configurar os arquivos `appsettings.Homologacao.json` de ambos os projetos para definir o nível mínimo de log como `Information` ou `Debug` para capturar os traces internos do framework.
-
-### [ ] ETAPA 3: Blindagem e Captura de Exceções Ocultas
-- [ ] Implementar ou revisar um Middleware Global de Exceções (`ExceptionHandlingMiddleware`) na API para capturar erros 500, estendendo o log com detalhes do payload (respeitando LGPD).
-- [ ] Validar que todos os blocos críticos de `try/catch` no fluxo de autenticação (OAuth Google, login tradicional, pontes de comunicação) invoquem explicitamente o `_logger.LogError(ex, ...)` em vez de engolirem a exceção em silêncio.
+[ ] 17.4. Validação de Telemetria: Simular acessos móveis/desktop em links encurtados próprios (tflow.link/...) e verificar a integridade da tabela LinkClickLog.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

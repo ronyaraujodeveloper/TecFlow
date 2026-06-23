@@ -88,31 +88,44 @@ public static class AuthEndpointExtensions
             return Results.Redirect("/");
         }
 
-        var accessToken = await httpContext.GetTokenAsync("access_token");
-        var idToken = await httpContext.GetTokenAsync("id_token");
-
-        if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(idToken))
+        try
         {
-            logger.LogWarning("OAuth concluído sem tokens para {Provider}.", provider);
-            return Results.Redirect("/?oauth=no-token");
+            var accessToken = await httpContext.GetTokenAsync("access_token");
+            var idToken = await httpContext.GetTokenAsync("id_token");
+
+            if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(idToken))
+            {
+                logger.LogWarning("OAuth concluído sem tokens para {Provider}.", provider);
+                return Results.Redirect("/?oauth=no-token");
+            }
+
+            var request = new PlatformAuthRequest
+            {
+                Provider = authProvider.ToString(),
+                AccessToken = accessToken,
+                IdToken = idToken
+            };
+
+            var result = await authBridge.LoginAsync(loginPlatform, request, httpContext.RequestAborted);
+            if (!result.Success || result.Data is null)
+            {
+                logger.LogWarning(
+                    "Falha OAuth para {Provider}/{Platform}: {Error}",
+                    provider,
+                    platform,
+                    result.ErrorMessage);
+                var error = Uri.EscapeDataString(result.ErrorMessage ?? "Falha na autenticação.");
+                return Results.Redirect($"/?oauth=failed&message={error}");
+            }
+
+            await authCookie.SignInFromAuthResponseAsync(result.Data, loginPlatform, authProvider, httpContext.RequestAborted);
+            return Results.Redirect("/dashboard");
         }
-
-        var request = new PlatformAuthRequest
+        catch (Exception ex)
         {
-            Provider = authProvider.ToString(),
-            AccessToken = accessToken,
-            IdToken = idToken
-        };
-
-        var result = await authBridge.LoginAsync(loginPlatform, request, httpContext.RequestAborted);
-        if (!result.Success || result.Data is null)
-        {
-            var error = Uri.EscapeDataString(result.ErrorMessage ?? "Falha na autenticação.");
-            return Results.Redirect($"/?oauth=failed&message={error}");
+            logger.LogError(ex, "Erro inesperado no callback OAuth {Provider}/{Platform}.", provider, platform);
+            return Results.Redirect("/?oauth=failed&message=" + Uri.EscapeDataString("Erro inesperado ao concluir login."));
         }
-
-        await authCookie.SignInFromAuthResponseAsync(result.Data, loginPlatform, authProvider, httpContext.RequestAborted);
-        return Results.Redirect("/dashboard");
     }
 
     private static async Task<IResult> FinishLinkOAuthAsync(

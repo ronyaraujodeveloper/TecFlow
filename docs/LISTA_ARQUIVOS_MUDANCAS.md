@@ -16,7 +16,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### Resolvido recentemente
 
-- [x] **ExceptionMiddleware.cs** — Havia cópia em `TecFlow.API/Middleware/` e implementação em `TecFlow.Core/Exceptions/`. **Ação concluída:** removida a cópia da API; pipeline usa apenas `TecFlow.Core` via `Program.cs`.
+- [x] **ExceptionMiddleware.cs** — Havia cópia em `TecFlow.API/Middleware/` e implementação em `TecFlow.Core/Exceptions/`. **Ação concluída:** middleware legado removido do Core; `TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs` retorna `ProblemDetails` JSON.
 
 ### Interfaces duplicadas (compilam, mas confundem DI e manutenção)
 
@@ -127,7 +127,18 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.API/Controllers/AuthController.cs** — `GET /api/auth/status` e `GET /api/auth/providers/status` (alias); login, register, vincular/desvincular provedores.
 - [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/` em dev Kestrel; `http://localhost:5001/` no IIS Homologacao).
 - [x] **TecFlow.WebUi/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS).
+- [x] **TecFlow.API/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS backend).
+- [x] **Configurar-Logs-IIS.ps1** — cria `logs\` em `C:\inetpub\tecflow\api` e `webui`; `FullControl` para `IIS_IUSRS`, `DefaultAppPool` e app pools dedicados.
 - [x] **Liberar-Logs-WebUi.ps1** — cria `C:\inetpub\tecflow\webui\logs\` e concede `FullControl` a `IIS_IUSRS` / app pools.
+- [x] **TecFlow.API/Program.cs** — Serilog: Console + arquivo `logs/app-.txt` (rolagem diária).
+- [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — seção `Serilog.MinimumLevel` (Information em homolog).
+- [x] **TecFlow.WebUi/Program.cs** — Serilog Console + `logs/app-.txt`, `UseSerilogRequestLogging`, `Log.CloseAndFlush`.
+- [x] **TecFlow.WebUi/Logging/BlazorCircuitLoggingHandler.cs** — log de abertura/fechamento/reconexão de circuitos SignalR.
+- [x] **TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs** — captura 500, log contextual seguro, `application/problem+json`.
+- [x] **TecFlow.API/Controllers/AuthController.cs** — `LogError` em login/registro inesperados.
+- [x] **TecFlow.Infrastructure.Services/Security/PlatformAuthService.cs** — `LogError` em falhas não previstas de login.
+- [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs**, **UserRegistrationApiService.cs** — `ILogger` nos catches de auth.
+- [x] **TecFlow.WebUi/Extensions/AuthEndpointExtensions.cs** — `LogError` no callback OAuth.
 
 ### Fase 6.3 — Produtos globais de propaganda (jun/2026)
 
@@ -322,7 +333,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 Arquivos já no projeto físico correto, mas com `namespace` desalinhado da pasta/projeto:
 
-- [ ] **ExceptionMiddleware.cs** — Em `TecFlow.Core/Exceptions/`, namespace `TecFlow.API.Middlewares`. (Ação: `TecFlow.Core.Middlewares` ou `TecFlow.Core.Exceptions`; atualizar `using` em `TecFlow.API/Program.cs`.)
+- [ ] **ExceptionMiddleware.cs** — ~~Em `TecFlow.Core/Exceptions/`, namespace `TecFlow.API.Middlewares`~~ **Resolvido:** removido do Core; usar `TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs`.
 
 - [ ] **CoreServiceRegistrationExtensions.cs** — Em `TecFlow.Infrastructure.Services/`, namespace `TecFlow.Infrastructure`. (Ação: `TecFlow.Infrastructure.Services`.)
 

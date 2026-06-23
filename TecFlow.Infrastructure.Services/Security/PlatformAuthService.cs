@@ -44,23 +44,35 @@ public class PlatformAuthService : IPlatformAuthService
         PlatformAuthDto request,
         CancellationToken cancellationToken = default)
     {
-        var provider = AuthProviderNames.Normalize(request.Provider);
-        if (provider is null)
+        try
         {
-            return (false, null, "Provedor de autenticação é obrigatório.", "PROVIDER_REQUIRED");
-        }
+            var provider = AuthProviderNames.Normalize(request.Provider);
+            if (provider is null)
+            {
+                return (false, null, "Provedor de autenticação é obrigatório.", "PROVIDER_REQUIRED");
+            }
 
-        if (provider == AuthProviderNames.EmailPassword)
+            if (provider == AuthProviderNames.EmailPassword)
+            {
+                return await LoginWithEmailPasswordAsync(platform, request, cancellationToken);
+            }
+
+            if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.IdToken))
+            {
+                return (false, null, $"Token do provedor {provider} é obrigatório para login social.", "SOCIAL_TOKEN_REQUIRED");
+            }
+
+            return await LoginWithSocialProviderAsync(platform, provider, request, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return await LoginWithEmailPasswordAsync(platform, request, cancellationToken);
+            _logger.LogError(
+                ex,
+                "Erro inesperado no login da plataforma {Platform} via provedor {Provider}.",
+                platform,
+                request.Provider);
+            throw;
         }
-
-        if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.IdToken))
-        {
-            return (false, null, $"Token do provedor {provider} é obrigatório para login social.", "SOCIAL_TOKEN_REQUIRED");
-        }
-
-        return await LoginWithSocialProviderAsync(platform, provider, request, cancellationToken);
     }
 
     public async Task<AuthProviderResponseDto> LinkProviderAsync(

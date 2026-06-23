@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto.Auth;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.UI;
@@ -29,15 +30,18 @@ public class AccountSecurityApiService : IAccountSecurityApiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
     private readonly ILoadingService _loadingService;
+    private readonly ILogger<AccountSecurityApiService> _logger;
 
     public AccountSecurityApiService(
         IHttpClientFactory httpClientFactory,
         IAccessTokenProvider accessTokenProvider,
-        ILoadingService loadingService)
+        ILoadingService loadingService,
+        ILogger<AccountSecurityApiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _accessTokenProvider = accessTokenProvider;
         _loadingService = loadingService;
+        _logger = logger;
     }
 
     public Task<AuthProviderResponseDto> GetProviderStatusAsync(CancellationToken cancellationToken = default)
@@ -101,20 +105,31 @@ public class AccountSecurityApiService : IAccountSecurityApiService
                 Descricao = "Não foi possível interpretar a resposta do servidor."
             };
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            _logger.LogError(ex, "Timeout em {Method} {RelativeUrl}.", method, relativeUrl);
             return new AuthProviderResponseDto
             {
                 Status = false,
                 Descricao = "Tempo limite excedido ao contactar o servidor."
             };
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            _logger.LogError(ex, "Falha HTTP em {Method} {RelativeUrl}.", method, relativeUrl);
             return new AuthProviderResponseDto
             {
                 Status = false,
                 Descricao = "Não foi possível contactar o servidor. Verifique se a API está em execução."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro inesperado em {Method} {RelativeUrl}.", method, relativeUrl);
+            return new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Ocorreu um erro inesperado ao comunicar com a API."
             };
         }
     }

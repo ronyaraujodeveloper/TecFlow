@@ -98,8 +98,16 @@ public class AuthController : ControllerBase
         [FromBody] UserDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _platformAuthService.RegisterAsync(request, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        try
+        {
+            var result = await _platformAuthService.RegisterAsync(request, cancellationToken);
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro inesperado no registro de usuario.");
+            throw;
+        }
     }
 
     [HttpGet("status")]
@@ -127,30 +135,42 @@ public class AuthController : ControllerBase
         PlatformAuthDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _platformAuthService.LoginAsync(platform, request, cancellationToken);
-        if (!result.Success)
+        try
         {
-            _logger.LogWarning(
-                "Falha de login para {Platform}. Code={ErrorCode}",
-                platform,
-                result.ErrorCode);
-
-            return result.ErrorCode switch
+            var result = await _platformAuthService.LoginAsync(platform, request, cancellationToken);
+            if (!result.Success)
             {
-                "INVALID_CREDENTIALS" or "SOCIAL_TOKEN_INVALID" => Unauthorized(new
-                {
-                    Message = result.ErrorMessage,
-                    ErrorCode = result.ErrorCode
-                }),
-                _ => BadRequest(new
-                {
-                    Message = result.ErrorMessage,
-                    ErrorCode = result.ErrorCode
-                })
-            };
-        }
+                _logger.LogWarning(
+                    "Falha de login para {Platform}. Code={ErrorCode}",
+                    platform,
+                    result.ErrorCode);
 
-        return Ok(result.Token);
+                return result.ErrorCode switch
+                {
+                    "INVALID_CREDENTIALS" or "SOCIAL_TOKEN_INVALID" => Unauthorized(new
+                    {
+                        Message = result.ErrorMessage,
+                        ErrorCode = result.ErrorCode
+                    }),
+                    _ => BadRequest(new
+                    {
+                        Message = result.ErrorMessage,
+                        ErrorCode = result.ErrorCode
+                    })
+                };
+            }
+
+            return Ok(result.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Erro inesperado no login da plataforma {Platform} via provedor {Provider}.",
+                platform,
+                request.Provider);
+            throw;
+        }
     }
 
     private int? GetCurrentUserId()

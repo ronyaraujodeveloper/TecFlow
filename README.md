@@ -1,4 +1,4 @@
-# 📝 TecFlow - Roadmap, Arquitetura & Contexto Geral
+﻿# 📝 TecFlow - Roadmap, Arquitetura & Contexto Geral
 
 > **Painel principal do projeto** (antigo `TODO.md`). Tarefas, regras de código e links para `docs/`. A IA deve marcar checkboxes aqui ao concluir implementações (ver `.cursorrules`).
 
@@ -231,83 +231,105 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Renderizar listagem responsiva contendo o histórico de links processados.
   - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
 
-  ### Fase 12: Motor de Busca Cruzada e Comparador de Preços Multicloud (Backend) 🧠🔍
-- [ ] 12.1. Evolução da Interface Strategy e Extração de Scraping/Meta-dados
+### 🔑 Fase 12: Autenticação Social e Identidade Omnichannel (Gmail, Apple, Facebook) 🌐
+
+#### 12.1. Integração com Google OAuth 2.0 (Login pelo Gmail)
+- [ ] **12.1.1. Configuração no Google Cloud Console:** Criar projeto, configurar a Tela de Consentimento OAuth (adicionando escopos `openid`, `profile`, `email`), registrar a URI de redirecionamento de homologação (`https://camcorder-bonding-sloppily.ngrok-free.dev/signin-google`) e gerar as chaves `ClientId` e `ClientSecret`.
+- [ ] **12.1.2. Implementação no Backend (TecFlow.API):** Instalar e configurar o pacote `Microsoft.AspNetCore.Authentication.Google`, mapear as chaves no `appsettings.json` e criar o endpoint de callback para receber o token do Google, validar/criar o usuário no PostgreSQL e emitir o JWT do sistema.
+- [ ] **12.1.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Desenvolver o botão "Entrar com Google" com design oficial, disparar o redirecionamento de segurança para o Google e tratar o retorno da sessão no Blazor Server.
+
+#### 12.2. Integração com Apple Identity (Login pelo iCloud)
+- [ ] **12.2.1. Configuração no Apple Developer Program:** Criar o *App ID* com a funcionalidade *Sign In with Apple* ativa, configurar o *Services ID* com a URL de redirecionamento correspondente e gerar a chave privada de assinatura (`.p8`).
+- [ ] **12.2.2. Implementação no Backend (TecFlow.API):** Configurar a autenticação da Apple utilizando criptografia de chaves (`ClientSecret` gerado dinamicamente via JWT assinado com a `.p8`) e validar o ID Token enviado pela Apple.
+- [ ] **12.2.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Acoplar o botão nativo "Sign in with Apple" respeitando as diretrizes estritas de UX da Apple e mapear o envio dos dados do usuário (nome/e-mail obtidos apenas no primeiro login).
+
+#### 12.3. Integração com Meta for Developers (Login pelo Facebook)
+- [ ] **12.3.1. Configuração no Meta Developers:** Criar um aplicativo do tipo "Consumidor", configurar o produto "Login do Facebook", adicionar as URIs de redirecionamento válidas e obter o *App ID* e *App Secret*.
+- [ ] **12.3.2. Implementação no Backend (TecFlow.API):** Instalar o pacote `Microsoft.AspNetCore.Authentication.Facebook`, configurar o middleware no pipeline e mapear o mapeamento de claims (id, email, name).
+- [ ] **12.3.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Inserir o botão "Entrar com Facebook" na página de login e ligar o fluxo de autenticação ao circuito Blazor.
+
+#### 12.4. Mecanismo de Auto-Linking e Vínculo de Contas
+- [ ] **12.4.1. Resolução de Conflito de E-mail Único:** Garantir no banco de dados que, se um usuário já cadastrado com `rony@...` via e-mail tentar clicar em "Entrar com Google" usando o mesmo e-mail, o sistema vincule com segurança a credencial do Google à conta existente em vez de gerar um registro duplicado ou estourar erro de constraint.
+
+### Fase 13: Motor de Busca Cruzada e Comparador de Preços Multicloud (Backend) 🧠🔍
+- [ ] 13.1. Evolução da Interface Strategy e Extração de Scraping/Meta-dados
   - Estender a interface `IPlatformLinkStrategy` para incluir o método `Task<ProductMetadataDto> ExtractProductMetadataAsync(string url)`.
   - Implementar um extrator de metadados básico (via API oficial ou crawler leve/HtmlAgilityPack) para identificar o Título Comercial, Imagem e Preço Atual do link original colado pelo usuário.
 
-- [ ] 12.2. Implementação do Motor de Busca Cruzada em Paralelo (Cross-Search)
+- [ ] 13.2. Implementação do Motor de Busca Cruzada em Paralelo (Cross-Search)
   - Estender a interface `IPlatformLinkStrategy` para incluir o método `Task<List<ProductSearchMatchDto>> SearchProductByTitleAsync(string title, Guid storeId)`.
   - Implementar nas classes especialistas (Shopee, TikTok, Amazon, Mercado Livre) a chamada de busca por palavra-chave nas respectivas APIs de afiliados.
   - Criar o serviço `ProductArbitrageService` que dispara as buscas em paralelo (`Task.WhenAll`) em todas as plataformas conectadas e ativas do usuário, ignorando falhas individuais de APIs externas para não travar o fluxo.
 
-- [ ] 12.3. Algoritmo de Rankeamento, Filtragem por Menor Preço e Normalização
+- [ ] 13.3. Algoritmo de Rankeamento, Filtragem por Menor Preço e Normalização
   - Desenvolver lógica de higienização de strings para comparar os títulos (removendo termos ruidosos como "Frete Grátis", "Original", "Promoção").
   - Filtrar os resultados para garantir que o preço encontrado nas plataformas concorrentes seja **menor** que o preço do link original.
   - Ordenar o resultado de forma ascendente pelo preço e limitar o retorno a no máximo 3 sugestões alternativas, já gerando o link de comissão convertido para cada uma delas.
 
-### Fase 13: Painel de Otimização e Sugestões de Ofertas no Frontend (TecFlow.WebUi) 💸
-- [ ] 13.1. Componente Reativo "Sugestões de Melhor Preço" (UI/UX)
+### Fase 14: Painel de Otimização e Sugestões de Ofertas no Frontend (TecFlow.WebUi) 💸
+- [ ] 14.1. Componente Reativo "Sugestões de Melhor Preço" (UI/UX)
   - Desenvolver uma seção dinâmica na página `GeradorLinks.razor` que exibe um *loader* de busca (ex: "Buscando preços melhores em outras plataformas...") logo após o link principal ser gerado.
   - Renderizar até 3 cards de sugestões alternativas utilizando abordagem Mobile-First.
 
-- [ ] 13.2. Anatomia do Card de Sugestão e Ações Rápidas
+- [ ] 14.2. Anatomia do Card de Sugestão e Ações Rápidas
   - Cada card de sugestão deve exibir de forma clara:
     * O logo do marketplace concorrente onde o produto mais barato foi encontrado.
     * O novo preço em destaque comparado ao preço original (ex: * De R$ 100,00 por R$ 85,00 na Amazon*).
     * Botões rápidos independentes de "Copiar Link Alternativo" e "Compartilhar".
 
-- [ ] 13.3. Telemetria de Conversão de Arbitragem
+- [ ] 14.3. Telemetria de Conversão de Arbitragem
   - Ajustar a tabela `LinkClickLog` para registrar quando um clique veio de um link de sugestão alternativa (arbitragem), permitindo que o usuário saiba no Dashboard se as sugestões de menor preço estão performando melhor que os links originais que ele cola.
 
-### [x] 14.1. Infraestrutura de Logs do Servidor (IIS)
+### [x] Fase 15: Infraestrutura de Logs Globais e Telemetria 🚀
+
+#### 15.1. Infraestrutura de Logs do Servidor (IIS)
 - [x] Criar script PowerShell `Configurar-Logs-IIS.ps1` para gerar as pastas físicas de log e gerenciar permissões de escrita (FullControl) para o pool do IIS (`IIS_IUSRS` / `DefaultAppPool`).
 
 - [x] Configurar o arquivo `web.config` do TecFlow.WebUi com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
 
 - [x] Configurar o arquivo `web.config` da TecFlow.API seguindo o mesmo padrão, mapeando os logs para `.\logs\stdout` orientado por flag de ativação.
 
-### [x] 14.2. Padronização do Log de Aplicação (.NET Serilog/ILogger)
+#### 15.2. Padronização do Log de Aplicação (.NET Serilog/ILogger)
 - [x] Inspecionar o arquivo `Program.cs` da TecFlow.API e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
 
 - [x] Inspecionar o arquivo `Program.cs` do TecFlow.WebUi (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas (`BlazorCircuitLoggingHandler`, `UseSerilogRequestLogging`).
 
 - [x] Configurar os arquivos `appsettings.Homologacao.json` de ambos os projetos para definir o nível mínimo de log como `Information` (traces internos do framework em homolog).
 
-### [x] 14.3. Blindagem e Captura de Exceções Ocultas
+#### 15.3. Blindagem e Captura de Exceções Ocultas
 - [x] Implementar ou revisar um Middleware Global de Exceções (`ExceptionHandlingMiddleware`) na API para capturar erros 500, estendendo o log com detalhes contextuais seguros (LGPD) e retornando `ProblemDetails` JSON.
 
 - [x] Validar que todos os blocos críticos de `try/catch` no fluxo de autenticação (OAuth, login tradicional, pontes de comunicação) invoquem explicitamente `_logger.LogError(ex, ...)` em vez de engolirem a exceção em silêncio.
 
-🗺️ Fase 15: Identidade Digital e Infraestrutura de Produção (O Alicerce)
-[ ] 15.1. Registro e Apontamento do Domínio: Registrar tecflow.com.br no Registro.br e configurar os servidores de DNS na Cloudflare.
+### Fase 16: Identidade Digital e Infraestrutura de Produção (O Alicerce) 🗺️
+- [ ] **16.1.** Registro e Apontamento do Domínio: Registrar tecflow.com.br no Registro.br e configurar os servidores de DNS na Cloudflare.
 
-[ ] 15.2. Configuração do Servidor e SSL: Apontar o subdomínio homolog.tecflow.com.br para o servidor de homologação e instalar certificado SSL (Let's Encrypt).
+- [ ] **16.2.** Configuração do Servidor e SSL: Apontar o subdomínio homolog.tecflow.com.br para o servidor de homologação e instalar certificado SSL (Let's Encrypt).
 
-[ ] 15.3. Blindagem de E-mail (Entregabilidade): Configurar apontamentos TXT de SPF, DKIM e DMARC na zona de DNS para evitar bloqueios no Gmail e iCloud.
+- [ ] **16.3.** Blindagem de E-mail (Entregabilidade): Configurar apontamentos TXT de SPF, DKIM e DMARC na zona de DNS para evitar bloqueios no Gmail e iCloud.
 
-[ ] 15.4. Publicação dos Termos Legais: Disponibilizar páginas institucionais em /privacidade e /termos para aprovação nas esteiras das Big Techs.
+- [ ] **16.4.** Publicação dos Termos Legais: Disponibilizar páginas institucionais em /privacidade e /termos para aprovação nas esteiras das Big Techs.
 
-🔑 Fase 16: Consoles de Desenvolvedor e Credenciais de APIs
-[ ] 16.1. Google Cloud Console: Configurar a tela de consentimento OAuth, gerar Client ID/Secret e ativar a API do Gmail.
+### 🔑 Fase 17: Consoles de Desenvolvedor e Credenciais de APIs
+- [ ] **17.1.** Google Cloud Console: Configurar a tela de consentimento OAuth, gerar Client ID/Secret e ativar a API do Gmail.
 
-[ ] 16.2. Apple Developer Program: Mapear Identifiers, Service IDs e chaves privadas (.p8) para o fluxo "Entrar com Apple".
+- [ ] **17.2.** Apple Developer Program: Mapear Identifiers, Service IDs e chaves privadas (.p8) para o fluxo "Entrar com Apple".
 
-[ ] 16.3. Meta for Developers: Criar app tipo Consumidor/Empresa e obter credenciais de Login do Facebook.
+- [ ] **17.3.** Meta for Developers: Criar app tipo Consumidor/Empresa e obter credenciais de Login do Facebook.
 
-[ ] 16.4. Shopee Open Platform: Solicitar acesso à Affiliate API e à V2 Open API de gerenciamento de lojas.
+- [ ] **17.4.** Shopee Open Platform: Solicitar acesso à Affiliate API e à V2 Open API de gerenciamento de lojas.
 
-[ ] 16.5. TikTok Developer / Shop Academy: Credenciamento empresarial para APIs de afiliados e login unificado.
+- [ ] **17.5.** TikTok Developer / Shop Academy: Credenciamento empresarial para APIs de afiliados e login unificado.
 
-[ ] 16.6. OpenAI Developer Platform: Gerar chaves secretas corporativas (sk-...) e travar limites de faturamento do motor de IA.
+- [ ] **17.6.** OpenAI Developer Platform: Gerar chaves secretas corporativas (sk-...) e travar limites de faturamento do motor de IA.
 
-🔥 Fase 17: Homologação e Testes de Circuito Fechado (A Prova de Fogo)
-[ ] 17.1. Teste de Autenticação Unificada e Auto-linking: Validar persistência e vínculo cruzado no PostgreSQL sem duplicar contas.
+### 🔥 Fase 18: Homologação e Testes de Circuito Fechado (A Prova de Fogo)
+- [ ] **18.1.** Teste de Autenticação Unificada e Auto-linking: Validar persistência e vínculo cruzado no PostgreSQL sem duplicar contas.
 
-[ ] 17.2. Simulação de Vínculo Multi-Lojas: Executar fluxos em Sandbox (Shopee/TikTok) e checar tokens criptografados na tabela IntegracaoLoja.
+- [ ] **18.2.** Simulação de Vínculo Multi-Lojas: Executar fluxos em Sandbox (Shopee/TikTok) e checar tokens criptografados na tabela IntegracaoLoja.
 
-[ ] 17.3. Teste de Estresse do Motor Strategy: Forçar expansão em lote de URLs encurtadas reais sem gargalo de processamento.
+- [ ] **18.3.** Teste de Estresse do Motor Strategy: Forçar expansão em lote de URLs encurtadas reais sem gargalo de processamento.
 
-[ ] 17.4. Validação de Telemetria: Simular acessos móveis/desktop em links encurtados próprios (tflow.link/...) e verificar a integridade da tabela LinkClickLog.
+- [ ] **18.4.** Validação de Telemetria: Simular acessos móveis/desktop em links encurtados próprios (tflow.link/...) e verificar a integridade da tabela LinkClickLog.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

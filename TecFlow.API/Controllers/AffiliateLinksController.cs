@@ -10,20 +10,24 @@ namespace TecFlow.API.Controllers;
 /// <summary>Geração omnichannel de links de afiliado com encurtador TecFlow.</summary>
 [ApiController]
 [Route("api/affiliate-links")]
+[Route("api/afiliados/links")]
 [Authorize]
 public class AffiliateLinksController : ControllerBase
 {
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly IAffiliateLinkHistoryService _historyService;
+    private readonly IAffiliateLinkGenerationContext _generationContext;
     private readonly ILogger<AffiliateLinksController> _logger;
 
     public AffiliateLinksController(
         IAffiliateLinkGenerationService generationService,
         IAffiliateLinkHistoryService historyService,
+        IAffiliateLinkGenerationContext generationContext,
         ILogger<AffiliateLinksController> logger)
     {
         _generationService = generationService;
         _historyService = historyService;
+        _generationContext = generationContext;
         _logger = logger;
     }
 
@@ -60,6 +64,10 @@ public class AffiliateLinksController : ControllerBase
                 Message = "Usuário não autenticado."
             });
         }
+
+        _generationContext.ClientIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        _generationContext.UserAgent = Request.Headers.UserAgent.ToString();
+        _generationContext.ReferrerUrl = Request.Headers.Referer.ToString();
 
         try
         {

@@ -39,17 +39,24 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
         string? customNickname,
         CancellationToken cancellationToken = default)
     {
-        var appId = _options.AffiliateAppId ?? _options.PartnerId;
-        var secret = _options.AffiliateSecret ?? _options.PartnerKey;
+        var appId = _options.ResolveAffiliateAppId();
+        var secret = _options.ResolveAffiliateSecret();
 
-        if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(secret))
+        if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(secret) || _options.IsSandboxMode)
         {
-            throw new AffiliateLinkGenerationException(
-                "Credenciais de afiliado Shopee não configuradas. Contacte o administrador do sistema.");
+            _logger.LogInformation(
+                "Shopee sandbox: credenciais de afiliado vazias. Gerando URL de homologação com {TrackingCode}.",
+                _options.SandboxTrackingCode);
+
+            return ApplyCommissionTracking(expandedProductUrl, store);
         }
 
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var subIds = BuildSubIds(affiliateId, customNickname, store.ShopId);
+        var subIds = BuildSubIds(
+            affiliateId,
+            customNickname,
+            store.ShopId,
+            ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId));
         var payload = new
         {
             productUrl = expandedProductUrl,
@@ -86,15 +93,30 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
                 "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
         }
 
-        return link;
+        return ApplyCommissionTracking(link, store);
+    }
+
+    private string ApplyCommissionTracking(string url, IntegracaoLoja store)
+    {
+        ShopeeProductUrlParser.TryParse(url, out var ids);
+        var universal = !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId)
+            ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ids)
+            : url;
+
+        return ShopeeCommissionUrlBuilder.Merge(
+            url,
+            _options.SandboxTrackingCode,
+            ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId),
+            universal);
     }
 
     private static IReadOnlyList<string> BuildSubIds(
         string affiliateId,
         string? customNickname,
-        string shopId)
+        string shopId,
+        string attributionSubId)
     {
-        var subIds = new List<string> { affiliateId, shopId };
+        var subIds = new List<string> { attributionSubId, affiliateId, shopId };
         if (!string.IsNullOrWhiteSpace(customNickname))
         {
             subIds.Add(customNickname.Trim());

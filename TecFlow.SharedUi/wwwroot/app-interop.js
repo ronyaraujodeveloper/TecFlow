@@ -1,32 +1,10 @@
 ﻿window.tecFlowAppInterop = {
     copyToClipboard: async function (text) {
-        if (!text) {
-            return false;
+        if (window.tecFlowClipboard && typeof window.tecFlowClipboard.copyText === "function") {
+            return window.tecFlowClipboard.copyText(text);
         }
 
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-                return true;
-            }
-        } catch {
-            // fallback abaixo
-        }
-
-        try {
-            const area = document.createElement("textarea");
-            area.value = text;
-            area.setAttribute("readonly", "");
-            area.style.position = "fixed";
-            area.style.left = "-9999px";
-            document.body.appendChild(area);
-            area.select();
-            const ok = document.execCommand("copy");
-            document.body.removeChild(area);
-            return ok;
-        } catch {
-            return false;
-        }
+        return false;
     },
 
     shareLink: async function (title, text, url) {
@@ -47,12 +25,7 @@
             }
         }
 
-        const message = encodeURIComponent(
-            [payload.text, payload.url].filter(Boolean).join("\n")
-        );
-        const whatsAppUrl = "https://wa.me/?text=" + message;
-        window.open(whatsAppUrl, "_blank", "noopener,noreferrer");
-        return { success: true, method: "whatsapp" };
+        return { success: false, cancelled: false, method: "fallback" };
     },
 
     scrollIntoViewById: function (elementId) {

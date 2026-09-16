@@ -12,6 +12,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeScopeResolver;
     private readonly IShortLinkService _shortLinkService;
+    private readonly ILinkClickTelemetryService _telemetryService;
     private readonly IAffiliateLinkGenerationContext _generationContext;
     private readonly ILogger<AffiliateLinkGenerationService> _logger;
 
@@ -20,6 +21,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         IUrlExpansionService urlExpansionService,
         IIntegracaoLojaScopeResolver storeScopeResolver,
         IShortLinkService shortLinkService,
+        ILinkClickTelemetryService telemetryService,
         IAffiliateLinkGenerationContext generationContext,
         ILogger<AffiliateLinkGenerationService> logger)
     {
@@ -27,9 +29,11 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         _urlExpansionService = urlExpansionService;
         _storeScopeResolver = storeScopeResolver;
         _shortLinkService = shortLinkService;
+        _telemetryService = telemetryService;
         _generationContext = generationContext;
         _logger = logger;
     }
+
     public async Task<GerarLinkAfiliadoResponseDto> GenerateAsync(
         GerarLinkAfiliadoDto request,
         int userId,
@@ -74,6 +78,18 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 store.TenantId,
                 store.Id,
                 request.CustomNickname,
+                cancellationToken);
+
+            await _telemetryService.RecordGenerationAsync(
+                affiliateLinkId,
+                store.TenantId,
+                store.ShopId,
+                request.OriginalUrl.Trim(),
+                generatedLink,
+                strategy.PlatformType,
+                _generationContext.ClientIpAddress,
+                _generationContext.UserAgent,
+                _generationContext.ReferrerUrl,
                 cancellationToken);
 
             return new GerarLinkAfiliadoResponseDto

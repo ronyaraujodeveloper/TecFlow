@@ -1,4 +1,4 @@
-# 🏗️ DIAGRAMAS VISUAIS: ARQUITETURA ATUAL vs PROPOSTA
+﻿# 🏗️ DIAGRAMAS VISUAIS: ARQUITETURA ATUAL vs PROPOSTA
 
 [« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
 
@@ -16,7 +16,30 @@
 TecFlow.Business/Integrations/
 ├── Common/                          # Opções compartilhadas, nomes de HttpClient
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
-└── Shopee/                          # IShopeeIntegrationClient + Options (PartnerId/PartnerKey)
+└── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
+
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` (`shopee.com.br` / `s.shopee.com.br`) → `UrlExpansionService` (GET + `Location` 301/302) → `ShopeeProductUrlParser` (ShopId/ItemId) → `ShopeeAffiliateLinkClient` / sandbox → `ShopeeCommissionUrlBuilder` (`tracking_code`, `sub_id=u{user}_t{tenant}`, `universal_link`, `deep_link`) → `ShortLinkService` + `LinkClickTelemetryService.RecordGenerationAsync` (`LinkClickLog` com TenantId/ShopId).
+
+```mermaid
+flowchart LR
+  STR[ShopeeLinkStrategy]
+  AFF[ShopeeAffiliateLinkClient]
+  BLD[ShopeeCommissionUrlBuilder]
+  SHORT[ShortAffiliateLink]
+  LOG[LinkClickLog]
+  OUT[URL rastreada]
+
+  STR -->|produto + UserId/TenantId| AFF
+  AFF --> BLD
+  STR -->|deep_link nativo| BLD
+  BLD --> SHORT
+  SHORT --> LOG
+  BLD --> OUT
+  UI[GeradorLinks.razor] -->|POST /api/afiliados/links/gerar| API[AffiliateLinksController]
+  API --> STR
+  PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
+  PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
+```
 
 TecFlow.Infrastructure.Services/Integrations/
 ├── Common/                          # ExternalApiLoggingHandler, políticas Polly

@@ -48,6 +48,7 @@ public class AffiliateLinkGenerationServiceTests
                 new NoOpStoreResolver(),
                 new NoOpShopeeClient(),
                 new AffiliateLinkGenerationContext(),
+                Microsoft.Extensions.Options.Options.Create(new TecFlow.Business.Integrations.Shopee.ShopeeIntegrationOptions()),
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<ShopeeLinkStrategy>.Instance)
         };
 
@@ -56,6 +57,7 @@ public class AffiliateLinkGenerationServiceTests
             new NoOpUrlExpansionService(),
             new NoOpStoreResolver(),
             new NoOpShortLinkService(),
+            new NoOpLinkClickTelemetryService(),
             new AffiliateLinkGenerationContext(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AffiliateLinkGenerationService>.Instance);
 
@@ -110,6 +112,30 @@ public class AffiliateLinkGenerationServiceTests
             string? customNickname,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(("http://localhost:5001/r/mock123", Guid.NewGuid()));
+    }
+
+    private sealed class NoOpLinkClickTelemetryService : ILinkClickTelemetryService
+    {
+        public Task RecordGenerationAsync(
+            Guid affiliateLinkId,
+            Guid tenantId,
+            string shopId,
+            string originalUrl,
+            string convertedUrl,
+            MarketplaceType platformType,
+            string? ipAddress,
+            string? userAgent,
+            string? referrerUrl,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public void EnqueueClickLog(
+            Guid affiliateLinkId,
+            string? ipAddress,
+            string? userAgent,
+            string? referrerUrl)
+        {
+        }
     }
 }
 

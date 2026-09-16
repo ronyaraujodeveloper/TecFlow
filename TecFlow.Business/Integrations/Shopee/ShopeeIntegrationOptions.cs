@@ -7,6 +7,9 @@ public class ShopeeIntegrationOptions
 
     public string PartnerId { get; set; } = string.Empty;
     public string PartnerKey { get; set; } = string.Empty;
+    public string AppSecret { get; set; } = string.Empty;
+    public string AppKey { get; set; } = string.Empty;
+    public string AppSignature { get; set; } = string.Empty;
     public string ApiBaseUrl { get; set; } = "https://partner.shopeemobile.com/api/v2/";
     public string AuthPartnerPath { get; set; } = "shop/auth_partner";
     public string TokenPath { get; set; } = "auth/token/get";
@@ -22,7 +25,33 @@ public class ShopeeIntegrationOptions
     public string GenerateCustomLinkPath { get; set; } = "api/v1/custom_link/generate";
     public string? AffiliateAppId { get; set; }
     public string? AffiliateSecret { get; set; }
+    public string SandboxTrackingCode { get; set; } = ShopeeSandboxLinkBuilder.DefaultTrackingCode;
     public string WebhookCallbackUrl { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 100;
     public bool EnableRequestLogging { get; set; } = true;
+
+    public string? ResolveAffiliateAppId() =>
+        FirstNonEmpty(AffiliateAppId, AppKey, PartnerId);
+
+    public string? ResolveAffiliateSecret() =>
+        FirstNonEmpty(AffiliateSecret, AppSecret, AppSignature, PartnerKey);
+
+    public bool HasAffiliateCredentials =>
+        !string.IsNullOrWhiteSpace(ResolveAffiliateAppId())
+        && !string.IsNullOrWhiteSpace(ResolveAffiliateSecret());
+
+    public bool IsSandboxMode => !HasAffiliateCredentials;
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
+    }
 }

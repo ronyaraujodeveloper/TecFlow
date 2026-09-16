@@ -6,4 +6,11 @@ namespace TecFlow.Business.Integrations.Shopee;
 public interface IShopeeIntegrationClient : IExternalIntegrationClient
 {
     ShopeeIntegrationOptions Options { get; }
+
+    /// <summary>Monta a URL rastreada de comissão (sandbox ou overlay local de tracking).</summary>
+    string BuildSandboxTrackedUrl(
+        string productUrl,
+        string? subId = null,
+        string? universalLink = null,
+        string? deepLink = null);
 }

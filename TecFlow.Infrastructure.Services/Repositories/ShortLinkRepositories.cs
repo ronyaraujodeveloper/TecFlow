@@ -30,6 +30,7 @@ public class ShortAffiliateLinkRepository : IShortAffiliateLinkRepository
         Guid affiliateLinkId,
         CancellationToken cancellationToken = default) =>
         _context.ShortAffiliateLinks
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .FirstOrDefaultAsync(link => link.AffiliateLinkId == affiliateLinkId, cancellationToken);
 
@@ -102,7 +103,7 @@ public class LinkClickLogRepository : ILinkClickLogRepository
 
         return await _context.LinkClickLogs
             .AsNoTracking()
-            .Where(log => ids.Contains(log.AffiliateLinkId))
+            .Where(log => ids.Contains(log.AffiliateLinkId) && log.EventKind == LinkClickLog.EventKindClick)
             .GroupBy(log => log.AffiliateLinkId)
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);

@@ -279,6 +279,11 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(log => log.AffiliateLinkId);
             entity.HasIndex(log => log.ClickedAt);
+            entity.HasIndex(log => log.CreatedAt);
+            entity.HasIndex(log => log.TenantId);
+            entity.Property(log => log.EventKind).HasMaxLength(32).IsRequired();
+            entity.Property(log => log.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(log => log.ShopId).HasMaxLength(128).IsRequired();
             entity.HasOne(log => log.AffiliateLink)
                 .WithMany()
                 .HasForeignKey(log => log.AffiliateLinkId)

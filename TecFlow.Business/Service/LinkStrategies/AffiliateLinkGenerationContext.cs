@@ -8,4 +8,10 @@ public sealed class AffiliateLinkGenerationContext : IAffiliateLinkGenerationCon
     public int UserId { get; set; }
 
     public string? CustomNickname { get; set; }
+
+    public string? ClientIpAddress { get; set; }
+
+    public string? UserAgent { get; set; }
+
+    public string? ReferrerUrl { get; set; }
 }

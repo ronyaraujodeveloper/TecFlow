@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	  <TargetFramework>net8.0</TargetFramework>
@@ -33,6 +33,7 @@
     <ProjectReference Include="..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj" />
     <ProjectReference Include="..\TecFlow.Orquestrador\TecFlow.Orquestrador.csproj" />
+    <ProjectReference Include="..\TecFlow.SharedUi\TecFlow.SharedUi.csproj" />
     <ProjectReference Include="..\TecFlow.Util\TecFlow.Util.csproj" />
   </ItemGroup>
 

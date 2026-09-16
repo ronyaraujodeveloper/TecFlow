@@ -1,30 +1,19 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
 
-/// <summary>Estratégia Shopee com expansão de URL e integração generateCustomLink.</summary>
+/// <summary>Estratégia Shopee com unshorten, extração ShopId/ItemId e URL de comissão rastreada.</summary>
 public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
 {
-    private static readonly string[] SupportedHosts =
-    [
-        "shopee.com",
-        "shopee.com.br",
-        "shope.ee",
-        "s.shopee.com.br"
-    ];
-
-    private static readonly string[] ExpandableHosts =
-    [
-        "s.shopee.com.br",
-        "shope.ee"
-    ];
-
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeResolver;
     private readonly IShopeeAffiliateLinkClient _shopeeAffiliateClient;
     private readonly IAffiliateLinkGenerationContext _generationContext;
+    private readonly ShopeeIntegrationOptions _options;
     private readonly ILogger<ShopeeLinkStrategy> _logger;
 
     public ShopeeLinkStrategy(
@@ -32,12 +21,14 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         IIntegracaoLojaScopeResolver storeResolver,
         IShopeeAffiliateLinkClient shopeeAffiliateClient,
         IAffiliateLinkGenerationContext generationContext,
+        IOptions<ShopeeIntegrationOptions> options,
         ILogger<ShopeeLinkStrategy> logger)
     {
         _urlExpansionService = urlExpansionService;
         _storeResolver = storeResolver;
         _shopeeAffiliateClient = shopeeAffiliateClient;
         _generationContext = generationContext;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -45,18 +36,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
 
     public string PlatformName => "Shopee";
 
-    public bool CanProcess(string url)
-    {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
-
-        var host = uri.Host.ToLowerInvariant();
-        return SupportedHosts.Any(supported =>
-            host.Equals(supported, StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith("." + supported, StringComparison.OrdinalIgnoreCase));
-    }
+    public bool CanProcess(string url) => ShopeeLinkHostMatcher.IsShopeeUrl(url);
 
     public async Task<string> GenerateDeepLinkAsync(
         string originalUrl,
@@ -76,7 +56,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             cancellationToken);
 
         var workingUrl = originalUrl.Trim();
-        if (ShouldExpand(workingUrl))
+        if (ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl))
         {
             _logger.LogInformation("Expandindo URL encurtada Shopee antes da geração do link de afiliado.");
             workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
@@ -88,24 +68,56 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
                 "Não foi possível identificar a URL canônica do produto Shopee após expandir o link.");
         }
 
-        return await _shopeeAffiliateClient.GenerateCustomLinkAsync(
+        var productIds = ShopeeProductUrlParser.ParseOrThrow(workingUrl);
+        _logger.LogInformation(
+            "Shopee URL expandida extraída. ShopId={ShopId} ItemId={ItemId}",
+            productIds.ShopId,
+            productIds.ItemId);
+
+        var generated = await _shopeeAffiliateClient.GenerateCustomLinkAsync(
             store,
             workingUrl,
             affiliateId,
             _generationContext.CustomNickname,
             cancellationToken);
+
+        return ApplyCommissionTracking(
+            generated,
+            store.UserId,
+            store.TenantId,
+            productIds,
+            originalUrl.Trim());
     }
 
-    private static bool ShouldExpand(string url)
+    private string ApplyCommissionTracking(
+        string generatedUrl,
+        int userId,
+        Guid tenantId,
+        ShopeeProductUrlIds productIds,
+        string originalUrl)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
+        var trackingCode = string.IsNullOrWhiteSpace(_options.SandboxTrackingCode)
+            ? ShopeeCommissionUrlBuilder.DefaultTrackingCode
+            : _options.SandboxTrackingCode.Trim();
 
-        var host = uri.Host.ToLowerInvariant();
-        return ExpandableHosts.Any(h =>
-            host.Equals(h, StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith("." + h, StringComparison.OrdinalIgnoreCase));
+        var subId = ShopeeCommissionUrlBuilder.BuildSubId(userId, tenantId);
+        var universalLink = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
+        var deepLink = ShopeeLinkHostMatcher.IsNativeDeepLink(originalUrl)
+            ? originalUrl.Trim()
+            : null;
+
+        _logger.LogInformation(
+            "Shopee URL de comissão. TrackingCode={TrackingCode} SubId={SubId} ShopId={ShopId} ItemId={ItemId}",
+            trackingCode,
+            subId,
+            productIds.ShopId,
+            productIds.ItemId);
+
+        return ShopeeCommissionUrlBuilder.Merge(
+            generatedUrl,
+            trackingCode,
+            subId,
+            universalLink,
+            deepLink);
     }
 }

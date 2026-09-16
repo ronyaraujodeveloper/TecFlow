@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using TecFlow.Business.Dto;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Models;
 using TecFlow.SharedUi.Models.Responses;
@@ -102,7 +103,11 @@ public class HttpService : IHttpService
             }
 
             var apiError = TryDeserialize<ApiErrorResponse>(content);
-            var message = apiError?.Message ?? $"Erro na API ({(int)response.StatusCode}).";
+            var affiliateError = TryDeserialize<GerarLinkAfiliadoResponseDto>(content);
+            var message = FirstNonEmpty(
+                apiError?.Message,
+                affiliateError?.Message,
+                $"Erro na API ({(int)response.StatusCode}).");
             return ApiResult<TResponse>.Fail(message, (int)response.StatusCode, apiError?.ErrorCode);
         }
         catch (TaskCanceledException ex)
@@ -152,5 +157,18 @@ public class HttpService : IHttpService
         {
             return default;
         }
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return "Erro na API.";
     }
 }

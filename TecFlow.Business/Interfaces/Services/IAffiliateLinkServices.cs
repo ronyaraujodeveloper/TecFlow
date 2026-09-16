@@ -10,6 +10,12 @@ public interface IAffiliateLinkGenerationContext
     int UserId { get; set; }
 
     string? CustomNickname { get; set; }
+
+    string? ClientIpAddress { get; set; }
+
+    string? UserAgent { get; set; }
+
+    string? ReferrerUrl { get; set; }
 }
 
 /// <summary>Expansão resiliente de URLs encurtadas (301/302) até a URL canônica.</summary>

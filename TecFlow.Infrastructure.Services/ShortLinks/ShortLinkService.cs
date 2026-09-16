@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Configuration;
@@ -7,6 +8,7 @@ using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
 using TecFlow.Database.Entity;
 using TecFlow.Infrastructure.Services.Repositories;
 
@@ -113,6 +115,40 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
         _logger = logger;
     }
 
+    public async Task RecordGenerationAsync(
+        Guid affiliateLinkId,
+        Guid tenantId,
+        string shopId,
+        string originalUrl,
+        string convertedUrl,
+        MarketplaceType platformType,
+        string? ipAddress,
+        string? userAgent,
+        string? referrerUrl,
+        CancellationToken cancellationToken = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ILinkClickLogRepository>();
+        var log = LinkClickLogFactory.CreateGeneration(
+            affiliateLinkId,
+            tenantId,
+            shopId,
+            originalUrl,
+            convertedUrl,
+            platformType,
+            ipAddress,
+            userAgent,
+            referrerUrl);
+
+        await repository.AddAsync(log, cancellationToken);
+        _logger.LogInformation(
+            "Telemetria de geração persistida. AffiliateLinkId={AffiliateLinkId} TenantId={TenantId} ShopId={ShopId} Platform={Platform}",
+            affiliateLinkId,
+            tenantId,
+            shopId,
+            log.Platform);
+    }
+
     public void EnqueueClickLog(
         Guid affiliateLinkId,
         string? ipAddress,
@@ -132,18 +168,39 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var repository = scope.ServiceProvider.GetRequiredService<ILinkClickLogRepository>();
+            var shortLinkRepository = scope.ServiceProvider.GetRequiredService<IShortAffiliateLinkRepository>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var log = new LinkClickLog
+            var link = await shortLinkRepository.GetByAffiliateLinkIdAsync(affiliateLinkId);
+            if (link is null)
             {
-                AffiliateLinkId = affiliateLinkId,
-                ClickedAt = DateTime.UtcNow,
-                IpAddress = LinkClickTelemetryHelper.MaskIpAddress(ipAddress),
-                UserAgent = string.IsNullOrWhiteSpace(userAgent)
-                    ? "desconhecido"
-                    : userAgent.Length <= 512 ? userAgent : userAgent[..512],
-                DeviceType = LinkClickTelemetryHelper.DetectDeviceType(userAgent),
-                ReferrerUrl = LinkClickTelemetryHelper.NormalizeReferrer(referrerUrl)
-            };
+                _logger.LogWarning(
+                    "Telemetria de clique ignorada: ShortAffiliateLink {AffiliateLinkId} não encontrado.",
+                    affiliateLinkId);
+                return;
+            }
+
+            var shopId = string.Empty;
+            if (link.IntegracaoLojaId is int lojaId)
+            {
+                shopId = await db.IntegracaoLojas
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Where(loja => loja.Id == lojaId)
+                    .Select(loja => loja.ShopId)
+                    .FirstOrDefaultAsync() ?? string.Empty;
+            }
+
+            var log = LinkClickLogFactory.CreateClick(
+                affiliateLinkId,
+                link.TenantId,
+                shopId,
+                link.OriginalUrl,
+                link.DestinationUrl,
+                link.PlatformType,
+                ipAddress,
+                userAgent,
+                referrerUrl);
 
             await repository.AddAsync(log);
         }

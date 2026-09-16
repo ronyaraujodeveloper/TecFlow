@@ -19,6 +19,18 @@ public interface IShortLinkService
 
 public interface ILinkClickTelemetryService
 {
+    Task RecordGenerationAsync(
+        Guid affiliateLinkId,
+        Guid tenantId,
+        string shopId,
+        string originalUrl,
+        string convertedUrl,
+        MarketplaceType platformType,
+        string? ipAddress,
+        string? userAgent,
+        string? referrerUrl,
+        CancellationToken cancellationToken = default);
+
     void EnqueueClickLog(
         Guid affiliateLinkId,
         string? ipAddress,

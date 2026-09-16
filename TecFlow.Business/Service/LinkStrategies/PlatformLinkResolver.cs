@@ -30,8 +30,9 @@ public sealed class PlatformLinkResolver
             if (strategy.CanProcess(url))
             {
                 _logger.LogDebug(
-                    "Estratégia {Platform} selecionada para a URL informada.",
-                    strategy.PlatformName);
+                    "Estratégia {Platform} selecionada para a URL {Host}.",
+                    strategy.PlatformName,
+                    TryGetHost(url));
 
                 return strategy;
             }
@@ -44,4 +45,7 @@ public sealed class PlatformLinkResolver
         throw new AffiliateLinkGenerationException(
             "Plataforma não suportada para a URL informada. Marketplaces disponíveis: Shopee e TikTok Shop.");
     }
+
+    private static string TryGetHost(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
 }

@@ -8,6 +8,9 @@ namespace TecFlow.SharedUi.Services.LinkGenerator;
 
 public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
 {
+    public const string GeneratePath = "api/afiliados/links/gerar";
+    public const string HistoryPath = "api/afiliados/links/historico";
+
     private readonly IHttpService _httpService;
     private readonly ILoadingService _loadingService;
 
@@ -23,7 +26,7 @@ public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
     {
         using var _ = _loadingService.BeginScope("Gerando link de comissão...");
         return _httpService.PostAsync<GerarLinkAfiliadoDto, GerarLinkAfiliadoResponseDto>(
-            "api/affiliate-links/gerar",
+            GeneratePath,
             request,
             cancellationToken);
     }
@@ -34,7 +37,7 @@ public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
     {
         using var _ = _loadingService.BeginScope("Carregando histórico de links...");
         var result = await _httpService.GetAsync<AffiliateLinkHistoryResponseDto>(
-            "api/affiliate-links/historico",
+            HistoryPath,
             filter,
             cancellationToken);
 

@@ -1,4 +1,4 @@
-# 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
+﻿# 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
 
 **Última varredura:** 4 de junho de 2026 (Fase 7.1 — Multi-Tenant)  
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
@@ -253,7 +253,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 - [x] **TecFlow.Business/Integrations/Common/** — `IExternalIntegrationClient`, `IntegrationHttpClientNames`, `IntegrationResilienceOptions`.
 - [x] **TecFlow.Business/Integrations/TikTokShop/** — `ITikTokShopIntegrationClient`, `TikTokShopIntegrationOptions` (AppKey/AppSecret).
-- [x] **TecFlow.Business/Integrations/Shopee/** — `IShopeeIntegrationClient`, `ShopeeIntegrationOptions` (PartnerId/PartnerKey).
+- [x] **TecFlow.Business/Integrations/Shopee/** — `IShopeeIntegrationClient`, `ShopeeIntegrationOptions` (PartnerId/PartnerKey/AppKey/AppSecret/AppSignature).
 - [x] **TecFlow.Infrastructure.Services/Integrations/Common/** — `ExternalApiLoggingHandler`, `IntegrationResiliencePolicies` (Polly retry + circuit breaker).
 - [x] **TecFlow.Infrastructure.Services/Integrations/TikTokShop/TikTokShopIntegrationClient.cs** — implementação HTTP.
 - [x] **TecFlow.Infrastructure.Services/Integrations/Shopee/ShopeeIntegrationClient.cs** — implementação HTTP.
@@ -473,6 +473,54 @@ API / Orquestrador / Worker / WebUi
 ```
 
 **Isolamento desejado:** `TecFlow.Business` e `TecFlow.Database` **não** devem referenciar `Infrastructure` — hoje **ok** no `.csproj`. Implementações ficam em `Infrastructure` + `Infrastructure.Services`.
+
+### Fase 19.1.1 — Credenciais de afiliado Shopee (appsettings)
+
+- [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — `Integrations:Shopee` com `PartnerId`, `PartnerKey`, `AppSecret`, `AppKey`, `AppSignature` (placeholders `""`).
+- [x] **TecFlow.Business/Integrations/Shopee/ShopeeIntegrationOptions.cs** — bind das chaves de afiliado.
+- [x] **TecFlow.Infrastructure.Services/LinkStrategies/ShopeeAffiliateLinkClient.cs** — fallback `AppKey`/`AppSecret`/`AppSignature`.
+- [x] **TecFlow.WebUi** — sem seção Shopee (credenciais ficam só na API).
+
+### Fase 19.1.2 — Fallback/Sandbox Shopee
+
+- [x] **TecFlow.Business/Integrations/Shopee/ShopeeSandboxLinkBuilder.cs** — URL de homologação com `tracking_code`/`sub_id` (`tecflow_sandbox_subid`).
+- [x] **ShopeeIntegrationClient** — modo sandbox quando credenciais vazias (não lança; não chama HTTP).
+- [x] **ShopeeAffiliateLinkClient** / **ShopeeLinkStrategy** — geração local de URL rastreada sem exceção.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/ShopeeLinkConversionTests.cs** — credenciais, sandbox e tracking.
+
+### Fase 19.2.1 — PlatformLinkResolver, unshorten e extração ShopId/ItemId
+
+- [x] **ShopeeLinkHostMatcher.cs** — hosts `shopee.com.br` e `s.shopee.com.br`.
+- [x] **ShopeeProductUrlParser.cs** — extração de ShopId/ItemId (path `-i.`, `/product|/item` e query).
+- [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
+- [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — unshorten + parse antes do generateCustomLink.
+
+### Fase 19.2.2 — URL rastreada de comissão
+
+- [x] **ShopeeCommissionUrlBuilder.cs** — query `tracking_code`, `sub_id` (usuário/tenant), `universal_link` e `deep_link` com URL encoding.
+- [x] **ShopeeLinkStrategy** / **ShopeeIntegrationClient.BuildSandboxTrackedUrl** — overlay de rastreio na URL final de afiliado.
+- [x] **ShopeeLinkConversionTests.cs** — contrato de query string, deep links nativos e caracteres especiais.
+
+### Fase 19.2.3 — Persistência de telemetria LinkClickLog
+
+- [x] **LinkClickLog.cs** — TenantId, ShopId, OriginalUrl, ConvertedUrl, Platform, CreatedAt, EventKind e metadados de acesso.
+- [x] **AffiliateLinkGenerationService** / **LinkClickTelemetryService.RecordGenerationAsync** — grava telemetria após conversão Shopee.
+- [x] **20260916231111_AddLinkClickLogGenerationTelemetry** — colunas novas na tabela `LinkClickLog`.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/LinkClickLogTests.cs** — TenantId/ShopId da sessão, campos obrigatórios e FK do encurtador.
+
+### Fase 19.3.1 — Integração GeradorLinks.razor
+
+- [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; spinner e alertas de erro.
+- [x] **AffiliateLinkApiService** — `api/afiliados/links/gerar` via `HttpService` + overlay de loading.
+- [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.
+- [x] **GeradorLinksServiceTests.cs** — mock HTTP POST e DTO de resposta com link convertido.
+
+### Fase 19.3.2 — Cópia e compartilhamento
+
+- [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.
+- [x] **LinkGeneratorResultPanel.razor** — destaque do link, Copiado!, Web Share, WhatsApp e Telegram.
+- [x] **AffiliateShareLinkBuilder.cs** — URIs `api.whatsapp.com/send` e `t.me/share/url` com URL encoding.
+- [x] **AffiliateShareLinkBuilderTests.cs** — encoding de espaços, `&` e query string.
 
 ---
 

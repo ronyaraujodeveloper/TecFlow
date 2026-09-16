@@ -11,4 +11,10 @@ public class GerarLinkAfiliadoDto
 
     /// <summary>Apelido opcional para rastreio ou identificação humana.</summary>
     public string? CustomNickname { get; set; }
+
+    /// <summary>Tenant ativo no seletor global do painel (Blazor).</summary>
+    public Guid? TenantId { get; set; }
+
+    /// <summary>ShopId da loja ativa no seletor global do painel (Blazor).</summary>
+    public string? ShopId { get; set; }
 }

@@ -1,4 +1,5 @@
 ﻿@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Helpers
 @inject IJSRuntime Js
 
 @if (Response is { Success: true } response && !string.IsNullOrWhiteSpace(response.ShortenedUrl))
@@ -61,6 +62,24 @@
                 </button>
             </div>
 
+            <div class="link-generator-fallback-share mt-3" aria-label="Compartilhar em aplicativos">
+                <p class="small text-muted mb-2">Ou envie direto:</p>
+                <div class="d-grid d-sm-flex gap-2">
+                    <a class="btn btn-success btn-touch flex-fill"
+                       href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ShortenedUrl, response.PlatformDetected)"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        WhatsApp
+                    </a>
+                    <a class="btn btn-info text-white btn-touch flex-fill"
+                       href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ShortenedUrl, response.PlatformDetected)"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Telegram
+                    </a>
+                </div>
+            </div>
+
             @if (!string.IsNullOrWhiteSpace(_actionMessage))
             {
                 <p class="small mt-3 mb-0 @(_actionIsError ? "text-danger" : "text-success")" role="status">
@@ -100,7 +119,7 @@
 
         try
         {
-            var copied = await Js.InvokeAsync<bool>("tecFlowAppInterop.copyToClipboard", url);
+            var copied = await CopyViaClipboardInteropAsync(url);
             if (copied)
             {
                 _copied = true;
@@ -129,6 +148,18 @@
         }
     }
 
+    private async Task<bool> CopyViaClipboardInteropAsync(string url)
+    {
+        try
+        {
+            return await Js.InvokeAsync<bool>("tecFlowClipboard.copyText", url);
+        }
+        catch (JSException)
+        {
+            return await Js.InvokeAsync<bool>("tecFlowAppInterop.copyToClipboard", url);
+        }
+    }
+
     private async Task ShareLinkAsync()
     {
         if (Response?.ShortenedUrl is not { Length: > 0 } url)
@@ -141,10 +172,7 @@
 
         try
         {
-            var shareText = string.IsNullOrWhiteSpace(Response.PlatformDetected)
-                ? "Confira este produto com meu link de comissão TecFlow:"
-                : $"Confira este produto na {Response.PlatformDetected} com meu link de comissão:";
-
+            var shareText = AffiliateShareLinkBuilder.BuildShareIntro(Response.PlatformDetected);
             var result = await Js.InvokeAsync<ShareLinkResult>(
                 "tecFlowAppInterop.shareLink",
                 "TecFlow — Link de Comissão",
@@ -161,20 +189,28 @@
                 _actionIsError = false;
                 _actionMessage = result.Method switch
                 {
-                    "whatsapp" => "Abrimos o WhatsApp Web com a mensagem pronta para envio.",
+                    "native" => "Compartilhamento iniciado no dispositivo.",
+                    "whatsapp" => "Abrimos o WhatsApp com a mensagem pronta para envio.",
+                    "telegram" => "Abrimos o Telegram com o link pronto para envio.",
                     _ => "Compartilhamento iniciado no dispositivo."
                 };
+                return;
             }
-            else
+
+            if (string.Equals(result.Method, "fallback", StringComparison.OrdinalIgnoreCase))
             {
-                _actionIsError = true;
-                _actionMessage = "Não foi possível abrir o compartilhamento.";
+                _actionIsError = false;
+                _actionMessage = "Use WhatsApp ou Telegram abaixo para enviar o link.";
+                return;
             }
+
+            _actionIsError = true;
+            _actionMessage = "Não foi possível abrir o compartilhamento.";
         }
         catch (Exception)
         {
             _actionIsError = true;
-            _actionMessage = "Erro ao compartilhar o link.";
+            _actionMessage = "Erro ao compartilhar o link. Use WhatsApp ou Telegram abaixo.";
         }
         finally
         {

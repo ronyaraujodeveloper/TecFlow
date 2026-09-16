@@ -37,51 +37,49 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         for (var hop = 0; hop < MaxRedirects; hop++)
         {
-            using var headRequest = new HttpRequestMessage(HttpMethod.Head, currentUrl);
-            using var headResponse = await client.SendAsync(
-                headRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-
-            if (IsRedirect(headResponse))
+            using var response = await SendWithoutAutoRedirectAsync(client, currentUrl, cancellationToken);
+            if (!IsRedirect(response))
             {
-                var nextUrl = ResolveRedirectLocation(currentUrl, headResponse);
-                if (string.IsNullOrWhiteSpace(nextUrl))
-                {
-                    break;
-                }
-
-                _logger.LogDebug("ExpandUrl hop {Hop}: {From} -> {To}", hop + 1, currentUrl, nextUrl);
-                currentUrl = nextUrl;
-                continue;
+                return currentUrl;
             }
 
-            if (headResponse.StatusCode == System.Net.HttpStatusCode.MethodNotAllowed
-                || headResponse.StatusCode == System.Net.HttpStatusCode.NotImplemented)
+            var nextUrl = ResolveRedirectLocation(currentUrl, response);
+            if (string.IsNullOrWhiteSpace(nextUrl) || string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
             {
-                using var getRequest = new HttpRequestMessage(HttpMethod.Get, currentUrl);
-                using var getResponse = await client.SendAsync(
-                    getRequest,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken);
-
-                if (IsRedirect(getResponse))
-                {
-                    var nextUrl = ResolveRedirectLocation(currentUrl, getResponse);
-                    if (string.IsNullOrWhiteSpace(nextUrl))
-                    {
-                        break;
-                    }
-
-                    currentUrl = nextUrl;
-                    continue;
-                }
+                break;
             }
 
-            return currentUrl;
+            _logger.LogDebug("ExpandUrl hop {Hop}: {From} -> {To}", hop + 1, currentUrl, nextUrl);
+            currentUrl = nextUrl;
         }
 
         return currentUrl;
+    }
+
+    private static async Task<HttpResponseMessage> SendWithoutAutoRedirectAsync(
+        HttpClient client,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, url);
+        var getResponse = await client.SendAsync(
+            getRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (IsRedirect(getResponse)
+            || (getResponse.StatusCode != System.Net.HttpStatusCode.MethodNotAllowed
+                && getResponse.StatusCode != System.Net.HttpStatusCode.NotImplemented))
+        {
+            return getResponse;
+        }
+
+        getResponse.Dispose();
+        using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
+        return await client.SendAsync(
+            headRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
     }
 
     private static bool IsRedirect(HttpResponseMessage response) =>

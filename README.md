@@ -331,5 +331,21 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [ ] **18.3.** Teste de Estresse do Motor Strategy: Forçar expansão em lote de URLs encurtadas reais sem gargalo de processamento.
 
 - [ ] **18.4.** Validação de Telemetria: Simular acessos móveis/desktop em links encurtados próprios (tflow.link/...) e verificar a integridade da tabela LinkClickLog.
+
+### 🛍️ Fase 19: Homologação Prática do Gerador e Conversor de Links de Afiliado (Shopee) 🔗
+
+#### 19.1. Parametrização e Configuração das Credenciais de Afiliado
+- [X] **19.1.1. Inspecionar e Ajustar `appsettings.json`:** Mapear as chaves de Afiliado da Shopee (`PartnerId`, `PartnerKey` / `AppSecret` / `AppKey` / `AppSignature`) na `TecFlow.API` e no `TecFlow.WebUi`.
+- [x] **19.1.2. Mapeamento de Fallback/Sandbox:** Implementar/validar o modo de simulação no `ShopeeIntegrationClient` para garantir que, caso as chaves reais de produção não estejam preenchidas, o sistema injete uma tag/sub_id de homologação sem estourar exceção.
+
+#### 19.2. Teste do Motor Backend de Unshorten e Re-parametrizador (Strategy)
+- [x] **19.2.1. Validação do `PlatformLinkResolver`:** Testar a resolução de domínios nativos da Shopee (`shopee.com.br` e links encurtados `s.shopee.com.br`), garantindo a expansão limpa via redirecionamento HTTP para extração do `ItemId` e `ShopId`.
+- [x] **19.2.2. Geração da URL Rastreada de Comissão:** Validar o método de conversão que gera a URL final de afiliado com os parâmetros de tracking (`tracking_code`, `sub_id`, `universal_link`).
+- [x] **19.2.3. Persistência de Telemetria:** Confirmar que a chamada grava corretamente um novo registro na tabela `LinkClickLog` com o `TenantId`/`ShopId` e metadados de acesso.
+
+#### 19.3. Conexão End-to-End no Frontend (TecFlow.WebUi)
+- [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend.
+- [x] **19.3.2. Ações de Interface e Feedback Visual:** Testar a renderização do link convertido, o botão de cópia rápida via `tecflow-clipboard.js` e o compartilhamento nativo para WhatsApp/Telegram.
+- [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no banco PostgreSQL.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

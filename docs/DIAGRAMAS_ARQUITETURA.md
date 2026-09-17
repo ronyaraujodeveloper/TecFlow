@@ -78,7 +78,9 @@ sequenceDiagram
   Lojista->>API: GET /api/marketplace-auth/{shopee|tiktok}/authorize-url
   API->>Auth: GenerateAuthorizationUrl (sandbox se PartnerId vazio)
   Auth-->>Lojista: authorizeUrl (200; Shopee nunca 500 por chave vazia)
-  Lojista->>MP: NavigationManager.NavigateTo(authorizeUrl, forceLoad)
+  Lojista->>API: POST /api/marketplace-auth/vincular-manual (code_teste em homolog)
+  API->>Auth: tokens sandbox sem chamada externa
+  Auth-->>Lojista: IntegracaoLojaResponseDto 200
   MP-->>API: GET /callback?code=&shopId=
   API->>Auth: CallbackAndGenerateTokensAsync
   Auth->>MP: POST token/get (assinado)

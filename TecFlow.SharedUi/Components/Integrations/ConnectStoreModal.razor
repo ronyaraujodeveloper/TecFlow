@@ -52,11 +52,26 @@
                         <div class="row g-2">
                             <div class="col-12">
                                 <label class="form-label" for="auth-code">Authorization code</label>
-                                <input id="auth-code" class="form-control form-control-sm" @bind="_authorizationCode" disabled="@IsBusy" />
+                                <input id="auth-code"
+                                       name="authorizationCode"
+                                       class="form-control form-control-sm"
+                                       placeholder="code_teste"
+                                       autocomplete="off"
+                                       @bind="_authorizationCode"
+                                       @bind:event="oninput"
+                                       disabled="@IsBusy" />
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="shop-id">Shop ID</label>
-                                <input id="shop-id" class="form-control form-control-sm" @bind="_shopId" disabled="@IsBusy" />
+                                <input id="shop-id"
+                                       name="shopId"
+                                       class="form-control form-control-sm"
+                                       inputmode="numeric"
+                                       placeholder="123456"
+                                       autocomplete="off"
+                                       @bind="_shopId"
+                                       @bind:event="oninput"
+                                       disabled="@IsBusy" />
                             </div>
                         </div>
                     </details>
@@ -145,7 +160,20 @@
             return;
         }
 
-        await OnManualLink.InvokeAsync((_platform, _friendlyName.Trim(), _authorizationCode.Trim(), _shopId.Trim()));
+        var authorizationCode = _authorizationCode.Trim();
+        var shopIdRaw = _shopId.Trim();
+        if (_platform == MarketplaceType.Shopee)
+        {
+            if (!long.TryParse(shopIdRaw, out var shopId) || shopId <= 0)
+            {
+                _formError = "Shop ID da Shopee deve ser um número inteiro (ex.: 123456).";
+                return;
+            }
+
+            shopIdRaw = shopId.ToString();
+        }
+
+        await OnManualLink.InvokeAsync((_platform, _friendlyName.Trim(), authorizationCode, shopIdRaw));
     }
 
     private bool ValidateFriendlyName()

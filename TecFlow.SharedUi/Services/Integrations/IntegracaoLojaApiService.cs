@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
@@ -43,15 +44,18 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
     private readonly ILoadingService _loadingService;
+    private readonly ILogger<IntegracaoLojaApiService> _logger;
 
     public IntegracaoLojaApiService(
         IHttpClientFactory httpClientFactory,
         IAccessTokenProvider accessTokenProvider,
-        ILoadingService loadingService)
+        ILoadingService loadingService,
+        ILogger<IntegracaoLojaApiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _accessTokenProvider = accessTokenProvider;
         _loadingService = loadingService;
+        _logger = logger;
     }
 
     public Task<IntegracaoLojaResponseDto> ListAsync(
@@ -69,7 +73,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
         CancellationToken cancellationToken = default)
     {
         using var _ = _loadingService.BeginScope("Vinculando nova loja...");
-        return SendEnvelopeAsync(HttpMethod.Post, "api/integracoes/vincular", request, cancellationToken);
+        return SendEnvelopeAsync(HttpMethod.Post, "api/marketplace-auth/vincular-manual", request, cancellationToken);
     }
 
     public Task<IntegracaoLojaResponseDto> UnlinkAsync(
@@ -180,12 +184,17 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var envelope = TryDeserialize<IntegracaoLojaResponseDto>(content);
+            var envelope = TryDeserializeEnvelope(content);
 
             if (envelope is not null)
             {
                 return envelope;
             }
+
+            _logger.LogWarning(
+                "Resposta de integrações não interpretada. Status={StatusCode} Payload={Payload}",
+                (int)response.StatusCode,
+                Truncate(content));
 
             return new IntegracaoLojaResponseDto
             {
@@ -209,6 +218,64 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                 Descricao = "Não foi possível contactar o servidor. Verifique se a API está em execução."
             };
         }
+    }
+
+    private IntegracaoLojaResponseDto? TryDeserializeEnvelope(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var root = document.RootElement;
+            if (root.TryGetProperty("status", out var statusElement)
+                && statusElement.ValueKind is JsonValueKind.Number)
+            {
+                return new IntegracaoLojaResponseDto
+                {
+                    Status = false,
+                    Descricao = ReadString(root, "detail")
+                        ?? ReadString(root, "title")
+                        ?? ReadString(root, "error")
+                        ?? "Falha ao vincular a loja."
+                };
+            }
+
+            return JsonSerializer.Deserialize<IntegracaoLojaResponseDto>(json, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao desserializar payload de integrações. Payload={Payload}", Truncate(json));
+            return null;
+        }
+    }
+
+    private static string? ReadString(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var property))
+        {
+            return null;
+        }
+
+        return property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString();
+    }
+
+    private static string Truncate(string? value, int maxLength = 2000)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+        {
+            return value ?? string.Empty;
+        }
+
+        return value[..maxLength];
     }
 
     private static T? TryDeserialize<T>(string json)

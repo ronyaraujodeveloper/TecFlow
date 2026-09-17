@@ -55,9 +55,27 @@ public class IntegracoesController : ControllerBase
             });
         }
 
-        var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        try
+        {
+            var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception)
+        {
+            return BadRequest(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Não foi possível vincular a loja. Tente novamente."
+            });
+        }
     }
+
+    /// <summary>Vinculação manual (homologação) no contrato padronizado IntegracaoLojaResponseDto.</summary>
+    [HttpPost("/api/marketplace-auth/vincular-manual")]
+    public Task<ActionResult<IntegracaoLojaResponseDto>> VincularManualAsync(
+        [FromBody] IntegracaoLojaDto dto,
+        CancellationToken cancellationToken) =>
+        LinkAsync(dto, cancellationToken);
 
     /// <summary>Remove/desvincula uma loja marketplace específica.</summary>
     [HttpDelete("lojas/{id:int}")]

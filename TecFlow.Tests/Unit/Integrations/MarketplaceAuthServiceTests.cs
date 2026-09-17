@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Integrations.Auth;
@@ -20,9 +21,12 @@ public class MarketplaceAuthServiceTests
     private readonly Mock<IHttpClientFactory> _httpClientFactory = new();
     private readonly MarketplaceSignatureService _signatureService = new();
 
+    private readonly Mock<IHostEnvironment> _hostEnvironment = new();
+
     public MarketplaceAuthServiceTests()
     {
         _currentTenant.Setup(t => t.TenantId).Returns(Guid.NewGuid());
+        _hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Homologacao");
     }
 
     private MarketplaceAuthService CreateService() =>
@@ -34,7 +38,8 @@ public class MarketplaceAuthServiceTests
             _httpClientFactory.Object,
             MarketplaceTestOptionsFactory.TikTokOptions(),
             MarketplaceTestOptionsFactory.ShopeeOptions(),
-            NullLogger<MarketplaceAuthService>.Instance);
+            NullLogger<MarketplaceAuthService>.Instance,
+            _hostEnvironment.Object);
 
     [Fact]
     public void GenerateAuthorizationUrl_ShouldContainAppKey_WhenMarketplaceIsTikTokShop()
@@ -89,7 +94,8 @@ public class MarketplaceAuthServiceTests
                 ApiBaseUrl = string.Empty,
                 AuthPartnerPath = string.Empty
             }),
-            NullLogger<MarketplaceAuthService>.Instance);
+            NullLogger<MarketplaceAuthService>.Instance,
+            _hostEnvironment.Object);
 
         var url = service.GenerateAuthorizationUrl(
             MarketplaceType.Shopee,
@@ -115,6 +121,31 @@ public class MarketplaceAuthServiceTests
         // Act / Assert
         Assert.Throws<ArgumentException>(() =>
             service.GenerateAuthorizationUrl(MarketplaceType.Shopee, ""));
+    }
+
+    [Fact]
+    public async Task CallbackAndGenerateTokensAsync_ShouldPersistTestTokens_WhenHomologCodeIsStub()
+    {
+        var service = CreateService();
+        MarketplaceAccount? savedAccount = null;
+        _accountRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+        _tokenRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await service.CallbackAndGenerateTokensAsync(
+            MarketplaceType.Shopee,
+            HomologMarketplaceAuth.StubAuthorizationCode,
+            "123456");
+
+        Assert.True(result.Success);
+        Assert.Equal("123456", result.ShopId);
+        Assert.NotNull(savedAccount);
+        Assert.Equal(HomologMarketplaceAuth.StubAccessToken, savedAccount!.AccessToken);
+        _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

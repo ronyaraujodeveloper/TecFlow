@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Auth;
@@ -25,6 +26,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private readonly TikTokShopIntegrationOptions _tikTokOptions;
     private readonly ShopeeIntegrationOptions _shopeeOptions;
     private readonly ILogger<MarketplaceAuthService> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
@@ -34,7 +36,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         IHttpClientFactory httpClientFactory,
         IOptions<TikTokShopIntegrationOptions> tikTokOptions,
         IOptions<ShopeeIntegrationOptions> shopeeOptions,
-        ILogger<MarketplaceAuthService> logger)
+        ILogger<MarketplaceAuthService> logger,
+        IHostEnvironment hostEnvironment)
     {
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
@@ -44,6 +47,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         _tikTokOptions = tikTokOptions.Value;
         _shopeeOptions = shopeeOptions.Value;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     public string GenerateAuthorizationUrl(MarketplaceType type, string redirectUri, string? state = null)
@@ -83,12 +87,30 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
         try
         {
-            var tokenPayload = type switch
+            OAuthTokenPayload tokenPayload;
+            if (AllowsHomologStubTokens() && HomologMarketplaceAuth.IsStubAuthorizationCode(code))
             {
-                MarketplaceType.TikTokShop => await ExchangeTikTokCodeAsync(code, cancellationToken),
-                MarketplaceType.Shopee => await ExchangeShopeeCodeAsync(code, shopId, cancellationToken),
-                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
-            };
+                _logger.LogWarning(
+                    "Usando tokens de homologação para {Marketplace} shop {ShopId} (code_teste).",
+                    type,
+                    shopId);
+                tokenPayload = new OAuthTokenPayload
+                {
+                    AccessToken = HomologMarketplaceAuth.StubAccessToken,
+                    RefreshToken = HomologMarketplaceAuth.StubRefreshToken,
+                    AccessTokenLifetimeSeconds = HomologMarketplaceAuth.StubAccessTokenLifetimeSeconds,
+                    RefreshTokenLifetimeSeconds = HomologMarketplaceAuth.StubAccessTokenLifetimeSeconds
+                };
+            }
+            else
+            {
+                tokenPayload = type switch
+                {
+                    MarketplaceType.TikTokShop => await ExchangeTikTokCodeAsync(code, cancellationToken),
+                    MarketplaceType.Shopee => await ExchangeShopeeCodeAsync(code, shopId, cancellationToken),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+                };
+            }
 
             if (string.IsNullOrWhiteSpace(tokenPayload.AccessToken))
             {
@@ -497,6 +519,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
         return existing.TenantId;
     }
+
+    private bool AllowsHomologStubTokens() =>
+        _hostEnvironment.IsDevelopment()
+        || _hostEnvironment.IsEnvironment("Homologacao");
 
     private static MarketplaceTokenResult Fail(MarketplaceType type, string shopId, string message) =>
         new()

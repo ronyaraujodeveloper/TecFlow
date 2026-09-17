@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Dto;
+﻿using System.Globalization;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -64,6 +65,23 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             return Fail("ShopId é obrigatório.");
         }
+
+        if (dto.PlatformType == MarketplaceType.Shopee)
+        {
+            if (!long.TryParse(dto.ShopId.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var shopId)
+                || shopId <= 0)
+            {
+                return Fail("Shop ID da Shopee deve ser um número inteiro (ex.: 123456).");
+            }
+
+            dto.ShopId = shopId.ToString(CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            dto.ShopId = dto.ShopId.Trim();
+        }
+
+        dto.AuthorizationCode = dto.AuthorizationCode.Trim();
 
         if (string.IsNullOrWhiteSpace(dto.FriendlyName))
         {

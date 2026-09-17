@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using TecFlow.Core.Abstractions;
 using TecFlow.Core.Entities;
@@ -19,10 +20,12 @@ public class IntegracaoLoja : ITenantScopedEntity
     /// <summary>Proprietário da integração (Usuarios / UserAccount).</summary>
     public int UserId { get; set; }
 
+    [JsonIgnore]
     public UserAccount? User { get; set; }
 
     public Guid TenantId { get; set; }
 
+    [JsonIgnore]
     public Tenant? Tenant { get; set; }
 
     public MarketplaceType PlatformType { get; set; }

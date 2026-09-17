@@ -103,7 +103,7 @@ public class HttpServiceVincularManualTests
             CreateValidFormDto());
 
         Assert.False(result.Success);
-        Assert.Equal("Ocorreu um erro inesperado ao comunicar com a API.", result.ErrorMessage);
+        Assert.Equal("Não foi possível interpretar a resposta do servidor.", result.ErrorMessage);
     }
 
     [Fact]

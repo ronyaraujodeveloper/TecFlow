@@ -1,5 +1,5 @@
-﻿@using TecFlow.Core.Enums
-@using TecFlow.Database.Entity
+﻿@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
 @implements IDisposable
 @inject IActiveStoreScopeService StoreScope
 
@@ -117,7 +117,7 @@
 
     private void CloseMenu() => _menuOpen = false;
 
-    private async Task SelectStoreAsync(IntegracaoLoja store)
+    private async Task SelectStoreAsync(MarketplaceAccountDto store)
     {
         CloseMenu();
         await StoreScope.SetActiveStoreAsync(store);

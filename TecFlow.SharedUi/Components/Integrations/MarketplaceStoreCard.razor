@@ -1,5 +1,5 @@
-﻿@using TecFlow.Core.Enums
-@using TecFlow.Database.Entity
+﻿@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
 
 <div class="marketplace-store-card card border-0 shadow-sm h-100">
     <div class="card-body d-flex flex-column gap-3">
@@ -52,7 +52,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public IntegracaoLoja Store { get; set; } = default!;
+    [Parameter, EditorRequired] public MarketplaceAccountDto Store { get; set; } = default!;
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public EventCallback<int> OnUnlink { get; set; }
 

@@ -1,20 +1,18 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Models;
 using TecFlow.SharedUi.Models.Responses;
+using TecFlow.SharedUi.Serialization;
+
 namespace TecFlow.SharedUi.Services.Http;
 
 public class HttpService : IHttpService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = TecFlowJsonOptions.Http;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
@@ -93,9 +91,22 @@ public class HttpService : IHttpService
                     return ApiResult<TResponse>.Fail("Resposta vazia do servidor.", (int)response.StatusCode);
                 }
 
-                var data = JsonSerializer.Deserialize<TResponse>(content, JsonOptions);
+                TResponse? data;
+                try
+                {
+                    data = JsonSerializer.Deserialize<TResponse>(content, JsonOptions);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Falha ao desserializar JSON. Payload={Payload}", Truncate(content));
+                    return ApiResult<TResponse>.Fail(
+                        "Não foi possível interpretar a resposta do servidor.",
+                        (int)response.StatusCode);
+                }
+
                 if (data is null)
                 {
+                    _logger.LogError("Resposta JSON nula após desserialização. Payload={Payload}", Truncate(content));
                     return ApiResult<TResponse>.Fail("Não foi possível interpretar a resposta do servidor.", (int)response.StatusCode);
                 }
 
@@ -170,5 +181,15 @@ public class HttpService : IHttpService
         }
 
         return "Erro na API.";
+    }
+
+    private static string Truncate(string? value, int maxLength = 2000)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+        {
+            return value ?? string.Empty;
+        }
+
+        return value[..maxLength];
     }
 }

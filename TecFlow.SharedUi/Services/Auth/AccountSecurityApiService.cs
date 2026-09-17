@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto.Auth;
+using TecFlow.SharedUi.Serialization;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.UI;
 
@@ -22,10 +23,7 @@ public interface IAccountSecurityApiService
 
 public class AccountSecurityApiService : IAccountSecurityApiService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = TecFlowJsonOptions.Http;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
@@ -134,14 +132,20 @@ public class AccountSecurityApiService : IAccountSecurityApiService
         }
     }
 
-    private static T? TryDeserialize<T>(string json)
+    private T? TryDeserialize<T>(string json)
     {
         try
         {
             return JsonSerializer.Deserialize<T>(json, JsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
+            _logger.LogError(ex, "Falha ao desserializar JSON. Payload={Payload}", json);
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao desserializar JSON. Payload={Payload}", json);
             return default;
         }
     }

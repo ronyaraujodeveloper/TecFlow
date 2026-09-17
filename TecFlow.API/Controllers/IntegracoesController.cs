@@ -79,12 +79,60 @@ public class IntegracoesController : ControllerBase
         }
     }
 
-    /// <summary>Vinculação manual (homologação) no contrato padronizado IntegracaoLojaResponseDto.</summary>
+    /// <summary>Vinculação manual (homologação) no contrato MarketplaceAccountResponseDto.</summary>
     [HttpPost("/api/marketplace-auth/vincular-manual")]
-    public Task<ActionResult<IntegracaoLojaResponseDto>> VincularManualAsync(
+    public async Task<ActionResult<MarketplaceAccountResponseDto>> VincularManualAsync(
         [FromBody] IntegracaoLojaDto dto,
-        CancellationToken cancellationToken) =>
-        LinkAsync(dto, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new MarketplaceAccountResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        if (dto is null)
+        {
+            return BadRequest(new MarketplaceAccountResponseDto
+            {
+                Status = false,
+                Descricao = "Payload de vinculação inválido."
+            });
+        }
+
+        try
+        {
+            var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
+            if (!result.Status)
+            {
+                return BadRequest(new MarketplaceAccountResponseDto
+                {
+                    Status = false,
+                    Descricao = result.Descricao,
+                    Data = result.Data
+                });
+            }
+
+            return Ok(new MarketplaceAccountResponseDto
+            {
+                Status = true,
+                Descricao = "Loja vinculada com sucesso",
+                Data = result.Data
+            });
+        }
+        catch (Exception)
+        {
+            return BadRequest(new MarketplaceAccountResponseDto
+            {
+                Status = false,
+                Descricao = "Não foi possível vincular a loja. Tente novamente."
+            });
+        }
+    }
 
     /// <summary>Remove/desvincula uma loja marketplace específica.</summary>
     [HttpDelete("lojas/{id:int}")]

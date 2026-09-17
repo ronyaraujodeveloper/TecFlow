@@ -1,12 +1,29 @@
-﻿using TecFlow.Core.Enums;
+﻿using System.Text.Json.Serialization;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Dto;
 
+/// <summary>Projeção segura de loja marketplace para a UI (sem tokens nem navegações EF).</summary>
 public class MarketplaceAccountDto
 {
+    public int Id { get; set; }
+
+    public int UserId { get; set; }
+
     public Guid TenantId { get; set; }
-    public MarketplaceType MarketplaceType { get; set; }
+
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string ShopId { get; set; } = string.Empty;
+
+    public string FriendlyName { get; set; } = string.Empty;
+
     public string ShopName { get; set; } = string.Empty;
-    public string? Cnpj { get; set; }
+
+    public MarketplaceType PlatformType { get; set; }
+
+    public DateTime ExpiresAt { get; set; }
+
+    public MarketplaceIntegrationStatus Status { get; set; }
+
+    public DateTime CreatedAt { get; set; }
 }

@@ -39,8 +39,10 @@ public class IntegracaoLoja : ITenantScopedEntity
     public string FriendlyName { get; set; } = string.Empty;
 
     [Required]
+    [JsonIgnore]
     public string AccessToken { get; set; } = string.Empty;
 
+    [JsonIgnore]
     public string? RefreshToken { get; set; }
 
     public DateTime ExpiresAt { get; set; }

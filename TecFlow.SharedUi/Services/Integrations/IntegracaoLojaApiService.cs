@@ -6,6 +6,7 @@ using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Filter;
 using TecFlow.SharedUi.Extensions;
+using TecFlow.SharedUi.Serialization;
 using TecFlow.SharedUi.Services.Http;
 using TecFlow.SharedUi.Services.UI;
 
@@ -36,10 +37,7 @@ public interface IIntegracaoLojaApiService
 
 public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = TecFlowJsonOptions.Http;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
@@ -251,9 +249,14 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             return JsonSerializer.Deserialize<IntegracaoLojaResponseDto>(json, JsonOptions);
         }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Falha ao desserializar payload de integrações. Payload={Payload}", Truncate(json));
+            return null;
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha ao desserializar payload de integrações. Payload={Payload}", Truncate(json));
+            _logger.LogError(ex, "Falha ao desserializar payload de integrações. Payload={Payload}", Truncate(json));
             return null;
         }
     }

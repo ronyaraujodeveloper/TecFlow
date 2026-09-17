@@ -20,7 +20,7 @@ public class IntegracoesControllerTests
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
         Assert.Equal(400, badRequest.StatusCode);
-        var envelope = Assert.IsType<IntegracaoLojaResponseDto>(badRequest.Value);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
         Assert.False(envelope.Status);
         Assert.Equal("Payload de vinculação inválido.", envelope.Descricao);
     }
@@ -39,7 +39,7 @@ public class IntegracoesControllerTests
         var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<IntegracaoLojaResponseDto>(badRequest.Value);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
         Assert.False(envelope.Status);
         Assert.Equal("Não foi possível vincular a loja. Tente novamente.", envelope.Descricao);
     }
@@ -67,7 +67,7 @@ public class IntegracoesControllerTests
         var action = await controller.VincularManualAsync(swapped, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<IntegracaoLojaResponseDto>(badRequest.Value);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
         Assert.False(envelope.Status);
         Assert.Contains("número inteiro", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
     }
@@ -87,8 +87,9 @@ public class IntegracoesControllerTests
         var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
-        var envelope = Assert.IsType<IntegracaoLojaResponseDto>(ok.Value);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(ok.Value);
         Assert.True(envelope.Status);
+        Assert.Equal("Loja vinculada com sucesso", envelope.Descricao);
     }
 
     [Fact]

@@ -42,13 +42,13 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         var (pageItems, meta) = PagedListHelper.Slice(items, filter);
 
-        return new IntegracaoLojaResponseDto
-        {
-            Status = true,
-            Descricao = "OK",
-            DataList = pageItems,
-            Paging = PagingInfoDto.FromMeta(meta)
-        };
+            return new IntegracaoLojaResponseDto
+            {
+                Status = true,
+                Descricao = "OK",
+                DataList = pageItems.Select(ToAccountDto).ToList(),
+                Paging = PagingInfoDto.FromMeta(meta)
+            };
     }
 
     public async Task<IntegracaoLojaResponseDto> LinkAsync(
@@ -141,7 +141,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             {
                 Status = true,
                 Descricao = "Integração atualizada com sucesso.",
-                Data = SyncStatus(existing)
+                Data = ToAccountDto(existing)
             };
         }
 
@@ -165,7 +165,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             Status = true,
             Descricao = "Loja vinculada com sucesso.",
-            Data = SyncStatus(integration)
+            Data = ToAccountDto(integration)
         };
     }
 
@@ -215,6 +215,24 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return expiresAt <= DateTime.UtcNow
             ? MarketplaceIntegrationStatus.Expired
             : MarketplaceIntegrationStatus.Active;
+    }
+
+    private static MarketplaceAccountDto ToAccountDto(IntegracaoLoja item)
+    {
+        item = SyncStatus(item);
+        return new MarketplaceAccountDto
+        {
+            Id = item.Id,
+            UserId = item.UserId,
+            TenantId = item.TenantId,
+            ShopId = item.ShopId,
+            FriendlyName = item.FriendlyName,
+            ShopName = string.IsNullOrWhiteSpace(item.FriendlyName) ? item.ShopId : item.FriendlyName,
+            PlatformType = item.PlatformType,
+            ExpiresAt = item.ExpiresAt,
+            Status = item.Status,
+            CreatedAt = item.CreatedAt
+        };
     }
 
     private static IntegracaoLojaResponseDto Fail(string message) =>

@@ -1,4 +1,4 @@
-﻿using TecFlow.Database.Entity;
+﻿using TecFlow.Business.Dto;
 
 namespace TecFlow.SharedUi.Services.State;
 
@@ -7,11 +7,11 @@ namespace TecFlow.SharedUi.Services.State;
 /// </summary>
 public interface IActiveStoreScopeService
 {
-    IntegracaoLoja? ActiveStore { get; }
+    MarketplaceAccountDto? ActiveStore { get; }
 
     int? ActiveStoreId { get; }
 
-    IReadOnlyList<IntegracaoLoja> Stores { get; }
+    IReadOnlyList<MarketplaceAccountDto> Stores { get; }
 
     bool IsInitialized { get; }
 
@@ -23,7 +23,7 @@ public interface IActiveStoreScopeService
 
     Task RestoreFromBrowserAsync(CancellationToken cancellationToken = default);
 
-    Task SetActiveStoreAsync(IntegracaoLoja store, CancellationToken cancellationToken = default);
+    Task SetActiveStoreAsync(MarketplaceAccountDto store, CancellationToken cancellationToken = default);
 
     Task RefreshStoresAsync(CancellationToken cancellationToken = default);
 }

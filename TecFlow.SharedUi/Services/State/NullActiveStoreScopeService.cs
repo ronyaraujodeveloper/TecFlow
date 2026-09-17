@@ -1,15 +1,15 @@
-﻿using TecFlow.Database.Entity;
+﻿using TecFlow.Business.Dto;
 
 namespace TecFlow.SharedUi.Services.State;
 
 /// <summary>Implementação neutra para hosts sem seletor de escopo (ex.: Mobile).</summary>
 public sealed class NullActiveStoreScopeService : IActiveStoreScopeService
 {
-    public IntegracaoLoja? ActiveStore => null;
+    public MarketplaceAccountDto? ActiveStore => null;
 
     public int? ActiveStoreId => null;
 
-    public IReadOnlyList<IntegracaoLoja> Stores { get; } = Array.Empty<IntegracaoLoja>();
+    public IReadOnlyList<MarketplaceAccountDto> Stores { get; } = Array.Empty<MarketplaceAccountDto>();
 
     public bool IsInitialized => true;
 
@@ -23,7 +23,7 @@ public sealed class NullActiveStoreScopeService : IActiveStoreScopeService
     public Task RestoreFromBrowserAsync(CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
-    public Task SetActiveStoreAsync(IntegracaoLoja store, CancellationToken cancellationToken = default) =>
+    public Task SetActiveStoreAsync(MarketplaceAccountDto store, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
     public Task RefreshStoresAsync(CancellationToken cancellationToken = default) =>

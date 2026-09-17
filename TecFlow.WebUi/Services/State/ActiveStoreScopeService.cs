@@ -1,5 +1,5 @@
 ﻿using Microsoft.JSInterop;
-using TecFlow.Database.Entity;
+using TecFlow.Business.Dto;
 using TecFlow.SharedUi.Services.Integrations;
 using TecFlow.SharedUi.Services.State;
 
@@ -13,7 +13,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<ActiveStoreScopeService> _logger;
 
-    private List<IntegracaoLoja> _stores = [];
+    private List<MarketplaceAccountDto> _stores = [];
     private bool _initialized;
     private bool _browserRestored;
 
@@ -27,11 +27,11 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
         _logger = logger;
     }
 
-    public IntegracaoLoja? ActiveStore { get; private set; }
+    public MarketplaceAccountDto? ActiveStore { get; private set; }
 
     public int? ActiveStoreId => ActiveStore?.Id;
 
-    public IReadOnlyList<IntegracaoLoja> Stores => _stores;
+    public IReadOnlyList<MarketplaceAccountDto> Stores => _stores;
 
     public bool IsInitialized => _initialized;
 
@@ -95,7 +95,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
         }
     }
 
-    public async Task SetActiveStoreAsync(IntegracaoLoja store, CancellationToken cancellationToken = default)
+    public async Task SetActiveStoreAsync(MarketplaceAccountDto store, CancellationToken cancellationToken = default)
     {
         if (store.Id <= 0)
         {
@@ -165,7 +165,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
     }
 
     private async Task ApplyActiveStoreAsync(
-        IntegracaoLoja store,
+        MarketplaceAccountDto store,
         bool persist,
         CancellationToken cancellationToken)
     {

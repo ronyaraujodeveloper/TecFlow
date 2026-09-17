@@ -4,7 +4,6 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
 @using TecFlow.Core.Enums
-@using TecFlow.Database.Entity
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IMarketplaceOAuthConnectService OAuthConnect
 @inject NavigationManager Navigation
@@ -89,7 +88,7 @@
                    OnManualLink="ManualLinkAsync" />
 
 @code {
-    private readonly List<IntegracaoLoja> _stores = [];
+    private readonly List<MarketplaceAccountDto> _stores = [];
     private bool _isLoading = true;
     private bool _isBusy;
     private bool _connectModalVisible;

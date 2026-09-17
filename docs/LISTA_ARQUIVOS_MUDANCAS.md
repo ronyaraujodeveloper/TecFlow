@@ -547,7 +547,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **HttpServiceVincularManualTests.cs** — POST `vincular-manual` com JSON real e falha de desserialização.
 - [x] **AccountSecurityApiServiceTests.cs** — envelope inválido sem exceção.
 - [x] **IntegracoesControllerTests.cs** — payload nulo/invertido devolve 400, não 500.
-- [x] **ConnectStoreManualLinkForm.cs** — validação de apelido, code string e Shop ID `long`.
+- [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.
+- [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.
 - [x] **AuthControllerSecurityTests / AffiliateLinksControllerTests / DashboardControllerTests** — 401/500 e JSON de formulário.
 
 ---

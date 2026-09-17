@@ -180,7 +180,8 @@ flowchart TB
   TST --> AUTH[MarketplaceAuthService]
   TST --> CAT[MarketplaceProductService Convert]
   TST --> ORD[MarketplaceOrderService + StockService]
-  TST --> API[Controllers: Products / Auth / Webhooks]
+  TST --> API[Controllers: Products / Auth / Webhooks / Integracoes / AffiliateLinks / Dashboard]
+  TST --> HTTP[HttpService / AccountSecurity / vincular-manual / form loja]
   TST --> FLT[ProductFilter → ProductResponseDto]
 
   SIG -.->|sem HTTP real| BUS[TecFlow.Business]
@@ -198,6 +199,8 @@ flowchart TB
 | Pedidos | `MarketplaceOrderServiceTests` | webhook + baixa estoque | JSON inválido / idempotência |
 | Estoque | `MarketplaceStockServiceTests` | dedução local | SKU não vinculado |
 | API 3 objetos | `ProductsControllerResponseDtoTests`, `ProductFilterExtensionsTests` | `DataList` / NotFound | filtro sem match |
+| Vincular loja HTTP | `HttpServiceVincularManualTests`, `AccountSecurityApiServiceTests`, `IntegracoesControllerTests` | envelope 200 / DTO camelCase | JSON inválido, campos invertidos/nulos sem 500 |
+| Auth / Dashboard / Links | `AuthControllerSecurityTests`, `DashboardControllerTests`, `AffiliateLinksControllerTests` | JWT + `lojaId` | 401 sem usuário / 500 envelope |
 
 ---
 

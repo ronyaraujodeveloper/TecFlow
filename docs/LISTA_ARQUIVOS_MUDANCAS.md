@@ -544,6 +544,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **IntegracaoLojaService / MarketplaceAuthService** — `code_teste` persiste tokens de homologação sem chamar a Shopee.
 - [x] **IntegracaoLojaApiService** — log do payload bruto se o envelope não deserializar; trata ProblemDetails.
 - [x] **TecFlow.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** — vínculo manual simulado.
+- [x] **HttpServiceVincularManualTests.cs** — POST `vincular-manual` com JSON real e falha de desserialização.
+- [x] **AccountSecurityApiServiceTests.cs** — envelope inválido sem exceção.
+- [x] **IntegracoesControllerTests.cs** — payload nulo/invertido devolve 400, não 500.
+- [x] **ConnectStoreManualLinkForm.cs** — validação de apelido, code string e Shop ID `long`.
+- [x] **AuthControllerSecurityTests / AffiliateLinksControllerTests / DashboardControllerTests** — 401/500 e JSON de formulário.
 
 ---
 

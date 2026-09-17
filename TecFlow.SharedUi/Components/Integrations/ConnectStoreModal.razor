@@ -149,30 +149,20 @@
 
     private async Task ManualLinkAsync()
     {
-        if (!ValidateFriendlyName())
+        if (!ConnectStoreManualLinkForm.TryValidate(
+                _platform,
+                _friendlyName,
+                _authorizationCode,
+                _shopId,
+                out var authorizationCode,
+                out var shopIdRaw,
+                out var error))
         {
+            _formError = error;
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_authorizationCode) || string.IsNullOrWhiteSpace(_shopId))
-        {
-            _formError = "Informe authorization code e Shop ID para vinculação manual.";
-            return;
-        }
-
-        var authorizationCode = _authorizationCode.Trim();
-        var shopIdRaw = _shopId.Trim();
-        if (_platform == MarketplaceType.Shopee)
-        {
-            if (!long.TryParse(shopIdRaw, out var shopId) || shopId <= 0)
-            {
-                _formError = "Shop ID da Shopee deve ser um número inteiro (ex.: 123456).";
-                return;
-            }
-
-            shopIdRaw = shopId.ToString();
-        }
-
+        _formError = null;
         await OnManualLink.InvokeAsync((_platform, _friendlyName.Trim(), authorizationCode, shopIdRaw));
     }
 

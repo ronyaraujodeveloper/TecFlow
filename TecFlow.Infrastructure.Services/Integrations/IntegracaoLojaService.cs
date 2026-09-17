@@ -56,6 +56,11 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         IntegracaoLojaDto dto,
         CancellationToken cancellationToken = default)
     {
+        if (dto is null)
+        {
+            return Fail("Payload de vinculação inválido.");
+        }
+
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
         {
             return Fail("Código de autorização OAuth é obrigatório.");

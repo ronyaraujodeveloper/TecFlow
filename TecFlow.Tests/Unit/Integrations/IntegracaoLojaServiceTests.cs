@@ -106,4 +106,69 @@ public class IntegracaoLojaServiceTests
         Assert.False(result.Status);
         Assert.Contains("número inteiro", result.Descricao, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task LinkAsync_ShouldFailWithoutThrowing_WhenDtoIsNull()
+    {
+        var service = new IntegracaoLojaService(
+            new Mock<IIntegracaoLojaRepository>().Object,
+            new Mock<IUserAccountRepository>().Object,
+            new Mock<IMarketplaceAccountRepository>().Object,
+            new Mock<IMarketplaceAuthService>().Object);
+
+        var result = await service.LinkAsync(1, null!);
+
+        Assert.False(result.Status);
+        Assert.Equal("Payload de vinculação inválido.", result.Descricao);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldFailWithoutThrowing_WhenAuthorizationCodeAndShopIdAreSwapped()
+    {
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            new Mock<IIntegracaoLojaRepository>().Object,
+            new Mock<IUserAccountRepository>().Object,
+            new Mock<IMarketplaceAccountRepository>().Object,
+            auth.Object);
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            AuthorizationCode = "123456",
+            ShopId = "code_teste",
+            FriendlyName = "Loja Homolog"
+        });
+
+        Assert.False(result.Status);
+        Assert.Contains("número inteiro", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        auth.Verify(
+            service => service.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldFailWithoutThrowing_WhenCodeAndShopIdAreBlank()
+    {
+        var service = new IntegracaoLojaService(
+            new Mock<IIntegracaoLojaRepository>().Object,
+            new Mock<IUserAccountRepository>().Object,
+            new Mock<IMarketplaceAccountRepository>().Object,
+            new Mock<IMarketplaceAuthService>().Object);
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            AuthorizationCode = "   ",
+            ShopId = null!,
+            FriendlyName = "Loja Homolog"
+        });
+
+        Assert.False(result.Status);
+        Assert.Equal("Código de autorização OAuth é obrigatório.", result.Descricao);
+    }
 }

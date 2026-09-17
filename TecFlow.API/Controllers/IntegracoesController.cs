@@ -55,6 +55,15 @@ public class IntegracoesController : ControllerBase
             });
         }
 
+        if (dto is null)
+        {
+            return BadRequest(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Payload de vinculação inválido."
+            });
+        }
+
         try
         {
             var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);

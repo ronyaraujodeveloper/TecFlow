@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Dto.Auth;
@@ -48,8 +49,9 @@ public class AuthController : ControllerBase
             });
         }
 
-        var result = await _platformAuthService.LinkProviderAsync(userId.Value, request, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return await ExecuteProviderAsync(
+            () => _platformAuthService.LinkProviderAsync(userId.Value, request, cancellationToken),
+            "vincular provedor");
     }
 
     [HttpDelete("providers/desvincular")]
@@ -68,8 +70,9 @@ public class AuthController : ControllerBase
             });
         }
 
-        var result = await _platformAuthService.UnlinkProviderAsync(userId.Value, provider, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return await ExecuteProviderAsync(
+            () => _platformAuthService.UnlinkProviderAsync(userId.Value, provider, cancellationToken),
+            "desvincular provedor");
     }
 
     [HttpPut("change-password")]
@@ -88,8 +91,9 @@ public class AuthController : ControllerBase
             });
         }
 
-        var result = await _platformAuthService.ChangePasswordAsync(userId.Value, request, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return await ExecuteProviderAsync(
+            () => _platformAuthService.ChangePasswordAsync(userId.Value, request, cancellationToken),
+            "alterar senha");
     }
 
     [HttpPost("register")]
@@ -126,8 +130,29 @@ public class AuthController : ControllerBase
             });
         }
 
-        var result = await _platformAuthService.GetProviderStatusAsync(userId.Value, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return await ExecuteProviderAsync(
+            () => _platformAuthService.GetProviderStatusAsync(userId.Value, cancellationToken),
+            "status de provedores");
+    }
+
+    private async Task<ActionResult<AuthProviderResponseDto>> ExecuteProviderAsync(
+        Func<Task<AuthProviderResponseDto>> action,
+        string operation)
+    {
+        try
+        {
+            var result = await action();
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro inesperado ao {Operation}.", operation);
+            return StatusCode(StatusCodes.Status500InternalServerError, new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Não foi possível concluir a operação de segurança."
+            });
+        }
     }
 
     private async Task<IActionResult> LoginForPlatformAsync(

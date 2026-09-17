@@ -96,4 +96,60 @@ public static class HomologDemoUserSeeder
 
         logger.LogInformation("Senha demo sincronizada para {Email}.", email);
     }
+
+    /// <summary>
+    /// Redefine a senha de um usuário local (Homologação/Development) via BCrypt + AppDbContext,
+    /// sem a política Identity (cadastro exige 8+ caracteres, maiúscula e especial).
+    /// </summary>
+    public static async Task ResetLocalUserPasswordAsync(
+        this WebApplication app,
+        string email,
+        string password)
+    {
+        if (!IsSeedEnvironment(app.Environment.EnvironmentName))
+        {
+            Console.WriteLine("Reset de senha permitido apenas em Homologacao/Development.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            Console.WriteLine("Informe e-mail e senha.");
+            return;
+        }
+
+        using var scope = app.Services.CreateScope();
+        var userRepository = scope.ServiceProvider.GetRequiredService<IUserAccountRepository>();
+        var tenantProvisioning = scope.ServiceProvider.GetRequiredService<ITenantProvisioningService>();
+        var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenantService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("TecFlow.HomologSeed");
+
+        currentTenant.BypassTenantFilters = true;
+        email = email.Trim();
+
+        var user = await userRepository.GetByEmailAsync(email);
+        if (user is null)
+        {
+            logger.LogInformation("Criando usuário local {Email} para reset de senha...", email);
+            user = new UserAccount
+            {
+                Name = email.Split('@')[0],
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Plan = "Pro",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var tenant = await tenantProvisioning.EnsureTenantForUserAsync(user);
+            user.TenantId = tenant.Id;
+            await userRepository.AddAsync(user);
+            Console.WriteLine($"Usuário {email} criado e senha definida.");
+            return;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+        user.UpdatedAt = DateTime.UtcNow;
+        await userRepository.UpdateAsync(user);
+        Console.WriteLine($"Senha redefinida para {email}.");
+    }
 }

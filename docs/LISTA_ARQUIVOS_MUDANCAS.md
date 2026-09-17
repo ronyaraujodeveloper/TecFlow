@@ -522,6 +522,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **AffiliateShareLinkBuilder.cs** — URIs `api.whatsapp.com/send` e `t.me/share/url` com URL encoding.
 - [x] **AffiliateShareLinkBuilderTests.cs** — encoding de espaços, `&` e query string.
 
+### Login homologação — filtro de tenant
+
+- [x] **AppDbContext.ApplyTenantQueryFilters** — lambdas de instância (`CurrentTenantId == null` visível no login).
+- [x] **TenantQueryFilterExtensions.cs** — documentação: não capturar `ICurrentTenantService` no modelo EF.
+- [x] **UserAccountRepository.GetByEmailAsync** — `IgnoreQueryFilters` na busca por e-mail.
+- [x] **TecFlow.Tests/Unit/MultiTenancy/TenantQueryFilterTests.cs** — visível sem tenant; isolado com tenant.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

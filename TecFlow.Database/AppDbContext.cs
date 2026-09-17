@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using TecFlow.Core.Abstractions;
 using TecFlow.Core.Entities;
 using TecFlow.Database.Entity;
@@ -56,7 +57,7 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         ConfigureSensitiveData(modelBuilder);
-        modelBuilder.ApplyTenantQueryFilters(_currentTenant);
+        ApplyTenantQueryFilters(modelBuilder);
 
         foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
@@ -304,6 +305,73 @@ public class AppDbContext : DbContext
     {
         ApplyTenantIdentifiers();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Valores lidos a cada query. O EF religa estes membros ao AppDbContext da requisição
+    /// (não captura o ICurrentTenantService do primeiro request que montou o modelo).
+    /// </summary>
+    internal bool TenantFilterBypass => _currentTenant.BypassTenantFilters;
+
+    internal Guid? CurrentTenantId => _currentTenant.TenantId;
+
+    internal string? CurrentShopId => _currentTenant.ShopId;
+
+    private void ApplyTenantQueryFilters(ModelBuilder modelBuilder)
+    {
+        var tenantOnly = typeof(AppDbContext).GetMethod(
+            nameof(ApplyTenantOnlyFilter),
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var tenantAndShop = typeof(AppDbContext).GetMethod(
+            nameof(ApplyTenantAndShopFilter),
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var clrType = entityType.ClrType;
+            if (clrType == typeof(Tenant) || !typeof(ITenantScopedEntity).IsAssignableFrom(clrType))
+            {
+                continue;
+            }
+
+            if (clrType == typeof(Product))
+            {
+                ApplyProductFilter(modelBuilder);
+                continue;
+            }
+
+            if (typeof(IShopScopedEntity).IsAssignableFrom(clrType))
+            {
+                tenantAndShop.MakeGenericMethod(clrType).Invoke(this, [modelBuilder]);
+                continue;
+            }
+
+            tenantOnly.MakeGenericMethod(clrType).Invoke(this, [modelBuilder]);
+        }
+    }
+
+    private void ApplyTenantOnlyFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ITenantScopedEntity
+    {
+        modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
+            TenantFilterBypass
+            || CurrentTenantId == null
+            || CurrentTenantId == e.TenantId);
+    }
+
+    private void ApplyTenantAndShopFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ITenantScopedEntity, IShopScopedEntity
+    {
+        modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
+            (TenantFilterBypass || CurrentTenantId == null || CurrentTenantId == e.TenantId)
+            && (CurrentShopId == null || e.ShopId == CurrentShopId));
+    }
+
+    private void ApplyProductFilter(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().HasQueryFilter(e =>
+            (TenantFilterBypass || CurrentTenantId == null || CurrentTenantId == e.TenantId)
+            && (CurrentShopId == null || e.MarketplaceShopId == null || e.MarketplaceShopId == CurrentShopId));
     }
 
     private void ApplyTenantIdentifiers()

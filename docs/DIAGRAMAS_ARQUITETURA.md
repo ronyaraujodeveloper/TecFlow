@@ -1117,7 +1117,7 @@ flowchart TB
 | Camada | Artefato | Função |
 |--------|----------|--------|
 | Core | `Tenant`, `MarketplaceAccount`, `ITenantScopedEntity` | Modelo SaaS e vínculo multi-loja |
-| Database | `ICurrentTenantService`, `TenantQueryFilterExtensions` | Filtros globais EF + escopo manual |
+| Database | `ICurrentTenantService`, `AppDbContext` (filtro de instância) | Isolamento por tenant/loja; login sem JWT não oculta `Usuarios` |
 | Infrastructure | `CurrentTenantService` | Extrai `tenant_id` / `shop_id` do JWT ou header |
 | Repositories | `ListConsolidated*` / `ListForShop*` | Visão agregada vs. loja única no painel |
 | Migração | `AddMultiTenantArchitecture` | Tabelas `Tenants`, `MarketplaceAccounts`, colunas `TenantId` |
@@ -1127,6 +1127,10 @@ Request autenticado
     → CurrentTenantService (TenantId + ShopId opcional)
     → AppDbContext query filter (isolamento automático)
     → Repositório: consolidado (ShopId null) OU ForShop(shopId)
+
+Request sem JWT (login e-mail/senha)
+    → filtro usa membros do AppDbContext da requisição (TenantId null = sem restrição)
+    → GetByEmail (IgnoreQueryFilters) localiza Usuarios e CheckPassword valida o hash
 ```
 
 ---

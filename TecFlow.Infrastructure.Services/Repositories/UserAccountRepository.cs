@@ -82,6 +82,7 @@ namespace TecFlow.Infrastructure.Services.Repositories
         {
             var normalized = email.Trim();
             return await _context.UserAccounts
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == normalized.ToLower());
         }
         public async Task<UserAccount> CreateAsync(UserAccount usuario)

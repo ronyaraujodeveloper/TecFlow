@@ -99,6 +99,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+if (args is { Length: >= 3 }
+    && string.Equals(args[0], "--reset-user-password", StringComparison.OrdinalIgnoreCase))
+{
+    await app.ResetLocalUserPasswordAsync(args[1], args[2]);
+    return;
+}
+
 await app.SeedHomologDemoUserAsync();
 
 try

@@ -203,30 +203,57 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     private string BuildShopeeAuthorizationUrl(string redirectUri, string state)
     {
-        EnsureShopeeCredentials();
-
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var apiPath = NormalizeShopeePath(_shopeeOptions.AuthPartnerPath);
-        var sign = _signatureService.GenerateShopeeSign(
-            _shopeeOptions.PartnerId,
-            _shopeeOptions.PartnerKey,
-            apiPath,
-            timestamp);
-
-        var redirectWithState = AppendQuery(redirectUri, new Dictionary<string, string?>
+        try
         {
-            ["state"] = state
-        });
+            var usingSandbox = !ShopeeAuthorizationUrlFactory.HasLiveCredentials(
+                _shopeeOptions.PartnerId,
+                _shopeeOptions.PartnerKey);
 
-        var query = new Dictionary<string, string?>
+            var partnerId = ShopeeAuthorizationUrlFactory.ResolvePartnerId(_shopeeOptions.PartnerId);
+            var partnerKey = ShopeeAuthorizationUrlFactory.ResolvePartnerKey(_shopeeOptions.PartnerKey);
+
+            if (usingSandbox)
+            {
+                _logger.LogWarning(
+                    "Integrations:Shopee PartnerId/PartnerKey vazios. Gerando URL sandbox {AuthUrl}.",
+                    ShopeeAuthorizationUrlFactory.AuthPartnerAbsoluteUrl);
+            }
+
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var apiPath = NormalizeShopeePath(
+                string.IsNullOrWhiteSpace(_shopeeOptions.AuthPartnerPath)
+                    ? "shop/auth_partner"
+                    : _shopeeOptions.AuthPartnerPath);
+            var sign = _signatureService.GenerateShopeeSign(
+                partnerId,
+                partnerKey,
+                apiPath,
+                timestamp);
+
+            var redirectWithState = AppendQuery(redirectUri, new Dictionary<string, string?>
+            {
+                ["state"] = state
+            });
+
+            var query = new Dictionary<string, string?>
+            {
+                ["partner_id"] = partnerId,
+                ["timestamp"] = timestamp.ToString(),
+                ["sign"] = sign,
+                ["redirect"] = redirectWithState
+            };
+
+            var authUrl = ShopeeAuthorizationUrlFactory.ResolveAuthPartnerUrl(
+                _shopeeOptions.ApiBaseUrl,
+                _shopeeOptions.AuthPartnerPath);
+
+            return AppendQuery(authUrl, query);
+        }
+        catch (Exception ex)
         {
-            ["partner_id"] = _shopeeOptions.PartnerId,
-            ["timestamp"] = timestamp.ToString(),
-            ["sign"] = sign,
-            ["redirect"] = redirectWithState
-        };
-
-        return AppendQuery($"{_shopeeOptions.ApiBaseUrl.TrimEnd('/')}/{_shopeeOptions.AuthPartnerPath.TrimStart('/')}", query);
+            _logger.LogError(ex, "Falha ao assinar URL OAuth Shopee. Usando fallback sandbox.");
+            return ShopeeAuthorizationUrlFactory.BuildSandboxFallback(redirectUri, state);
+        }
     }
 
     private async Task<OAuthTokenPayload> ExchangeTikTokCodeAsync(string code, CancellationToken cancellationToken)

@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
+using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.API.Controllers;
@@ -11,10 +13,14 @@ namespace TecFlow.API.Controllers;
 public class MarketplaceAuthController : ControllerBase
 {
     private readonly IMarketplaceAuthService _marketplaceAuthService;
+    private readonly ILogger<MarketplaceAuthController> _logger;
 
-    public MarketplaceAuthController(IMarketplaceAuthService marketplaceAuthService)
+    public MarketplaceAuthController(
+        IMarketplaceAuthService marketplaceAuthService,
+        ILogger<MarketplaceAuthController> logger)
     {
         _marketplaceAuthService = marketplaceAuthService;
+        _logger = logger;
     }
 
     /// <summary>Gera URL oficial de autorização OAuth para TikTok Shop ou Shopee.</summary>
@@ -25,8 +31,12 @@ public class MarketplaceAuthController : ControllerBase
         [FromQuery] string redirectUri,
         [FromQuery] string? state = null)
     {
-        var url = _marketplaceAuthService.GenerateAuthorizationUrl(type, redirectUri, state);
-        return Ok(ToAuthorizeDto(type, url));
+        if (string.IsNullOrWhiteSpace(redirectUri))
+        {
+            return BadRequest(new { error = "redirectUri é obrigatório." });
+        }
+
+        return GenerateAuthorizeResult(type, redirectUri, state);
     }
 
     /// <summary>Gera URL OAuth por slug da plataforma (shopee / tiktok).</summary>
@@ -50,8 +60,38 @@ public class MarketplaceAuthController : ControllerBase
         }
 
         var stateValue = string.IsNullOrWhiteSpace(state) ? friendlyName ?? lojaId : state;
-        var url = _marketplaceAuthService.GenerateAuthorizationUrl(type, redirectUri, stateValue);
-        return Ok(ToAuthorizeDto(type, url));
+        return GenerateAuthorizeResult(type, redirectUri, stateValue);
+    }
+
+    private ActionResult<MarketplaceAuthorizeUrlResponseDto> GenerateAuthorizeResult(
+        MarketplaceType type,
+        string redirectUri,
+        string? state)
+    {
+        try
+        {
+            var url = _marketplaceAuthService.GenerateAuthorizationUrl(type, redirectUri, state);
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new InvalidOperationException("URL de autorização vazia.");
+            }
+
+            return Ok(ToAuthorizeDto(type, url));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao gerar URL OAuth para {Marketplace}.", type);
+
+            if (type == MarketplaceType.Shopee)
+            {
+                var fallback = ShopeeAuthorizationUrlFactory.BuildSandboxFallback(redirectUri, state);
+                return Ok(ToAuthorizeDto(type, fallback));
+            }
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { error = "Não foi possível gerar a URL de autorização." });
+        }
     }
 
     private static MarketplaceAuthorizeUrlResponseDto ToAuthorizeDto(MarketplaceType type, string url) =>

@@ -536,6 +536,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **MarketplaceOAuthConnectService.cs** — ticket pendente + GET `api/marketplace-auth/{plataforma}/authorize-url`.
 - [x] **MarketplaceAuthController** — rota `{plataforma}/authorize-url` e DTO `authorizeUrl`.
 - [x] **TecFlow.Tests/Unit/SharedUi/MarketplaceOAuthConnectServiceTests.cs** — path, DTO e erro da API.
+- [x] **ShopeeAuthorizationUrlFactory.cs** — PartnerId/PartnerKey sandbox quando vazios (sem HTTP 500).
+- [x] **MarketplaceAuthController** — try/catch em authorize-url; Shopee devolve 200 com URL sandbox.
+- [x] **appsettings.json / appsettings.Homologacao.json** — `Integrations:Shopee` com PartnerId/PartnerKey padrão de homologação.
 
 ---
 

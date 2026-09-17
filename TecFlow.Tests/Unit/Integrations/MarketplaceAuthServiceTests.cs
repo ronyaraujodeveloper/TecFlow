@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Integrations.Auth;
+using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
@@ -68,6 +70,40 @@ public class MarketplaceAuthServiceTests
         Assert.Contains($"partner_id={MarketplaceTestOptionsFactory.ShopeePartnerId}", url);
         Assert.Contains("sign=", url);
         Assert.Contains("state-shopee", url);
+    }
+
+    [Fact]
+    public void GenerateAuthorizationUrl_ShouldReturnSandboxShopeeUrl_WhenPartnerCredentialsAreEmpty()
+    {
+        var service = new MarketplaceAuthService(
+            _tokenRepository.Object,
+            _accountRepository.Object,
+            _currentTenant.Object,
+            _signatureService,
+            _httpClientFactory.Object,
+            MarketplaceTestOptionsFactory.TikTokOptions(),
+            Options.Create(new ShopeeIntegrationOptions
+            {
+                PartnerId = string.Empty,
+                PartnerKey = string.Empty,
+                ApiBaseUrl = string.Empty,
+                AuthPartnerPath = string.Empty
+            }),
+            NullLogger<MarketplaceAuthService>.Instance);
+
+        var url = service.GenerateAuthorizationUrl(
+            MarketplaceType.Shopee,
+            "https://localhost:7002/integracoes/oauth/callback",
+            "ticket-homolog");
+
+        Assert.Contains(
+            ShopeeAuthorizationUrlFactory.AuthPartnerAbsoluteUrl,
+            url,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"partner_id={ShopeeAuthorizationUrlFactory.SandboxPartnerId}", url);
+        Assert.Contains("sign=", url);
+        Assert.Contains("shop/auth_partner", url, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ticket-homolog", url);
     }
 
     [Fact]

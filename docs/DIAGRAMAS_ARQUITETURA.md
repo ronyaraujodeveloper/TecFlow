@@ -76,8 +76,8 @@ sequenceDiagram
   participant DB as MarketplaceTokens
 
   Lojista->>API: GET /api/marketplace-auth/{shopee|tiktok}/authorize-url
-  API->>Auth: GenerateAuthorizationUrl + HMAC sign (Shopee)
-  Auth-->>Lojista: authorizeUrl
+  API->>Auth: GenerateAuthorizationUrl (sandbox se PartnerId vazio)
+  Auth-->>Lojista: authorizeUrl (200; Shopee nunca 500 por chave vazia)
   Lojista->>MP: NavigationManager.NavigateTo(authorizeUrl, forceLoad)
   MP-->>API: GET /callback?code=&shopId=
   API->>Auth: CallbackAndGenerateTokensAsync

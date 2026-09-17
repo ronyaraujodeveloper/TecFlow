@@ -75,10 +75,10 @@ sequenceDiagram
   participant MP as TikTok/Shopee OAuth
   participant DB as MarketplaceTokens
 
-  Lojista->>API: GET /api/marketplace-auth/authorize-url
+  Lojista->>API: GET /api/marketplace-auth/{shopee|tiktok}/authorize-url
   API->>Auth: GenerateAuthorizationUrl + HMAC sign (Shopee)
-  Auth-->>Lojista: authorizationUrl
-  Lojista->>MP: Autoriza app TecFlow
+  Auth-->>Lojista: authorizeUrl
+  Lojista->>MP: NavigationManager.NavigateTo(authorizeUrl, forceLoad)
   MP-->>API: GET /callback?code=&shopId=
   API->>Auth: CallbackAndGenerateTokensAsync
   Auth->>MP: POST token/get (assinado)

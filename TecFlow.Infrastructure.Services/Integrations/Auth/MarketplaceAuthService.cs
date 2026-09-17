@@ -60,7 +60,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         return type switch
         {
             MarketplaceType.TikTokShop => BuildTikTokAuthorizationUrl(redirectUri, stateValue),
-            MarketplaceType.Shopee => BuildShopeeAuthorizationUrl(redirectUri),
+            MarketplaceType.Shopee => BuildShopeeAuthorizationUrl(redirectUri, stateValue),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Marketplace não suportado.")
         };
     }
@@ -201,7 +201,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         return AppendQuery(_tikTokOptions.AuthorizeUrl, query);
     }
 
-    private string BuildShopeeAuthorizationUrl(string redirectUri)
+    private string BuildShopeeAuthorizationUrl(string redirectUri, string state)
     {
         EnsureShopeeCredentials();
 
@@ -213,12 +213,17 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             apiPath,
             timestamp);
 
+        var redirectWithState = AppendQuery(redirectUri, new Dictionary<string, string?>
+        {
+            ["state"] = state
+        });
+
         var query = new Dictionary<string, string?>
         {
             ["partner_id"] = _shopeeOptions.PartnerId,
             ["timestamp"] = timestamp.ToString(),
             ["sign"] = sign,
-            ["redirect"] = redirectUri
+            ["redirect"] = redirectWithState
         };
 
         return AppendQuery($"{_shopeeOptions.ApiBaseUrl.TrimEnd('/')}/{_shopeeOptions.AuthPartnerPath.TrimStart('/')}", query);

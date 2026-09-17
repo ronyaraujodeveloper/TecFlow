@@ -61,11 +61,13 @@ public class MarketplaceAuthServiceTests
         // Act
         var url = service.GenerateAuthorizationUrl(
             MarketplaceType.Shopee,
-            "https://app.tecflow.test/callback");
+            "https://app.tecflow.test/callback",
+            "state-shopee");
 
         // Assert
         Assert.Contains($"partner_id={MarketplaceTestOptionsFactory.ShopeePartnerId}", url);
         Assert.Contains("sign=", url);
+        Assert.Contains("state-shopee", url);
     }
 
     [Fact]

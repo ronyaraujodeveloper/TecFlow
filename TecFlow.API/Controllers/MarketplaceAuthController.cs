@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
 
@@ -19,14 +20,47 @@ public class MarketplaceAuthController : ControllerBase
     /// <summary>Gera URL oficial de autorização OAuth para TikTok Shop ou Shopee.</summary>
     [HttpGet("authorize-url")]
     [AllowAnonymous]
-    public ActionResult<object> GetAuthorizationUrl(
+    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetAuthorizationUrl(
         [FromQuery] MarketplaceType type,
         [FromQuery] string redirectUri,
         [FromQuery] string? state = null)
     {
         var url = _marketplaceAuthService.GenerateAuthorizationUrl(type, redirectUri, state);
-        return Ok(new { authorizationUrl = url, marketplace = type.ToString() });
+        return Ok(ToAuthorizeDto(type, url));
     }
+
+    /// <summary>Gera URL OAuth por slug da plataforma (shopee / tiktok).</summary>
+    [HttpGet("{plataforma}/authorize-url")]
+    [AllowAnonymous]
+    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetPlatformAuthorizationUrl(
+        string plataforma,
+        [FromQuery] string? redirectUri,
+        [FromQuery] string? state = null,
+        [FromQuery] string? friendlyName = null,
+        [FromQuery] string? lojaId = null)
+    {
+        if (!MarketplacePlatformRoute.TryParse(plataforma, out var type))
+        {
+            return BadRequest(new { error = "Plataforma inválida. Use shopee ou tiktok." });
+        }
+
+        if (string.IsNullOrWhiteSpace(redirectUri))
+        {
+            return BadRequest(new { error = "redirectUri é obrigatório." });
+        }
+
+        var stateValue = string.IsNullOrWhiteSpace(state) ? friendlyName ?? lojaId : state;
+        var url = _marketplaceAuthService.GenerateAuthorizationUrl(type, redirectUri, stateValue);
+        return Ok(ToAuthorizeDto(type, url));
+    }
+
+    private static MarketplaceAuthorizeUrlResponseDto ToAuthorizeDto(MarketplaceType type, string url) =>
+        new()
+        {
+            AuthorizeUrl = url,
+            AuthorizationUrl = url,
+            Marketplace = type.ToString()
+        };
 
     /// <summary>Callback OAuth: troca o authorization code por tokens e persiste no banco.</summary>
     [HttpGet("callback")]

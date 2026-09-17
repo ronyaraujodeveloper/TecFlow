@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Moq;
 using TecFlow.API.Controllers;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
 
@@ -29,7 +30,44 @@ public class MarketplaceAuthControllerTests
 
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.NotNull(ok.Value);
+        var dto = Assert.IsType<MarketplaceAuthorizeUrlResponseDto>(ok.Value);
+        Assert.Equal("https://auth.tiktok.test/authorize?app_key=1", dto.AuthorizeUrl);
+        Assert.Equal(dto.AuthorizeUrl, dto.AuthorizationUrl);
+    }
+
+    [Fact]
+    public void GetPlatformAuthorizationUrl_ShouldReturnAuthorizeUrl_ForShopeeSlug()
+    {
+        var auth = new Mock<IMarketplaceAuthService>();
+        auth.Setup(s => s.GenerateAuthorizationUrl(
+                MarketplaceType.Shopee,
+                "https://callback",
+                "ticket-1"))
+            .Returns("https://partner.shopee.test/auth?partner_id=1");
+
+        var controller = new MarketplaceAuthController(auth.Object);
+
+        var result = controller.GetPlatformAuthorizationUrl(
+            "shopee",
+            "https://callback",
+            "ticket-1",
+            "Loja SP",
+            null);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<MarketplaceAuthorizeUrlResponseDto>(ok.Value);
+        Assert.Equal("https://partner.shopee.test/auth?partner_id=1", dto.AuthorizeUrl);
+        Assert.Equal("Shopee", dto.Marketplace);
+    }
+
+    [Fact]
+    public void GetPlatformAuthorizationUrl_ShouldReturnBadRequest_WhenPlatformIsUnknown()
+    {
+        var controller = new MarketplaceAuthController(new Mock<IMarketplaceAuthService>().Object);
+
+        var result = controller.GetPlatformAuthorizationUrl("amazon", "https://callback");
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]

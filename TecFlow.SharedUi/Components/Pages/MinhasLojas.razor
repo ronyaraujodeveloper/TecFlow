@@ -6,6 +6,7 @@
 @using TecFlow.Core.Enums
 @using TecFlow.Database.Entity
 @inject IIntegracaoLojaApiService IntegracaoApi
+@inject IMarketplaceOAuthConnectService OAuthConnect
 @inject NavigationManager Navigation
 @inject ILogger<MinhasLojas> Logger
 
@@ -185,13 +186,36 @@
         _connectModalError = null;
     }
 
-    private Task StartOAuthAsync((MarketplaceType Platform, string FriendlyName) payload)
+    private async Task StartOAuthAsync((MarketplaceType Platform, string FriendlyName) payload)
     {
-        var url =
-            $"/integracoes/oauth/start?platform={(int)payload.Platform}&friendlyName={Uri.EscapeDataString(payload.FriendlyName)}";
+        _isBusy = true;
+        _connectModalError = null;
+        ClearPageMessage();
 
-        Navigation.NavigateTo(url, forceLoad: true);
-        return Task.CompletedTask;
+        try
+        {
+            var callbackUri = Navigation.ToAbsoluteUri("integracoes/oauth/callback").ToString();
+            var result = await OAuthConnect.StartAsync(payload.Platform, payload.FriendlyName, callbackUri);
+
+            if (!result.Success || string.IsNullOrWhiteSpace(result.AuthorizeUrl))
+            {
+                _connectModalError = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "Não foi possível gerar a URL de autorização."
+                    : result.ErrorMessage;
+                return;
+            }
+
+            Navigation.NavigateTo(result.AuthorizeUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao iniciar OAuth da plataforma {Platform}.", payload.Platform);
+            _connectModalError = "Erro inesperado ao iniciar a autorização OAuth.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private async Task ManualLinkAsync((MarketplaceType Platform, string FriendlyName, string AuthorizationCode, string ShopId) payload)

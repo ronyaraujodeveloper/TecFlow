@@ -529,6 +529,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **UserAccountRepository.GetByEmailAsync** — `IgnoreQueryFilters` na busca por e-mail.
 - [x] **TecFlow.Tests/Unit/MultiTenancy/TenantQueryFilterTests.cs** — visível sem tenant; isolado com tenant.
 
+### OAuth Minhas Lojas / Integrações
+
+- [x] **ConnectStoreModal.razor** — botão `Conectar via OAuth` dispara `OnStartOAuth`.
+- [x] **MinhasLojas.razor** — `IMarketplaceOAuthConnectService` + `NavigationManager.NavigateTo(authorizeUrl, forceLoad: true)`.
+- [x] **MarketplaceOAuthConnectService.cs** — ticket pendente + GET `api/marketplace-auth/{plataforma}/authorize-url`.
+- [x] **MarketplaceAuthController** — rota `{plataforma}/authorize-url` e DTO `authorizeUrl`.
+- [x] **TecFlow.Tests/Unit/SharedUi/MarketplaceOAuthConnectServiceTests.cs** — path, DTO e erro da API.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

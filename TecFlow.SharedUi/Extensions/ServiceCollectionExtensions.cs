@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
+        services.AddScoped<IMarketplaceOAuthConnectService, MarketplaceOAuthConnectService>();
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();

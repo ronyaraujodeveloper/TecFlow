@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Filter;
 using TecFlow.SharedUi.Extensions;
@@ -27,6 +28,8 @@ public interface IIntegracaoLojaApiService
         MarketplaceType platformType,
         string redirectUri,
         string? state = null,
+        string? friendlyName = null,
+        string? lojaId = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -81,37 +84,76 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
         MarketplaceType platformType,
         string redirectUri,
         string? state = null,
+        string? friendlyName = null,
+        string? lojaId = null,
         CancellationToken cancellationToken = default)
     {
+        using var _ = _loadingService.BeginScope("Gerando URL de autorização...");
         try
         {
             var client = _httpClientFactory.CreateClient("Orquestrador");
-            var url =
-                $"api/marketplace-auth/authorize-url?type={(int)platformType}&redirectUri={Uri.EscapeDataString(redirectUri)}";
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                BuildAuthorizeRelativeUrl(platformType, redirectUri, state, friendlyName, lojaId));
 
-            if (!string.IsNullOrWhiteSpace(state))
+            var accessToken = _accessTokenProvider.GetAccessToken();
+            if (!string.IsNullOrEmpty(accessToken))
             {
-                url += $"&state={Uri.EscapeDataString(state)}";
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
             }
 
-            using var response = await client.GetAsync(url, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                return (false, null, $"Erro ao gerar URL OAuth ({(int)response.StatusCode}).");
+                return (false, null, $"Não foi possível gerar a URL de autorização ({(int)response.StatusCode}).");
             }
 
-            var payload = TryDeserialize<AuthorizationUrlResponse>(content);
-            return payload?.AuthorizationUrl is { Length: > 0 } authUrl
-                ? (true, authUrl, null)
-                : (false, null, "Resposta OAuth inválida.");
+            var payload = TryDeserialize<MarketplaceAuthorizeUrlResponseDto>(content);
+            var authorizeUrl = FirstNonEmpty(payload?.AuthorizeUrl, payload?.AuthorizationUrl);
+            return string.IsNullOrWhiteSpace(authorizeUrl)
+                ? (false, null, "A API não retornou a URL de autorização.")
+                : (true, authorizeUrl, null);
         }
         catch (Exception)
         {
             return (false, null, "Não foi possível contactar a API para iniciar OAuth.");
         }
     }
+
+    public static string BuildAuthorizeRelativeUrl(
+        MarketplaceType platformType,
+        string redirectUri,
+        string? state = null,
+        string? friendlyName = null,
+        string? lojaId = null)
+    {
+        var slug = MarketplacePlatformRoute.ToSlug(platformType);
+        var url =
+            $"api/marketplace-auth/{slug}/authorize-url?redirectUri={Uri.EscapeDataString(redirectUri)}";
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            url += $"&state={Uri.EscapeDataString(state)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(friendlyName))
+        {
+            url += $"&friendlyName={Uri.EscapeDataString(friendlyName)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(lojaId))
+        {
+            url += $"&lojaId={Uri.EscapeDataString(lojaId)}";
+        }
+
+        return url;
+    }
+
+    private static string? FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
     private async Task<IntegracaoLojaResponseDto> SendEnvelopeAsync(
         HttpMethod method,
@@ -181,8 +223,4 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
         }
     }
 
-    private sealed class AuthorizationUrlResponse
-    {
-        public string AuthorizationUrl { get; set; } = string.Empty;
-    }
 }

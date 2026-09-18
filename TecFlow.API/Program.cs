@@ -53,14 +53,16 @@ var jwtSection = builder.Configuration.GetSection("Jwt");
 
 if (jwtSection.Exists())
 {
-    var jwtSecret = jwtSection["Key"];
+    var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"];
     if (string.IsNullOrEmpty(jwtSecret))
     {
         throw new InvalidOperationException("JWT Secret is missing in configuration.");
     }
 
     var jwtIssuer = jwtSection["Issuer"];
-    var jwtAudience = jwtSection["Audience"];
+    var jwtAudience = string.IsNullOrWhiteSpace(jwtSection["Audience"])
+        ? "TecFlowClient"
+        : jwtSection["Audience"];
 
     builder.Services.AddAuthentication(options =>
     {
@@ -72,9 +74,13 @@ if (jwtSection.Exists())
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = !string.IsNullOrEmpty(jwtIssuer),
-            ValidateAudience = !string.IsNullOrEmpty(jwtAudience),
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidAudiences = new[] { jwtAudience, "TecFlowClient" },
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew = TimeSpan.FromMinutes(2)
         };
     });
 }

@@ -1090,6 +1090,7 @@ sequenceDiagram
 flowchart TB
   subgraph JWT["Contexto HTTP / JWT"]
     Claims["Claims: tenant_id, shop_id (opcional)"]
+    Aud["aud = TecFlowClient / iss = TecFlowAPI"]
     Header["Header: X-TecFlow-Shop-Id (painel)"]
   end
 

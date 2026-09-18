@@ -19,7 +19,7 @@ namespace TecFlow.Infrastructure.Security
 
         public string GenerateToken(UserAccount usuario)
         {
-            string? JwtKey = _configuration["Jwt:Key"];
+            string? JwtKey = _configuration["Jwt:Key"] ?? _configuration["Jwt:Secret"];
             var key = Encoding.UTF8.GetBytes(JwtKey ?? string.Empty);
 
             var claims = new List<Claim>
@@ -31,8 +31,8 @@ namespace TecFlow.Infrastructure.Security
             };
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _configuration["Jwt:Issuer"] ?? "TecFlowAPI",
+                audience: _configuration["Jwt:Audience"] ?? "TecFlowClient",
                 claims: claims.AsEnumerable(),
                 expires: DateTime.UtcNow.AddHours(8),
                 signingCredentials: new SigningCredentials(

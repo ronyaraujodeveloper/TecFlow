@@ -153,7 +153,7 @@ if (jwtSection.Exists())
 
 {
 
-    var jwtSecret = jwtSection["Key"];
+    var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"];
 
     if (string.IsNullOrEmpty(jwtSecret))
 
@@ -167,7 +167,11 @@ if (jwtSection.Exists())
 
     var jwtIssuer = jwtSection["Issuer"];
 
-    var jwtAudience = jwtSection["Audience"];
+    var jwtAudience = string.IsNullOrWhiteSpace(jwtSection["Audience"])
+
+        ? "TecFlowClient"
+
+        : jwtSection["Audience"];
 
 
 
@@ -191,11 +195,19 @@ if (jwtSection.Exists())
 
             ValidateIssuer = !string.IsNullOrEmpty(jwtIssuer),
 
-            ValidateAudience = !string.IsNullOrEmpty(jwtAudience),
+            ValidIssuer = jwtIssuer,
+
+            ValidateAudience = true,
+
+            ValidAudience = jwtAudience,
+
+            ValidAudiences = new[] { jwtAudience, "TecFlowClient" },
 
             ValidateIssuerSigningKey = true,
 
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+
+            ClockSkew = TimeSpan.FromMinutes(2)
 
         };
 

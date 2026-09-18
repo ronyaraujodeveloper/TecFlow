@@ -783,8 +783,18 @@ html, body {
     border-radius: 1rem;
 }
 
+.marketplace-connect-modal {
+    z-index: 1055;
+    pointer-events: auto;
+}
+
+.marketplace-connect-modal + .modal-backdrop {
+    z-index: 1050;
+}
+
 .marketplace-connect-modal .modal-footer .btn {
     min-height: var(--touch-target-min);
+    pointer-events: auto;
 }
 
 .active-store-scope {

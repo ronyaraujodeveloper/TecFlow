@@ -36,5 +36,14 @@
 
         element.scrollIntoView({ behavior: "smooth", block: "nearest" });
         return true;
+    },
+
+    getInputValueById: function (elementId) {
+        const element = document.getElementById(elementId);
+        if (!element || typeof element.value !== "string") {
+            return "";
+        }
+
+        return element.value;
     }
 };

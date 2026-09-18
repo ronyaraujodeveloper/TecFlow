@@ -540,7 +540,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **MarketplaceAuthController** — try/catch em authorize-url; Shopee devolve 200 com URL sandbox.
 - [x] **appsettings.json / appsettings.Homologacao.json** — `Integrations:Shopee` com PartnerId/PartnerKey padrão de homologação.
 - [x] **HomologMarketplaceAuth.cs** — `code_teste` e tokens stub sem chamada à Shopee.
-- [x] **ConnectStoreModal.razor** — `VincularManualmenteAsync` com try/catch e EventCallback de DTO (sem tupla); Shop ID `long.TryParse` com fallback 123456 em homolog.
+- [x] **ConnectStoreModal.razor** — botão `type="button"` `@onclick="VincularManualmenteDirect"` chama a API direto; Shop ID/`code_teste` com fallback.
 - [x] **IntegracaoLojaService / MarketplaceAuthService** — `code_teste` persiste tokens de homologação sem chamar a Shopee.
 - [x] **IntegracaoLojaApiService** — log do payload bruto se o envelope não deserializar; trata ProblemDetails.
 - [x] **TecFlow.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** — vínculo manual simulado.

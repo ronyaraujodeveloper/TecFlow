@@ -1,7 +1,7 @@
 ﻿@page "/minhas-lojas"
 @page "/account/integrations"
 @attribute [Authorize]
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @using TecFlow.Business.Dto
 @using TecFlow.Core.Enums
 @inject IIntegracaoLojaApiService IntegracaoApi
@@ -85,7 +85,7 @@
                    ErrorMessage="@_connectModalError"
                    OnClose="CloseConnectModal"
                    OnStartOAuth="StartOAuthAsync"
-                   OnManualLink="ManualLinkAsync" />
+                   OnLinked="VincularManualmenteDirect" />
 
 @code {
     private readonly List<MarketplaceAccountDto> _stores = [];
@@ -217,40 +217,13 @@
         }
     }
 
-    private async Task ManualLinkAsync(IntegracaoLojaDto payload)
+    private async Task VincularManualmenteDirect()
     {
-        _isBusy = true;
+        _connectModalVisible = false;
         _connectModalError = null;
-        ClearPageMessage();
-
-        try
-        {
-            var response = await IntegracaoApi.LinkAsync(payload);
-
-            if (response.Status)
-            {
-                _connectModalVisible = false;
-                _pageMessage = "Loja vinculada com sucesso.";
-                _pageMessageIsError = false;
-                await LoadStoresAsync();
-            }
-            else
-            {
-                _connectModalError = string.IsNullOrWhiteSpace(response.Descricao)
-                    ? "Não foi possível vincular a loja."
-                    : response.Descricao;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
-            Logger.LogError(ex, "Erro ao vincular loja manualmente.");
-            _connectModalError = "Erro inesperado ao vincular loja.";
-        }
-        finally
-        {
-            _isBusy = false;
-        }
+        _pageMessage = "Loja vinculada com sucesso.";
+        _pageMessageIsError = false;
+        await LoadStoresAsync();
     }
 
     private async Task UnlinkStoreAsync(int integrationId)

@@ -1138,6 +1138,18 @@ Request sem JWT (login e-mail/senha)
     → GetByEmail (IgnoreQueryFilters) localiza Usuarios e CheckPassword valida o hash
 ```
 
+```mermaid
+sequenceDiagram
+  participant UI as ConnectStoreModal (InteractiveServer)
+  participant API as IntegracoesController
+  participant SVC as IntegracaoLojaService
+  UI->>UI: VincularManualmenteDirect (type=button)
+  UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
+  UI->>API: POST vínculo (HttpService)
+  API->>SVC: LinkAsync
+  SVC-->>UI: MarketplaceAccountResponseDto
+```
+
 ---
 
 **FIM DOS DIAGRAMAS**

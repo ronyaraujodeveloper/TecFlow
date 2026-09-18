@@ -1,7 +1,10 @@
-﻿@using TecFlow.Business.Dto
+﻿@using System.Globalization
+@using TecFlow.Business.Dto
 @using TecFlow.Core.Enums
-@using Microsoft.Extensions.Hosting
-@inject IHostEnvironment HostEnvironment
+@using TecFlow.SharedUi.Services.Integrations
+@inject IIntegracaoLojaApiService IntegracaoApi
+@inject IJSRuntime JS
+@inject ILogger<ConnectStoreModal> Logger
 
 @if (Visible)
 {
@@ -13,7 +16,7 @@
                         <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
                         <p class="text-muted small mb-0">Escolha a plataforma, defina um apelido e inicie o OAuth.</p>
                     </div>
-                    <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@IsBusy" @onclick="Close"></button>
+                    <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
                 </div>
 
                 <div class="modal-body pt-3">
@@ -27,13 +30,13 @@
                         <div class="marketplace-platform-picker d-grid gap-2">
                             <button type="button"
                                     class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
-                                    disabled="@IsBusy"
+                                    disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.TikTokShop)">
                                 <span class="marketplace-platform-badge marketplace-platform-badge--tiktok">TikTok Shop</span>
                             </button>
                             <button type="button"
                                     class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Shopee)"
-                                    disabled="@IsBusy"
+                                    disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.Shopee)">
                                 <span class="marketplace-platform-badge marketplace-platform-badge--shopee">Shopee</span>
                             </button>
@@ -43,11 +46,13 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="friendly-name">Apelido / nome amigável</label>
                         <input id="friendly-name"
+                               type="text"
                                class="form-control"
                                maxlength="256"
                                placeholder="Ex.: Loja principal SP"
                                @bind="_friendlyName"
-                               disabled="@IsBusy" />
+                               @bind:event="oninput"
+                               disabled="@_linking" />
                     </div>
 
                     <details class="marketplace-manual-link small" open>
@@ -63,7 +68,7 @@
                                        autocomplete="off"
                                        @bind="_authorizationCode"
                                        @bind:event="oninput"
-                                       disabled="@IsBusy" />
+                                       disabled="@_linking" />
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="shop-id">Shop ID</label>
@@ -76,31 +81,29 @@
                                        autocomplete="off"
                                        @bind="_shopId"
                                        @bind:event="oninput"
-                                       disabled="@IsBusy" />
+                                       disabled="@_linking" />
                             </div>
                         </div>
                     </details>
                 </div>
 
                 <div class="modal-footer border-0 flex-column flex-sm-row gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="Close">
+                    <button type="button" class="btn btn-outline-secondary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="Close">
                         Cancelar
                     </button>
                     <button type="button"
                             class="btn btn-outline-primary btn-touch w-100 w-sm-auto"
-                            disabled="@IsBusy"
-                            @onclick="VincularManualmenteAsync"
-                            @onclick:preventDefault="true">
-                        @(IsBusy ? "Vinculando..." : "Vincular manualmente")
+                            @onclick="VincularManualmenteDirect">
+                        @(_linking ? "Vinculando..." : "Vincular manualmente")
                     </button>
-                    <button type="button" class="btn btn-primary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="StartOAuthAsync">
-                        @(IsBusy ? "Redirecionando..." : "Conectar via OAuth")
+                    <button type="button" class="btn btn-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
+                        @(_linking ? "Redirecionando..." : "Conectar via OAuth")
                     </button>
                 </div>
             </div>
         </div>
     </div>
-    <div class="modal-backdrop fade show" @onclick="Close"></div>
+    <div class="modal-backdrop fade show"></div>
 }
 
 @code {
@@ -109,18 +112,16 @@
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
-    [Parameter] public EventCallback<IntegracaoLojaDto> OnManualLink { get; set; }
+    [Parameter] public EventCallback OnLinked { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
     private string _friendlyName = string.Empty;
     private string _authorizationCode = string.Empty;
     private string _shopId = string.Empty;
     private string? _formError;
+    private bool _linking;
 
     private string? DisplayError => ErrorMessage ?? _formError;
-
-    private bool UseHomologFallbacks =>
-        HostEnvironment.IsDevelopment() || HostEnvironment.IsEnvironment("Homologacao");
 
     protected override void OnParametersSet()
     {
@@ -141,7 +142,7 @@
 
     private async Task Close()
     {
-        if (IsBusy)
+        if (_linking)
         {
             return;
         }
@@ -151,57 +152,98 @@
 
     private async Task StartOAuthAsync()
     {
-        if (!ValidateFriendlyName())
+        var friendlyName = await ReadInputAsync("friendly-name", _friendlyName);
+        if (string.IsNullOrWhiteSpace(friendlyName))
         {
+            _formError = "Informe um apelido para identificar a loja.";
             return;
         }
 
-        await OnStartOAuth.InvokeAsync((_platform, _friendlyName.Trim()));
+        await OnStartOAuth.InvokeAsync((_platform, friendlyName.Trim()));
     }
 
-    private async Task VincularManualmenteAsync()
+    private async Task VincularManualmenteDirect()
     {
         try
         {
-            if (!ConnectStoreManualLinkForm.TryValidate(
-                    _platform,
-                    _friendlyName,
-                    _authorizationCode,
-                    _shopId,
-                    out var authorizationCode,
-                    out var shopIdRaw,
-                    out var error,
-                    UseHomologFallbacks))
+            var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
+            var authorizationCode = (await ReadInputAsync("auth-code", _authorizationCode)).Trim();
+            var shopIdInput = (await ReadInputAsync("shop-id", _shopId)).Trim();
+
+            if (string.IsNullOrWhiteSpace(friendlyName))
             {
-                _formError = error;
+                friendlyName = "Loja Homolog";
+            }
+
+            if (string.IsNullOrWhiteSpace(authorizationCode))
+            {
+                authorizationCode = ConnectStoreManualLinkForm.HomologDefaultAuthorizationCode;
+            }
+
+            if (!long.TryParse(
+                    shopIdInput,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var shopIdParsed)
+                || shopIdParsed <= 0)
+            {
+                shopIdParsed = ConnectStoreManualLinkForm.HomologDefaultShopId;
+            }
+
+            _friendlyName = friendlyName;
+            _authorizationCode = authorizationCode;
+            _shopId = shopIdParsed.ToString(CultureInfo.InvariantCulture);
+            _formError = null;
+            _linking = true;
+
+            Console.WriteLine("[DEBUG BLAZOR] Clique detectado, enviando requisição...");
+
+            var response = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
+            {
+                PlatformType = _platform,
+                FriendlyName = _friendlyName,
+                AuthorizationCode = _authorizationCode,
+                ShopId = _shopId
+            });
+
+            if (response.Status)
+            {
+                await OnLinked.InvokeAsync();
                 return;
             }
 
-            _formError = null;
-            await OnManualLink.InvokeAsync(new IntegracaoLojaDto
-            {
-                PlatformType = _platform,
-                FriendlyName = _friendlyName.Trim(),
-                AuthorizationCode = authorizationCode,
-                ShopId = shopIdRaw
-            });
+            _formError = string.IsNullOrWhiteSpace(response.Descricao)
+                ? "Não foi possível vincular a loja."
+                : response.Descricao;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
-            _formError = "Erro inesperado ao vincular loja. Veja o console do servidor.";
+            Logger.LogError(ex, "Erro ao vincular loja manualmente.");
+            _formError = "Erro inesperado ao vincular loja.";
+        }
+        finally
+        {
+            _linking = false;
         }
     }
 
-    private bool ValidateFriendlyName()
+    private async Task<string> ReadInputAsync(string elementId, string boundValue)
     {
-        if (!string.IsNullOrWhiteSpace(_friendlyName))
+        try
         {
-            return true;
+            var raw = await JS.InvokeAsync<string>("tecFlowAppInterop.getInputValueById", elementId);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                return raw;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
         }
 
-        _formError = "Informe um apelido para identificar a loja.";
-        return false;
+        return boundValue ?? string.Empty;
     }
 
     private void ResetForm()
@@ -211,5 +253,6 @@
         _authorizationCode = string.Empty;
         _shopId = string.Empty;
         _formError = null;
+        _linking = false;
     }
 }

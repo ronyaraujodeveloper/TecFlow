@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using TecFlow.Business.Dto;
 
 namespace TecFlow.SharedUi.Serialization;
 
@@ -19,6 +20,7 @@ public static class TecFlowJsonOptions
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
+        options.Converters.Add(new MarketplaceTypeJsonConverter());
         options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: true));
         return options;
     }

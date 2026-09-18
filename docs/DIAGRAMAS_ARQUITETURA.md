@@ -1144,11 +1144,13 @@ sequenceDiagram
   participant UI as ConnectStoreModal (InteractiveServer)
   participant API as IntegracoesController
   participant SVC as IntegracaoLojaService
+  participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
-  UI->>API: POST vínculo (HttpService)
-  API->>SVC: LinkAsync
-  SVC-->>UI: MarketplaceAccountResponseDto
+  UI->>API: POST /api/marketplace-auth/vincular-manual
+  API->>SVC: LinkAsync (homolog: code_teste / ShopId 123456)
+  SVC->>DB: Upsert MarketplaceAccounts
+  SVC-->>UI: MarketplaceAccountResponseDto.Ok()
 ```
 
 ---

@@ -177,7 +177,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             if (body is not null)
             {
-                request.Content = JsonContent.Create(body);
+                request.Content = JsonContent.Create(body, body.GetType(), options: JsonOptions);
             }
 
             using var response = await client.SendAsync(request, cancellationToken);

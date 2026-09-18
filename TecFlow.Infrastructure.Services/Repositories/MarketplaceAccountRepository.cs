@@ -18,9 +18,19 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
         _currentTenant = currentTenant;
     }
 
-    public Task<MarketplaceAccount?> GetByShopAsync(string shopId, MarketplaceType marketplaceType) =>
-        _context.MarketplaceAccounts.FirstOrDefaultAsync(a =>
-            a.ShopId == shopId && a.MarketplaceType == marketplaceType);
+    public Task<MarketplaceAccount?> GetByShopAsync(string shopId, MarketplaceType marketplaceType)
+    {
+        var query = _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .Where(a => a.ShopId == shopId && a.MarketplaceType == marketplaceType);
+
+        if (_currentTenant.TenantId is { } tenantId && tenantId != Guid.Empty)
+        {
+            query = query.Where(a => a.TenantId == tenantId);
+        }
+
+        return query.FirstOrDefaultAsync();
+    }
 
     public async Task<IReadOnlyList<MarketplaceAccount>> ListForCurrentTenantAsync(bool consolidatedAllShops = true)
     {

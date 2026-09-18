@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.API.Controllers;
 using TecFlow.Business.Dto;
@@ -93,6 +95,20 @@ public class IntegracoesControllerTests
     }
 
     [Fact]
+    public async Task VincularManualAsync_ShouldLogAndReturnBadRequest_WhenModelStateIsInvalid()
+    {
+        var controller = CreateController(new Mock<IIntegracaoLojaService>().Object);
+        controller.ModelState.AddModelError("shopId", "The JSON value could not be converted to String.");
+
+        var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
+        Assert.False(envelope.Status);
+        Assert.Contains("shopId", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ListAsync_ShouldReturn401_WhenUserIsMissing()
     {
         var controller = CreateController(new Mock<IIntegracaoLojaService>().Object, userId: null);
@@ -105,7 +121,10 @@ public class IntegracoesControllerTests
 
     private static IntegracoesController CreateController(IIntegracaoLojaService service, string? userId = "7")
     {
-        var controller = new IntegracoesController(service);
+        var controller = new IntegracoesController(
+            service,
+            NullLogger<IntegracoesController>.Instance,
+            CreateEnvironment("Homologacao"));
         var claims = userId is null
             ? Array.Empty<Claim>()
             : [new Claim(ClaimTypes.NameIdentifier, userId)];
@@ -118,6 +137,13 @@ public class IntegracoesControllerTests
             }
         };
         return controller;
+    }
+
+    private static IHostEnvironment CreateEnvironment(string name)
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns(name);
+        return environment.Object;
     }
 
     private static IntegracaoLojaDto ValidDto() => new()

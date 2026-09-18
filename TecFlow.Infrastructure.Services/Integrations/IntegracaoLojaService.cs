@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Microsoft.Extensions.Hosting;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
@@ -16,17 +17,20 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     private readonly IUserAccountRepository _userAccountRepository;
     private readonly IMarketplaceAccountRepository _marketplaceAccountRepository;
     private readonly IMarketplaceAuthService _marketplaceAuthService;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public IntegracaoLojaService(
         IIntegracaoLojaRepository integracaoLojaRepository,
         IUserAccountRepository userAccountRepository,
         IMarketplaceAccountRepository marketplaceAccountRepository,
-        IMarketplaceAuthService marketplaceAuthService)
+        IMarketplaceAuthService marketplaceAuthService,
+        IHostEnvironment hostEnvironment)
     {
         _integracaoLojaRepository = integracaoLojaRepository;
         _userAccountRepository = userAccountRepository;
         _marketplaceAccountRepository = marketplaceAccountRepository;
         _marketplaceAuthService = marketplaceAuthService;
+        _hostEnvironment = hostEnvironment;
     }
 
     public async Task<IntegracaoLojaResponseDto> ListByUserAsync(
@@ -60,6 +64,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             return Fail("Payload de vinculação inválido.");
         }
+
+        ApplyHomologFallbacks(dto);
 
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
         {
@@ -234,6 +240,54 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             CreatedAt = item.CreatedAt
         };
     }
+
+    private void ApplyHomologFallbacks(IntegracaoLojaDto dto)
+    {
+        if (!AllowsHomologFallbacks())
+        {
+            return;
+        }
+
+        if (dto.PlatformType == 0)
+        {
+            dto.PlatformType = MarketplaceType.Shopee;
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+        {
+            dto.FriendlyName = "Loja Homolog";
+        }
+
+        var code = dto.AuthorizationCode?.Trim() ?? string.Empty;
+        var shop = dto.ShopId?.Trim() ?? string.Empty;
+        var shopIsNumeric = long.TryParse(shop, NumberStyles.Integer, CultureInfo.InvariantCulture, out var shopId)
+            && shopId > 0;
+        var codeIsNumeric = long.TryParse(code, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
+        var shopLooksLikeStub = HomologMarketplaceAuth.IsStubAuthorizationCode(shop);
+
+        if (!shopIsNumeric && shopLooksLikeStub && codeIsNumeric)
+        {
+            (code, shop) = (shop, code);
+            shopIsNumeric = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            code = HomologMarketplaceAuth.StubAuthorizationCode;
+        }
+
+        if (!shopIsNumeric)
+        {
+            shop = "123456";
+        }
+
+        dto.AuthorizationCode = code;
+        dto.ShopId = shop;
+    }
+
+    private bool AllowsHomologFallbacks() =>
+        _hostEnvironment.IsDevelopment()
+        || _hostEnvironment.IsEnvironment("Homologacao");
 
     private static IntegracaoLojaResponseDto Fail(string message) =>
         new()

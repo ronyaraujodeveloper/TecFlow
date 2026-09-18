@@ -1,9 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using TecFlow.API.Middlewares;
 using TecFlow.API.Extensions;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Infrastructure.Services.LinkStrategies;
@@ -26,7 +31,26 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
         retainedFileCountLimit: 14,
         shared: true));
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
+        options.JsonSerializerOptions.Converters.Add(new MarketplaceTypeJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
+    });
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("TecFlow.API.ModelState");
+        var fields = FormatModelState(context.ModelState);
+        logger.LogWarning("ModelState inválido. Campos: {Fields}", fields);
+        return new BadRequestObjectResult(MarketplaceAccountResponseDto.Fail($"Payload de vinculação inválido. {fields}"));
+    };
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
@@ -122,3 +146,15 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+static string FormatModelState(ModelStateDictionary modelState) =>
+    string.Join("; ", modelState
+        .Where(entry => entry.Value is { Errors.Count: > 0 })
+        .Select(entry =>
+        {
+            var messages = entry.Value!.Errors.Select(error =>
+                string.IsNullOrWhiteSpace(error.ErrorMessage)
+                    ? error.Exception?.Message ?? "inválido"
+                    : error.ErrorMessage);
+            return $"{entry.Key}: {string.Join(", ", messages)}";
+        }));

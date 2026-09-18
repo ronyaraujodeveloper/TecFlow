@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
@@ -13,10 +14,17 @@ namespace TecFlow.API.Controllers;
 public class IntegracoesController : ControllerBase
 {
     private readonly IIntegracaoLojaService _integracaoLojaService;
+    private readonly ILogger<IntegracoesController> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
-    public IntegracoesController(IIntegracaoLojaService integracaoLojaService)
+    public IntegracoesController(
+        IIntegracaoLojaService integracaoLojaService,
+        ILogger<IntegracoesController> logger,
+        IHostEnvironment hostEnvironment)
     {
         _integracaoLojaService = integracaoLojaService;
+        _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     /// <summary>Lista lojas marketplace vinculadas ao usuário autenticado.</summary>
@@ -28,11 +36,7 @@ public class IntegracoesController : ControllerBase
         var userId = GetCurrentUserId();
         if (userId is null)
         {
-            return Unauthorized(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Usuário não autenticado."
-            });
+            return Unauthorized(IntegracaoLojaFail("Usuário não autenticado."));
         }
 
         var result = await _integracaoLojaService.ListByUserAsync(userId.Value, filter, cancellationToken);
@@ -45,24 +49,23 @@ public class IntegracoesController : ControllerBase
         [FromBody] IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return InvalidModelState();
+        }
+
         var userId = GetCurrentUserId();
         if (userId is null)
         {
-            return Unauthorized(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Usuário não autenticado."
-            });
+            return Unauthorized(IntegracaoLojaFail("Usuário não autenticado."));
         }
 
         if (dto is null)
         {
-            return BadRequest(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Payload de vinculação inválido."
-            });
+            return BadRequest(IntegracaoLojaFail("Payload de vinculação inválido."));
         }
+
+        ApplyHomologFallbacks(dto);
 
         try
         {
@@ -71,11 +74,7 @@ public class IntegracoesController : ControllerBase
         }
         catch (Exception)
         {
-            return BadRequest(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Não foi possível vincular a loja. Tente novamente."
-            });
+            return BadRequest(IntegracaoLojaFail("Não foi possível vincular a loja. Tente novamente."));
         }
     }
 
@@ -85,52 +84,37 @@ public class IntegracoesController : ControllerBase
         [FromBody] IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return InvalidModelState();
+        }
+
         var userId = GetCurrentUserId();
         if (userId is null)
         {
-            return Unauthorized(new MarketplaceAccountResponseDto
-            {
-                Status = false,
-                Descricao = "Usuário não autenticado."
-            });
+            return Unauthorized(MarketplaceAccountResponseDto.Fail("Usuário não autenticado."));
         }
 
         if (dto is null)
         {
-            return BadRequest(new MarketplaceAccountResponseDto
-            {
-                Status = false,
-                Descricao = "Payload de vinculação inválido."
-            });
+            return BadRequest(MarketplaceAccountResponseDto.Fail("Payload de vinculação inválido."));
         }
+
+        ApplyHomologFallbacks(dto);
 
         try
         {
             var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
             if (!result.Status)
             {
-                return BadRequest(new MarketplaceAccountResponseDto
-                {
-                    Status = false,
-                    Descricao = result.Descricao,
-                    Data = result.Data
-                });
+                return BadRequest(MarketplaceAccountResponseDto.Fail(result.Descricao));
             }
 
-            return Ok(new MarketplaceAccountResponseDto
-            {
-                Status = true,
-                Descricao = "Loja vinculada com sucesso",
-                Data = result.Data
-            });
+            return Ok(MarketplaceAccountResponseDto.Ok(result.Data));
         }
         catch (Exception)
         {
-            return BadRequest(new MarketplaceAccountResponseDto
-            {
-                Status = false,
-                Descricao = "Não foi possível vincular a loja. Tente novamente."
-            });
+            return BadRequest(MarketplaceAccountResponseDto.Fail("Não foi possível vincular a loja. Tente novamente."));
         }
     }
 
@@ -143,16 +127,54 @@ public class IntegracoesController : ControllerBase
         var userId = GetCurrentUserId();
         if (userId is null)
         {
-            return Unauthorized(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Usuário não autenticado."
-            });
+            return Unauthorized(IntegracaoLojaFail("Usuário não autenticado."));
         }
 
         var result = await _integracaoLojaService.UnlinkAsync(userId.Value, id, cancellationToken);
         return result.Status ? Ok(result) : NotFound(result);
     }
+
+    private BadRequestObjectResult InvalidModelState()
+    {
+        var fields = string.Join("; ", ModelState
+            .Where(entry => entry.Value is { Errors.Count: > 0 })
+            .Select(entry =>
+            {
+                var messages = entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? error.Exception?.Message ?? "inválido"
+                        : error.ErrorMessage);
+                return $"{entry.Key}: {string.Join(", ", messages)}";
+            }));
+
+        _logger.LogWarning("ModelState inválido ao vincular loja. Campos: {Fields}", fields);
+        return BadRequest(MarketplaceAccountResponseDto.Fail($"Payload de vinculação inválido. {fields}"));
+    }
+
+    private void ApplyHomologFallbacks(IntegracaoLojaDto dto)
+    {
+        if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Homologacao"))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
+        {
+            dto.AuthorizationCode = "code_teste";
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.ShopId))
+        {
+            dto.ShopId = "123456";
+        }
+    }
+
+    private static IntegracaoLojaResponseDto IntegracaoLojaFail(string descricao) =>
+        new()
+        {
+            Status = false,
+            Descricao = descricao
+        };
 
     private int? GetCurrentUserId()
     {

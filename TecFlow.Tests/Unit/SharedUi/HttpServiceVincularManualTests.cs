@@ -36,6 +36,20 @@ public class HttpServiceVincularManualTests
     }
 
     [Fact]
+    public void IntegracaoLojaDto_ShouldDeserializeNumericShopIdAndPlatformName()
+    {
+        const string formJson =
+            """{"platformType":"Shopee","authorizationCode":"code_teste","shopId":123456,"friendlyName":"Loja Homolog"}""";
+
+        var dto = JsonSerializer.Deserialize<IntegracaoLojaDto>(formJson, JsonOptions());
+
+        Assert.NotNull(dto);
+        Assert.Equal(MarketplaceType.Shopee, dto!.PlatformType);
+        Assert.Equal("code_teste", dto.AuthorizationCode);
+        Assert.Equal("123456", dto.ShopId);
+    }
+
+    [Fact]
     public void IntegracaoLojaDto_ShouldDeserializeSwappedFieldsWithoutThrowing()
     {
         const string swappedJson =

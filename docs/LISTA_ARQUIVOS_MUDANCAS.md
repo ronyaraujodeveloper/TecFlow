@@ -547,6 +547,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** — vínculo manual simulado.
 - [x] **HttpServiceVincularManualTests.cs** — POST `vincular-manual` com JSON real e falha de desserialização.
 - [x] **AccountSecurityApiServiceTests.cs** — envelope inválido sem exceção.
+- [x] **IntegracaoLojaDto.cs** / **MarketplaceTypeJsonConverter.cs** — JSON camelCase + ShopId string/long.
+- [x] **IntegracoesController.cs** — log de ModelState no 400; homolog aceita `code_teste` / `123456`.
 - [x] **IntegracoesControllerTests.cs** — payload nulo/invertido devolve 400, não 500.
 - [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.
 - [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.

@@ -1,4 +1,5 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Hosting;
+using Moq;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
@@ -63,7 +64,7 @@ public class IntegracaoLojaServiceTests
             .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
             .Returns(Task.CompletedTask);
 
-        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object);
+        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object, Production());
         var result = await service.LinkAsync(7, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
@@ -93,7 +94,8 @@ public class IntegracaoLojaServiceTests
             new Mock<IIntegracaoLojaRepository>().Object,
             new Mock<IUserAccountRepository>().Object,
             new Mock<IMarketplaceAccountRepository>().Object,
-            new Mock<IMarketplaceAuthService>().Object);
+            new Mock<IMarketplaceAuthService>().Object,
+            Production());
 
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
@@ -114,7 +116,8 @@ public class IntegracaoLojaServiceTests
             new Mock<IIntegracaoLojaRepository>().Object,
             new Mock<IUserAccountRepository>().Object,
             new Mock<IMarketplaceAccountRepository>().Object,
-            new Mock<IMarketplaceAuthService>().Object);
+            new Mock<IMarketplaceAuthService>().Object,
+            Production());
 
         var result = await service.LinkAsync(1, null!);
 
@@ -130,7 +133,8 @@ public class IntegracaoLojaServiceTests
             new Mock<IIntegracaoLojaRepository>().Object,
             new Mock<IUserAccountRepository>().Object,
             new Mock<IMarketplaceAccountRepository>().Object,
-            auth.Object);
+            auth.Object,
+            Production());
 
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
@@ -158,7 +162,8 @@ public class IntegracaoLojaServiceTests
             new Mock<IIntegracaoLojaRepository>().Object,
             new Mock<IUserAccountRepository>().Object,
             new Mock<IMarketplaceAccountRepository>().Object,
-            new Mock<IMarketplaceAuthService>().Object);
+            new Mock<IMarketplaceAuthService>().Object,
+            Production());
 
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
@@ -170,5 +175,77 @@ public class IntegracaoLojaServiceTests
 
         Assert.False(result.Status);
         Assert.Equal("Código de autorização OAuth é obrigatório.", result.Descricao);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldAcceptSwappedStubPayload_WhenHomologacao()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        auth.Setup(service => service.CallbackAndGenerateTokensAsync(
+                MarketplaceType.Shopee,
+                HomologMarketplaceAuth.StubAuthorizationCode,
+                "123456",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MarketplaceTokenResult { Success = true, ShopId = "123456", MarketplaceType = MarketplaceType.Shopee, ExpiresAt = DateTime.UtcNow.AddDays(1) });
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("123456", MarketplaceType.Shopee))
+            .ReturnsAsync(new MarketplaceAccount
+            {
+                TenantId = user.TenantId,
+                ShopId = "123456",
+                ShopName = "123456",
+                MarketplaceType = MarketplaceType.Shopee,
+                AccessToken = HomologMarketplaceAuth.StubAccessToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(1)
+            });
+
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "123456", MarketplaceType.Shopee, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object, Homolog());
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            AuthorizationCode = "123456",
+            ShopId = "code_teste",
+            FriendlyName = "Loja Homolog"
+        });
+
+        Assert.True(result.Status);
+        auth.Verify(
+            service => service.CallbackAndGenerateTokensAsync(
+                MarketplaceType.Shopee,
+                HomologMarketplaceAuth.StubAuthorizationCode,
+                "123456",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private static IHostEnvironment Production() => Environment("Production");
+
+    private static IHostEnvironment Homolog() => Environment("Homologacao");
+
+    private static IHostEnvironment Environment(string name)
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns(name);
+        return environment.Object;
     }
 }

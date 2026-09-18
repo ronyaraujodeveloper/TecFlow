@@ -5,16 +5,22 @@ namespace TecFlow.Business.Dto;
 
 public class IntegracaoLojaDto
 {
-    public MarketplaceType PlatformType { get; set; }
+    [JsonPropertyName("platformType")]
+    [JsonConverter(typeof(MarketplaceTypeJsonConverter))]
+    public MarketplaceType PlatformType { get; set; } = MarketplaceType.Shopee;
 
     /// <summary>Authorization code retornado pelo callback OAuth do marketplace.</summary>
     [JsonPropertyName("authorizationCode")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string AuthorizationCode { get; set; } = string.Empty;
 
-    /// <summary>Identificador da loja na plataforma (ShopId numérico na Shopee).</summary>
+    /// <summary>Identificador da loja na plataforma (aceita string ou número JSON).</summary>
     [JsonPropertyName("shopId")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string ShopId { get; set; } = string.Empty;
 
     /// <summary>Apelido amigável definido pelo usuário no painel.</summary>
+    [JsonPropertyName("friendlyName")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string FriendlyName { get; set; } = string.Empty;
 }

@@ -1,10 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <_TecFlowMobileFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</_TecFlowMobileFrameworks>
-        <_TecFlowMobileFrameworks Condition="'$(AndroidSdkDirectory)' == '' or !Exists('$(AndroidSdkDirectory)')">net9.0-ios;net9.0-maccatalyst</_TecFlowMobileFrameworks>
-        <TargetFrameworks>$(_TecFlowMobileFrameworks)</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net9.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('windows'))">net9.0-android</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <RootNamespace>TecFlow.Mobile</RootNamespace>

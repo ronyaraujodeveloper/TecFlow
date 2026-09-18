@@ -281,9 +281,9 @@ Tecso.AutomacaoCusor/
 │   ├── Program.cs               # DI alinhado à API
 │   └── OrquestradorPrincipal.cs
 │
-├── TecFlow.SharedUi/            # RCL UI compartilhada (Fase 4.2)
-├── TecFlow.WebUi/               # Host Blazor Server + OAuth (Fase 3/4)
-├── TecFlow.Mobile/              # MAUI Blazor Hybrid (Fase 4.2)
+├── TecFlow.SharedUi/            # RCL UI compartilhada (Fase 4.2) — AppRoutes.razor (MAUI)
+├── TecFlow.WebUi/               # Host Blazor Server + OAuth (Fase 3/4) — Routes.razor único
+├── TecFlow.Mobile/              # MAUI Blazor Hybrid (Fase 4.2) — TFM Windows `net9.0-windows*` (sem iOS/Mac Catalyst)
 │   ├── Components/, Services/, Extensions/, Models/, wwwroot/, …
 │   └── → TecFlow.Business (*ResponseDto, DashboardSummaryDto)
 │

@@ -30,13 +30,13 @@
                                  Platform="Platform" OnError="SetError" />
 
             <OAuthProviderButton Provider="AuthProvider.ICloud" Label="iCloud"
-                                 IconClass="icloud" IconContent="&#63743;"
+                                 IconClass="icloud" IconContent="@AppleIconGlyph"
                                  BtnClass="btn-outline-secondary"
                                  Platform="Platform" OnError="SetError" />
 
             <button type="button" class="btn btn-outline-dark btn-lg auth-provider-btn"
                     @onclick="() => SelectProvider(AuthProvider.EmailPassword)">
-                <span class="provider-icon email">@@</span> E-mail e senha
+                <span class="provider-icon email">@EmailIconGlyph</span> E-mail e senha
             </button>
         </div>
 
@@ -62,6 +62,9 @@
 </div>
 
 @code {
+    private const string EmailIconGlyph = "@";
+    private const string AppleIconGlyph = "\uF8FF";
+
     [Parameter, EditorRequired] public LoginPlatform Platform { get; set; }
 
     private AuthProvider? _selectedProvider;

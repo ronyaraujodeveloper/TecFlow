@@ -37,11 +37,13 @@ public static class ServiceCollectionExtensions
         if (environment is not null
             && (environment.IsDevelopment() || environment.IsEnvironment("Homologacao")))
         {
+#pragma warning disable CA1416
             orquestradorClient.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback =
                     HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             });
+#pragma warning restore CA1416
         }
 
         services.AddScoped<IAccessTokenProvider, SessionAccessTokenProvider>();

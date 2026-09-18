@@ -34,7 +34,7 @@
                 <OAuthProviderButton Provider="AuthProvider.ICloud"
                                      Label="Apple (iCloud)"
                                      IconClass="icloud"
-                                     IconContent="&#63743;"
+                                     IconContent="@AppleIconGlyph"
                                      BtnClass="btn-outline-dark"
                                      Platform="@_portalPlatform"
                                      OnError="SetError" />
@@ -100,6 +100,8 @@
 </div>
 
 @code {
+    private const string AppleIconGlyph = "\uF8FF";
+
     /// <summary>
     /// Plataforma padrão do portal até existir endpoint unificado dedicado na API.
     /// </summary>

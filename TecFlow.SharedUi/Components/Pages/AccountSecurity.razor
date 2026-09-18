@@ -64,7 +64,7 @@
                     <IdentityProviderCard Title="E-mail"
                                           Description="Login tradicional com senha."
                                           IconClass="email"
-                                          IconContent="@@"
+                                          IconContent="@EmailIconGlyph"
                                           IsConnected="@_hasPassword"
                                           ShowLink="false"
                                           ShowUnlink="false"
@@ -105,7 +105,7 @@
                     <IdentityProviderCard Title="Apple (iCloud)"
                                           Description="Entrada com Apple ID."
                                           IconClass="icloud"
-                                          IconContent="&#63743;"
+                                          IconContent="@AppleIconGlyph"
                                           IsConnected="@IsProviderLinked("Apple")"
                                           CanUnlink="@CanUnlinkProvider("Apple")"
                                           CanLink="@OAuthRegistry.IsEnabled(AuthProvider.ICloud)"
@@ -201,6 +201,9 @@
 </div>
 
 @code {
+    private const string EmailIconGlyph = "@";
+    private const string AppleIconGlyph = "\uF8FF";
+
     private enum SecurityTab
     {
         Providers,

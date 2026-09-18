@@ -217,7 +217,7 @@
         }
     }
 
-    private async Task ManualLinkAsync((MarketplaceType Platform, string FriendlyName, string AuthorizationCode, string ShopId) payload)
+    private async Task ManualLinkAsync(IntegracaoLojaDto payload)
     {
         _isBusy = true;
         _connectModalError = null;
@@ -225,13 +225,7 @@
 
         try
         {
-            var response = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
-            {
-                PlatformType = payload.Platform,
-                FriendlyName = payload.FriendlyName,
-                AuthorizationCode = payload.AuthorizationCode,
-                ShopId = payload.ShopId
-            });
+            var response = await IntegracaoApi.LinkAsync(payload);
 
             if (response.Status)
             {
@@ -249,6 +243,7 @@
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
             Logger.LogError(ex, "Erro ao vincular loja manualmente.");
             _connectModalError = "Erro inesperado ao vincular loja.";
         }

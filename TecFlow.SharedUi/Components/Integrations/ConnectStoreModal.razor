@@ -1,4 +1,7 @@
-﻿@using TecFlow.Core.Enums
+﻿@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using Microsoft.Extensions.Hosting
+@inject IHostEnvironment HostEnvironment
 
 @if (Visible)
 {
@@ -47,13 +50,14 @@
                                disabled="@IsBusy" />
                     </div>
 
-                    <details class="marketplace-manual-link small">
+                    <details class="marketplace-manual-link small" open>
                         <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
                         <div class="row g-2">
                             <div class="col-12">
                                 <label class="form-label" for="auth-code">Authorization code</label>
                                 <input id="auth-code"
                                        name="authorizationCode"
+                                       type="text"
                                        class="form-control form-control-sm"
                                        placeholder="code_teste"
                                        autocomplete="off"
@@ -65,6 +69,7 @@
                                 <label class="form-label" for="shop-id">Shop ID</label>
                                 <input id="shop-id"
                                        name="shopId"
+                                       type="text"
                                        class="form-control form-control-sm"
                                        inputmode="numeric"
                                        placeholder="123456"
@@ -81,7 +86,11 @@
                     <button type="button" class="btn btn-outline-secondary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="Close">
                         Cancelar
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="ManualLinkAsync">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-touch w-100 w-sm-auto"
+                            disabled="@IsBusy"
+                            @onclick="VincularManualmenteAsync"
+                            @onclick:preventDefault="true">
                         @(IsBusy ? "Vinculando..." : "Vincular manualmente")
                     </button>
                     <button type="button" class="btn btn-primary btn-touch w-100 w-sm-auto" disabled="@IsBusy" @onclick="StartOAuthAsync">
@@ -100,15 +109,18 @@
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
-    [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName, string AuthorizationCode, string ShopId)> OnManualLink { get; set; }
+    [Parameter] public EventCallback<IntegracaoLojaDto> OnManualLink { get; set; }
 
-    private MarketplaceType _platform = MarketplaceType.TikTokShop;
+    private MarketplaceType _platform = MarketplaceType.Shopee;
     private string _friendlyName = string.Empty;
     private string _authorizationCode = string.Empty;
     private string _shopId = string.Empty;
     private string? _formError;
 
     private string? DisplayError => ErrorMessage ?? _formError;
+
+    private bool UseHomologFallbacks =>
+        HostEnvironment.IsDevelopment() || HostEnvironment.IsEnvironment("Homologacao");
 
     protected override void OnParametersSet()
     {
@@ -147,23 +159,38 @@
         await OnStartOAuth.InvokeAsync((_platform, _friendlyName.Trim()));
     }
 
-    private async Task ManualLinkAsync()
+    private async Task VincularManualmenteAsync()
     {
-        if (!ConnectStoreManualLinkForm.TryValidate(
-                _platform,
-                _friendlyName,
-                _authorizationCode,
-                _shopId,
-                out var authorizationCode,
-                out var shopIdRaw,
-                out var error))
+        try
         {
-            _formError = error;
-            return;
-        }
+            if (!ConnectStoreManualLinkForm.TryValidate(
+                    _platform,
+                    _friendlyName,
+                    _authorizationCode,
+                    _shopId,
+                    out var authorizationCode,
+                    out var shopIdRaw,
+                    out var error,
+                    UseHomologFallbacks))
+            {
+                _formError = error;
+                return;
+            }
 
-        _formError = null;
-        await OnManualLink.InvokeAsync((_platform, _friendlyName.Trim(), authorizationCode, shopIdRaw));
+            _formError = null;
+            await OnManualLink.InvokeAsync(new IntegracaoLojaDto
+            {
+                PlatformType = _platform,
+                FriendlyName = _friendlyName.Trim(),
+                AuthorizationCode = authorizationCode,
+                ShopId = shopIdRaw
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
+            _formError = "Erro inesperado ao vincular loja. Veja o console do servidor.";
+        }
     }
 
     private bool ValidateFriendlyName()
@@ -179,7 +206,7 @@
 
     private void ResetForm()
     {
-        _platform = MarketplaceType.TikTokShop;
+        _platform = MarketplaceType.Shopee;
         _friendlyName = string.Empty;
         _authorizationCode = string.Empty;
         _shopId = string.Empty;

@@ -24,7 +24,7 @@ public class ConnectStoreManualLinkFormTests
     }
 
     [Fact]
-    public void TryValidate_ShouldRejectSwappedShopeeShopId()
+    public void TryValidate_ShouldRejectSwappedShopeeShopId_WhenNotHomolog()
     {
         var ok = ConnectStoreManualLinkForm.TryValidate(
             MarketplaceType.Shopee,
@@ -37,6 +37,25 @@ public class ConnectStoreManualLinkFormTests
 
         Assert.False(ok);
         Assert.Contains("número inteiro", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldDefaultShopIdInHomolog_WhenParseFails()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            "code_teste",
+            "code_teste",
+            out var code,
+            out var shopId,
+            out var error,
+            useHomologFallbacks: true);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("code_teste", code);
+        Assert.Equal("123456", shopId);
     }
 
     [Fact]

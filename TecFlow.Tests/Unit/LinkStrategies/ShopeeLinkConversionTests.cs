@@ -263,6 +263,37 @@ public class ShopeeLinkConversionTests
     }
 
     [Fact]
+    public async Task ShopeeLinkStrategy_ShouldConvertBrShpEeWithoutProductIdsUsingHomologFallback()
+    {
+        const string shortUrl = "https://br.shp.ee/taeej22s";
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("br.shp.ee", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var recorder = new RecordingShopeeClient();
+        var strategy = CreateShopeeStrategy(
+            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance),
+            recorder);
+
+        var link = await strategy.GenerateDeepLinkAsync(shortUrl, Guid.NewGuid(), AffiliateId);
+
+        Assert.Equal("taeej22s", ShopeeProductUrlParser.TryExtractShortHash(shortUrl));
+        Assert.Contains("/universal-link/product/999999/888888", link, StringComparison.Ordinal);
+        Assert.Contains("utm_source=affiliate", link, StringComparison.Ordinal);
+        Assert.Contains("sub_id=tecflow_test", link, StringComparison.Ordinal);
+        Assert.Contains("short_hash=taeej22s", link, StringComparison.Ordinal);
+        Assert.Equal(
+            ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ShopeeProductUrlParser.HomologIds),
+            recorder.LastExpandedUrl);
+    }
+
+    [Fact]
     public void MarketplaceUrlDetector_ShouldRecognizeBrShpEe()
     {
         var detected = TecFlow.SharedUi.Helpers.MarketplaceUrlDetector.Detect(
@@ -286,10 +317,15 @@ public class ShopeeLinkConversionTests
 
     [Theory]
     [InlineData("https://shopee.com.br/Cadeira-Gamer-i.123456.789012", "123456", "789012")]
+    [InlineData("https://shopee.com.br/product-name-i.123456.7891011", "123456", "7891011")]
     [InlineData("https://shopee.com.br/product/111/222", "111", "222")]
+    [InlineData("https://shopee.com.br/universal-link/product/999999/888888", "999999", "888888")]
     [InlineData("https://shopee.com.br/item/333/444", "333", "444")]
     [InlineData("https://shopee.com.br/produto?shopid=555&itemid=666", "555", "666")]
+    [InlineData("https://shopee.com.br/product/foo/bar?shopId=123456&itemId=7891011", "123456", "7891011")]
     [InlineData("https://shopee.com.br/produto?item_id=777&shop_id=888", "888", "777")]
+    [InlineData("https://shopee.com.br/shop/123456/item/7891011", "123456", "7891011")]
+    [InlineData("https://shopee.com.br/Nome-Produto.123456.7891011", "123456", "7891011")]
     public void ShopeeProductUrlParser_ShouldExtractShopIdAndItemId(string url, string shopId, string itemId)
     {
         Assert.True(ShopeeProductUrlParser.TryParse(url, out var ids));
@@ -449,13 +485,15 @@ public class ShopeeLinkConversionTests
 
     private static ShopeeLinkStrategy CreateShopeeStrategy(
         IUrlExpansionService expansion,
-        IShopeeAffiliateLinkClient client) =>
+        IShopeeAffiliateLinkClient client,
+        string environmentName = "Homologacao") =>
         new(
             expansion,
             new FixedStoreResolver(CreateStore()),
             client,
             new AffiliateLinkGenerationContext { UserId = 10 },
             EmptyShopeeOptions(),
+            CreateHostEnvironment(environmentName),
             NullLogger<ShopeeLinkStrategy>.Instance);
 
     private static PlatformLinkResolver CreateResolver() =>
@@ -467,6 +505,7 @@ public class ShopeeLinkConversionTests
                     new RecordingShopeeClient(),
                     new AffiliateLinkGenerationContext { UserId = 10 },
                     EmptyShopeeOptions(),
+                    CreateHostEnvironment(),
                     NullLogger<ShopeeLinkStrategy>.Instance)
             ],
             NullLogger<PlatformLinkResolver>.Instance);
@@ -503,7 +542,7 @@ public class ShopeeLinkConversionTests
             CreateHostEnvironment(environmentName));
     }
 
-    private static IHostEnvironment CreateHostEnvironment(string name)
+    private static IHostEnvironment CreateHostEnvironment(string name = "Homologacao")
     {
         var environment = new Mock<IHostEnvironment>();
         environment.SetupGet(item => item.EnvironmentName).Returns(name);

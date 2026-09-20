@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` (`shopee.com.br` / `br.shp.ee` / `shp.ee` / `shope.ee`) → `UrlExpansionService` (GET + `Location` 301/302) → `ShopeeProductUrlParser` (ShopId/ItemId) → `ShopeeAffiliateLinkClient` / sandbox (`affiliate_id=12345` em homolog) → `ShopeeCommissionUrlBuilder` (`tracking_code`, `sub_id=u{user}_t{tenant}`, `universal_link`, `deep_link`) → `ShortLinkService` + `LinkClickTelemetryService.RecordGenerationAsync` (`LinkClickLog` com TenantId/ShopId).
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` (`shopee.com.br` / `br.shp.ee` / `shp.ee` / `shope.ee`) → `UrlExpansionService` (GET + `Location` 301/302) → `ShopeeProductUrlParser` (ShopId/ItemId ou fallback `999999`/`888888` em homolog) → `ShopeeAffiliateLinkClient` / sandbox (`https://shopee.com.br/universal-link/product/999999/888888?utm_source=affiliate&sub_id=tecflow_test`) → `ShopeeCommissionUrlBuilder` → `ShortLinkService` + `LinkClickTelemetryService.RecordGenerationAsync` (`LinkClickLog` com TenantId/ShopId).
 
 ```mermaid
 flowchart LR

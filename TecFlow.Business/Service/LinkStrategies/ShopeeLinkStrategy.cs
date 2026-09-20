@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
@@ -14,6 +16,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
     private readonly IShopeeAffiliateLinkClient _shopeeAffiliateClient;
     private readonly IAffiliateLinkGenerationContext _generationContext;
     private readonly ShopeeIntegrationOptions _options;
+    private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger<ShopeeLinkStrategy> _logger;
 
     public ShopeeLinkStrategy(
@@ -22,6 +25,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         IShopeeAffiliateLinkClient shopeeAffiliateClient,
         IAffiliateLinkGenerationContext generationContext,
         IOptions<ShopeeIntegrationOptions> options,
+        IHostEnvironment hostEnvironment,
         ILogger<ShopeeLinkStrategy> logger)
     {
         _urlExpansionService = urlExpansionService;
@@ -29,6 +33,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         _shopeeAffiliateClient = shopeeAffiliateClient;
         _generationContext = generationContext;
         _options = options.Value;
+        _hostEnvironment = hostEnvironment;
         _logger = logger;
     }
 
@@ -63,24 +68,64 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
         }
 
-        if (!CanProcess(workingUrl))
+        var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
+            _hostEnvironment.EnvironmentName,
+            authorizationCode: null)
+            || _options.IsSandboxMode;
+
+        if (!CanProcess(workingUrl) && !allowHomologFallback)
         {
             throw new AffiliateLinkGenerationException(
                 "Não foi possível identificar a URL canônica do produto Shopee após expandir o link.");
         }
 
-        var productIds = ShopeeProductUrlParser.ParseOrThrow(workingUrl);
-        _logger.LogInformation(
-            "Shopee URL expandida extraída. ShopId={ShopId} ItemId={ItemId}",
-            productIds.ShopId,
-            productIds.ItemId);
-
-        var generated = await _shopeeAffiliateClient.GenerateCustomLinkAsync(
-            store,
+        var productIds = ShopeeProductUrlParser.ParseOrThrow(
             workingUrl,
-            affiliateId,
-            _generationContext.CustomNickname,
-            cancellationToken);
+            originalUrl.Trim(),
+            allowHomologFallback);
+        var usedHomologIds = productIds.ShopId == ShopeeProductUrlParser.HomologShopId
+            && productIds.ItemId == ShopeeProductUrlParser.HomologItemId
+            && !ShopeeProductUrlParser.TryParse(workingUrl, out _);
+
+        if (usedHomologIds)
+        {
+            workingUrl = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
+            _logger.LogInformation(
+                "Shopee homologação: IDs simulados a partir do hash {ShortHash}. ShopId={ShopId} ItemId={ItemId}",
+                ShopeeProductUrlParser.TryExtractShortHash(originalUrl),
+                productIds.ShopId,
+                productIds.ItemId);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Shopee URL expandida extraída. ShopId={ShopId} ItemId={ItemId}",
+                productIds.ShopId,
+                productIds.ItemId);
+        }
+
+        string generated;
+        try
+        {
+            generated = await _shopeeAffiliateClient.GenerateCustomLinkAsync(
+                store,
+                workingUrl,
+                affiliateId,
+                _generationContext.CustomNickname,
+                cancellationToken);
+        }
+        catch (Exception ex) when (allowHomologFallback)
+        {
+            _logger.LogWarning(ex, "Falha na conversão Shopee. Usando link simulado de homologação.");
+            return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+        }
+
+        if (usedHomologIds || string.IsNullOrWhiteSpace(generated))
+        {
+            return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+        }
 
         return ApplyCommissionTracking(
             generated,

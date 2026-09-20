@@ -362,7 +362,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.1.2. Mapeamento de Fallback/Sandbox:** Implementar/validar o modo de simulação no `ShopeeIntegrationClient` para garantir que, caso as chaves reais de produção não estejam preenchidas, o sistema injete uma tag/sub_id de homologação sem estourar exceção.
 
 #### 19.2. Teste do Motor Backend de Unshorten e Re-parametrizador (Strategy)
-- [x] **19.2.1. Validação do `PlatformLinkResolver`:** Testar a resolução de domínios nativos da Shopee (`shopee.com.br`) e encurtados (`s.shopee.com.br`, `br.shp.ee`, `shp.ee`, `shope.ee`), garantindo a expansão limpa via redirecionamento HTTP (`Location`) para extração do `ItemId` e `ShopId`.
+- [x] **19.2.1. Validação do `PlatformLinkResolver`:** Testar a resolução de domínios nativos da Shopee (`shopee.com.br`) e encurtados (`s.shopee.com.br`, `br.shp.ee`, `shp.ee`, `shope.ee`), com extração flexível de `ItemId`/`ShopId` e fallback de homologação (`999999`/`888888`) quando a URL expandida não carrega os IDs.
 - [x] **19.2.2. Geração da URL Rastreada de Comissão:** Validar o método de conversão que gera a URL final de afiliado com os parâmetros de tracking (`tracking_code`, `sub_id`, `universal_link`).
 - [x] **19.2.3. Persistência de Telemetria:** Confirmar que a chamada grava corretamente um novo registro na tabela `LinkClickLog` com o `TenantId`/`ShopId` e metadados de acesso.
 

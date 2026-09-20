@@ -12,6 +12,22 @@ public static class ShopeeCommissionUrlBuilder
     public const string DeepLinkQuery = "deep_link";
     public const string AffiliateIdQuery = "affiliate_id";
     public const string HomologAffiliateId = "12345";
+    public const string HomologUtmSource = "affiliate";
+    public const string HomologTrackingSubId = "tecflow_test";
+
+    public static string BuildHomologConvertedLink(string? shortHash = null)
+    {
+        var url =
+            $"https://shopee.com.br/universal-link/product/{ShopeeProductUrlParser.HomologShopId}/{ShopeeProductUrlParser.HomologItemId}"
+            + $"?utm_source={HomologUtmSource}&sub_id={HomologTrackingSubId}";
+
+        if (string.IsNullOrWhiteSpace(shortHash))
+        {
+            return url;
+        }
+
+        return $"{url}&short_hash={EncodeQueryComponent(shortHash.Trim())}";
+    }
 
     public static string BuildSubId(int userId, Guid tenantId)
     {

@@ -110,7 +110,7 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
                     "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
             }
 
-            return ApplyCommissionTracking(link, store, includeHomologAffiliate: IsHomologEnvironment());
+            return ApplyCommissionTracking(link, store, includeHomologAffiliate: false);
         }
         catch (AffiliateLinkGenerationException)
         {
@@ -129,12 +129,18 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
 
     private string ApplyCommissionTracking(string url, IntegracaoLoja store, bool includeHomologAffiliate = false)
     {
-        ShopeeProductUrlParser.TryParse(url, out var ids);
-        var productUrl = !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId)
+        var parsed = ShopeeProductUrlParser.TryParse(url, out var ids);
+        if (includeHomologAffiliate && !parsed)
+        {
+            return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                ShopeeProductUrlParser.TryExtractShortHash(url));
+        }
+
+        var productUrl = parsed
             ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ids)
             : url;
         var source = includeHomologAffiliate ? productUrl : url;
-        var universal = !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId)
+        var universal = parsed
             ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ids)
             : url;
 

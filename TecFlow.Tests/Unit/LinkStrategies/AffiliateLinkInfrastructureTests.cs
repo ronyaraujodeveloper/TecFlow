@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using Microsoft.Extensions.Hosting;
+using Moq;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Application;
@@ -49,6 +51,7 @@ public class AffiliateLinkGenerationServiceTests
                 new NoOpShopeeClient(),
                 new AffiliateLinkGenerationContext(),
                 Microsoft.Extensions.Options.Options.Create(new TecFlow.Business.Integrations.Shopee.ShopeeIntegrationOptions()),
+                CreateHostEnvironment(),
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<ShopeeLinkStrategy>.Instance)
         };
 
@@ -71,6 +74,13 @@ public class AffiliateLinkGenerationServiceTests
 
         Assert.False(result.Success);
         Assert.Contains("suportada", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IHostEnvironment CreateHostEnvironment()
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns("Homologacao");
+        return environment.Object;
     }
 
     private sealed class NoOpUrlExpansionService : IUrlExpansionService

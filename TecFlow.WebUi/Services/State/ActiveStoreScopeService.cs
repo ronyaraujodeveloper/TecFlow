@@ -43,6 +43,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
     {
         if (_initialized)
         {
+            await RefreshStoresAsync(cancellationToken);
             return;
         }
 
@@ -161,6 +162,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
         finally
         {
             IsLoading = false;
+            OnStoreChanged?.Invoke();
         }
     }
 

@@ -112,7 +112,7 @@
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
-    [Parameter] public EventCallback OnLinked { get; set; }
+    [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
     private string _friendlyName = string.Empty;
@@ -208,7 +208,7 @@
 
             if (response.Status)
             {
-                await OnLinked.InvokeAsync();
+                await OnLojaVinculada.InvokeAsync();
                 return;
             }
 

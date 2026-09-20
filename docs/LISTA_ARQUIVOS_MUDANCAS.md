@@ -532,8 +532,10 @@ API / Orquestrador / Worker / WebUi
 
 ### OAuth Minhas Lojas / Integrações
 
-- [x] **ConnectStoreModal.razor** — botão `Conectar via OAuth` dispara `OnStartOAuth`.
-- [x] **MinhasLojas.razor** — `IMarketplaceOAuthConnectService` + `NavigationManager.NavigateTo(authorizeUrl, forceLoad: true)`.
+- [x] **ConnectStoreModal.razor** — `OnLojaVinculada` recarrega a lista após vínculo com sucesso.
+- [x] **MinhasLojas.razor** — `ObterLojasAsync()` + `StateHasChanged()` e `StoreScope.RefreshStoresAsync()`.
+- [x] **ActiveStoreScopeService** — `EnsureInitializedAsync` recarrega lojas; `OnStoreChanged` após cada leitura.
+- [x] **MarketplaceAccountRepository** — listagens e `GetByShopAsync` com `AsNoTracking()`.
 - [x] **MarketplaceOAuthConnectService.cs** — ticket pendente + GET `api/marketplace-auth/{plataforma}/authorize-url`.
 - [x] **MarketplaceAuthController** — rota `{plataforma}/authorize-url` e DTO `authorizeUrl`.
 - [x] **TecFlow.Tests/Unit/SharedUi/MarketplaceOAuthConnectServiceTests.cs** — path, DTO e erro da API.

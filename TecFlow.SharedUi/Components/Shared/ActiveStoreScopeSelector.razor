@@ -113,7 +113,15 @@
 
     private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
 
-    private void ToggleMenu() => _menuOpen = !_menuOpen;
+    private async Task ToggleMenu()
+    {
+        if (!_menuOpen)
+        {
+            await StoreScope.RefreshStoresAsync();
+        }
+
+        _menuOpen = !_menuOpen;
+    }
 
     private void CloseMenu() => _menuOpen = false;
 

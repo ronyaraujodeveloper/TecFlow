@@ -6,6 +6,7 @@
 @using TecFlow.Core.Enums
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IMarketplaceOAuthConnectService OAuthConnect
+@inject IActiveStoreScopeService StoreScope
 @inject NavigationManager Navigation
 @inject ILogger<MinhasLojas> Logger
 
@@ -85,7 +86,7 @@
                    ErrorMessage="@_connectModalError"
                    OnClose="CloseConnectModal"
                    OnStartOAuth="StartOAuthAsync"
-                   OnLinked="VincularManualmenteDirect" />
+                   OnLojaVinculada="OnLojaVinculadaAsync" />
 
 @code {
     private readonly List<MarketplaceAccountDto> _stores = [];
@@ -100,7 +101,7 @@
     protected override async Task OnInitializedAsync()
     {
         ApplyQueryFeedback();
-        await LoadStoresAsync();
+        await ObterLojasAsync();
     }
 
     private void ApplyQueryFeedback()
@@ -130,10 +131,11 @@
         Navigation.NavigateTo("/minhas-lojas", replace: true);
     }
 
-    private async Task LoadStoresAsync()
+    private async Task ObterLojasAsync()
     {
         _isLoading = true;
         _loadError = null;
+        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -150,6 +152,8 @@
                     ? "Não foi possível carregar suas lojas integradas."
                     : response.Descricao;
             }
+
+            await StoreScope.RefreshStoresAsync();
         }
         catch (Exception ex)
         {
@@ -159,13 +163,14 @@
         finally
         {
             _isLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task ReloadAsync()
     {
         ClearPageMessage();
-        await LoadStoresAsync();
+        await ObterLojasAsync();
     }
 
     private void OpenConnectModal()
@@ -217,13 +222,13 @@
         }
     }
 
-    private async Task VincularManualmenteDirect()
+    private async Task OnLojaVinculadaAsync()
     {
         _connectModalVisible = false;
         _connectModalError = null;
         _pageMessage = "Loja vinculada com sucesso.";
         _pageMessageIsError = false;
-        await LoadStoresAsync();
+        await ObterLojasAsync();
     }
 
     private async Task UnlinkStoreAsync(int integrationId)
@@ -238,7 +243,7 @@
             {
                 _pageMessage = "Loja desconectada com sucesso.";
                 _pageMessageIsError = false;
-                await LoadStoresAsync();
+                await ObterLojasAsync();
             }
             else
             {

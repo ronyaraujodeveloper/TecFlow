@@ -21,6 +21,7 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
     public Task<MarketplaceAccount?> GetByShopAsync(string shopId, MarketplaceType marketplaceType)
     {
         var query = _context.MarketplaceAccounts
+            .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(a => a.ShopId == shopId && a.MarketplaceType == marketplaceType);
 
@@ -35,6 +36,7 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
     public async Task<IReadOnlyList<MarketplaceAccount>> ListForCurrentTenantAsync(bool consolidatedAllShops = true)
     {
         var list = await _context.MarketplaceAccounts
+            .AsNoTracking()
             .OrderBy(a => a.MarketplaceType)
             .ThenBy(a => a.ShopName)
             .ToListAsync();
@@ -44,6 +46,7 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
     public async Task<IReadOnlyList<MarketplaceAccount>> ListForShopAsync(string shopId)
     {
         var list = await _context.MarketplaceAccounts
+            .AsNoTracking()
             .WithManualTenantScope(_currentTenant)
             .Where(a => a.ShopId == shopId)
             .ToListAsync();

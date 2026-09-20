@@ -30,7 +30,7 @@ public static class MarketplaceUrlDetector
             "Shopee",
             "SP",
             "marketplace-chip--shopee",
-            ["shopee.com", "shopee.com.br", "shope.ee", "s.shopee.com.br"],
+            ["shopee.com", "shopee.com.br", "shope.ee", "shp.ee", "br.shp.ee", "s.shopee.com.br"],
             MarketplaceType.Shopee,
             true),
         new(

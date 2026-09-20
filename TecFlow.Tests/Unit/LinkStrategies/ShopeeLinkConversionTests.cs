@@ -1,6 +1,8 @@
 ﻿using System.Net;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
@@ -103,6 +105,8 @@ public class ShopeeLinkConversionTests
         Assert.Contains("tracking_code=", link, StringComparison.OrdinalIgnoreCase);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
         Assert.Equal(ExpectedSubId, subId);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliate));
+        Assert.Equal(ShopeeCommissionUrlBuilder.HomologAffiliateId, affiliate);
         Assert.DoesNotContain("Contacte o administrador", link, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -129,6 +133,10 @@ public class ShopeeLinkConversionTests
     [InlineData("https://shopee.com.br/produto-i.123.456", true)]
     [InlineData("https://www.shopee.com.br/produto-i.123.456", true)]
     [InlineData("https://s.shopee.com.br/abc123", true)]
+    [InlineData("https://br.shp.ee/taeej22s", true)]
+    [InlineData("https://br.shp.ee/taeej22s?fromSource=copy_link&smtt=0.0.9", true)]
+    [InlineData("https://shp.ee/abc", true)]
+    [InlineData("https://shope.ee/xyz", true)]
     [InlineData("shopee://product?itemid=999&shopid=888", true)]
     [InlineData("https://example.com/produto", false)]
     public void PlatformLinkResolver_ShouldRecognizeShopeeDomains(string url, bool expected)
@@ -218,6 +226,62 @@ public class ShopeeLinkConversionTests
         Assert.Equal("999", ids.ItemId);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
         Assert.Equal(ExpectedSubId, subId);
+    }
+
+    [Fact]
+    public async Task ShopeeLinkStrategy_ShouldUnshortenBrShpEeAndExtractShopAndItemIds()
+    {
+        const string shortUrl = "https://br.shp.ee/taeej22s?fromSource=copy_link&smtt=0.0.9";
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("br.shp.ee", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://shopee.com.br/product/123456/789012") }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var recorder = new RecordingShopeeClient();
+        var strategy = CreateShopeeStrategy(
+            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance),
+            recorder);
+
+        var link = await strategy.GenerateDeepLinkAsync(shortUrl, Guid.NewGuid(), AffiliateId);
+
+        Assert.True(ShopeeLinkHostMatcher.IsShopeeUrl(shortUrl));
+        Assert.True(ShopeeLinkHostMatcher.IsShortenerUrl(shortUrl));
+        Assert.Equal("https://shopee.com.br/product/123456/789012", recorder.LastExpandedUrl);
+        Assert.True(ShopeeProductUrlParser.TryParse(recorder.LastExpandedUrl, out var ids));
+        Assert.Equal("123456", ids.ShopId);
+        Assert.Equal("789012", ids.ItemId);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
+        Assert.Equal(ExpectedSubId, subId);
+    }
+
+    [Fact]
+    public void MarketplaceUrlDetector_ShouldRecognizeBrShpEe()
+    {
+        var detected = TecFlow.SharedUi.Helpers.MarketplaceUrlDetector.Detect(
+            "https://br.shp.ee/taeej22s?fromSource=copy_link&smtt=0.0.9");
+
+        Assert.NotNull(detected);
+        Assert.Equal(TecFlow.SharedUi.Helpers.SupportedMarketplaceKey.Shopee, detected!.Key);
+    }
+
+    [Fact]
+    public async Task ShopeeAffiliateLinkClient_WhenApiReturnsEmptyInHomolog_ShouldBuildTrackedProductUrl()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse("""{"data":{}}""");
+        var client = CreateAffiliateClient(MarketplaceTestOptionsFactory.ShopeeOptions(), handler, "Homologacao");
+        var link = await client.GenerateCustomLinkAsync(CreateStore(), ProductUrl, AffiliateId, customNickname: null);
+
+        Assert.Contains("/product/123/456", link, StringComparison.Ordinal);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliate));
+        Assert.Equal(ShopeeCommissionUrlBuilder.HomologAffiliateId, affiliate);
     }
 
     [Theory]
@@ -424,7 +488,8 @@ public class ShopeeLinkConversionTests
 
     private static ShopeeAffiliateLinkClient CreateAffiliateClient(
         IOptions<ShopeeIntegrationOptions> options,
-        HttpMessageHandler handler)
+        HttpMessageHandler handler,
+        string environmentName = "Homologacao")
     {
         var http = new HttpClient(handler, disposeHandler: false)
         {
@@ -434,7 +499,15 @@ public class ShopeeLinkConversionTests
         return new ShopeeAffiliateLinkClient(
             http,
             options,
-            NullLogger<ShopeeAffiliateLinkClient>.Instance);
+            NullLogger<ShopeeAffiliateLinkClient>.Instance,
+            CreateHostEnvironment(environmentName));
+    }
+
+    private static IHostEnvironment CreateHostEnvironment(string name)
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns(name);
+        return environment.Object;
     }
 
     private static IOptions<ShopeeIntegrationOptions> EmptyShopeeOptions() =>

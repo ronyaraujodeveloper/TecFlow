@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Shopee;
@@ -21,15 +22,18 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
     private readonly HttpClient _httpClient;
     private readonly ShopeeIntegrationOptions _options;
     private readonly ILogger<ShopeeAffiliateLinkClient> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public ShopeeAffiliateLinkClient(
         HttpClient httpClient,
         IOptions<ShopeeIntegrationOptions> options,
-        ILogger<ShopeeAffiliateLinkClient> logger)
+        ILogger<ShopeeAffiliateLinkClient> logger,
+        IHostEnvironment hostEnvironment)
     {
         _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     public async Task<string> GenerateCustomLinkAsync(
@@ -48,66 +52,98 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
                 "Shopee sandbox: credenciais de afiliado vazias. Gerando URL de homologação com {TrackingCode}.",
                 _options.SandboxTrackingCode);
 
-            return ApplyCommissionTracking(expandedProductUrl, store);
+            return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
         }
 
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var subIds = BuildSubIds(
-            affiliateId,
-            customNickname,
-            store.ShopId,
-            ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId));
-        var payload = new
+        try
         {
-            productUrl = expandedProductUrl,
-            subIds,
-            shopId = store.ShopId
-        };
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var subIds = BuildSubIds(
+                affiliateId,
+                customNickname,
+                store.ShopId,
+                ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId));
+            var payload = new
+            {
+                productUrl = expandedProductUrl,
+                subIds,
+                shopId = store.ShopId
+            };
 
-        var jsonBody = JsonSerializer.Serialize(payload, JsonOptions);
-        var sign = ComputeAffiliateSign(appId, secret, timestamp, jsonBody);
-        var requestUri =
-            $"{_options.GenerateCustomLinkPath.TrimStart('/')}?appId={Uri.EscapeDataString(appId)}&timestamp={timestamp}&sign={sign}";
+            var jsonBody = JsonSerializer.Serialize(payload, JsonOptions);
+            var sign = ComputeAffiliateSign(appId, secret, timestamp, jsonBody);
+            var requestUri =
+                $"{_options.GenerateCustomLinkPath.TrimStart('/')}?appId={Uri.EscapeDataString(appId)}&timestamp={timestamp}&sign={sign}";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {store.AccessToken}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {store.AccessToken}");
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogWarning(
-                "Shopee generateCustomLink falhou. Status={StatusCode}. Body={Body}",
-                (int)response.StatusCode,
-                content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Shopee generateCustomLink falhou. Status={StatusCode}. Body={Body}",
+                    (int)response.StatusCode,
+                    content);
 
-            throw MapShopeeFailure(content, response.StatusCode);
+                if (IsHomologEnvironment())
+                {
+                    return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
+                }
+
+                throw MapShopeeFailure(content, response.StatusCode);
+            }
+
+            var link = TryExtractAffiliateUrl(content);
+            if (string.IsNullOrWhiteSpace(link))
+            {
+                if (IsHomologEnvironment())
+                {
+                    _logger.LogWarning("Shopee não retornou customLink. Usando URL de tracking de homologação.");
+                    return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
+                }
+
+                throw new AffiliateLinkGenerationException(
+                    "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
+            }
+
+            return ApplyCommissionTracking(link, store, includeHomologAffiliate: IsHomologEnvironment());
         }
-
-        var link = TryExtractAffiliateUrl(content);
-        if (string.IsNullOrWhiteSpace(link))
+        catch (AffiliateLinkGenerationException)
         {
-            throw new AffiliateLinkGenerationException(
-                "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
+            throw;
         }
-
-        return ApplyCommissionTracking(link, store);
+        catch (Exception ex) when (IsHomologEnvironment())
+        {
+            _logger.LogWarning(ex, "Falha na API de afiliados Shopee. Usando URL de tracking de homologação.");
+            return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
+        }
     }
 
-    private string ApplyCommissionTracking(string url, IntegracaoLoja store)
+    private bool IsHomologEnvironment() =>
+        _hostEnvironment.IsDevelopment()
+        || _hostEnvironment.IsEnvironment("Homologacao");
+
+    private string ApplyCommissionTracking(string url, IntegracaoLoja store, bool includeHomologAffiliate = false)
     {
         ShopeeProductUrlParser.TryParse(url, out var ids);
+        var productUrl = !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId)
+            ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ids)
+            : url;
+        var source = includeHomologAffiliate ? productUrl : url;
         var universal = !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId)
             ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ids)
             : url;
 
         return ShopeeCommissionUrlBuilder.Merge(
-            url,
+            source,
             _options.SandboxTrackingCode,
             ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId),
-            universal);
+            universal,
+            affiliateId: includeHomologAffiliate ? ShopeeCommissionUrlBuilder.HomologAffiliateId : null);
     }
 
     private static IReadOnlyList<string> BuildSubIds(

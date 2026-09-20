@@ -10,6 +10,8 @@ public static class ShopeeCommissionUrlBuilder
     public const string SubIdQuery = "sub_id";
     public const string UniversalLinkQuery = "universal_link";
     public const string DeepLinkQuery = "deep_link";
+    public const string AffiliateIdQuery = "affiliate_id";
+    public const string HomologAffiliateId = "12345";
 
     public static string BuildSubId(int userId, Guid tenantId)
     {
@@ -45,7 +47,8 @@ public static class ShopeeCommissionUrlBuilder
         string? trackingCode = null,
         string? subId = null,
         string? universalLink = null,
-        string? deepLink = null)
+        string? deepLink = null,
+        string? affiliateId = null)
     {
         var baseUrl = string.IsNullOrWhiteSpace(productUrl)
             ? "https://shopee.com.br/"
@@ -72,6 +75,11 @@ public static class ShopeeCommissionUrlBuilder
         if (!string.IsNullOrWhiteSpace(deepLink))
         {
             query[DeepLinkQuery] = deepLink.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(affiliateId))
+        {
+            query[AffiliateIdQuery] = affiliateId.Trim();
         }
 
         var encodedQuery = string.Join("&", query.Select(pair => FormatQueryPair(pair.Key, pair.Value)));

@@ -56,7 +56,8 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             cancellationToken);
 
         var workingUrl = originalUrl.Trim();
-        if (ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl))
+        if (ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl)
+            || !ShopeeProductUrlParser.TryParse(workingUrl, out _))
         {
             _logger.LogInformation("Expandindo URL encurtada Shopee antes da geração do link de afiliado.");
             workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);

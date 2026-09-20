@@ -62,6 +62,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
         CancellationToken cancellationToken)
     {
         using var getRequest = new HttpRequestMessage(HttpMethod.Get, url);
+        EnsureBrowserUserAgent(getRequest);
         var getResponse = await client.SendAsync(
             getRequest,
             HttpCompletionOption.ResponseHeadersRead,
@@ -76,10 +77,23 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         getResponse.Dispose();
         using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
+        EnsureBrowserUserAgent(headRequest);
         return await client.SendAsync(
             headRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
+    }
+
+    private static void EnsureBrowserUserAgent(HttpRequestMessage request)
+    {
+        if (request.Headers.UserAgent.Count > 0)
+        {
+            return;
+        }
+
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TecFlow/1.0");
     }
 
     private static bool IsRedirect(HttpResponseMessage response) =>

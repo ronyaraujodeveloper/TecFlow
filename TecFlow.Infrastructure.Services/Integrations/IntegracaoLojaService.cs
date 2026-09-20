@@ -146,7 +146,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return new IntegracaoLojaResponseDto
             {
                 Status = true,
-                Descricao = "Integração atualizada com sucesso.",
+                Descricao = ResolveLinkSuccessMessage(dto, "Integração atualizada com sucesso."),
                 Data = ToAccountDto(existing)
             };
         }
@@ -170,7 +170,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return new IntegracaoLojaResponseDto
         {
             Status = true,
-            Descricao = "Loja vinculada com sucesso.",
+            Descricao = ResolveLinkSuccessMessage(dto, "Loja vinculada com sucesso."),
             Data = ToAccountDto(integration)
         };
     }
@@ -284,6 +284,11 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         dto.AuthorizationCode = code;
         dto.ShopId = shop;
     }
+
+    private string ResolveLinkSuccessMessage(IntegracaoLojaDto dto, string fallback) =>
+        HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, dto.AuthorizationCode)
+            ? HomologMarketplaceAuth.ManualLinkSuccessMessage
+            : fallback;
 
     private bool AllowsHomologFallbacks() =>
         _hostEnvironment.IsDevelopment()

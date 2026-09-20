@@ -74,7 +74,7 @@ public class IntegracaoLojaServiceTests
         });
 
         Assert.True(result.Status);
-        Assert.Equal("Loja vinculada com sucesso.", result.Descricao);
+        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
         Assert.NotNull(saved);
         Assert.Equal("123456", saved!.ShopId);
         Assert.Equal(HomologMarketplaceAuth.StubAccessToken, saved.AccessToken);

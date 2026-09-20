@@ -88,10 +88,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         try
         {
             OAuthTokenPayload tokenPayload;
-            if (AllowsHomologStubTokens() && HomologMarketplaceAuth.IsStubAuthorizationCode(code))
+            if (ShouldSkipRemoteOAuth(code))
             {
                 _logger.LogWarning(
-                    "Usando tokens de homologação para {Marketplace} shop {ShopId} (code_teste).",
+                    "Pulando OAuth remoto da Shopee/TikTok para {Marketplace} shop {ShopId} (homologação/code_*).",
                     type,
                     shopId);
                 tokenPayload = new OAuthTokenPayload
@@ -154,7 +154,9 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             return new MarketplaceTokenResult
             {
                 Success = true,
-                Descricao = "Tokens armazenados com sucesso.",
+                Descricao = ShouldSkipRemoteOAuth(code)
+                    ? HomologMarketplaceAuth.ManualLinkSuccessMessage
+                    : "Tokens armazenados com sucesso.",
                 ShopId = shopId,
                 MarketplaceType = type,
                 ExpiresAt = entity.ExpiresAt
@@ -520,9 +522,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         return existing.TenantId;
     }
 
-    private bool AllowsHomologStubTokens() =>
-        _hostEnvironment.IsDevelopment()
-        || _hostEnvironment.IsEnvironment("Homologacao");
+    private bool ShouldSkipRemoteOAuth(string code) =>
+        HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, code);
 
     private static MarketplaceTokenResult Fail(MarketplaceType type, string shopId, string message) =>
         new()

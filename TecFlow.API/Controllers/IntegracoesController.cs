@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database.Filter;
 
@@ -110,7 +111,11 @@ public class IntegracoesController : ControllerBase
                 return BadRequest(MarketplaceAccountResponseDto.Fail(result.Descricao));
             }
 
-            return Ok(MarketplaceAccountResponseDto.Ok(result.Data));
+            return Ok(MarketplaceAccountResponseDto.Ok(
+                result.Data,
+                HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, dto.AuthorizationCode)
+                    ? HomologMarketplaceAuth.ManualLinkSuccessMessage
+                    : result.Descricao));
         }
         catch (Exception)
         {

@@ -1148,7 +1148,7 @@ sequenceDiagram
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
   UI->>API: POST /api/marketplace-auth/vincular-manual
-  API->>SVC: LinkAsync (homolog: code_teste / ShopId 123456)
+  API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
   SVC->>DB: Upsert MarketplaceAccounts
   SVC-->>UI: MarketplaceAccountResponseDto.Ok()
 ```

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.API.Controllers;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
 
@@ -91,7 +92,7 @@ public class IntegracoesControllerTests
         var ok = Assert.IsType<OkObjectResult>(action.Result);
         var envelope = Assert.IsType<MarketplaceAccountResponseDto>(ok.Value);
         Assert.True(envelope.Status);
-        Assert.Equal("Loja vinculada com sucesso", envelope.Descricao);
+        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, envelope.Descricao);
     }
 
     [Fact]

@@ -143,8 +143,51 @@ public class MarketplaceAuthServiceTests
 
         Assert.True(result.Success);
         Assert.Equal("123456", result.ShopId);
+        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
         Assert.NotNull(savedAccount);
         Assert.Equal(HomologMarketplaceAuth.StubAccessToken, savedAccount!.AccessToken);
+        _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CallbackAndGenerateTokensAsync_ShouldSkipRemoteOAuth_WhenCodeHasHomologPrefixInProduction()
+    {
+        _hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Production");
+        var service = CreateService();
+        _accountRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
+        _tokenRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await service.CallbackAndGenerateTokensAsync(
+            MarketplaceType.Shopee,
+            "code_homolog_local",
+            "123456");
+
+        Assert.True(result.Success);
+        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
+        _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CallbackAndGenerateTokensAsync_ShouldSkipRemoteOAuth_WhenEnvironmentIsHomologacao()
+    {
+        var service = CreateService();
+        _accountRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
+        _tokenRepository
+            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await service.CallbackAndGenerateTokensAsync(
+            MarketplaceType.Shopee,
+            "oauth-real-looking-code",
+            "123456");
+
+        Assert.True(result.Success);
         _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
     }
 

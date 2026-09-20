@@ -62,7 +62,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
     {
         using var _ = _loadingService.BeginScope("Carregando lojas integradas...");
         filter ??= new IntegracaoLojaFilter { Page = 1, PageSize = 100 };
-        var url = "api/integracoes/lojas".AppendQueryString(filter);
+        var url = "api/marketplace-auth/lojas".AppendQueryString(filter);
         return SendEnvelopeAsync(HttpMethod.Get, url, null, cancellationToken);
     }
 

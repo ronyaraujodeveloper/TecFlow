@@ -108,7 +108,8 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 ### Fase 7.1 — Multi-Tenant / Multi-Conta Marketplace (jun/2026)
 
 - [x] **TecFlow.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
-- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens + CNPJ.
+- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens + CNPJ + `UserId`/`FriendlyName`/`IsActive`.
+- [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
 - [x] **TecFlow.Core/Abstractions/ITenantScopedEntity.cs**, **IShopScopedEntity.cs** — contratos de isolamento.
 - [x] **TecFlow.Core/Security/TecFlowClaimTypes.cs** — claims `tenant_id`, `shop_id` (movido de SharedUi).
 - [x] **TenantId** em: `UserAccount`, `Product`, `Campaign`, `Affiliate`, `Content`, `Conversion`, `Metric`, `MarketplaceToken`, `MarketplaceOrder`, `MarketplaceOrderLine`, `GlobalAdvertisingProduct`, `MarketplaceAffiliateLink`, `UserDeviceToken`.
@@ -269,7 +270,9 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Business/Integrations/Common/MarketplaceSignatureHelper.cs** — HMAC-SHA256 Shopee e TikTok Shop.
 - [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — authorize URL, callback, refresh automático.
 - [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceTokenRepository.cs** — upsert por `ShopId` + `MarketplaceType`.
-- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** — `api/marketplace-auth/*`.
+- [x] **MarketplaceAuthController** — `GET api/marketplace-auth/lojas` lê `MarketplaceAccounts` por `UserId`.
+- [x] **IntegracaoLojaService.ListByUserAsync** — `AsNoTracking` em `MarketplaceAccounts`.
+- [x] **IntegracaoLojaApiService.ListAsync** / **MinhasLojas.razor** — recarrega lojas após vínculo.
 - [x] **Migration AddMarketplaceTokens** — tabela `MarketplaceTokens` com tokens criptografados no `AppDbContext`.
 
 ### Integrações TikTok Shop & Shopee — Fase 3.3 (Catálogo / Produtos)

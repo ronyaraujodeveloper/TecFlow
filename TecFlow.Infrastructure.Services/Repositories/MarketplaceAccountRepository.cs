@@ -53,6 +53,24 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
         return list;
     }
 
+    public async Task<IReadOnlyList<MarketplaceAccount>> ListByUserIdAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var key = userId?.Trim() ?? string.Empty;
+        return await _context.MarketplaceAccounts
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(account => account.IsActive && account.UserId == key)
+            .OrderByDescending(account => account.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<MarketplaceAccount?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
+        _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(account => account.Id == id, cancellationToken);
+
     public async Task UpsertAsync(MarketplaceAccount account)
     {
         var existing = await _context.MarketplaceAccounts
@@ -65,11 +83,24 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
         if (existing is null)
         {
             account.CreatedAt = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(account.FriendlyName))
+            {
+                account.FriendlyName = string.IsNullOrWhiteSpace(account.ShopName)
+                    ? account.ShopId
+                    : account.ShopName;
+            }
+
+            account.IsActive = true;
             await _context.MarketplaceAccounts.AddAsync(account);
         }
         else
         {
             existing.ShopName = account.ShopName;
+            existing.FriendlyName = string.IsNullOrWhiteSpace(account.FriendlyName)
+                ? existing.FriendlyName
+                : account.FriendlyName;
+            existing.UserId = string.IsNullOrWhiteSpace(account.UserId) ? existing.UserId : account.UserId;
+            existing.IsActive = account.IsActive;
             existing.AccessToken = account.AccessToken;
             existing.RefreshToken = account.RefreshToken;
             existing.ExpiresAt = account.ExpiresAt;

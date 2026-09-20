@@ -4,6 +4,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
 using TecFlow.Database.Filter;
@@ -39,20 +40,44 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         CancellationToken cancellationToken = default)
     {
         filter.UserId = userId;
-        var items = (await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken))
-            .Select(SyncStatus)
-            .ApplyFilter(filter)
+        var userKey = userId.ToString(CultureInfo.InvariantCulture);
+        var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
+        var integrations = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
+
+        var dtos = accounts
+            .Select(account =>
+            {
+                var integration = integrations.FirstOrDefault(item =>
+                    item.ShopId == account.ShopId && item.PlatformType == account.MarketplaceType);
+                return ToAccountDto(account, integration);
+            })
             .ToList();
 
-        var (pageItems, meta) = PagedListHelper.Slice(items, filter);
-
-            return new IntegracaoLojaResponseDto
+        foreach (var integration in integrations)
+        {
+            var alreadyListed = dtos.Any(item =>
+                item.ShopId == integration.ShopId && item.PlatformType == integration.PlatformType);
+            if (!alreadyListed)
             {
-                Status = true,
-                Descricao = "OK",
-                DataList = pageItems.Select(ToAccountDto).ToList(),
-                Paging = PagingInfoDto.FromMeta(meta)
-            };
+                dtos.Add(ToAccountDto(integration));
+            }
+        }
+
+        if (filter.PlatformType.HasValue)
+        {
+            dtos = dtos.Where(item => item.PlatformType == filter.PlatformType.Value).ToList();
+        }
+
+        dtos = dtos.OrderByDescending(item => item.CreatedAt).ToList();
+        var (pageItems, meta) = PagedListHelper.Slice(dtos, filter);
+
+        return new IntegracaoLojaResponseDto
+        {
+            Status = true,
+            Descricao = "OK",
+            DataList = pageItems.ToList(),
+            Paging = PagingInfoDto.FromMeta(meta)
+        };
     }
 
     public async Task<IntegracaoLojaResponseDto> LinkAsync(
@@ -125,6 +150,12 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("Tokens OAuth gerados, mas não foi possível localizar a conta marketplace persistida.");
         }
 
+        marketplaceAccount.UserId = userId.ToString(CultureInfo.InvariantCulture);
+        marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
+        marketplaceAccount.ShopName = dto.FriendlyName.Trim();
+        marketplaceAccount.IsActive = true;
+        await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
+
         var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
             userId,
             dto.ShopId.Trim(),
@@ -147,7 +178,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             {
                 Status = true,
                 Descricao = ResolveLinkSuccessMessage(dto, "Integração atualizada com sucesso."),
-                Data = ToAccountDto(existing)
+                Data = ToAccountDto(marketplaceAccount, existing)
             };
         }
 
@@ -171,7 +202,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             Status = true,
             Descricao = ResolveLinkSuccessMessage(dto, "Loja vinculada com sucesso."),
-            Data = ToAccountDto(integration)
+            Data = ToAccountDto(marketplaceAccount, integration)
         };
     }
 
@@ -180,16 +211,52 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         int integrationId,
         CancellationToken cancellationToken = default)
     {
+        var userKey = userId.ToString(CultureInfo.InvariantCulture);
         var integration = await _integracaoLojaRepository.GetByIdAsync(integrationId, cancellationToken);
-        if (integration is null || integration.UserId != userId)
+        if (integration is not null && integration.UserId != userId)
+        {
+            integration = null;
+        }
+
+        var account = await _marketplaceAccountRepository.GetByIdAsync(integrationId, cancellationToken);
+        if (account is not null && !string.Equals(account.UserId, userKey, StringComparison.Ordinal))
+        {
+            account = null;
+        }
+
+        if (integration is null && account is null)
         {
             return Fail("Integração não encontrada para o usuário autenticado.");
         }
 
-        integration.Status = MarketplaceIntegrationStatus.Inactive;
-        integration.Touch();
-        await _integracaoLojaRepository.UpdateAsync(integration, cancellationToken);
-        await _integracaoLojaRepository.DeleteAsync(integrationId, cancellationToken);
+        if (account is null && integration is not null)
+        {
+            account = await _marketplaceAccountRepository.GetByShopAsync(integration.ShopId, integration.PlatformType);
+        }
+
+        if (account is not null)
+        {
+            account.IsActive = false;
+            account.Touch();
+            await _marketplaceAccountRepository.UpsertAsync(account);
+        }
+
+        if (integration is null && account is not null)
+        {
+            integration = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
+                userId,
+                account.ShopId,
+                account.MarketplaceType,
+                cancellationToken);
+        }
+
+        if (integration is not null)
+        {
+            integration.Status = MarketplaceIntegrationStatus.Inactive;
+            integration.Touch();
+            await _integracaoLojaRepository.UpdateAsync(integration, cancellationToken);
+            await _integracaoLojaRepository.DeleteAsync(integration.Id, cancellationToken);
+        }
 
         return new IntegracaoLojaResponseDto
         {
@@ -238,6 +305,28 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             ExpiresAt = item.ExpiresAt,
             Status = item.Status,
             CreatedAt = item.CreatedAt
+        };
+    }
+
+    private static MarketplaceAccountDto ToAccountDto(MarketplaceAccount account, IntegracaoLoja? integration)
+    {
+        _ = int.TryParse(account.UserId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedUserId);
+        var status = account.IsActive
+            ? ResolveStatus(account.ExpiresAt, MarketplaceIntegrationStatus.Active)
+            : MarketplaceIntegrationStatus.Inactive;
+
+        return new MarketplaceAccountDto
+        {
+            Id = integration?.Id ?? account.Id,
+            UserId = parsedUserId,
+            TenantId = account.TenantId,
+            ShopId = account.ShopId,
+            FriendlyName = string.IsNullOrWhiteSpace(account.FriendlyName) ? account.ShopName : account.FriendlyName,
+            ShopName = string.IsNullOrWhiteSpace(account.ShopName) ? account.ShopId : account.ShopName,
+            PlatformType = account.MarketplaceType,
+            ExpiresAt = account.ExpiresAt,
+            Status = status,
+            CreatedAt = account.CreatedAt
         };
     }
 

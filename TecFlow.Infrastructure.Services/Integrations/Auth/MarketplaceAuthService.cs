@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,7 @@ using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
 using TecFlow.Database.MultiTenancy;
 
 namespace TecFlow.Infrastructure.Services.Integrations.Auth;
@@ -20,6 +22,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     private readonly IMarketplaceTokenRepository _tokenRepository;
     private readonly IMarketplaceAccountRepository _accountRepository;
+    private readonly AppDbContext _context;
     private readonly ICurrentTenantService _currentTenant;
     private readonly IMarketplaceSignatureService _signatureService;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -31,6 +34,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
         IMarketplaceAccountRepository accountRepository,
+        AppDbContext context,
         ICurrentTenantService currentTenant,
         IMarketplaceSignatureService signatureService,
         IHttpClientFactory httpClientFactory,
@@ -41,6 +45,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     {
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
+        _context = context;
         _currentTenant = currentTenant;
         _signatureService = signatureService;
         _httpClientFactory = httpClientFactory;
@@ -139,17 +144,21 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             entity.Touch();
             await _tokenRepository.UpsertAsync(entity);
 
-            await _accountRepository.UpsertAsync(new MarketplaceAccount
+            await PersistMarketplaceAccountAsync(new MarketplaceAccount
             {
                 TenantId = tenantId.Value,
+                UserId = string.Empty,
                 ShopId = shopId,
                 ShopName = shopId,
+                FriendlyName = shopId,
                 MarketplaceType = type,
                 AccessToken = entity.AccessToken,
                 RefreshToken = entity.RefreshToken,
+                IsActive = true,
                 ExpiresAt = entity.ExpiresAt,
-                RefreshExpiresAt = entity.RefreshExpiresAt
-            });
+                RefreshExpiresAt = entity.RefreshExpiresAt,
+                CreatedAt = DateTime.UtcNow
+            }, cancellationToken);
 
             return new MarketplaceTokenResult
             {
@@ -206,6 +215,22 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
         stored.Touch();
         await _tokenRepository.UpsertAsync(stored);
+
+        var account = await _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                item => item.ShopId == shopId && item.MarketplaceType == type,
+                cancellationToken);
+        if (account is not null)
+        {
+            account.AccessToken = stored.AccessToken;
+            account.RefreshToken = stored.RefreshToken;
+            account.ExpiresAt = stored.ExpiresAt;
+            account.RefreshExpiresAt = stored.RefreshExpiresAt;
+            account.IsActive = true;
+            account.Touch();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
         return stored.AccessToken;
     }
@@ -524,6 +549,37 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     private bool ShouldSkipRemoteOAuth(string code) =>
         HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, code);
+
+    private async Task PersistMarketplaceAccountAsync(MarketplaceAccount account, CancellationToken cancellationToken)
+    {
+        var existing = await _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                item => item.TenantId == account.TenantId
+                    && item.ShopId == account.ShopId
+                    && item.MarketplaceType == account.MarketplaceType,
+                cancellationToken);
+
+        if (existing is null)
+        {
+            await _context.MarketplaceAccounts.AddAsync(account, cancellationToken);
+        }
+        else
+        {
+            existing.UserId = string.IsNullOrWhiteSpace(account.UserId) ? existing.UserId : account.UserId;
+            existing.FriendlyName = account.FriendlyName;
+            existing.ShopName = account.ShopName;
+            existing.AccessToken = account.AccessToken;
+            existing.RefreshToken = account.RefreshToken;
+            existing.ExpiresAt = account.ExpiresAt;
+            existing.RefreshExpiresAt = account.RefreshExpiresAt;
+            existing.IsActive = account.IsActive;
+            existing.Touch();
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        await _accountRepository.UpsertAsync(account);
+    }
 
     private static MarketplaceTokenResult Fail(MarketplaceType type, string shopId, string message) =>
         new()

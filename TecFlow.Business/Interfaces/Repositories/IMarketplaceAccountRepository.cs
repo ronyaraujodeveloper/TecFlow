@@ -11,5 +11,9 @@ public interface IMarketplaceAccountRepository
 
     Task<IReadOnlyList<MarketplaceAccount>> ListForShopAsync(string shopId);
 
+    Task<IReadOnlyList<MarketplaceAccount>> ListByUserIdAsync(string userId, CancellationToken cancellationToken = default);
+
+    Task<MarketplaceAccount?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
     Task UpsertAsync(MarketplaceAccount account);
 }

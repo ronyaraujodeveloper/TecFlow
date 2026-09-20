@@ -67,14 +67,23 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Name);
 
-        modelBuilder.Entity<MarketplaceAccount>()
-            .HasIndex(a => new { a.TenantId, a.ShopId, a.MarketplaceType })
-            .IsUnique();
-
-        modelBuilder.Entity<MarketplaceAccount>()
-            .HasOne(a => a.Tenant)
-            .WithMany(t => t.MarketplaceAccounts)
-            .HasForeignKey(a => a.TenantId);
+        modelBuilder.Entity<MarketplaceAccount>(entity =>
+        {
+            entity.ToTable("MarketplaceAccounts");
+            entity.HasKey(account => account.Id);
+            entity.Property(account => account.UserId).HasMaxLength(128).IsRequired();
+            entity.Property(account => account.FriendlyName).HasMaxLength(256).IsRequired();
+            entity.Property(account => account.ShopId).HasMaxLength(128).IsRequired();
+            entity.Property(account => account.ShopName).HasMaxLength(256).IsRequired();
+            entity.Property(account => account.AccessToken).IsRequired();
+            entity.Property(account => account.IsActive).HasDefaultValue(true);
+            entity.Property(account => account.MarketplaceType).HasConversion<int>();
+            entity.HasIndex(account => new { account.TenantId, account.ShopId, account.MarketplaceType })
+                .IsUnique();
+            entity.HasOne(account => account.Tenant)
+                .WithMany(tenant => tenant.MarketplaceAccounts)
+                .HasForeignKey(account => account.TenantId);
+        });
 
         modelBuilder.Entity<UserAccount>()
             .HasOne(u => u.Tenant)

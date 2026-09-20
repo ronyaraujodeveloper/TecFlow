@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Filter;
 
 namespace TecFlow.API.Controllers;
 
@@ -13,13 +16,16 @@ namespace TecFlow.API.Controllers;
 public class MarketplaceAuthController : ControllerBase
 {
     private readonly IMarketplaceAuthService _marketplaceAuthService;
+    private readonly IIntegracaoLojaService _integracaoLojaService;
     private readonly ILogger<MarketplaceAuthController> _logger;
 
     public MarketplaceAuthController(
         IMarketplaceAuthService marketplaceAuthService,
+        IIntegracaoLojaService integracaoLojaService,
         ILogger<MarketplaceAuthController> logger)
     {
         _marketplaceAuthService = marketplaceAuthService;
+        _integracaoLojaService = integracaoLojaService;
         _logger = logger;
     }
 
@@ -101,6 +107,27 @@ public class MarketplaceAuthController : ControllerBase
             AuthorizationUrl = url,
             Marketplace = type.ToString()
         };
+
+    /// <summary>Lista lojas persistidas em MarketplaceAccounts para o usuário autenticado.</summary>
+    [HttpGet("lojas")]
+    [Authorize]
+    public async Task<ActionResult<IntegracaoLojaResponseDto>> ListLojasAsync(
+        [FromQuery] IntegracaoLojaFilter filter,
+        CancellationToken cancellationToken)
+    {
+        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(claimValue, out var userId))
+        {
+            return Unauthorized(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        var result = await _integracaoLojaService.ListByUserAsync(userId, filter, cancellationToken);
+        return Ok(result);
+    }
 
     /// <summary>Callback OAuth: troca o authorization code por tokens e persiste no banco.</summary>
     [HttpGet("callback")]

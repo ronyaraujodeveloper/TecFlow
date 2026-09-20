@@ -13,7 +13,16 @@ public class MarketplaceAccount : BaseEntity, ITenantScopedEntity, IShopScopedEn
 
     public Tenant? Tenant { get; set; }
 
+    /// <summary>Identificador do usuário TecFlow (string para alinhar claims/JWT).</summary>
+    [Required]
+    [MaxLength(128)]
+    public string UserId { get; set; } = string.Empty;
+
     public MarketplaceType MarketplaceType { get; set; }
+
+    [Required]
+    [MaxLength(256)]
+    public string FriendlyName { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(128)]
@@ -26,6 +35,8 @@ public class MarketplaceAccount : BaseEntity, ITenantScopedEntity, IShopScopedEn
     public string AccessToken { get; set; } = string.Empty;
 
     public string? RefreshToken { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     [MaxLength(18)]
     public string? Cnpj { get; set; }

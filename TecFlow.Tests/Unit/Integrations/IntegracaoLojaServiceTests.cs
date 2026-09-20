@@ -6,6 +6,7 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
+using TecFlow.Database.Filter;
 using TecFlow.Infrastructure.Services.Integrations;
 
 namespace TecFlow.Tests.Unit.Integrations;
@@ -54,6 +55,8 @@ public class IntegracaoLojaServiceTests
                 RefreshToken = HomologMarketplaceAuth.StubRefreshToken,
                 ExpiresAt = DateTime.UtcNow.AddDays(30)
             });
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
 
         IntegracaoLoja? saved = null;
         var stores = new Mock<IIntegracaoLojaRepository>();
@@ -211,6 +214,8 @@ public class IntegracaoLojaServiceTests
                 AccessToken = HomologMarketplaceAuth.StubAccessToken,
                 ExpiresAt = DateTime.UtcNow.AddDays(1)
             });
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
 
         var stores = new Mock<IIntegracaoLojaRepository>();
         stores.Setup(repository => repository.GetByUserShopPlatformAsync(
@@ -236,6 +241,49 @@ public class IntegracaoLojaServiceTests
                 "123456",
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ListByUserAsync_ShouldReturnMarketplaceAccountsForUser()
+    {
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.ListByUserIdAsync("7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new MarketplaceAccount
+                {
+                    Id = 21,
+                    UserId = "7",
+                    TenantId = Guid.NewGuid(),
+                    ShopId = "123456",
+                    FriendlyName = "Loja Homolog",
+                    ShopName = "Loja Homolog",
+                    MarketplaceType = MarketplaceType.Shopee,
+                    IsActive = true,
+                    AccessToken = "token",
+                    ExpiresAt = DateTime.UtcNow.AddDays(1),
+                    CreatedAt = DateTime.UtcNow
+                }
+            ]);
+
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.ListByUserIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<IntegracaoLoja>());
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            new Mock<IUserAccountRepository>().Object,
+            accounts.Object,
+            new Mock<IMarketplaceAuthService>().Object,
+            Production());
+
+        var result = await service.ListByUserAsync(7, new IntegracaoLojaFilter { Page = 1, PageSize = 20 });
+
+        Assert.True(result.Status);
+        Assert.NotNull(result.DataList);
+        Assert.Single(result.DataList);
+        Assert.Equal("123456", result.DataList![0].ShopId);
+        Assert.Equal("Loja Homolog", result.DataList[0].FriendlyName);
     }
 
     private static IHostEnvironment Production() => Environment("Production");

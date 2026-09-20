@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -7,9 +8,11 @@ using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
 using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Services.Integrations.Auth;
 using TecFlow.Tests.Helpers;
+using TecFlow.Util.Security;
 
 namespace TecFlow.Tests.Unit.Integrations;
 
@@ -33,6 +36,7 @@ public class MarketplaceAuthServiceTests
         new(
             _tokenRepository.Object,
             _accountRepository.Object,
+            CreateDbContext(),
             _currentTenant.Object,
             _signatureService,
             _httpClientFactory.Object,
@@ -40,6 +44,19 @@ public class MarketplaceAuthServiceTests
             MarketplaceTestOptionsFactory.ShopeeOptions(),
             NullLogger<MarketplaceAuthService>.Instance,
             _hostEnvironment.Object);
+
+    private static AppDbContext CreateDbContext()
+    {
+        var encryption = new Mock<IEncryptionService>();
+        encryption.Setup(item => item.Encrypt(It.IsAny<string>())).Returns<string>(value => value);
+        encryption.Setup(item => item.Decrypt(It.IsAny<string>())).Returns<string>(value => value);
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        return new AppDbContext(options, encryption.Object, new NullCurrentTenantService());
+    }
 
     [Fact]
     public void GenerateAuthorizationUrl_ShouldContainAppKey_WhenMarketplaceIsTikTokShop()
@@ -83,6 +100,7 @@ public class MarketplaceAuthServiceTests
         var service = new MarketplaceAuthService(
             _tokenRepository.Object,
             _accountRepository.Object,
+            CreateDbContext(),
             _currentTenant.Object,
             _signatureService,
             _httpClientFactory.Object,

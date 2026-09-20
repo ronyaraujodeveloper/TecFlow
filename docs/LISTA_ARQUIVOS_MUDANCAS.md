@@ -110,6 +110,8 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
 - [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens + CNPJ + `UserId`/`FriendlyName`/`IsActive`.
 - [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
+- [x] **TecFlow.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
+- [x] **TecFlow.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.
 - [x] **TecFlow.Core/Abstractions/ITenantScopedEntity.cs**, **IShopScopedEntity.cs** — contratos de isolamento.
 - [x] **TecFlow.Core/Security/TecFlowClaimTypes.cs** — claims `tenant_id`, `shop_id` (movido de SharedUi).
 - [x] **TenantId** em: `UserAccount`, `Product`, `Campaign`, `Affiliate`, `Content`, `Conversion`, `Metric`, `MarketplaceToken`, `MarketplaceOrder`, `MarketplaceOrderLine`, `GlobalAdvertisingProduct`, `MarketplaceAffiliateLink`, `UserDeviceToken`.

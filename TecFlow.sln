@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TecFlow.Mobile", "TecFlow.M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TecFlow.Observability", "TecFlow.Observability\TecFlow.Observability.csproj", "{19E63DDF-9E3D-4439-8C85-A04EFF03894E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TecFlow.Data", "TecFlow.Data\TecFlow.Data.csproj", "{135090FF-4476-4222-A7C7-8FCD76174A08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -237,6 +239,18 @@ Global
 		{19E63DDF-9E3D-4439-8C85-A04EFF03894E}.Release|x64.Build.0 = Release|Any CPU
 		{19E63DDF-9E3D-4439-8C85-A04EFF03894E}.Release|x86.ActiveCfg = Release|Any CPU
 		{19E63DDF-9E3D-4439-8C85-A04EFF03894E}.Release|x86.Build.0 = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|x64.Build.0 = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Debug|x86.Build.0 = Debug|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|x64.ActiveCfg = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|x64.Build.0 = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|x86.ActiveCfg = Release|Any CPU
+		{135090FF-4476-4222-A7C7-8FCD76174A08}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

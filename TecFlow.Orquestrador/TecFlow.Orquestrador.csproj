@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TecFlow.Application\TecFlow.Application.csproj" />
     <ProjectReference Include="..\TecFlow.Business\TecFlow.Business.csproj" />
+    <ProjectReference Include="..\TecFlow.Data\TecFlow.Data.csproj" />
     <ProjectReference Include="..\TecFlow.Database\TecFlow.Database.csproj" />
     <ProjectReference Include="..\TecFlow.Core\TecFlow.Core.csproj" />
     <ProjectReference Include="..\TecFlow.Infrastructure.Services\TecFlow.Infrastructure.Services.csproj" />

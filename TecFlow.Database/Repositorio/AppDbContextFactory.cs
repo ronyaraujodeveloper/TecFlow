@@ -16,35 +16,40 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
     {
         var basePath = ResolveSettingsPath();
 
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
         var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: false)
-            .AddJsonFile("appsettings.Development.json", optional: true)
-            .AddJsonFile("appsettings.Homologacao.json", optional: true)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = PostgreSqlConnectionStringExtensions.EnsureUtf8Encoding(
-            configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("DefaultConnection não configurada."));
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("DefaultConnection não configurada.");
+        var provider = configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
 
         var encryptionService = EncryptionServiceCollectionExtensions.CreateEncryptionService(configuration);
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.AddInterceptors(new NpgsqlUtf8ClientEncodingInterceptor());
-        optionsBuilder.UseNpgsql(connectionString, npgsql =>
-            npgsql.MigrationsAssembly("TecFlow.Infrastructure"));
+        optionsBuilder.UseConfiguredProvider(connectionString, provider);
 
         return new AppDbContext(optionsBuilder.Options, encryptionService, new NullCurrentTenantService());
     }
 
     private static string ResolveSettingsPath()
     {
+        var current = Directory.GetCurrentDirectory();
+        if (File.Exists(Path.Combine(current, "appsettings.json")))
+        {
+            return current;
+        }
+
         var candidates = new[]
         {
+            Path.Combine(Directory.GetCurrentDirectory(), "../TecFlow.API"),
+            Path.Combine(Directory.GetCurrentDirectory(), "../../TecFlow.API"),
             Path.Combine(Directory.GetCurrentDirectory(), "../TecFlow.Orquestrador"),
             Path.Combine(Directory.GetCurrentDirectory(), "../../TecFlow.Orquestrador"),
-            Path.Combine(Directory.GetCurrentDirectory(), "../TecFlow.API"),
         };
 
         foreach (var path in candidates)

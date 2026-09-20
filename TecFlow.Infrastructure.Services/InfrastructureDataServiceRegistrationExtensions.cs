@@ -28,9 +28,8 @@ namespace TecFlow.Infrastructure.Services
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var connectionString = PostgreSqlConnectionStringExtensions.EnsureUtf8Encoding(
-                configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured."));
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
 
             var provider = configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
 
@@ -43,7 +42,7 @@ namespace TecFlow.Infrastructure.Services
             string provider = "PostgreSQL")
         {
             throw new InvalidOperationException(
-                "Use AddTecFlowInfrastructureData(services, configuration) para registrar PostgreSQL e criptografia.");
+                "Use AddTecFlowInfrastructureData(services, configuration) para registrar o provider e a criptografia.");
         }
 
         private static IServiceCollection AddTecFlowInfrastructureDataInternal(
@@ -67,15 +66,7 @@ namespace TecFlow.Infrastructure.Services
 
             services.AddDbContext<AppDbContext>(options =>
             {
-                if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new NotSupportedException(
-                        "SqlServer foi descontinuado neste projeto. Configure Database:Provider=PostgreSQL.");
-                }
-
-                options.AddInterceptors(new NpgsqlUtf8ClientEncodingInterceptor());
-                options.UseNpgsql(connectionString, npgsql =>
-                    npgsql.MigrationsAssembly("TecFlow.Infrastructure"));
+                options.UseConfiguredProvider(connectionString, provider);
 
                 var env = configuration?["ASPNETCORE_ENVIRONMENT"]
                     ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");

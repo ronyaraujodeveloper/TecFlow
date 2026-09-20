@@ -235,6 +235,8 @@ Tecso.AutomacaoCusor/
 │       ├── CryptographyHelper.cs
 │       └── ValidationHelper.cs
 │
+├── TecFlow.Data/                # Migrations EF Core do SQL Server (`InitialSqlServerMigration`)
+│
 ├── TecFlow.Database/
 │   ├── AppDbContext.cs          # DbContext principal
 │   ├── Entity/                  # UserEntity
@@ -252,7 +254,7 @@ Tecso.AutomacaoCusor/
 │   ├── Configuration/           # AppConfiguration, SerilogLogger
 │   ├── Data/                    # DataService, Configurations/ (sem AppDbContext)
 │   ├── Interfaces/              # IAppConfiguration, IUserContextProvider, ILoggerService
-│   ├── Migrations/              # EF migrations (legado — alinhar com Database)
+│   ├── Migrations/              # EF migrations PostgreSQL (Homologacao)
 │   ├── Security/                # JwtTokenService, UserContextProvider
 │   └── Services/Security/       # LegacyCredentialReEncrypt*
 │

@@ -8,8 +8,8 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 ## 🛠️ Stack Tecnológica Definida
 - **Backend:** .NET 8.0 Web API (C#)
 - **Frontend:** Blazor WebApp — projeto **`TecFlow.WebUi`** (ASP.NET Core .NET 8.0)
-- **Banco de Dados:** PostgreSQL (Instalado localmente via EDB, Porta 5432)
-- **ORM:** Entity Framework Core (EF Core) com Npgsql
+- **Banco de Dados:** SQL Server local (`AutomacaoSociais`) via `Database:Provider=SqlServer`; PostgreSQL permanece na homologação IIS (`appsettings.Homologacao.json`)
+- **ORM:** Entity Framework Core 8 — `UseSqlServer` (`TecFlow.Data`) ou `UseNpgsql` (`TecFlow.Infrastructure`) conforme o provider
 
 ---
 
@@ -23,8 +23,9 @@ Para evitar que a acentuação em PT-BR fique quebrada (ex: exibir '??' ou carac
 2. **Cultura e Localização Nativa (PT-BR):**
    - O portal frontend `TecFlow.WebUi` opera sob a cultura `pt-BR`. O pipeline de inicialização configura globalmente as propriedades `DefaultThreadCurrentCulture` e `DefaultThreadCurrentUICulture` para garantir consistência em formatações de data, moeda e decodificação textual.
 
-3. **Persistência de Dados (PostgreSQL):**
-   - Todas as comunicações com o banco de dados via driver `Npgsql` devem explicitar os parâmetros de encoding na Connection String (`Client Encoding=UTF8;Encoding=UTF8;`), garantindo que strings enviadas via Entity Framework Core preservem a acentuação original no armazenamento físico.
+3. **Persistência de Dados:**
+   - SQL Server (`Database:Provider=SqlServer`): `UseSqlServer` e migrations em `TecFlow.Data`.
+   - PostgreSQL (Homologação IIS): driver `Npgsql` com `Client Encoding=UTF8;Encoding=UTF8;` na connection string.
 
 ---
 
@@ -71,6 +72,18 @@ Diagnóstico das Fases **8** (auth/multi-loja), **10** (links backend), **11** (
 - **Filtro por módulo:** `dotnet test --filter "FullyQualifiedName~Shopee"`
 - **Filtro auth/loja:** `dotnet test --filter "FullyQualifiedName~Integracoes|FullyQualifiedName~AuthController"`
 
+## ⚠️ REGRAS ARQUITETURAIS INVIOLÁVEIS (NÃO ALTERAR)
+
+1. **BANCO DE DADOS OFICIAL:**
+   - O único banco de dados oficial do projeto é o **SQL Server**.
+   - O nome do banco de dados na string de conexão deve ser estritamente **`AutomacaoSociais`**.
+   - O provider do Entity Framework Core deve ser obrigatoriamente **`SqlServer`** (`Microsoft.EntityFrameworkCore.SqlServer`).
+   - É **EXTREMAMENTE PROIBIDO** alterar a configuração do `appsettings.json` para `PostgreSQL` / `Npgsql` ou criar bancos com outros nomes (como `TecFlowDb`).
+
+2. **COMPATIBILIDADE E ENCODING:**
+   - Todos os arquivos editados ou criados devem ser salvos com a codificação **UTF-8 com BOM**.
+   - As migrations do EF Core devem ser geradas e executadas exclusivamente para a sintaxe T-SQL / SQL Server direcionadas ao banco `AutomacaoSociais`.
+   
 ### 🎯 Cobertura por módulo
 - [x] **Unidade — algoritmos:** `ValidationHelperTests`, `OrderStateMachineTests`
 - [x] **Fase 8.1/8.2 — Auth / provedores:** `AuthControllerSecurityTests` (401, 400, 500 envelope, JSON `LinkProviderDto`, login `INVALID_CREDENTIALS`)

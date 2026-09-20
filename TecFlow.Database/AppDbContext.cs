@@ -181,7 +181,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Product>()
             .HasIndex(p => new { p.TenantId, p.SkuCode, p.MarketplaceSource, p.MarketplaceShopId })
-            .HasFilter("\"SkuCodigo\" IS NOT NULL AND \"MarketplaceOrigem\" IS NOT NULL");
+            .HasFilter(Database.IsSqlServer()
+                ? "[SkuCodigo] IS NOT NULL AND [MarketplaceOrigem] IS NOT NULL"
+                : "\"SkuCodigo\" IS NOT NULL AND \"MarketplaceOrigem\" IS NOT NULL");
 
         modelBuilder.Entity<UserDeviceToken>()
             .HasIndex(t => new { t.TenantId, t.OwnerId, t.Token })

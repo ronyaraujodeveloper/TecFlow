@@ -1149,11 +1149,13 @@ sequenceDiagram
   participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
-  UI->>API: POST /api/marketplace-auth/vincular-manual
+  UI->>API: POST /api/marketplace-auth/vincular-manual (CORS AllowAll)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
   SVC->>DB: Upsert MarketplaceAccounts
   alt SQL/exceção
     API-->>UI: HTTP 500 JSON ResponseDto.Fail("Erro do Servidor/SQL: ...")
+  else corpo vazio / HttpRequestException
+    UI-->>UI: alerta "Erro de Conexão no IIS (HTTP {status}): porta 5001 / CORS"
   else HTML/IIS
     UI-->>UI: alerta "Erro retornado pelo IIS: " + 200 chars
   else sucesso

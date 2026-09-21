@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
@@ -182,6 +183,16 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return new IntegracaoLojaResponseDto
+                {
+                    Status = false,
+                    Descricao = HttpService.FormatIisConnectionError(response.StatusCode)
+                };
+            }
+
             var envelope = TryDeserializeEnvelope(content);
 
             if (envelope is not null)
@@ -211,6 +222,15 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
             {
                 Status = false,
                 Descricao = "Tempo limite excedido ao contactar o servidor."
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Falha HTTP ao chamar integrações {Method} {Url}.", method, relativeUrl);
+            return new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = HttpService.FormatIisConnectionError(ex.StatusCode)
             };
         }
         catch (Exception ex)

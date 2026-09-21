@@ -84,12 +84,15 @@ public class HttpService : IHttpService
             using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return ApiResult<TResponse>.Fail(
+                    FormatIisConnectionError(response.StatusCode),
+                    (int)response.StatusCode);
+            }
+
             if (response.IsSuccessStatusCode)
             {
-                if (string.IsNullOrWhiteSpace(content))
-                {
-                    return ApiResult<TResponse>.Fail("Resposta vazia do servidor.", (int)response.StatusCode);
-                }
 
                 TResponse? data;
                 try
@@ -137,15 +140,10 @@ public class HttpService : IHttpService
             LogHttpFailure(ex, method, relativeUrl, "timeout");
             return ApiResult<TResponse>.Fail("Tempo limite excedido ao contactar o servidor.", isOffline: true);
         }
-        catch (HttpRequestException ex) when (ex.StatusCode is null or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
-        {
-            LogHttpFailure(ex, method, relativeUrl, "indisponivel");
-            return ApiResult<TResponse>.Fail("Servidor indisponível. Tente novamente em instantes.", isOffline: true);
-        }
         catch (HttpRequestException ex)
         {
             LogHttpFailure(ex, method, relativeUrl, "http");
-            return ApiResult<TResponse>.Fail("Não foi possível contactar o servidor. Verifique se o Orquestrador está em execução.", isOffline: true);
+            return ApiResult<TResponse>.Fail(FormatIisConnectionError(ex.StatusCode), (int?)ex.StatusCode, isOffline: true);
         }
         catch (Exception ex)
         {
@@ -239,11 +237,14 @@ public class HttpService : IHttpService
         return trimmed.StartsWith('{') || trimmed.StartsWith('[');
     }
 
+    internal static string FormatIisConnectionError(HttpStatusCode? statusCode) =>
+        $"Erro de Conexão no IIS (HTTP {statusCode}): Verifique se a API na porta 5001 está online e com CORS liberado.";
+
     internal static string FormatIisError(string? content)
     {
         var snippet = Truncate(content, 200);
         return string.IsNullOrWhiteSpace(snippet)
-            ? "Erro retornado pelo IIS: (vazio)"
+            ? FormatIisConnectionError(null)
             : "Erro retornado pelo IIS: " + snippet;
     }
 

@@ -227,6 +227,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.WebUi/Extensions/WebUiServiceCollectionExtensions.cs** — encaminha `IHostEnvironment` para `AddTecFlowClientServices`.
 - [x] **TecFlow.Mobile/** — MAUI Blazor Hybrid (`MainPage.xaml` + `BlazorWebView` → `AppRoutes` SharedUi); TFM Windows sem iOS/Mac Catalyst.
 - [x] **TecFlow.Mobile/MauiProgram.cs** — DI compartilhada + `MobileAuthenticationStateProvider` + `SessionAuthCookieService`.
+- [x] **TecFlow.API/Program.cs** — política CORS `AllowAll` antes de `UseAuthentication`/`UseAuthorization`.
 - [x] **TecFlow.Mobile/Platforms/Android/AndroidManifest.xml** — permissões `INTERNET` e `ACCESS_NETWORK_STATE`.
 - [x] **TecFlow.Mobile/Platforms/iOS/Info.plist** — `NSAppTransportSecurity` / rede local.
 - [x] **TecFlow.Mobile/appsettings.json** — URL do Orquestrador (emulador Android `10.0.2.2`).
@@ -557,7 +558,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **IntegracaoLojaDto.cs** / **MarketplaceTypeJsonConverter.cs** — JSON camelCase + ShopId string/long.
 - [x] **IntegracoesController.cs** — log de ModelState no 400; homolog aceita `code_teste` / `123456`; `LinkAsync` devolve JSON 500 `ResponseDto`.
 - [x] **MarketplaceAuthController** — `POST vincular-manual` com try/catch global; 500 JSON `ResponseDto.Fail("Erro do Servidor/SQL: ...")`.
-- [x] **IntegracaoLojaApiService / HttpService** — HTML/500 bruto no modal (`Erro retornado pelo IIS:` + 200 chars).
+- [x] **IntegracaoLojaApiService / HttpService** — HTML/500 bruto no modal; corpo vazio/`HttpRequestException` vira alerta CORS/porta 5001.
 - [x] **MarketplaceAuthControllerTests.cs** — vínculo manual 400/500 JSON.
 - [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.
 - [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.

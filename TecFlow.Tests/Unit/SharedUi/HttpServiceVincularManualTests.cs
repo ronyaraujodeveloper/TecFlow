@@ -153,6 +153,69 @@ public class HttpServiceVincularManualTests
         Assert.Contains("{not-json", result.Descricao);
     }
 
+    [Fact]
+    public async Task HttpService_ShouldSurfaceIisConnectionError_WhenResponseBodyIsEmpty()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse(string.Empty, HttpStatusCode.InternalServerError);
+        var http = CreateHttp(handler);
+
+        var result = await http.PostAsync<IntegracaoLojaDto, IntegracaoLojaResponseDto>(
+            ManualLinkPath,
+            CreateValidFormDto());
+
+        Assert.False(result.Success);
+        Assert.Equal(500, result.StatusCode);
+        Assert.Contains("Erro de Conexão no IIS (HTTP InternalServerError)", result.ErrorMessage);
+        Assert.Contains("porta 5001", result.ErrorMessage);
+        Assert.Contains("CORS", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task HttpService_ShouldSurfaceIisConnectionError_WhenHttpRequestExceptionIsThrown()
+    {
+        var handler = new ThrowingHttpHandler(new HttpRequestException(
+            "connection aborted",
+            inner: null,
+            HttpStatusCode.ServiceUnavailable));
+        var http = CreateHttp(handler);
+
+        var result = await http.PostAsync<IntegracaoLojaDto, IntegracaoLojaResponseDto>(
+            ManualLinkPath,
+            CreateValidFormDto());
+
+        Assert.False(result.Success);
+        Assert.Contains("Erro de Conexão no IIS (HTTP ServiceUnavailable)", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task IntegracaoLojaApiService_ShouldSurfaceIisConnectionError_WhenResponseBodyIsEmpty()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse("   ", HttpStatusCode.OK);
+        var api = CreateApi(handler);
+
+        var result = await api.LinkAsync(CreateValidFormDto());
+
+        Assert.False(result.Status);
+        Assert.Contains("Erro de Conexão no IIS (HTTP OK)", result.Descricao);
+        Assert.Contains("CORS", result.Descricao);
+    }
+
+    [Fact]
+    public async Task IntegracaoLojaApiService_ShouldSurfaceIisConnectionError_WhenHttpRequestExceptionIsThrown()
+    {
+        var handler = new ThrowingHttpHandler(new HttpRequestException(
+            "failed to fetch",
+            inner: null,
+            statusCode: null));
+        var api = CreateApi(handler);
+
+        var result = await api.LinkAsync(CreateValidFormDto());
+
+        Assert.False(result.Status);
+        Assert.Contains("Erro de Conexão no IIS (HTTP )", result.Descricao);
+        Assert.Contains("porta 5001", result.Descricao);
+    }
+
     private static IntegracaoLojaDto CreateValidFormDto() => new()
     {
         PlatformType = MarketplaceType.Shopee,
@@ -211,5 +274,17 @@ public class HttpServiceVincularManualTests
         public void Dispose()
         {
         }
+    }
+
+    private sealed class ThrowingHttpHandler : HttpMessageHandler
+    {
+        private readonly HttpRequestException _exception;
+
+        public ThrowingHttpHandler(HttpRequestException exception) => _exception = exception;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(_exception);
     }
 }

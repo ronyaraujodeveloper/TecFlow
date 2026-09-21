@@ -24,12 +24,21 @@ public class MarketplaceAuthController : ControllerBase
     private readonly ILogger<MarketplaceAuthController> _logger;
     private readonly IHostEnvironment _hostEnvironment;
 
+    /// <summary>
+    /// Não injeta AppDbContext/TecFlowDbContext: o EF fica no serviço (DI scoped).
+    /// O construtor só recebe abstrações e não dispara I/O nem consulta SQL.
+    /// </summary>
     public MarketplaceAuthController(
         IMarketplaceAuthService marketplaceAuthService,
         IIntegracaoLojaService integracaoLojaService,
         ILogger<MarketplaceAuthController> logger,
         IHostEnvironment hostEnvironment)
     {
+        ArgumentNullException.ThrowIfNull(marketplaceAuthService);
+        ArgumentNullException.ThrowIfNull(integracaoLojaService);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(hostEnvironment);
+
         _marketplaceAuthService = marketplaceAuthService;
         _integracaoLojaService = integracaoLojaService;
         _logger = logger;

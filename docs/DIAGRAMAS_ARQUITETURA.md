@@ -1144,7 +1144,7 @@ Request sem JWT (login e-mail/senha)
 ```mermaid
 sequenceDiagram
   participant UI as ConnectStoreModal (InteractiveServer)
-  participant API as IntegracoesController
+  participant API as MarketplaceAuthController
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
@@ -1152,7 +1152,13 @@ sequenceDiagram
   UI->>API: POST /api/marketplace-auth/vincular-manual
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
   SVC->>DB: Upsert MarketplaceAccounts
-  SVC-->>UI: MarketplaceAccountResponseDto.Ok()
+  alt SQL/exceção
+    API-->>UI: HTTP 500 JSON ResponseDto.Fail("Erro do Servidor/SQL: ...")
+  else HTML/IIS
+    UI-->>UI: alerta "Erro retornado pelo IIS: " + 200 chars
+  else sucesso
+    SVC-->>UI: MarketplaceAccountResponseDto.Ok()
+  end
 ```
 
 ---

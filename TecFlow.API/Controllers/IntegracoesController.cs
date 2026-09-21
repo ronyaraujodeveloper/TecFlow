@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Security.Claims;
@@ -8,7 +7,6 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database.Filter;
-using TecFlow.Infrastructure.Services.Integrations.Auth;
 
 namespace TecFlow.API.Controllers;
 
@@ -80,59 +78,9 @@ public class IntegracoesController : ControllerBase
         {
             Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
             _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
-            return BadRequest(IntegracaoLojaFail(MarketplaceAuthService.FormatSqlError(ex)));
-        }
-    }
-
-    /// <summary>Vinculação manual (homologação) no contrato MarketplaceAccountResponseDto.</summary>
-    [HttpPost("/api/marketplace-auth/vincular-manual")]
-    public async Task<ActionResult<MarketplaceAccountResponseDto>> VincularManualAsync(
-        [FromBody] IntegracaoLojaDto dto,
-        CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
-        {
-            return InvalidModelState();
-        }
-
-        var userId = GetCurrentUserId();
-        if (userId is null)
-        {
-            return Unauthorized(MarketplaceAccountResponseDto.Fail("Usuário não autenticado."));
-        }
-
-        if (dto is null)
-        {
-            return BadRequest(MarketplaceAccountResponseDto.Fail("Payload de vinculação inválido."));
-        }
-
-        ApplyHomologFallbacks(dto);
-
-        try
-        {
-            var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
-            if (!result.Status)
-            {
-                return BadRequest(MarketplaceAccountResponseDto.Fail(result.Descricao));
-            }
-
-            return Ok(MarketplaceAccountResponseDto.Ok(
-                result.Data,
-                HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, dto.AuthorizationCode)
-                    ? HomologMarketplaceAuth.ManualLinkSuccessMessage
-                    : result.Descricao));
-        }
-        catch (DbUpdateException ex)
-        {
-            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
-            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
-            return BadRequest(MarketplaceAccountResponseDto.Fail(MarketplaceAuthService.FormatSqlError(ex)));
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
-            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
-            return BadRequest(MarketplaceAccountResponseDto.Fail(MarketplaceAuthService.FormatSqlError(ex)));
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ResponseDto.Fail($"Erro do Servidor/SQL: {ex.Message}"));
         }
     }
 

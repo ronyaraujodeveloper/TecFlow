@@ -117,7 +117,8 @@ public class HttpServiceVincularManualTests
             CreateValidFormDto());
 
         Assert.False(result.Success);
-        Assert.Equal("Não foi possível interpretar a resposta do servidor.", result.ErrorMessage);
+        Assert.StartsWith("Erro retornado pelo IIS: ", result.ErrorMessage);
+        Assert.Contains("<html>gateway</html>", result.ErrorMessage);
     }
 
     [Fact]
@@ -148,7 +149,8 @@ public class HttpServiceVincularManualTests
         var result = await api.LinkAsync(CreateValidFormDto());
 
         Assert.False(result.Status);
-        Assert.Equal("Não foi possível interpretar a resposta do servidor.", result.Descricao);
+        Assert.StartsWith("Erro retornado pelo IIS: ", result.Descricao);
+        Assert.Contains("{not-json", result.Descricao);
     }
 
     private static IntegracaoLojaDto CreateValidFormDto() => new()

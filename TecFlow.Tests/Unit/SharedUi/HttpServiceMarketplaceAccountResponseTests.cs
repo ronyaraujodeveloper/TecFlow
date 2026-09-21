@@ -51,7 +51,8 @@ public class HttpServiceMarketplaceAccountResponseTests
             new { });
 
         Assert.False(result.Success);
-        Assert.Equal("Não foi possível interpretar a resposta do servidor.", result.ErrorMessage);
+        Assert.StartsWith("Erro retornado pelo IIS: ", result.ErrorMessage);
+        Assert.Contains("<html>erro</html>", result.ErrorMessage);
     }
 
     [Fact]

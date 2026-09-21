@@ -555,8 +555,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **HttpServiceVincularManualTests.cs** — POST `vincular-manual` com JSON real e falha de desserialização.
 - [x] **AccountSecurityApiServiceTests.cs** — envelope inválido sem exceção.
 - [x] **IntegracaoLojaDto.cs** / **MarketplaceTypeJsonConverter.cs** — JSON camelCase + ShopId string/long.
-- [x] **IntegracoesController.cs** — log de ModelState no 400; homolog aceita `code_teste` / `123456`.
-- [x] **IntegracoesControllerTests.cs** — payload nulo/invertido devolve 400, não 500.
+- [x] **IntegracoesController.cs** — log de ModelState no 400; homolog aceita `code_teste` / `123456`; `LinkAsync` devolve JSON 500 `ResponseDto`.
+- [x] **MarketplaceAuthController** — `POST vincular-manual` com try/catch global; 500 JSON `ResponseDto.Fail("Erro do Servidor/SQL: ...")`.
+- [x] **IntegracaoLojaApiService / HttpService** — HTML/500 bruto no modal (`Erro retornado pelo IIS:` + 200 chars).
+- [x] **MarketplaceAuthControllerTests.cs** — vínculo manual 400/500 JSON.
 - [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.
 - [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.
 - [x] **AuthControllerSecurityTests / AffiliateLinksControllerTests / DashboardControllerTests** — 401/500 e JSON de formulário.

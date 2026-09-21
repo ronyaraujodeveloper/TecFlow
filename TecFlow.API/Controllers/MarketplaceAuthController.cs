@@ -22,15 +22,18 @@ public class MarketplaceAuthController : ControllerBase
     private readonly IMarketplaceAuthService _marketplaceAuthService;
     private readonly IIntegracaoLojaService _integracaoLojaService;
     private readonly ILogger<MarketplaceAuthController> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public MarketplaceAuthController(
         IMarketplaceAuthService marketplaceAuthService,
         IIntegracaoLojaService integracaoLojaService,
-        ILogger<MarketplaceAuthController> logger)
+        ILogger<MarketplaceAuthController> logger,
+        IHostEnvironment hostEnvironment)
     {
         _marketplaceAuthService = marketplaceAuthService;
         _integracaoLojaService = integracaoLojaService;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     /// <summary>Gera URL oficial de autorização OAuth para TikTok Shop ou Shopee.</summary>
@@ -133,6 +136,55 @@ public class MarketplaceAuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Vinculação manual (homologação). Sempre devolve JSON ResponseDto, inclusive em 500/SQL.</summary>
+    [HttpPost("vincular-manual")]
+    [Authorize]
+    public async Task<ActionResult<ResponseDto>> VincularManualAsync(
+        [FromBody] IntegracaoLojaDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return InvalidModelState();
+            }
+
+            var userId = GetCurrentUserId();
+            if (userId is null)
+            {
+                return Unauthorized(ResponseDto.Fail("Usuário não autenticado."));
+            }
+
+            if (dto is null)
+            {
+                return BadRequest(ResponseDto.Fail("Payload de vinculação inválido."));
+            }
+
+            ApplyHomologFallbacks(dto);
+
+            var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
+            if (!result.Status)
+            {
+                return BadRequest(ResponseDto.Fail(result.Descricao));
+            }
+
+            return Ok(MarketplaceAccountResponseDto.Ok(
+                result.Data,
+                HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, dto.AuthorizationCode)
+                    ? HomologMarketplaceAuth.ManualLinkSuccessMessage
+                    : result.Descricao));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ResponseDto.Fail($"Erro do Servidor/SQL: {ex.Message}"));
+        }
+    }
+
     /// <summary>Callback OAuth: troca o authorization code por tokens e persiste no banco.</summary>
     [HttpGet("callback")]
     [Authorize]
@@ -192,4 +244,45 @@ public class MarketplaceAuthController : ControllerBase
             ShopId = shopId,
             MarketplaceType = type
         };
+
+    private BadRequestObjectResult InvalidModelState()
+    {
+        var fields = string.Join("; ", ModelState
+            .Where(entry => entry.Value is { Errors.Count: > 0 })
+            .Select(entry =>
+            {
+                var messages = entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? error.Exception?.Message ?? "inválido"
+                        : error.ErrorMessage);
+                return $"{entry.Key}: {string.Join(", ", messages)}";
+            }));
+
+        _logger.LogWarning("ModelState inválido ao vincular loja. Campos: {Fields}", fields);
+        return BadRequest(ResponseDto.Fail($"Payload de vinculação inválido. {fields}"));
+    }
+
+    private void ApplyHomologFallbacks(IntegracaoLojaDto dto)
+    {
+        if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Homologacao"))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
+        {
+            dto.AuthorizationCode = "code_teste";
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.ShopId))
+        {
+            dto.ShopId = "123456";
+        }
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(claimValue, out var userId) ? userId : null;
+    }
 }

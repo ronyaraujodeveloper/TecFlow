@@ -197,12 +197,12 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
             _logger.LogWarning(
                 "Resposta de integrações não interpretada. Status={StatusCode} Payload={Payload}",
                 (int)response.StatusCode,
-                Truncate(content));
+                Truncate(content, 200));
 
             return new IntegracaoLojaResponseDto
             {
                 Status = false,
-                Descricao = "Não foi possível interpretar a resposta do servidor."
+                Descricao = HttpService.FormatIisError(content)
             };
         }
         catch (TaskCanceledException)
@@ -253,8 +253,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                         ?? ReadString(root, "title")
                         ?? ReadString(root, "error")
                         ?? ReadString(root, "message")
-                        ?? Truncate(json)
-                        ?? "Falha ao vincular a loja."
+                        ?? HttpService.FormatIisError(json)
                 };
             }
 

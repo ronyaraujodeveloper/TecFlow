@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Security.Claims;
@@ -18,7 +19,6 @@ public class MarketplaceAuthControllerTests
     [Fact]
     public void GetAuthorizationUrl_ShouldReturnOkWithUrl_WhenServiceGeneratesLink()
     {
-        // Arrange
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(s => s.GenerateAuthorizationUrl(
                 MarketplaceType.TikTokShop,
@@ -26,18 +26,12 @@ public class MarketplaceAuthControllerTests
                 "state-1"))
             .Returns("https://auth.tiktok.test/authorize?app_key=1");
 
-        var controller = new MarketplaceAuthController(
-            auth.Object,
-            new Mock<IIntegracaoLojaService>().Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-
-        // Act
+        var controller = CreateController(auth: auth.Object);
         var result = controller.GetAuthorizationUrl(
             MarketplaceType.TikTokShop,
             "https://callback",
             "state-1");
 
-        // Assert
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<MarketplaceAuthorizeUrlResponseDto>(ok.Value);
         Assert.Equal("https://auth.tiktok.test/authorize?app_key=1", dto.AuthorizeUrl);
@@ -54,11 +48,7 @@ public class MarketplaceAuthControllerTests
                 "ticket-1"))
             .Returns("https://partner.shopee.test/auth?partner_id=1");
 
-        var controller = new MarketplaceAuthController(
-            auth.Object,
-            new Mock<IIntegracaoLojaService>().Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-
+        var controller = CreateController(auth: auth.Object);
         var result = controller.GetPlatformAuthorizationUrl(
             "shopee",
             "https://callback",
@@ -75,11 +65,7 @@ public class MarketplaceAuthControllerTests
     [Fact]
     public void GetPlatformAuthorizationUrl_ShouldReturnBadRequest_WhenPlatformIsUnknown()
     {
-        var controller = new MarketplaceAuthController(
-            new Mock<IMarketplaceAuthService>().Object,
-            new Mock<IIntegracaoLojaService>().Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-
+        var controller = CreateController();
         var result = controller.GetPlatformAuthorizationUrl("amazon", "https://callback");
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -88,7 +74,6 @@ public class MarketplaceAuthControllerTests
     [Fact]
     public async Task CallbackAsync_ShouldReturnBadRequest_WhenTokenExchangeFails()
     {
-        // Arrange
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(s => s.CallbackAndGenerateTokensAsync(
                 MarketplaceType.Shopee,
@@ -104,19 +89,13 @@ public class MarketplaceAuthControllerTests
                 MarketplaceType = MarketplaceType.Shopee
             });
 
-        var controller = new MarketplaceAuthController(
-            auth.Object,
-            new Mock<IIntegracaoLojaService>().Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-
-        // Act
+        var controller = CreateController(auth: auth.Object);
         var result = await controller.CallbackAsync(
             MarketplaceType.Shopee,
             "bad-code",
             "shop-1",
             CancellationToken.None);
 
-        // Assert
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
@@ -130,11 +109,7 @@ public class MarketplaceAuthControllerTests
                 "ticket-1"))
             .Throws(new InvalidOperationException("Configure Integrations:Shopee:PartnerId e PartnerKey."));
 
-        var controller = new MarketplaceAuthController(
-            auth.Object,
-            new Mock<IIntegracaoLojaService>().Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-
+        var controller = CreateController(auth: auth.Object);
         var result = controller.GetPlatformAuthorizationUrl(
             "shopee",
             "https://localhost:7002/integracoes/oauth/callback",
@@ -177,20 +152,7 @@ public class MarketplaceAuthControllerTests
                 ]
             });
 
-        var controller = new MarketplaceAuthController(
-            new Mock<IMarketplaceAuthService>().Object,
-            lojas.Object,
-            NullLogger<MarketplaceAuthController>.Instance);
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext
-            {
-                User = new ClaimsPrincipal(new ClaimsIdentity(
-                    [new Claim(ClaimTypes.NameIdentifier, "7")],
-                    "Test"))
-            }
-        };
-
+        var controller = CreateController(lojas: lojas.Object, userId: "7");
         var action = await controller.ListLojasAsync(new IntegracaoLojaFilter(), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
@@ -199,4 +161,127 @@ public class MarketplaceAuthControllerTests
         Assert.Single(envelope.DataList!);
         Assert.Equal("123456", envelope.DataList![0].ShopId);
     }
+
+    [Fact]
+    public async Task VincularManualAsync_ShouldReturnBadRequest_WhenPayloadIsNull()
+    {
+        var action = await CreateController().VincularManualAsync(null!, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
+        var envelope = Assert.IsType<ResponseDto>(badRequest.Value);
+        Assert.False(envelope.Status);
+        Assert.Equal("Payload de vinculação inválido.", envelope.Descricao);
+    }
+
+    [Fact]
+    public async Task VincularManualAsync_ShouldReturnJson500_WhenServiceThrows()
+    {
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("falha inesperada"));
+
+        var action = await CreateController(lojas: lojas.Object).VincularManualAsync(ValidDto(), CancellationToken.None);
+
+        var result = Assert.IsType<ObjectResult>(action.Result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        var envelope = Assert.IsType<ResponseDto>(result.Value);
+        Assert.False(envelope.Status);
+        Assert.Equal("Erro do Servidor/SQL: falha inesperada", envelope.Descricao);
+    }
+
+    [Fact]
+    public async Task VincularManualAsync_ShouldReturnBadRequestEnvelope_WhenShopIdAndCodeAreSwapped()
+    {
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Shop ID da Shopee deve ser um número inteiro (ex.: 123456)."
+            });
+
+        var swapped = new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            AuthorizationCode = "123456",
+            ShopId = "code_teste",
+            FriendlyName = "Loja Homolog"
+        };
+
+        var action = await CreateController(lojas: lojas.Object).VincularManualAsync(swapped, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
+        var envelope = Assert.IsType<ResponseDto>(badRequest.Value);
+        Assert.False(envelope.Status);
+        Assert.Contains("número inteiro", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task VincularManualAsync_ShouldReturnOk_WhenLinkSucceeds()
+    {
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntegracaoLojaResponseDto
+            {
+                Status = true,
+                Descricao = "Loja vinculada com sucesso."
+            });
+
+        var action = await CreateController(lojas: lojas.Object).VincularManualAsync(ValidDto(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(ok.Value);
+        Assert.True(envelope.Status);
+        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, envelope.Descricao);
+    }
+
+    [Fact]
+    public async Task VincularManualAsync_ShouldLogAndReturnBadRequest_WhenModelStateIsInvalid()
+    {
+        var controller = CreateController();
+        controller.ModelState.AddModelError("shopId", "The JSON value could not be converted to String.");
+
+        var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
+        var envelope = Assert.IsType<ResponseDto>(badRequest.Value);
+        Assert.False(envelope.Status);
+        Assert.Contains("shopId", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static MarketplaceAuthController CreateController(
+        IMarketplaceAuthService? auth = null,
+        IIntegracaoLojaService? lojas = null,
+        string? userId = "7")
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns("Homologacao");
+
+        var controller = new MarketplaceAuthController(
+            auth ?? new Mock<IMarketplaceAuthService>().Object,
+            lojas ?? new Mock<IIntegracaoLojaService>().Object,
+            NullLogger<MarketplaceAuthController>.Instance,
+            environment.Object);
+
+        var claims = userId is null
+            ? Array.Empty<Claim>()
+            : [new Claim(ClaimTypes.NameIdentifier, userId)];
+        var identity = new ClaimsIdentity(claims, authenticationType: userId is null ? null : "Test");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(identity)
+            }
+        };
+        return controller;
+    }
+
+    private static IntegracaoLojaDto ValidDto() => new()
+    {
+        PlatformType = MarketplaceType.Shopee,
+        AuthorizationCode = "code_teste",
+        ShopId = "123456",
+        FriendlyName = "Loja Homolog"
+    };
 }

@@ -6,109 +6,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.API.Controllers;
 using TecFlow.Business.Dto;
-using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
-using TecFlow.Core.Enums;
 
 namespace TecFlow.Tests.Unit.Controllers;
 
 public class IntegracoesControllerTests
 {
-    [Fact]
-    public async Task VincularManualAsync_ShouldReturnBadRequest_WhenPayloadIsNull()
-    {
-        var controller = CreateController(new Mock<IIntegracaoLojaService>().Object);
-
-        var action = await controller.VincularManualAsync(null!, CancellationToken.None);
-
-        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        Assert.Equal(400, badRequest.StatusCode);
-        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
-        Assert.False(envelope.Status);
-        Assert.Equal("Payload de vinculação inválido.", envelope.Descricao);
-    }
-
-    [Fact]
-    public async Task VincularManualAsync_ShouldReturnBadRequest_WhenServiceThrows()
-    {
-        var service = new Mock<IIntegracaoLojaService>();
-        service.Setup(s => s.LinkAsync(
-                7,
-                It.IsAny<IntegracaoLojaDto>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("falha inesperada"));
-
-        var controller = CreateController(service.Object);
-        var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
-
-        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
-        Assert.False(envelope.Status);
-        Assert.Equal("falha inesperada", envelope.Descricao);
-    }
-
-    [Fact]
-    public async Task VincularManualAsync_ShouldReturnBadRequestEnvelope_WhenShopIdAndCodeAreSwapped()
-    {
-        var service = new Mock<IIntegracaoLojaService>();
-        service.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntegracaoLojaResponseDto
-            {
-                Status = false,
-                Descricao = "Shop ID da Shopee deve ser um número inteiro (ex.: 123456)."
-            });
-
-        var controller = CreateController(service.Object);
-        var swapped = new IntegracaoLojaDto
-        {
-            PlatformType = MarketplaceType.Shopee,
-            AuthorizationCode = "123456",
-            ShopId = "code_teste",
-            FriendlyName = "Loja Homolog"
-        };
-
-        var action = await controller.VincularManualAsync(swapped, CancellationToken.None);
-
-        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
-        Assert.False(envelope.Status);
-        Assert.Contains("número inteiro", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task VincularManualAsync_ShouldReturnOk_WhenLinkSucceeds()
-    {
-        var service = new Mock<IIntegracaoLojaService>();
-        service.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntegracaoLojaResponseDto
-            {
-                Status = true,
-                Descricao = "Loja vinculada com sucesso."
-            });
-
-        var controller = CreateController(service.Object);
-        var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
-
-        var ok = Assert.IsType<OkObjectResult>(action.Result);
-        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(ok.Value);
-        Assert.True(envelope.Status);
-        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, envelope.Descricao);
-    }
-
-    [Fact]
-    public async Task VincularManualAsync_ShouldLogAndReturnBadRequest_WhenModelStateIsInvalid()
-    {
-        var controller = CreateController(new Mock<IIntegracaoLojaService>().Object);
-        controller.ModelState.AddModelError("shopId", "The JSON value could not be converted to String.");
-
-        var action = await controller.VincularManualAsync(ValidDto(), CancellationToken.None);
-
-        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
-        Assert.False(envelope.Status);
-        Assert.Contains("shopId", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
-    }
-
     [Fact]
     public async Task ListAsync_ShouldReturn401_WhenUserIsMissing()
     {
@@ -118,6 +21,31 @@ public class IntegracoesControllerTests
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(action.Result);
         Assert.Equal(401, unauthorized.StatusCode);
         Assert.False(Assert.IsType<IntegracaoLojaResponseDto>(unauthorized.Value).Status);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldReturnJson500_WhenServiceThrows()
+    {
+        var service = new Mock<IIntegracaoLojaService>();
+        service.Setup(s => s.LinkAsync(
+                7,
+                It.IsAny<IntegracaoLojaDto>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("falha inesperada"));
+
+        var controller = CreateController(service.Object);
+        var action = await controller.LinkAsync(new IntegracaoLojaDto
+        {
+            AuthorizationCode = "code_teste",
+            ShopId = "123456",
+            FriendlyName = "Loja Homolog"
+        }, CancellationToken.None);
+
+        var result = Assert.IsType<ObjectResult>(action.Result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        var envelope = Assert.IsType<ResponseDto>(result.Value);
+        Assert.False(envelope.Status);
+        Assert.Equal("Erro do Servidor/SQL: falha inesperada", envelope.Descricao);
     }
 
     private static IntegracoesController CreateController(IIntegracaoLojaService service, string? userId = "7")
@@ -146,12 +74,4 @@ public class IntegracoesControllerTests
         environment.SetupGet(item => item.EnvironmentName).Returns(name);
         return environment.Object;
     }
-
-    private static IntegracaoLojaDto ValidDto() => new()
-    {
-        PlatformType = MarketplaceType.Shopee,
-        AuthorizationCode = "code_teste",
-        ShopId = "123456",
-        FriendlyName = "Loja Homolog"
-    };
 }

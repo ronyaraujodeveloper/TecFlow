@@ -99,31 +99,36 @@ public class HttpService : IHttpService
                 catch (JsonException ex)
                 {
                     _logger.LogError(ex, "Falha ao desserializar JSON. Payload={Payload}", Truncate(content));
-                    return ApiResult<TResponse>.Fail(
-                        "Não foi possível interpretar a resposta do servidor.",
-                        (int)response.StatusCode);
+                    return ApiResult<TResponse>.Fail(FormatIisError(content), (int)response.StatusCode);
                 }
 
                 if (data is null)
                 {
                     _logger.LogError("Resposta JSON nula após desserialização. Payload={Payload}", Truncate(content));
-                    return ApiResult<TResponse>.Fail("Não foi possível interpretar a resposta do servidor.", (int)response.StatusCode);
+                    return ApiResult<TResponse>.Fail(FormatIisError(content), (int)response.StatusCode);
                 }
 
                 return ApiResult<TResponse>.Ok(data);
+            }
+
+            if (!LooksLikeJson(content))
+            {
+                return ApiResult<TResponse>.Fail(FormatIisError(content), (int)response.StatusCode);
             }
 
             var apiError = TryDeserialize<ApiErrorResponse>(content);
             var affiliateError = TryDeserialize<GerarLinkAfiliadoResponseDto>(content);
             var marketplaceError = TryDeserialize<MarketplaceAccountResponseDto>(content);
             var lojaError = TryDeserialize<IntegracaoLojaResponseDto>(content);
+            var responseDto = TryDeserialize<ResponseDto>(content);
             var message = FirstNonEmpty(
                 marketplaceError?.Descricao,
                 lojaError?.Descricao,
+                responseDto?.Descricao,
                 apiError?.Message,
                 affiliateError?.Message,
                 ReadProblemDetail(content),
-                content,
+                FormatIisError(content),
                 $"Erro na API ({(int)response.StatusCode}).");
             return ApiResult<TResponse>.Fail(message, (int)response.StatusCode, apiError?.ErrorCode);
         }
@@ -221,6 +226,25 @@ public class HttpService : IHttpService
         }
 
         return property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString();
+    }
+
+    private static bool LooksLikeJson(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        var trimmed = content.TrimStart();
+        return trimmed.StartsWith('{') || trimmed.StartsWith('[');
+    }
+
+    internal static string FormatIisError(string? content)
+    {
+        var snippet = Truncate(content, 200);
+        return string.IsNullOrWhiteSpace(snippet)
+            ? "Erro retornado pelo IIS: (vazio)"
+            : "Erro retornado pelo IIS: " + snippet;
     }
 
     private static string Truncate(string? value, int maxLength = 2000)

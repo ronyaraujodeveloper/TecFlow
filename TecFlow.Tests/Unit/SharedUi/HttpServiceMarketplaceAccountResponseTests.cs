@@ -54,6 +54,30 @@ public class HttpServiceMarketplaceAccountResponseTests
         Assert.Equal("Não foi possível interpretar a resposta do servidor.", result.ErrorMessage);
     }
 
+    [Fact]
+    public async Task HttpService_ShouldSurfaceDescricao_WhenManualLinkReturnsSqlError()
+    {
+        const string json =
+            """{"status":false,"descricao":"Cannot insert the value NULL into column 'UserId'"}""";
+
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+
+        var http = new HttpService(
+            new NamedClientFactory(handler),
+            new StaticTokenProvider("jwt"),
+            NullLogger<HttpService>.Instance);
+
+        var result = await http.PostAsync<object, MarketplaceAccountResponseDto>(
+            "api/marketplace-auth/vincular-manual",
+            new { });
+
+        Assert.False(result.Success);
+        Assert.Equal("Cannot insert the value NULL into column 'UserId'", result.ErrorMessage);
+    }
+
     private static HttpService CreateHttp(string json)
     {
         var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

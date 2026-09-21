@@ -44,7 +44,7 @@ public class IntegracoesControllerTests
         var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
         var envelope = Assert.IsType<MarketplaceAccountResponseDto>(badRequest.Value);
         Assert.False(envelope.Status);
-        Assert.Equal("Não foi possível vincular a loja. Tente novamente.", envelope.Descricao);
+        Assert.Equal("falha inesperada", envelope.Descricao);
     }
 
     [Fact]

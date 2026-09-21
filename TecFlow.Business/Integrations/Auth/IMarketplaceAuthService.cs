@@ -10,7 +10,8 @@ public interface IMarketplaceAuthService
         MarketplaceType type,
         string code,
         string shopId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? userId = null);
 
     Task<string> GetValidTokenAsync(
         string shopId,

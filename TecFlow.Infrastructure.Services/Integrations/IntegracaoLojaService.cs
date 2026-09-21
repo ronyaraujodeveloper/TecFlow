@@ -9,6 +9,7 @@ using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
 using TecFlow.Database.Filter;
 using TecFlow.Database.Pagin;
+using TecFlow.Infrastructure.Services.Integrations.Auth;
 
 namespace TecFlow.Infrastructure.Services.Integrations;
 
@@ -134,7 +135,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             dto.PlatformType,
             dto.AuthorizationCode.Trim(),
             dto.ShopId.Trim(),
-            cancellationToken);
+            cancellationToken,
+            userId.ToString(CultureInfo.InvariantCulture));
 
         if (!oauthResult.Success)
         {
@@ -154,7 +156,14 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopName = dto.FriendlyName.Trim();
         marketplaceAccount.IsActive = true;
-        await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
+        try
+        {
+            await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
+        }
+        catch (Exception ex)
+        {
+            return Fail(MarketplaceAuthService.FormatSqlError(ex));
+        }
 
         var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
             userId,

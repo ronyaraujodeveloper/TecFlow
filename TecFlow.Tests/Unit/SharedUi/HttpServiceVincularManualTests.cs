@@ -103,7 +103,7 @@ public class HttpServiceVincularManualTests
 
         Assert.False(result.Success);
         Assert.Equal(500, result.StatusCode);
-        Assert.Equal("Erro na API (500).", result.ErrorMessage);
+        Assert.Equal("falha simulada", result.ErrorMessage);
     }
 
     [Fact]

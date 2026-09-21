@@ -1,9 +1,11 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
@@ -78,7 +80,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         MarketplaceType type,
         string code,
         string shopId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? userId = null)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -147,10 +150,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             await PersistMarketplaceAccountAsync(new MarketplaceAccount
             {
                 TenantId = tenantId.Value,
-                UserId = string.Empty,
-                ShopId = shopId,
-                ShopName = shopId,
-                FriendlyName = shopId,
+                UserId = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId.Trim(),
+                ShopId = shopId.Trim(),
+                ShopName = shopId.Trim(),
+                FriendlyName = shopId.Trim(),
                 MarketplaceType = type,
                 AccessToken = entity.AccessToken,
                 RefreshToken = entity.RefreshToken,
@@ -174,7 +177,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Falha no callback OAuth para {Marketplace} shop {ShopId}.", type, shopId);
-            return Fail(type, shopId, ex.Message);
+            return Fail(type, shopId, FormatSqlError(ex));
         }
     }
 
@@ -552,33 +555,99 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     private async Task PersistMarketplaceAccountAsync(MarketplaceAccount account, CancellationToken cancellationToken)
     {
-        var existing = await _context.MarketplaceAccounts
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                item => item.TenantId == account.TenantId
-                    && item.ShopId == account.ShopId
-                    && item.MarketplaceType == account.MarketplaceType,
-                cancellationToken);
+        EnsureMarketplaceAccountCanBeInserted(account);
 
-        if (existing is null)
+        try
         {
-            await _context.MarketplaceAccounts.AddAsync(account, cancellationToken);
+            var existing = await _context.MarketplaceAccounts
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    item => item.TenantId == account.TenantId
+                        && item.ShopId == account.ShopId
+                        && item.MarketplaceType == account.MarketplaceType,
+                    cancellationToken);
+
+            if (existing is null)
+            {
+                _context.MarketplaceAccounts.Add(account);
+            }
+            else
+            {
+                existing.UserId = string.IsNullOrWhiteSpace(account.UserId) ? existing.UserId : account.UserId;
+                existing.FriendlyName = account.FriendlyName;
+                existing.ShopName = account.ShopName;
+                existing.AccessToken = account.AccessToken;
+                existing.RefreshToken = account.RefreshToken;
+                existing.ExpiresAt = account.ExpiresAt;
+                existing.RefreshExpiresAt = account.RefreshExpiresAt;
+                existing.IsActive = account.IsActive;
+                existing.MarketplaceType = account.MarketplaceType;
+                existing.Touch();
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
-        else
+        catch (DbUpdateException ex)
         {
-            existing.UserId = string.IsNullOrWhiteSpace(account.UserId) ? existing.UserId : account.UserId;
-            existing.FriendlyName = account.FriendlyName;
-            existing.ShopName = account.ShopName;
-            existing.AccessToken = account.AccessToken;
-            existing.RefreshToken = account.RefreshToken;
-            existing.ExpiresAt = account.ExpiresAt;
-            existing.RefreshExpiresAt = account.RefreshExpiresAt;
-            existing.IsActive = account.IsActive;
-            existing.Touch();
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            throw;
+        }
+        catch (SqlException ex)
+        {
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            throw;
+        }
+    }
+
+    private static void EnsureMarketplaceAccountCanBeInserted(MarketplaceAccount account)
+    {
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(account.UserId))
+        {
+            missing.Add(nameof(account.UserId));
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
-        await _accountRepository.UpsertAsync(account);
+        if (string.IsNullOrWhiteSpace(account.ShopId))
+        {
+            missing.Add(nameof(account.ShopId));
+        }
+
+        if (string.IsNullOrWhiteSpace(account.FriendlyName))
+        {
+            missing.Add(nameof(account.FriendlyName));
+        }
+
+        if (account.MarketplaceType is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
+        {
+            missing.Add("PlatformType");
+        }
+
+        if (string.IsNullOrWhiteSpace(account.AccessToken))
+        {
+            missing.Add(nameof(account.AccessToken));
+        }
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "MarketplaceAccount incompleta para persistência no SQL Server: " + string.Join(", ", missing) + ".");
+        }
+    }
+
+    public static string FormatSqlError(Exception ex)
+    {
+        var parts = new List<string>();
+        for (var current = ex; current is not null; current = current.InnerException)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Message) && !parts.Contains(current.Message))
+            {
+                parts.Add(current.Message);
+            }
+        }
+
+        return parts.Count == 0 ? "Erro ao salvar MarketplaceAccount no SQL Server." : string.Join(" | ", parts);
     }
 
     private static MarketplaceTokenResult Fail(MarketplaceType type, string shopId, string message) =>

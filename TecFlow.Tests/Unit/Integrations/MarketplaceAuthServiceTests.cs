@@ -26,6 +26,8 @@ public class MarketplaceAuthServiceTests
 
     private readonly Mock<IHostEnvironment> _hostEnvironment = new();
 
+    private readonly AppDbContext _db = CreateDbContext();
+
     public MarketplaceAuthServiceTests()
     {
         _currentTenant.Setup(t => t.TenantId).Returns(Guid.NewGuid());
@@ -36,7 +38,7 @@ public class MarketplaceAuthServiceTests
         new(
             _tokenRepository.Object,
             _accountRepository.Object,
-            CreateDbContext(),
+            _db,
             _currentTenant.Object,
             _signatureService,
             _httpClientFactory.Object,
@@ -145,11 +147,6 @@ public class MarketplaceAuthServiceTests
     public async Task CallbackAndGenerateTokensAsync_ShouldPersistTestTokens_WhenHomologCodeIsStub()
     {
         var service = CreateService();
-        MarketplaceAccount? savedAccount = null;
-        _accountRepository
-            .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
-            .Callback<MarketplaceAccount>(account => savedAccount = account)
-            .Returns(Task.CompletedTask);
         _tokenRepository
             .Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceToken>()))
             .Returns(Task.CompletedTask);
@@ -157,13 +154,15 @@ public class MarketplaceAuthServiceTests
         var result = await service.CallbackAndGenerateTokensAsync(
             MarketplaceType.Shopee,
             HomologMarketplaceAuth.StubAuthorizationCode,
-            "123456");
+            "123456",
+            userId: "7");
 
         Assert.True(result.Success);
         Assert.Equal("123456", result.ShopId);
         Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
-        Assert.NotNull(savedAccount);
-        Assert.Equal(HomologMarketplaceAuth.StubAccessToken, savedAccount!.AccessToken);
+        var savedAccount = Assert.Single(_db.MarketplaceAccounts);
+        Assert.Equal("7", savedAccount.UserId);
+        Assert.Equal(HomologMarketplaceAuth.StubAccessToken, savedAccount.AccessToken);
         _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
     }
 
@@ -182,7 +181,8 @@ public class MarketplaceAuthServiceTests
         var result = await service.CallbackAndGenerateTokensAsync(
             MarketplaceType.Shopee,
             "code_homolog_local",
-            "123456");
+            "123456",
+            userId: "7");
 
         Assert.True(result.Success);
         Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
@@ -203,7 +203,8 @@ public class MarketplaceAuthServiceTests
         var result = await service.CallbackAndGenerateTokensAsync(
             MarketplaceType.Shopee,
             "oauth-real-looking-code",
-            "123456");
+            "123456",
+            userId: "7");
 
         Assert.True(result.Success);
         _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);

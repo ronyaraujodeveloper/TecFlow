@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
@@ -8,6 +11,7 @@ using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Filter;
+using TecFlow.Infrastructure.Services.Integrations.Auth;
 
 namespace TecFlow.API.Controllers;
 
@@ -138,15 +142,31 @@ public class MarketplaceAuthController : ControllerBase
         [FromQuery] string shopId,
         CancellationToken cancellationToken)
     {
-        var result = await _marketplaceAuthService.CallbackAndGenerateTokensAsync(
-            type, code, shopId, cancellationToken);
-
-        if (!result.Success)
+        var userId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        try
         {
-            return BadRequest(result);
-        }
+            var result = await _marketplaceAuthService.CallbackAndGenerateTokensAsync(
+                type, code, shopId, cancellationToken, userId);
 
-        return Ok(result);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (DbUpdateException ex)
+        {
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return BadRequest(MarketplaceTokenFail(shopId, type, MarketplaceAuthService.FormatSqlError(ex)));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return BadRequest(MarketplaceTokenFail(shopId, type, MarketplaceAuthService.FormatSqlError(ex)));
+        }
     }
 
     /// <summary>Retorna access token válido (renova automaticamente se expirado).</summary>
@@ -160,4 +180,16 @@ public class MarketplaceAuthController : ControllerBase
         var token = await _marketplaceAuthService.GetValidTokenAsync(shopId, type, cancellationToken);
         return Ok(new { shopId, marketplace = type.ToString(), accessToken = token });
     }
+
+    private static MarketplaceTokenResult MarketplaceTokenFail(
+        string shopId,
+        MarketplaceType type,
+        string message) =>
+        new()
+        {
+            Success = false,
+            Descricao = message,
+            ShopId = shopId,
+            MarketplaceType = type
+        };
 }

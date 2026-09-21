@@ -115,9 +115,15 @@ public class HttpService : IHttpService
 
             var apiError = TryDeserialize<ApiErrorResponse>(content);
             var affiliateError = TryDeserialize<GerarLinkAfiliadoResponseDto>(content);
+            var marketplaceError = TryDeserialize<MarketplaceAccountResponseDto>(content);
+            var lojaError = TryDeserialize<IntegracaoLojaResponseDto>(content);
             var message = FirstNonEmpty(
+                marketplaceError?.Descricao,
+                lojaError?.Descricao,
                 apiError?.Message,
                 affiliateError?.Message,
+                ReadProblemDetail(content),
+                content,
                 $"Erro na API ({(int)response.StatusCode}).");
             return ApiResult<TResponse>.Fail(message, (int)response.StatusCode, apiError?.ErrorCode);
         }
@@ -181,6 +187,40 @@ public class HttpService : IHttpService
         }
 
         return "Erro na API.";
+    }
+
+    private static string? ReadProblemDetail(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var root = document.RootElement;
+            return FirstNonEmpty(
+                ReadJsonString(root, "descricao"),
+                ReadJsonString(root, "detail"),
+                ReadJsonString(root, "title"),
+                ReadJsonString(root, "error"),
+                ReadJsonString(root, "message"));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? ReadJsonString(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var property))
+        {
+            return null;
+        }
+
+        return property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString();
     }
 
     private static string Truncate(string? value, int maxLength = 2000)

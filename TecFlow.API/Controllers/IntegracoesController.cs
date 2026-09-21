@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Serilog;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Database.Filter;
+using TecFlow.Infrastructure.Services.Integrations.Auth;
 
 namespace TecFlow.API.Controllers;
 
@@ -73,9 +76,11 @@ public class IntegracoesController : ControllerBase
             var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
             return result.Status ? Ok(result) : BadRequest(result);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return BadRequest(IntegracaoLojaFail("Não foi possível vincular a loja. Tente novamente."));
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return BadRequest(IntegracaoLojaFail(MarketplaceAuthService.FormatSqlError(ex)));
         }
     }
 
@@ -117,9 +122,17 @@ public class IntegracoesController : ControllerBase
                     ? HomologMarketplaceAuth.ManualLinkSuccessMessage
                     : result.Descricao));
         }
-        catch (Exception)
+        catch (DbUpdateException ex)
         {
-            return BadRequest(MarketplaceAccountResponseDto.Fail("Não foi possível vincular a loja. Tente novamente."));
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return BadRequest(MarketplaceAccountResponseDto.Fail(MarketplaceAuthService.FormatSqlError(ex)));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+            return BadRequest(MarketplaceAccountResponseDto.Fail(MarketplaceAuthService.FormatSqlError(ex)));
         }
     }
 

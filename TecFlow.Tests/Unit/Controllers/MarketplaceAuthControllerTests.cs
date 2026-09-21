@@ -94,7 +94,8 @@ public class MarketplaceAuthControllerTests
                 MarketplaceType.Shopee,
                 "bad-code",
                 "shop-1",
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()))
             .ReturnsAsync(new MarketplaceTokenResult
             {
                 Success = false,

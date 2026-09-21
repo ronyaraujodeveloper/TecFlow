@@ -33,7 +33,8 @@ public class IntegracaoLojaServiceTests
                 MarketplaceType.Shopee,
                 HomologMarketplaceAuth.StubAuthorizationCode,
                 "123456",
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()))
             .ReturnsAsync(new MarketplaceTokenResult
             {
                 Success = true,
@@ -86,7 +87,8 @@ public class IntegracaoLojaServiceTests
                 MarketplaceType.Shopee,
                 HomologMarketplaceAuth.StubAuthorizationCode,
                 "123456",
-                It.IsAny<CancellationToken>()),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -154,7 +156,8 @@ public class IntegracaoLojaServiceTests
                 It.IsAny<MarketplaceType>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
             Times.Never);
     }
 
@@ -200,7 +203,8 @@ public class IntegracaoLojaServiceTests
                 MarketplaceType.Shopee,
                 HomologMarketplaceAuth.StubAuthorizationCode,
                 "123456",
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()))
             .ReturnsAsync(new MarketplaceTokenResult { Success = true, ShopId = "123456", MarketplaceType = MarketplaceType.Shopee, ExpiresAt = DateTime.UtcNow.AddDays(1) });
 
         var accounts = new Mock<IMarketplaceAccountRepository>();
@@ -239,7 +243,8 @@ public class IntegracaoLojaServiceTests
                 MarketplaceType.Shopee,
                 HomologMarketplaceAuth.StubAuthorizationCode,
                 "123456",
-                It.IsAny<CancellationToken>()),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
             Times.Once);
     }
 

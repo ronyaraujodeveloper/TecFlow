@@ -186,6 +186,11 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             if (envelope is not null)
             {
+                if (!envelope.Status && string.IsNullOrWhiteSpace(envelope.Descricao))
+                {
+                    envelope.Descricao = Truncate(content);
+                }
+
                 return envelope;
             }
 
@@ -208,12 +213,15 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                 Descricao = "Tempo limite excedido ao contactar o servidor."
             };
         }
-        catch (HttpRequestException)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Falha HTTP ao chamar integrações {Method} {Url}.", method, relativeUrl);
             return new IntegracaoLojaResponseDto
             {
                 Status = false,
-                Descricao = "Não foi possível contactar o servidor. Verifique se a API está em execução."
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Não foi possível contactar o servidor. Verifique se a API está em execução."
+                    : ex.Message
             };
         }
     }
@@ -240,9 +248,12 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                 return new IntegracaoLojaResponseDto
                 {
                     Status = false,
-                    Descricao = ReadString(root, "detail")
+                    Descricao = ReadString(root, "descricao")
+                        ?? ReadString(root, "detail")
                         ?? ReadString(root, "title")
                         ?? ReadString(root, "error")
+                        ?? ReadString(root, "message")
+                        ?? Truncate(json)
                         ?? "Falha ao vincular a loja."
                 };
             }

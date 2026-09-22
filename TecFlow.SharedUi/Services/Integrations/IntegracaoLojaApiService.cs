@@ -99,12 +99,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                 HttpMethod.Get,
                 BuildAuthorizeRelativeUrl(platformType, redirectUri, state, friendlyName, lojaId));
 
-            var accessToken = _accessTokenProvider.GetAccessToken();
-            if (!string.IsNullOrEmpty(accessToken))
-            {
-                request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-            }
+            await ApplyBearerAsync(request, cancellationToken);
 
             using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -169,12 +164,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
             var client = _httpClientFactory.CreateClient("Orquestrador");
             using var request = new HttpRequestMessage(method, relativeUrl);
 
-            var accessToken = _accessTokenProvider.GetAccessToken();
-            if (!string.IsNullOrEmpty(accessToken))
-            {
-                request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-            }
+            await ApplyBearerAsync(request, cancellationToken);
 
             if (body is not null)
             {
@@ -244,6 +234,22 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                     : ex.Message
             };
         }
+    }
+
+    private async Task ApplyBearerAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var accessToken = await _accessTokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            _logger.LogWarning(
+                "JWT ausente ao chamar {Method} {Url}. A API deve responder 401.",
+                request.Method,
+                request.RequestUri);
+            return;
+        }
+
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
     }
 
     private IntegracaoLojaResponseDto? TryDeserializeEnvelope(string json)

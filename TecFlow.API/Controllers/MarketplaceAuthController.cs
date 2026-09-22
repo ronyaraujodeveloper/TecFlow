@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
@@ -131,7 +132,7 @@ public class MarketplaceAuthController : ControllerBase
         [FromQuery] IntegracaoLojaFilter filter,
         CancellationToken cancellationToken)
     {
-        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var claimValue = ResolveLoggedUserId();
         if (!int.TryParse(claimValue, out var userId))
         {
             return Unauthorized(new IntegracaoLojaResponseDto
@@ -203,7 +204,7 @@ public class MarketplaceAuthController : ControllerBase
         [FromQuery] string shopId,
         CancellationToken cancellationToken)
     {
-        var userId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ResolveLoggedUserId();
         try
         {
             var result = await _marketplaceAuthService.CallbackAndGenerateTokensAsync(
@@ -291,7 +292,12 @@ public class MarketplaceAuthController : ControllerBase
 
     private int? GetCurrentUserId()
     {
-        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var claimValue = ResolveLoggedUserId();
         return int.TryParse(claimValue, out var userId) ? userId : null;
     }
+
+    private string? ResolveLoggedUserId() =>
+        User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+        ?? User.FindFirst("sub")?.Value;
 }

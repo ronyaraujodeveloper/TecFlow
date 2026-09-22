@@ -69,11 +69,11 @@ public class HttpService : IHttpService
             var client = _httpClientFactory.CreateClient("Orquestrador");
             using var request = new HttpRequestMessage(method, relativeUrl);
 
-            var accessToken = ResolveAccessToken();
-            if (!string.IsNullOrEmpty(accessToken))
+            var accessToken = await ResolveAccessTokenAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(accessToken))
             {
                 request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
             }
 
             if (body is not null)
@@ -165,7 +165,8 @@ public class HttpService : IHttpService
         Console.WriteLine(ex.ToString());
     }
 
-    private string? ResolveAccessToken() => _accessTokenProvider.GetAccessToken();
+    private Task<string?> ResolveAccessTokenAsync(CancellationToken cancellationToken) =>
+        _accessTokenProvider.GetAccessTokenAsync(cancellationToken);
 
     private static T? TryDeserialize<T>(string json)
     {

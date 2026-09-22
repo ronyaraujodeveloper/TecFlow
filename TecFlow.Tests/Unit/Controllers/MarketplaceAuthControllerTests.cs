@@ -163,6 +163,22 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
+    public async Task VincularManualAsync_ShouldUseNameIdentifierClaim_WhenJwtIsValid()
+    {
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntegracaoLojaResponseDto { Status = true, Descricao = "OK" });
+
+        var action = await CreateController(lojas: lojas.Object, userId: "7")
+            .VincularManualAsync(ValidDto(), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(action.Result);
+        lojas.Verify(
+            s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task VincularManualAsync_ShouldReturnBadRequest_WhenPayloadIsNull()
     {
         var action = await CreateController().VincularManualAsync(null!, CancellationToken.None);

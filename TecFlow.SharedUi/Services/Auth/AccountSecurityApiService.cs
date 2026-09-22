@@ -76,11 +76,11 @@ public class AccountSecurityApiService : IAccountSecurityApiService
             var client = _httpClientFactory.CreateClient("Orquestrador");
             using var request = new HttpRequestMessage(method, relativeUrl);
 
-            var accessToken = _accessTokenProvider.GetAccessToken();
-            if (!string.IsNullOrEmpty(accessToken))
+            var accessToken = await _accessTokenProvider.GetAccessTokenAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(accessToken))
             {
                 request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
             }
 
             if (body is not null)

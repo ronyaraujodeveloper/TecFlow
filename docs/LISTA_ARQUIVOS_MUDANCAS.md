@@ -558,6 +558,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **IntegracaoLojaDto.cs** / **MarketplaceTypeJsonConverter.cs** — JSON camelCase + ShopId string/long.
 - [x] **IntegracoesController.cs** — log de ModelState no 400; homolog aceita `code_teste` / `123456`; `LinkAsync` devolve JSON 500 `ResponseDto`.
 - [x] **MarketplaceAuthController** — `POST vincular-manual` com try/catch global; 500 JSON `ResponseDto.Fail("Erro do Servidor/SQL: ...")`.
+- [x] **WebAccessTokenProvider / IntegracaoLojaApiService / HttpService** — Bearer JWT via cookie + AuthenticationStateProvider em `vincular-manual` e `lojas`.
 - [x] **IntegracaoLojaApiService / HttpService** — HTML/500 bruto no modal; corpo vazio/`HttpRequestException` vira alerta CORS/porta 5001.
 - [x] **MarketplaceAuthControllerTests.cs** — vínculo manual 400/500 JSON.
 - [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.

@@ -1149,7 +1149,8 @@ sequenceDiagram
   participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
-  UI->>API: POST /api/marketplace-auth/vincular-manual (CORS AllowAll)
+  UI->>UI: SyncSessionFromPrincipal (JWT do cookie)
+  UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
   SVC->>DB: Upsert MarketplaceAccounts
   alt SQL/exceção

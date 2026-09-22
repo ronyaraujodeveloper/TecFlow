@@ -90,6 +90,28 @@ public class HttpServiceVincularManualTests
     }
 
     [Fact]
+    public async Task IntegracaoLojaApiService_ShouldSendBearerToken_OnVincularManualAndLojas()
+    {
+        HttpRequestMessage? captured = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            captured = request;
+            return JsonOk(SuccessEnvelopeJson);
+        });
+
+        var api = CreateApi(handler);
+        await api.LinkAsync(CreateValidFormDto());
+
+        Assert.NotNull(captured);
+        Assert.Equal("Bearer", captured!.Headers.Authorization?.Scheme);
+        Assert.Equal("jwt", captured.Headers.Authorization?.Parameter);
+
+        captured = null;
+        await api.ListAsync();
+        Assert.Equal("jwt", captured!.Headers.Authorization?.Parameter);
+    }
+
+    [Fact]
     public async Task HttpService_ShouldFailGracefully_WhenStatusIsNumericProblemDetails()
     {
         var handler = StubHttpMessageHandler.WithJsonResponse(

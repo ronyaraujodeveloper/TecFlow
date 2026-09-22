@@ -9,6 +9,8 @@
 @inject IActiveStoreScopeService StoreScope
 @inject NavigationManager Navigation
 @inject ILogger<MinhasLojas> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthCookieService AuthCookie
 
 <PageTitle>Minhas Lojas / Integrações — TecFlow</PageTitle>
 
@@ -100,6 +102,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        AuthCookie.SyncSessionFromPrincipal(authState.User);
         ApplyQueryFeedback();
         await ObterLojasAsync();
     }

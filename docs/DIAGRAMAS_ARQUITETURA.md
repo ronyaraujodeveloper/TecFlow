@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` (`shopee.com.br` / `br.shp.ee` / `shp.ee` / `shope.ee`) → `ShopeeProductUrlParser.Sanitize` (remove `extraParams`/`sp_atk`/`xptdk`) → `UrlExpansionService` (GET + `Location` 301/302) → `ShopeeProductUrlParser` (`*-i.{shopId}.{itemId}` ou fallback `999999`/`888888` em homolog) → `ShopeeAffiliateLinkClient` / sandbox → `ShopeeCommissionUrlBuilder` → `ShortLinkService` + `LinkClickTelemetryService.RecordGenerationAsync`.
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` → regex `i.(shopId).(itemId)` (query `extraParams` ignorada) → URL de afiliado com tags da loja vinculada → `ShortLinkService`. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
 
 ```mermaid
 flowchart LR

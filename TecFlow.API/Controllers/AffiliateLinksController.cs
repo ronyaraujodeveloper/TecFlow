@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Database.Filter;
 
 namespace TecFlow.API.Controllers;
@@ -74,6 +75,17 @@ public class AffiliateLinksController : ControllerBase
         {
             var result = await _generationService.GenerateAsync(request, userId, cancellationToken);
             return result.Success ? Ok(result) : BadRequest(result);
+        }
+        catch (AffiliateLinkGenerationException ex)
+        {
+            _logger.LogWarning(ex, "Falha de parse/conversão de link para UserId={UserId}.", userId);
+            return BadRequest(new GerarLinkAfiliadoResponseDto
+            {
+                Success = false,
+                Status = false,
+                Message = ShopeeProductUrlParser.UnrecognizedLinkMessage,
+                Descricao = ShopeeProductUrlParser.UnrecognizedLinkMessage
+            });
         }
         catch (Exception ex)
         {

@@ -15,7 +15,7 @@ public static class ShopeeProductUrlParser
     public const string HomologItemId = "888888";
 
     public const string UnrecognizedLinkMessage =
-        "Formato de link da Shopee não reconhecido. Use o link do app ou a URL padrão do produto.";
+        "Não foi possível converter este link da Shopee. Verifique o formato enviado.";
 
     public static ShopeeProductUrlIds HomologIds { get; } = new(HomologShopId, HomologItemId);
 
@@ -40,6 +40,11 @@ public static class ShopeeProductUrlParser
         "fbclid"
     };
 
+    /// <summary>Link desktop Shopee: slug-i.{shopId}.{itemId} (querystring ignorada).</summary>
+    private static readonly Regex DesktopItemPattern = new(
+        @"i\.(?<shopId>\d+)\.(?<itemId>\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex HyphenItemPattern = new(
         @"[-_/]i\.(\d+)\.(\d+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -59,7 +64,8 @@ public static class ShopeeProductUrlParser
     private static readonly string[] NestedUrlQueryKeys = ["url", "redir", "redirect", "target", "u", "link"];
 
     public static bool TryParse(string? url, out ShopeeProductUrlIds ids) =>
-        TryParseInternal(Sanitize(url), out ids, depth: 0)
+        TryParseDesktopItem(url, out ids)
+        || TryParseInternal(Sanitize(url), out ids, depth: 0)
         || TryParseInternal(url, out ids, depth: 0)
         || TryParseHyphenInRaw(url, out ids);
 
@@ -97,7 +103,8 @@ public static class ShopeeProductUrlParser
             return StripQueryFallback(trimmed);
         }
 
-        if (TryParseHyphenInRaw(uri.AbsolutePath, out var hyphenIds)
+        if (TryParseDesktopItem(trimmed, out var hyphenIds)
+            || TryParseHyphenInRaw(uri.AbsolutePath, out hyphenIds)
             || TryParsePathPatterns(uri.AbsolutePath, out hyphenIds))
         {
             return BuildCanonicalProductUrl(uri, hyphenIds);
@@ -136,6 +143,11 @@ public static class ShopeeProductUrlParser
         if (depth > 3 || string.IsNullOrWhiteSpace(url))
         {
             return false;
+        }
+
+        if (TryParseDesktopItem(url, out ids))
+        {
+            return true;
         }
 
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
@@ -189,6 +201,11 @@ public static class ShopeeProductUrlParser
             return true;
         }
 
+        if (TryParseDesktopItem(path, out ids))
+        {
+            return true;
+        }
+
         var hyphenMatch = HyphenItemPattern.Match(path);
         if (hyphenMatch.Success)
         {
@@ -206,12 +223,41 @@ public static class ShopeeProductUrlParser
         return false;
     }
 
+    public static bool TryParseDesktopItem(string? value, out ShopeeProductUrlIds ids)
+    {
+        ids = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var source = StripQueryFallback(value.Trim());
+        var match = DesktopItemPattern.Match(source);
+        if (!match.Success)
+        {
+            match = DesktopItemPattern.Match(value);
+        }
+
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        ids = new ShopeeProductUrlIds(match.Groups["shopId"].Value, match.Groups["itemId"].Value);
+        return !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId);
+    }
+
     private static bool TryParseHyphenInRaw(string? value, out ShopeeProductUrlIds ids)
     {
         ids = default;
         if (string.IsNullOrWhiteSpace(value))
         {
             return false;
+        }
+
+        if (TryParseDesktopItem(value, out ids))
+        {
+            return true;
         }
 
         var hyphenMatch = HyphenItemPattern.Match(value);
@@ -234,10 +280,11 @@ public static class ShopeeProductUrlParser
     private static string BuildCanonicalProductUrl(Uri uri, ShopeeProductUrlIds ids)
     {
         var path = uri.AbsolutePath;
-        var hyphenMatch = HyphenItemPattern.Match(path);
-        if (hyphenMatch.Success)
+        var desktopMatch = DesktopItemPattern.Match(path);
+        if (desktopMatch.Success)
         {
-            var cleanPath = path[..hyphenMatch.Index] + $"-i.{ids.ShopId}.{ids.ItemId}";
+            var prefix = path[..desktopMatch.Index];
+            var cleanPath = $"{prefix}i.{ids.ShopId}.{ids.ItemId}";
             return $"{uri.Scheme}://{uri.Authority}{cleanPath}";
         }
 

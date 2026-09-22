@@ -7,6 +7,7 @@ using Moq;
 using TecFlow.API.Controllers;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Database.Filter;
 
 namespace TecFlow.Tests.Unit.Controllers;
@@ -83,6 +84,31 @@ public class AffiliateLinksControllerTests
         Assert.Equal("https://shopee.com.br/produto", body.OriginalUrl);
         Assert.Equal("https://shopee.com.br/produto?tracking_code=tecflow_sandbox_subid", body.AffiliateUrl);
         Assert.Equal("http://localhost:5001/r/abc1234", body.ShortenedUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ShouldReturn400_WhenShopeeParseFails()
+    {
+        var generation = new Mock<IAffiliateLinkGenerationService>();
+        generation.Setup(s => s.GenerateAsync(It.IsAny<GerarLinkAfiliadoDto>(), 7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GerarLinkAfiliadoResponseDto
+            {
+                Success = false,
+                Status = false,
+                Message = ShopeeProductUrlParser.UnrecognizedLinkMessage,
+                Descricao = ShopeeProductUrlParser.UnrecognizedLinkMessage
+            });
+
+        var controller = CreateController(generation.Object);
+        var action = await controller.GenerateAsync(
+            new GerarLinkAfiliadoDto { OriginalUrl = "https://shopee.com.br/categoria/moveis" },
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
+        Assert.Equal(400, badRequest.StatusCode);
+        var body = Assert.IsType<GerarLinkAfiliadoResponseDto>(badRequest.Value);
+        Assert.False(body.Success);
+        Assert.Equal(ShopeeProductUrlParser.UnrecognizedLinkMessage, body.Message);
     }
 
     [Fact]

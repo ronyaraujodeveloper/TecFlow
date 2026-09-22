@@ -290,7 +290,7 @@
             else
             {
                 _generatedResponse = null;
-                ShowError(result.ErrorMessage ?? result.Data?.Message ?? "Não foi possível gerar o link de comissão.");
+                ShowError(ResolveConversionError(result.ErrorMessage, result.Data?.Message));
             }
         }
         catch (Exception ex)
@@ -355,5 +355,50 @@
     {
         _feedbackMessage = message;
         _feedbackIsError = true;
+    }
+
+    private string ResolveConversionError(string? apiMessage, string? dtoMessage)
+    {
+        var raw = FirstNonEmpty(apiMessage, dtoMessage);
+        if (IsShopeeParseFailure(raw))
+        {
+            return ShopeeProductUrlParser.UnrecognizedLinkMessage;
+        }
+
+        return string.IsNullOrWhiteSpace(raw)
+            ? "Não foi possível gerar o link de comissão."
+            : raw;
+    }
+
+    private bool IsShopeeParseFailure(string? raw)
+    {
+        if (_detectedPlatform?.IntegrationType != MarketplaceType.Shopee)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        return raw.Contains("não reconhec", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("formato enviado", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("Formato de link da Shopee", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("ItemId", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("ShopId", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
     }
 }

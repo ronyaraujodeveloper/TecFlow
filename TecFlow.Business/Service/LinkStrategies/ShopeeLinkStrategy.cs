@@ -144,54 +144,79 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         }
         catch (Exception ex) when (allowHomologFallback)
         {
-            _logger.LogWarning(ex, "Falha na conversão Shopee. Usando link simulado de homologação.");
-            return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
-                ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+            _logger.LogWarning(ex, "Falha na API Shopee. Montando URL de afiliado com ShopId/ItemId extraídos.");
+            if (usedHomologIds)
+            {
+                return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                    ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+            }
+
+            return BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
         }
 
-        if (usedHomologIds || string.IsNullOrWhiteSpace(generated))
+        if (string.IsNullOrWhiteSpace(generated) || usedHomologIds)
         {
-            return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
-                ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+            if (usedHomologIds)
+            {
+                return ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                    ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
+            }
+
+            return BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
         }
 
         return ApplyCommissionTracking(
             generated,
-            store.UserId,
-            store.TenantId,
+            store,
             productIds,
-            originalUrl.Trim());
+            originalUrl.Trim(),
+            affiliateId);
+    }
+
+    private string BuildAffiliateUrlFromProductIds(
+        TecFlow.Database.Entity.IntegracaoLoja store,
+        ShopeeProductUrlIds productIds,
+        string originalUrl,
+        string affiliateId)
+    {
+        var canonical = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
+        return ApplyCommissionTracking(canonical, store, productIds, originalUrl, affiliateId);
     }
 
     private string ApplyCommissionTracking(
         string generatedUrl,
-        int userId,
-        Guid tenantId,
+        TecFlow.Database.Entity.IntegracaoLoja store,
         ShopeeProductUrlIds productIds,
-        string originalUrl)
+        string originalUrl,
+        string affiliateId)
     {
         var trackingCode = string.IsNullOrWhiteSpace(_options.SandboxTrackingCode)
             ? ShopeeCommissionUrlBuilder.DefaultTrackingCode
             : _options.SandboxTrackingCode.Trim();
 
-        var subId = ShopeeCommissionUrlBuilder.BuildSubId(userId, tenantId);
+        var subId = ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId);
         var universalLink = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
         var deepLink = ShopeeLinkHostMatcher.IsNativeDeepLink(originalUrl)
             ? originalUrl.Trim()
             : null;
+        var resolvedAffiliateId = !string.IsNullOrWhiteSpace(store.ShopId)
+            ? store.ShopId
+            : affiliateId;
 
         _logger.LogInformation(
-            "Shopee URL de comissão. TrackingCode={TrackingCode} SubId={SubId} ShopId={ShopId} ItemId={ItemId}",
+            "Shopee URL de comissão. TrackingCode={TrackingCode} SubId={SubId} ShopId={ShopId} ItemId={ItemId} AffiliateId={AffiliateId}",
             trackingCode,
             subId,
             productIds.ShopId,
-            productIds.ItemId);
+            productIds.ItemId,
+            resolvedAffiliateId);
 
         return ShopeeCommissionUrlBuilder.Merge(
             generatedUrl,
             trackingCode,
             subId,
             universalLink,
-            deepLink);
+            deepLink,
+            resolvedAffiliateId);
     }
 }

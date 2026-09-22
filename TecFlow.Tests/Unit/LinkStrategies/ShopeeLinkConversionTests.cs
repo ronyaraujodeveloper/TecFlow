@@ -365,27 +365,31 @@ public class ShopeeLinkConversionTests
     }
 
     [Fact]
-    public async Task ShopeeLinkStrategy_ShouldConvertTitansAtlasProductUrlWithNoisyQuery()
+    public async Task ShopeeLinkStrategy_ShouldConvertTitansAtlasDesktopUrlWithDisplayModelExtraParams()
     {
         const string original =
             "https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557"
-            + "?extraParams=%7B%22foo%22%3A1%7D&sp_atk=abc&xptdk=xyz";
+            + "?extraParams=%7B%22display_model_id%22%3A199163985057%2C%22model_selection_logic%22%3A3%7D";
+
+        Assert.True(ShopeeProductUrlParser.TryParseDesktopItem(original, out var parsed));
+        Assert.Equal("1226120317", parsed.ShopId);
+        Assert.Equal("22197624557", parsed.ItemId);
 
         var client = new RecordingShopeeClient();
         var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), client);
-
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
         Assert.False(string.IsNullOrWhiteSpace(link));
-        Assert.Contains("1226120317", client.LastExpandedUrl, StringComparison.Ordinal);
-        Assert.Contains("22197624557", client.LastExpandedUrl, StringComparison.Ordinal);
+        Assert.Contains("1226120317", link, StringComparison.Ordinal);
+        Assert.Contains("22197624557", link, StringComparison.Ordinal);
         Assert.DoesNotContain("extraParams", client.LastExpandedUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("sp_atk", client.LastExpandedUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.TrackingCodeQuery, out _));
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
-        Assert.Equal("https://shopee.com.br/product/1226120317/22197624557", universal);
+        Assert.DoesNotContain("199163985057", parsed.ShopId, StringComparison.Ordinal);
+        Assert.Equal("https://shopee.com.br/product/1226120317/22197624557",
+            ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal)
+                ? universal
+                : null);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
+        Assert.Equal("shop-sandbox", affiliateTag);
     }
 
     [Fact]

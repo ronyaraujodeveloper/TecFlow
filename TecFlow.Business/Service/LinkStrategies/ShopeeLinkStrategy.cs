@@ -198,7 +198,12 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             authorizationCode: null)
             || _options.IsSandboxMode;
 
-        string generated;
+        var affiliateUrl = usedHomologIds
+            ? ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
+                ShopeeProductUrlParser.TryExtractShortHash(originalUrl))
+            : BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
+
+        string? generated = null;
         try
         {
             generated = await _shopeeAffiliateClient.GenerateCustomLinkAsync(
@@ -208,48 +213,38 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
                 _generationContext.CustomNickname,
                 cancellationToken);
         }
-        catch (Exception ex) when (allowHomologFallback)
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha na API Shopee. Montando URL de afiliado com ShopId/ItemId extraídos.");
-            if (usedHomologIds)
-            {
-                var homolog = ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
-                    ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
-                CaptureOfficialShortUrl(homolog, originalUrl, productIds);
-                return homolog;
-            }
-
-            var built = BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
-            CaptureOfficialShortUrl(built, originalUrl, productIds);
-            return built;
+            _logger.LogError(
+                ex,
+                "Falha ao obter o link reduzido oficial da Shopee. UserId={UserId} StoreId={StoreId} TenantId={TenantId} ShopId={ShopId} OriginalUrl={OriginalUrl} HomologFallback={HomologFallback} ExceptionType={ExceptionType} Causa={Causa}",
+                store.UserId,
+                store.Id,
+                store.TenantId,
+                store.ShopId,
+                originalUrl,
+                allowHomologFallback,
+                ex.GetType().FullName,
+                ex.ToString());
         }
 
-        if (string.IsNullOrWhiteSpace(generated) || usedHomologIds)
+        if (!string.IsNullOrWhiteSpace(generated) && !usedHomologIds)
         {
-            if (usedHomologIds)
-            {
-                var homolog = ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
-                    ShopeeProductUrlParser.TryExtractShortHash(originalUrl));
-                CaptureOfficialShortUrl(homolog, originalUrl, productIds);
-                return homolog;
-            }
-
-            var built = BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
-            CaptureOfficialShortUrl(built, originalUrl, productIds);
-            return built;
+            var tracked = ApplyCommissionTracking(
+                generated,
+                store,
+                productIds,
+                originalUrl.Trim(),
+                affiliateId);
+            AssignOfficialShortUrl(tracked, generated, originalUrl);
+            return tracked;
         }
 
-        var tracked = ApplyCommissionTracking(
-            generated,
-            store,
-            productIds,
-            originalUrl.Trim(),
-            affiliateId);
-        CaptureOfficialShortUrl(generated, originalUrl, productIds);
-        return tracked;
+        AssignOfficialShortUrl(affiliateUrl, generated, originalUrl);
+        return affiliateUrl;
     }
 
-    private void CaptureOfficialShortUrl(string generatedOrApiUrl, string originalUrl, ShopeeProductUrlIds productIds)
+    private void AssignOfficialShortUrl(string affiliateUrl, string? generatedOrApiUrl, string originalUrl)
     {
         if (ShopeeOfficialShortUrl.IsOfficialShortener(_generationContext.OfficialShortenedShopeeUrl))
         {
@@ -258,10 +253,19 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             return;
         }
 
-        _generationContext.OfficialShortenedShopeeUrl = ShopeeOfficialShortUrl.Resolve(
-            generatedOrApiUrl,
-            originalUrl,
-            productIds);
+        if (ShopeeOfficialShortUrl.IsOfficialShortener(generatedOrApiUrl))
+        {
+            _generationContext.OfficialShortenedShopeeUrl = ShopeeOfficialShortUrl.Sanitize(generatedOrApiUrl!);
+            return;
+        }
+
+        if (ShopeeOfficialShortUrl.IsOfficialShortener(originalUrl))
+        {
+            _generationContext.OfficialShortenedShopeeUrl = ShopeeOfficialShortUrl.Sanitize(originalUrl);
+            return;
+        }
+
+        _generationContext.OfficialShortenedShopeeUrl = affiliateUrl;
     }
 
     private string BuildAffiliateUrlFromProductIds(

@@ -320,6 +320,7 @@ public class ShopeeLinkConversionTests
     [InlineData("https://shopee.com.br/product-name-i.123456.7891011", "123456", "7891011")]
     [InlineData("https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557", "1226120317", "22197624557")]
     [InlineData("https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557?extraParams=%7B%22foo%22%3A1%7D&sp_atk=abc&xptdk=xyz", "1226120317", "22197624557")]
+    [InlineData("https://shopee.com.br/Cadeira-Gamer-Olympians-Poseidon-Preta-e-Vermelha-i.1226120317.19899301031", "1226120317", "19899301031")]
     [InlineData("https://shopee.com.br/product/111/222", "111", "222")]
     [InlineData("https://shopee.com.br/universal-link/product/999999/888888", "999999", "888888")]
     [InlineData("https://shopee.com.br/item/333/444", "333", "444")]
@@ -397,7 +398,35 @@ public class ShopeeLinkConversionTests
                 : null);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
         Assert.Equal("shop-sandbox", affiliateTag);
-        Assert.Equal("https://br.shp.ee/i1226120317x22197624557", context.OfficialShortenedShopeeUrl);
+        Assert.Equal(link, context.OfficialShortenedShopeeUrl);
+    }
+
+    [Fact]
+    public async Task ShopeeLinkStrategy_ShouldConvertPoseidonChairWhenOfficialShortenerFails()
+    {
+        const string original =
+            "https://shopee.com.br/Cadeira-Gamer-Olympians-Poseidon-Preta-e-Vermelha-i.1226120317.19899301031";
+
+        Assert.True(ShopeeLinkStrategy.TryExtractDesktopProductIds(original, out var extracted));
+        Assert.Equal("1226120317", extracted.ShopId);
+        Assert.Equal("19899301031", extracted.ItemId);
+
+        var context = new AffiliateLinkGenerationContext { UserId = 10 };
+        var strategy = CreateShopeeStrategy(
+            new PassthroughUrlExpansionService(),
+            new ThrowingShopeeClient(),
+            environmentName: "Production",
+            context: context);
+
+        var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
+
+        Assert.False(string.IsNullOrWhiteSpace(link));
+        Assert.Contains("1226120317", link, StringComparison.Ordinal);
+        Assert.Contains("19899301031", link, StringComparison.Ordinal);
+        Assert.Contains("/product/1226120317/19899301031", link, StringComparison.Ordinal);
+        Assert.Equal(link, context.OfficialShortenedShopeeUrl);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
+        Assert.Equal("shop-sandbox", affiliateTag);
     }
 
     [Fact]
@@ -690,5 +719,16 @@ public class ShopeeLinkConversionTests
             LastExpandedUrl = expandedProductUrl;
             return Task.FromResult(expandedProductUrl);
         }
+    }
+
+    private sealed class ThrowingShopeeClient : IShopeeAffiliateLinkClient
+    {
+        public Task<string> GenerateCustomLinkAsync(
+            IntegracaoLoja store,
+            string expandedProductUrl,
+            string affiliateId,
+            string? customNickname,
+            CancellationToken cancellationToken = default) =>
+            throw new HttpRequestException("Falha simulada na API de encurtamento oficial da Shopee.");
     }
 }

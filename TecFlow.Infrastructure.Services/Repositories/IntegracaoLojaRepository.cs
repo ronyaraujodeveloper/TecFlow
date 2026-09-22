@@ -19,13 +19,17 @@ public class IntegracaoLojaRepository : IIntegracaoLojaRepository
         int userId,
         CancellationToken cancellationToken = default) =>
         await _context.IntegracaoLojas
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(item => item.UserId == userId)
             .OrderByDescending(item => item.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public async Task<IntegracaoLoja?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
-        await _context.IntegracaoLojas.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        await _context.IntegracaoLojas
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     public async Task<IntegracaoLoja?> GetByUserShopPlatformAsync(
         int userId,

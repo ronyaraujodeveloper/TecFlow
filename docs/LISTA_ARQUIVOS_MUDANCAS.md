@@ -500,7 +500,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShopeeLinkHostMatcher.cs** — hosts `shopee.com.br`, `br.shp.ee`, `shp.ee`, `shope.ee`.
 - [x] **ShopeeProductUrlParser.cs** — regex `i.(shopId).(itemId)` em URLs desktop, sanitização de `extraParams`/`sp_atk`/`xptdk` e HTTP 400 com alerta Blazor de formato não reconhecido.
 - [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
-- [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop (Titans Atlas), URL limpa + tags da loja, unshorten quando necessário.
+- [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop (Titans Atlas / Poseidon), URL limpa + tags da loja, unshorten quando necessário; try/catch no encurtador oficial com fallback `ShortenedShopeeUrl = AffiliateUrl`.
+- [x] **IntegracaoLojaRepository** / **IntegracaoLojaScopeResolver** — busca da loja no `AppDbContext` (`AutomacaoSociais`) com `IgnoreQueryFilters` e log Serilog da causa.
 
 ### Fase 19.2.2 — URL rastreada de comissão
 

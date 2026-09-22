@@ -87,43 +87,43 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning(
-                    "Shopee generateCustomLink falhou. Status={StatusCode}. Body={Body}",
+                _logger.LogError(
+                    "Shopee generateCustomLink falhou. Status={StatusCode} StoreId={StoreId} ShopId={ShopId} ProductUrl={ProductUrl} Body={Body}",
                     (int)response.StatusCode,
+                    store.Id,
+                    store.ShopId,
+                    expandedProductUrl,
                     content);
 
-                if (IsHomologEnvironment())
-                {
-                    return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
-                }
-
-                throw MapShopeeFailure(content, response.StatusCode);
+                return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
             }
 
             var link = TryExtractAffiliateUrl(content);
             CaptureOfficialShortFromPayload(content, link);
             if (string.IsNullOrWhiteSpace(link))
             {
-                if (IsHomologEnvironment())
-                {
-                    _logger.LogWarning("Shopee não retornou customLink. Usando URL de tracking de homologação.");
-                    return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
-                }
-
-                throw new AffiliateLinkGenerationException(
-                    "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
+                _logger.LogError(
+                    "Shopee não retornou customLink. StoreId={StoreId} ShopId={ShopId} ProductUrl={ProductUrl} Homolog={Homolog}",
+                    store.Id,
+                    store.ShopId,
+                    expandedProductUrl,
+                    IsHomologEnvironment());
+                return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
             }
 
             var source = ShopeeOfficialShortUrl.IsOfficialShortener(link) ? expandedProductUrl : link;
             return ApplyCommissionTracking(source, store, includeHomologAffiliate: false);
         }
-        catch (AffiliateLinkGenerationException)
+        catch (Exception ex)
         {
-            throw;
-        }
-        catch (Exception ex) when (IsHomologEnvironment())
-        {
-            _logger.LogWarning(ex, "Falha na API de afiliados Shopee. Usando URL de tracking de homologação.");
+            _logger.LogError(
+                ex,
+                "Falha na API de afiliados Shopee. StoreId={StoreId} ShopId={ShopId} ProductUrl={ProductUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                store.Id,
+                store.ShopId,
+                expandedProductUrl,
+                ex.GetType().FullName,
+                ex.ToString());
             return ApplyCommissionTracking(expandedProductUrl, store, includeHomologAffiliate: true);
         }
     }
@@ -170,44 +170,6 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
         }
 
         return subIds;
-    }
-
-    private static AffiliateLinkGenerationException MapShopeeFailure(string content, System.Net.HttpStatusCode statusCode)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(content);
-            if (doc.RootElement.TryGetProperty("message", out var messageProp))
-            {
-                var message = messageProp.GetString();
-                if (!string.IsNullOrWhiteSpace(message))
-                {
-                    return new AffiliateLinkGenerationException(
-                        $"Shopee recusou a geração do link: {message}");
-                }
-            }
-
-            if (doc.RootElement.TryGetProperty("error", out var errorProp)
-                && errorProp.TryGetProperty("message", out var nestedMessage))
-            {
-                var nested = nestedMessage.GetString();
-                if (!string.IsNullOrWhiteSpace(nested))
-                {
-                    return new AffiliateLinkGenerationException(
-                        $"Shopee recusou a geração do link: {nested}");
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignorado — mensagem genérica abaixo.
-        }
-
-        return statusCode == System.Net.HttpStatusCode.NotFound
-            ? new AffiliateLinkGenerationException(
-                "Produto não encontrado ou indisponível no programa de afiliados Shopee.")
-            : new AffiliateLinkGenerationException(
-                "Não foi possível gerar o link de afiliado Shopee. Verifique a URL e o status da loja.");
     }
 
     private void CaptureOfficialShortFromPayload(string content, string? customLink)

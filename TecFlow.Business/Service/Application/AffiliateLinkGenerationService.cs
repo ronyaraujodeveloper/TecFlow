@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 using Microsoft.Extensions.Logging;
@@ -94,6 +95,13 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 _generationContext.ReferrerUrl,
                 cancellationToken);
 
+            var officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim();
+            if (string.IsNullOrWhiteSpace(officialShort)
+                || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+            {
+                officialShort = generatedLink;
+            }
+
             return new GerarLinkAfiliadoResponseDto
             {
                 Success = true,
@@ -104,19 +112,33 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 AffiliateUrl = generatedLink,
                 ConvertedUrl = generatedLink,
                 ShortenedUrl = publicShortUrl,
-                ShortenedShopeeUrl = _generationContext.OfficialShortenedShopeeUrl?.Trim() ?? string.Empty,
+                ShortenedShopeeUrl = officialShort,
                 PlatformDetected = strategy.PlatformName,
                 AffiliateLinkId = affiliateLinkId
             };
         }
         catch (AffiliateLinkGenerationException ex)
         {
-            _logger.LogWarning(ex, "Falha controlada ao gerar link de afiliado.");
+            _logger.LogError(
+                ex,
+                "Falha controlada ao gerar link de afiliado. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
             return Fail(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro inesperado ao gerar link de afiliado.");
+            _logger.LogError(
+                ex,
+                "Erro inesperado ao gerar link de afiliado. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
             return Fail("Não foi possível gerar o link de afiliado no momento. Tente novamente em instantes.");
         }
     }

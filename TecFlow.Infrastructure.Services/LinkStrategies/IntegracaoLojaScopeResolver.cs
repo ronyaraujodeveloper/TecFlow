@@ -43,14 +43,24 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
 
         if (store is null || store.UserId != userId)
         {
-            _logger.LogWarning(
-                "IntegracaoLoja não encontrada para StoreScope={StoreScopeId} e UserId={UserId}.",
+            _logger.LogError(
+                "IntegracaoLoja não encontrada no AppDbContext (AutomacaoSociais). StoreScope={StoreScopeId} DecodedId={DecodedId} UserId={UserId} FoundUserId={FoundUserId}",
                 storeScopeId,
-                userId);
+                decodedId,
+                userId,
+                store?.UserId);
 
             throw new AffiliateLinkGenerationException(
                 "Loja não encontrada para o escopo selecionado. Verifique o seletor global no topo do painel.");
         }
+
+        _logger.LogInformation(
+            "IntegracaoLoja resolvida no AppDbContext (AutomacaoSociais). StoreId={StoreId} UserId={UserId} TenantId={TenantId} ShopId={ShopId} Platform={Platform}",
+            store.Id,
+            store.UserId,
+            store.TenantId,
+            store.ShopId,
+            store.PlatformType);
 
         if (store.PlatformType != expectedPlatform)
         {

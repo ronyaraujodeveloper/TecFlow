@@ -70,6 +70,11 @@ public class GerarLinkAfiliadoResponseDto
             ShortenedShopeeUrl = AffiliateUrl.Trim();
         }
 
+        if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl) && !string.IsNullOrWhiteSpace(AffiliateUrl))
+        {
+            ShortenedShopeeUrl = AffiliateUrl.Trim();
+        }
+
         if (string.IsNullOrWhiteSpace(Message) && !string.IsNullOrWhiteSpace(Descricao))
         {
             Message = Descricao;

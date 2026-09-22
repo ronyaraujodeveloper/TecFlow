@@ -307,8 +307,14 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Erro inesperado ao gerar link de comissão.");
-            ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+            Logger.LogError(
+                ex,
+                "Erro inesperado ao gerar link de comissão. OriginalUrl={OriginalUrl} StoreId={StoreId} ExceptionType={ExceptionType} Causa={Causa}",
+                _productUrl,
+                StoreScope.ActiveStoreId,
+                ex.GetType().FullName,
+                ex.ToString());
+            ShowError(ResolveConversionError(ex.Message, null));
             StateHasChanged();
         }
         finally

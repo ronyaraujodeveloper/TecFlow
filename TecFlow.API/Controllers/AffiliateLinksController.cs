@@ -74,22 +74,47 @@ public class AffiliateLinksController : ControllerBase
         try
         {
             var result = await _generationService.GenerateAsync(request, userId, cancellationToken);
-            return result.Success ? Ok(result) : BadRequest(result);
+            if (!result.Success)
+            {
+                _logger.LogError(
+                    "Falha na conversão de link. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} Message={Message}",
+                    userId,
+                    request.StoreId,
+                    request.OriginalUrl,
+                    result.Message);
+                return BadRequest(result);
+            }
+
+            return Ok(result);
         }
         catch (AffiliateLinkGenerationException ex)
         {
-            _logger.LogWarning(ex, "Falha de parse/conversão de link para UserId={UserId}.", userId);
+            _logger.LogError(
+                ex,
+                "Falha de parse/conversão de link. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
             return BadRequest(new GerarLinkAfiliadoResponseDto
             {
                 Success = false,
                 Status = false,
-                Message = ShopeeProductUrlParser.UnrecognizedLinkMessage,
-                Descricao = ShopeeProductUrlParser.UnrecognizedLinkMessage
+                Message = ex.Message,
+                Descricao = ex.Message
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro inesperado ao gerar link de afiliado para UserId={UserId}.", userId);
+            _logger.LogError(
+                ex,
+                "Erro inesperado ao gerar link de afiliado. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
             return StatusCode(500, new GerarLinkAfiliadoResponseDto
             {
                 Success = false,

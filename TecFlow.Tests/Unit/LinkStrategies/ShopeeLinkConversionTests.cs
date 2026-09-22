@@ -380,8 +380,9 @@ public class ShopeeLinkConversionTests
         Assert.Equal("1226120317", parsed.ShopId);
         Assert.Equal("22197624557", parsed.ItemId);
 
+        var context = new AffiliateLinkGenerationContext { UserId = 10 };
         var client = new RecordingShopeeClient();
-        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), client);
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), client, context: context);
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
         Assert.False(string.IsNullOrWhiteSpace(link));
@@ -396,6 +397,21 @@ public class ShopeeLinkConversionTests
                 : null);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
         Assert.Equal("shop-sandbox", affiliateTag);
+        Assert.Equal("https://br.shp.ee/i1226120317x22197624557", context.OfficialShortenedShopeeUrl);
+    }
+
+    [Fact]
+    public void ShopeeOfficialShortUrl_ShouldKeepBrShpEeFromOriginalAndIgnoreExtraParams()
+    {
+        const string original =
+            "https://br.shp.ee/taeej22s?extraParams=%7B%22display_model_id%22%3A1%7D";
+
+        var resolved = ShopeeOfficialShortUrl.Resolve(
+            "https://shopee.com.br/product/1/2",
+            original,
+            new ShopeeProductUrlIds("1", "2"));
+
+        Assert.Equal("https://br.shp.ee/taeej22s", resolved);
     }
 
     [Fact]
@@ -553,12 +569,13 @@ public class ShopeeLinkConversionTests
     private static ShopeeLinkStrategy CreateShopeeStrategy(
         IUrlExpansionService expansion,
         IShopeeAffiliateLinkClient client,
-        string environmentName = "Homologacao") =>
+        string environmentName = "Homologacao",
+        AffiliateLinkGenerationContext? context = null) =>
         new(
             expansion,
             new FixedStoreResolver(CreateStore()),
             client,
-            new AffiliateLinkGenerationContext { UserId = 10 },
+            context ?? new AffiliateLinkGenerationContext { UserId = 10 },
             EmptyShopeeOptions(),
             CreateHostEnvironment(environmentName),
             NullLogger<ShopeeLinkStrategy>.Instance);

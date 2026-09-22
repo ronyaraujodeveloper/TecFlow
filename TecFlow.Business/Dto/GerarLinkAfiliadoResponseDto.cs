@@ -16,6 +16,9 @@ public class GerarLinkAfiliadoResponseDto
     /// <summary>URL interna TecFlow de telemetria (http://localhost:5001/r/code).</summary>
     public string ShortenedUrl { get; set; } = string.Empty;
 
+    /// <summary>URL encurtada oficial da Shopee (https://br.shp.ee/...).</summary>
+    public string ShortenedShopeeUrl { get; set; } = string.Empty;
+
     /// <summary>Alias de <see cref="AffiliateUrl"/> para o contrato `POST /api/links/convert`.</summary>
     public string ConvertedUrl { get; set; } = string.Empty;
 
@@ -32,7 +35,8 @@ public class GerarLinkAfiliadoResponseDto
 
     public bool HasConvertedLink =>
         !string.IsNullOrWhiteSpace(AffiliateUrl)
-        || !string.IsNullOrWhiteSpace(ResolvedShortUrl);
+        || !string.IsNullOrWhiteSpace(ResolvedShortUrl)
+        || !string.IsNullOrWhiteSpace(ShortenedShopeeUrl);
 
     public void NormalizeHttp200()
     {
@@ -56,6 +60,16 @@ public class GerarLinkAfiliadoResponseDto
             ShortenedUrl = ConvertedUrl.Trim();
         }
 
+        if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl) && LooksLikeShopeeOfficialShort(ConvertedUrl))
+        {
+            ShortenedShopeeUrl = ConvertedUrl.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl) && LooksLikeShopeeOfficialShort(AffiliateUrl))
+        {
+            ShortenedShopeeUrl = AffiliateUrl.Trim();
+        }
+
         if (string.IsNullOrWhiteSpace(Message) && !string.IsNullOrWhiteSpace(Descricao))
         {
             Message = Descricao;
@@ -71,6 +85,12 @@ public class GerarLinkAfiliadoResponseDto
     private static bool LooksLikeTecFlowShort(string? url) =>
         !string.IsNullOrWhiteSpace(url)
         && url.Contains("/r/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeShopeeOfficialShort(string? url) =>
+        !string.IsNullOrWhiteSpace(url)
+        && (url.Contains("br.shp.ee", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("shp.ee/", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("s.shopee.com", StringComparison.OrdinalIgnoreCase));
 
     private static string FirstNonEmpty(params string?[] values)
     {

@@ -14,4 +14,6 @@ public sealed class AffiliateLinkGenerationContext : IAffiliateLinkGenerationCon
     public string? UserAgent { get; set; }
 
     public string? ReferrerUrl { get; set; }
+
+    public string? OfficialShortenedShopeeUrl { get; set; }
 }

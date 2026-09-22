@@ -33,7 +33,8 @@ flowchart LR
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT --> LOG
-  BLD --> AFFURL[AffiliateUrl Shopee]
+  BLD --> AFFURL[AffiliateUrl longa]
+  BLD --> SHPEE[ShortenedShopeeUrl br.shp.ee]
   SHORT --> SHORTURL[ShortenedUrl localhost:5001/r]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
   API --> STR

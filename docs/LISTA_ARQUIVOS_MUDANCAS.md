@@ -505,7 +505,7 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.2.2 — URL rastreada de comissão
 
 - [x] **ShopeeCommissionUrlBuilder.cs** — query `tracking_code`, `sub_id` (usuário/tenant), `universal_link` e `deep_link` com URL encoding.
-- [x] **ShopeeLinkStrategy** / **ShopeeIntegrationClient.BuildSandboxTrackedUrl** — overlay de rastreio na URL final de afiliado.
+- [x] **ShopeeOfficialShortUrl.cs** — resolve `https://br.shp.ee/...` a partir da API, da URL original ou dos IDs do produto.
 - [x] **ShopeeLinkConversionTests.cs** — contrato de query string, deep links nativos e caracteres especiais.
 
 ### Fase 19.2.3 — Persistência de telemetria LinkClickLog
@@ -519,14 +519,14 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; `_isLoading`, spinner, alerta vermelho e `StateHasChanged()` no sucesso.
 - [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `originalUrl`, `affiliateUrl` e `shortenedUrl`.
-- [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (oficial Shopee) e `ShortenedUrl` (`/r/code`).
+- [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`/r/code`).
 - [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.
 - [x] **GeradorLinksServiceTests.cs** — mock HTTP POST e DTO de resposta com link convertido.
 
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.
-- [x] **LinkGeneratorResultPanel.razor** — dois campos de cópia: afiliado Shopee (`AffiliateUrl`) e rastreio TecFlow (`ShortenedUrl` em `http://localhost:5001/r/code`).
+- [x] **LinkGeneratorResultPanel.razor** — três cards de cópia: afiliado longo, encurtado Shopee (`br.shp.ee`) e rastreio TecFlow.
 - [x] **AffiliateShareLinkBuilder.cs** — URIs `api.whatsapp.com/send` e `t.me/share/url` com URL encoding.
 - [x] **AffiliateShareLinkBuilderTests.cs** — encoding de espaços, `&` e query string.
 

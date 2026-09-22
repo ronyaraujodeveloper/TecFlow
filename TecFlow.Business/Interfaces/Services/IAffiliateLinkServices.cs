@@ -16,6 +16,9 @@ public interface IAffiliateLinkGenerationContext
     string? UserAgent { get; set; }
 
     string? ReferrerUrl { get; set; }
+
+    /// <summary>Encurtador oficial da Shopee (br.shp.ee) capturado na última conversão.</summary>
+    string? OfficialShortenedShopeeUrl { get; set; }
 }
 
 /// <summary>Expansão resiliente de URLs encurtadas (301/302) até a URL canônica.</summary>

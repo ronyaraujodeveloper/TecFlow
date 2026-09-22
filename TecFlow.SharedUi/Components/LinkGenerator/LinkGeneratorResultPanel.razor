@@ -13,7 +13,7 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                 <div>
                     <span class="link-generator-result-badge">Link pronto</span>
-                    <h2 class="h5 fw-bold mb-1 mt-2">Seu link de comissão</h2>
+                    <h2 class="h5 fw-bold mb-1 mt-2">Seus links de comissão</h2>
                     @if (!string.IsNullOrWhiteSpace(response.PlatformDetected))
                     {
                         <p class="text-muted small mb-0">
@@ -24,65 +24,85 @@
                 <span class="link-generator-result-check" aria-hidden="true">✓</span>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
-            {
-                <label class="form-label small text-muted mb-1" for="generated-affiliate-url">
-                    Link de Afiliado Direto (Shopee)
-                </label>
-                <div class="link-generator-result-url-wrap">
-                    <output id="generated-affiliate-url"
-                            class="link-generator-result-url font-monospace"
-                            for="product-url">
-                        @response.AffiliateUrl
-                    </output>
-                </div>
-                <div class="d-grid mt-2 mb-4">
-                    <button type="button"
-                            class="btn btn-lg btn-touch @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
-                            disabled="@_isCopying"
-                            aria-live="polite"
-                            @onclick="() => CopyLinkAsync(response.AffiliateUrl, CopyTarget.Affiliate)">
-                        @if (_copiedAffiliate)
-                        {
-                            <span>Copiado!</span>
-                        }
-                        else
-                        {
-                            <span>Copiar link de afiliado</span>
-                        }
-                    </button>
-                </div>
-            }
+            <div class="row g-3">
+                @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
+                {
+                    <div class="col-12">
+                        <article class="link-choice-card">
+                            <header class="link-choice-card-header">
+                                <span class="link-choice-icon" aria-hidden="true">🔗</span>
+                                <div>
+                                    <h3 class="link-choice-title">Link de Afiliado Direto (Shopee)</h3>
+                                    <p class="link-choice-hint mb-0">URL longa com tags da loja vinculada.</p>
+                                </div>
+                            </header>
+                            <output id="generated-affiliate-url"
+                                    class="link-generator-result-url font-monospace"
+                                    for="product-url">
+                                @response.AffiliateUrl
+                            </output>
+                            <button type="button"
+                                    class="btn btn-touch w-100 mt-3 @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.AffiliateUrl, CopyTarget.Affiliate)">
+                                @(_copiedAffiliate ? "Copiado!" : "Copiar link longo")
+                            </button>
+                        </article>
+                    </div>
+                }
 
-            @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
-            {
-                <label class="form-label small text-muted mb-1" for="generated-short-url">
-                    Link Encurtado com Rastreio TecFlow
-                </label>
-                <div class="link-generator-result-url-wrap">
-                    <output id="generated-short-url"
-                            class="link-generator-result-url font-monospace"
-                            for="product-url">
-                        @response.ResolvedShortUrl
-                    </output>
-                </div>
-                <div class="d-grid mt-2">
-                    <button type="button"
-                            class="btn btn-lg btn-touch @(_copiedShort ? "btn-success" : "btn-outline-primary")"
-                            disabled="@_isCopying"
-                            aria-live="polite"
-                            @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
-                        @if (_copiedShort)
-                        {
-                            <span>Copiado!</span>
-                        }
-                        else
-                        {
-                            <span>Copiar link com rastreio</span>
-                        }
-                    </button>
-                </div>
-            }
+                @if (!string.IsNullOrWhiteSpace(response.ShortenedShopeeUrl))
+                {
+                    <div class="col-12 col-lg-6">
+                        <article class="link-choice-card link-choice-card--shopee">
+                            <header class="link-choice-card-header">
+                                <span class="link-choice-icon" aria-hidden="true">🛒</span>
+                                <div>
+                                    <h3 class="link-choice-title">Link Encurtado Shopee (br.shp.ee)</h3>
+                                    <p class="link-choice-hint mb-0">Encurtador oficial da Shopee.</p>
+                                </div>
+                            </header>
+                            <output id="generated-shopee-short-url"
+                                    class="link-generator-result-url font-monospace"
+                                    for="product-url">
+                                @response.ShortenedShopeeUrl
+                            </output>
+                            <button type="button"
+                                    class="btn btn-touch w-100 mt-3 @(_copiedShopeeShort ? "btn-success" : "btn-outline-orange")"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.ShortenedShopeeUrl, CopyTarget.ShopeeShort)">
+                                @(_copiedShopeeShort ? "Copiado!" : "Copiar br.shp.ee")
+                            </button>
+                        </article>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
+                {
+                    <div class="col-12 col-lg-6">
+                        <article class="link-choice-card link-choice-card--tecflow">
+                            <header class="link-choice-card-header">
+                                <span class="link-choice-icon" aria-hidden="true">📡</span>
+                                <div>
+                                    <h3 class="link-choice-title">Link Encurtado com Rastreio TecFlow</h3>
+                                    <p class="link-choice-hint mb-0">Contagem de cliques no painel TecFlow.</p>
+                                </div>
+                            </header>
+                            <output id="generated-short-url"
+                                    class="link-generator-result-url font-monospace"
+                                    for="product-url">
+                                @response.ResolvedShortUrl
+                            </output>
+                            <button type="button"
+                                    class="btn btn-touch w-100 mt-3 @(_copiedShort ? "btn-success" : "btn-outline-primary")"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
+                                @(_copiedShort ? "Copiado!" : "Copiar rastreio TecFlow")
+                            </button>
+                        </article>
+                    </div>
+                }
+            </div>
 
             <div class="link-generator-result-actions d-grid d-sm-flex gap-2 mt-4">
                 <button type="button"
@@ -129,6 +149,7 @@
 
     private bool _copiedAffiliate;
     private bool _copiedShort;
+    private bool _copiedShopeeShort;
     private bool _isCopying;
     private bool _isSharing;
     private string? _actionMessage;
@@ -137,7 +158,7 @@
 
     protected override void OnParametersSet()
     {
-        var key = $"{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}";
+        var key = $"{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}";
         if (!string.Equals(key, _lastResponseKey, StringComparison.Ordinal))
         {
             _lastResponseKey = key;
@@ -146,9 +167,7 @@
     }
 
     private static string ShareUrl(GerarLinkAfiliadoResponseDto response) =>
-        !string.IsNullOrWhiteSpace(response.ResolvedShortUrl)
-            ? response.ResolvedShortUrl
-            : response.AffiliateUrl;
+        FirstNonEmpty(response.ResolvedShortUrl, response.ShortenedShopeeUrl, response.AffiliateUrl);
 
     private async Task CopyLinkAsync(string? url, CopyTarget target)
     {
@@ -167,14 +186,19 @@
             {
                 _copiedAffiliate = target == CopyTarget.Affiliate;
                 _copiedShort = target == CopyTarget.Short;
+                _copiedShopeeShort = target == CopyTarget.ShopeeShort;
                 _actionIsError = false;
-                _actionMessage = target == CopyTarget.Affiliate
-                    ? "Link de afiliado copiado para a área de transferência."
-                    : "Link com rastreio TecFlow copiado para a área de transferência.";
+                _actionMessage = target switch
+                {
+                    CopyTarget.Affiliate => "Link de afiliado copiado para a área de transferência.",
+                    CopyTarget.ShopeeShort => "Link encurtado da Shopee copiado para a área de transferência.",
+                    _ => "Link com rastreio TecFlow copiado para a área de transferência."
+                };
                 StateHasChanged();
                 await Task.Delay(2200);
                 _copiedAffiliate = false;
                 _copiedShort = false;
+                _copiedShopeeShort = false;
                 _actionMessage = null;
             }
             else
@@ -276,16 +300,31 @@
     {
         _copiedAffiliate = false;
         _copiedShort = false;
+        _copiedShopeeShort = false;
         _isCopying = false;
         _isSharing = false;
         _actionMessage = null;
         _actionIsError = false;
     }
 
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
     private enum CopyTarget
     {
         Affiliate,
-        Short
+        Short,
+        ShopeeShort
     }
 
     private sealed class ShareLinkResult

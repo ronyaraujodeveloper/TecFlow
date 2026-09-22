@@ -58,6 +58,8 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             var (strategy, resolvedUrl) = await ResolveStrategyAsync(workingUrl, cancellationToken);
             var affiliateId = userId.ToString();
 
+            _generationContext.OfficialShortenedShopeeUrl = null;
+
             var generatedLink = await strategy.GenerateDeepLinkAsync(
                 resolvedUrl,
                 request.StoreId,
@@ -102,6 +104,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 AffiliateUrl = generatedLink,
                 ConvertedUrl = generatedLink,
                 ShortenedUrl = publicShortUrl,
+                ShortenedShopeeUrl = _generationContext.OfficialShortenedShopeeUrl?.Trim() ?? string.Empty,
                 PlatformDetected = strategy.PlatformName,
                 AffiliateLinkId = affiliateLinkId
             };
@@ -147,6 +150,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             AffiliateUrl = string.Empty,
             ConvertedUrl = string.Empty,
             ShortenedUrl = string.Empty,
+            ShortenedShopeeUrl = string.Empty,
             PlatformDetected = string.Empty
         };
 }

@@ -23,17 +23,20 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
     private readonly ShopeeIntegrationOptions _options;
     private readonly ILogger<ShopeeAffiliateLinkClient> _logger;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly IAffiliateLinkGenerationContext? _generationContext;
 
     public ShopeeAffiliateLinkClient(
         HttpClient httpClient,
         IOptions<ShopeeIntegrationOptions> options,
         ILogger<ShopeeAffiliateLinkClient> logger,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        IAffiliateLinkGenerationContext? generationContext = null)
     {
         _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
         _hostEnvironment = hostEnvironment;
+        _generationContext = generationContext;
     }
 
     public async Task<string> GenerateCustomLinkAsync(
@@ -98,6 +101,7 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
             }
 
             var link = TryExtractAffiliateUrl(content);
+            CaptureOfficialShortFromPayload(content, link);
             if (string.IsNullOrWhiteSpace(link))
             {
                 if (IsHomologEnvironment())
@@ -110,7 +114,8 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
                     "A Shopee não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
             }
 
-            return ApplyCommissionTracking(link, store, includeHomologAffiliate: false);
+            var source = ShopeeOfficialShortUrl.IsOfficialShortener(link) ? expandedProductUrl : link;
+            return ApplyCommissionTracking(source, store, includeHomologAffiliate: false);
         }
         catch (AffiliateLinkGenerationException)
         {
@@ -203,6 +208,54 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
                 "Produto não encontrado ou indisponível no programa de afiliados Shopee.")
             : new AffiliateLinkGenerationException(
                 "Não foi possível gerar o link de afiliado Shopee. Verifique a URL e o status da loja.");
+    }
+
+    private void CaptureOfficialShortFromPayload(string content, string? customLink)
+    {
+        if (_generationContext is null)
+        {
+            return;
+        }
+
+        var official = TryExtractOfficialShortUrl(content);
+        if (string.IsNullOrWhiteSpace(official) && ShopeeOfficialShortUrl.IsOfficialShortener(customLink))
+        {
+            official = customLink;
+        }
+
+        if (!string.IsNullOrWhiteSpace(official) && ShopeeOfficialShortUrl.IsOfficialShortener(official))
+        {
+            _generationContext.OfficialShortenedShopeeUrl = ShopeeOfficialShortUrl.Sanitize(official);
+        }
+    }
+
+    private static string? TryExtractOfficialShortUrl(string content)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("data", out var data))
+            {
+                foreach (var name in new[] { "shortLink", "short_link", "shortUrl", "short_url" })
+                {
+                    if (data.TryGetProperty(name, out var value))
+                    {
+                        var text = value.GetString();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private static string? TryExtractAffiliateUrl(string content)

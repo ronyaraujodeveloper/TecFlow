@@ -83,7 +83,50 @@ Diagnóstico das Fases **8** (auth/multi-loja), **10** (links backend), **11** (
 2. **COMPATIBILIDADE E ENCODING:**
    - Todos os arquivos editados ou criados devem ser salvos com a codificação **UTF-8 com BOM**.
    - As migrations do EF Core devem ser geradas e executadas exclusivamente para a sintaxe T-SQL / SQL Server direcionadas ao banco `AutomacaoSociais`.
-   
+
+---
+
+## 🛠️ ROADMAP DE PLATAFORMAS (MULTI-MARKETPLACE)
+
+O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a adição plug-and-play de novas plataformas de afiliados e marketplaces.
+
+### 📌 Status de Suporte por Plataforma
+
+| Plataforma | Link Resolver / Deep Link | API de Afiliados | Status |
+| :--- | :--- | :--- | :--- |
+| **Shopee** | `ShopeeLinkStrategy.cs` | Suportado (br.shp.ee / app) | 🟢 **Concluído (Homologação)** |
+| **TikTok Shop** | `TikTokShopLinkStrategy.cs` | Em planejamento | 🟡 **Próxima Etapa** |
+| **Mercado Livre** | `MercadoLivreLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+| **Amazon** | `AmazonLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+| **AliExpress** | `AliExpressLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+| **Magazine Luiza** | `MagaluLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+
+---
+
+## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
+
+Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova plataforma no backend:
+
+1. **Camada de Domínio e Dados:**
+   - Adicionar o Enum da plataforma em `PlatformType.cs`.
+   - Garantir que a tabela `MarketplaceAccounts` no SQL Server armazene as credenciais (`AppKey`, `AppSecret`, `TrackingId`) associadas à nova plataforma.
+
+2. **Implementação da Estratégia (`TecFlow.Domain` / `TecFlow.Services`):**
+   - Criar a classe `NomePlataformaLinkStrategy.cs` implementando a interface `IPlatformLinkStrategy`.
+   - Implementar o método `CanHandle(string url)` para reconhecer os domínios da plataforma via Regex.
+   - Implementar a sanitização do link, injeção das tags de afiliado e a chamada ao SDK/API oficial para encurtamento.
+
+3. **Injeção de Dependência:**
+   - Registrar a nova estratégia no container de IoC em `Program.cs`:
+     `builder.Services.AddScoped<IPlatformLinkStrategy, NomePlataformaLinkStrategy>();`
+
+4. **Retorno Padronizado (DTO Único):**
+   - Todas as estratégias DEVEM preencher obrigatoriamente o DTO `ConvertLinkResponseDto`:
+     - `OriginalUrl`: Link bruto colado pelo usuário.
+     - `AffiliateUrl`: Link direto da plataforma com tag de afiliado.
+     - `ShortenedShopeeUrl` / `ShortenedPlatformUrl`: Link reduzido oficial da plataforma.
+     - `TecFlowTrackingUrl`: Link interno de telemetria `/r/{code}`.
+     
 ### 🎯 Cobertura por módulo
 - [x] **Unidade — algoritmos:** `ValidationHelperTests`, `OrderStateMachineTests`
 - [x] **Fase 8.1/8.2 — Auth / provedores:** `AuthControllerSecurityTests` (401, 400, 500 envelope, JSON `LinkProviderDto`, login `INVALID_CREDENTIALS`)
@@ -381,7 +424,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 #### 19.3. Conexão End-to-End no Frontend (TecFlow.WebUi)
 - [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend, com `_isLoading`, alerta vermelho se a loja não estiver selecionada e `StateHasChanged()` após sucesso.
-- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (Shopee) e `ShortenedUrl` (`http://localhost:5001/r/code`) com cópia independente via `tecflow-clipboard.js` e compartilhamento WhatsApp/Telegram.
+- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/r/code`) em cards com cópia independente via `tecflow-clipboard.js`.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no banco PostgreSQL.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

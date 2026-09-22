@@ -1021,6 +1021,60 @@ html, body {
     font-weight: 700;
 }
 
+.link-choice-card {
+    height: 100%;
+    padding: 1rem 1.1rem 1.1rem;
+    border-radius: 1rem;
+    background: #fff;
+    border: 1px solid rgba(13, 110, 253, 0.18);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.link-choice-card--shopee {
+    border-color: rgba(238, 77, 45, 0.35);
+    background: linear-gradient(180deg, #fff8f6 0%, #fff 70%);
+}
+
+.link-choice-card--tecflow {
+    border-color: rgba(13, 110, 253, 0.28);
+}
+
+.link-choice-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.link-choice-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.link-choice-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.15rem;
+}
+
+.link-choice-hint {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.btn-outline-orange {
+    color: #ee4d2d;
+    border-color: #ee4d2d;
+    background: #fff;
+}
+
+.btn-outline-orange:hover,
+.btn-outline-orange:focus {
+    color: #fff;
+    background: #ee4d2d;
+    border-color: #ee4d2d;
+}
+
 .link-generator-result-actions .btn {
     font-weight: 700;
     border-radius: 0.85rem;

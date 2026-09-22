@@ -17,6 +17,7 @@ namespace TecFlow.Tests.Unit.LinkStrategies;
 public class ShopeeLinkConversionTests
 {
     private static readonly Guid TestTenantId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    private const string ExpectedUniversalSubId = "Loja Homolog";
     private static string ExpectedSubId => ShopeeCommissionUrlBuilder.BuildSubId(10, TestTenantId);
 
     [Fact]
@@ -111,22 +112,16 @@ public class ShopeeLinkConversionTests
     }
 
     [Fact]
-    public async Task ShopeeLinkStrategy_WithoutCredentials_ShouldGenerateTrackedSandboxUrl()
+    public async Task ShopeeLinkStrategy_WithoutCredentials_ShouldGenerateUniversalDeeplink()
     {
-        var handler = new StubHttpMessageHandler(_ =>
-            throw new InvalidOperationException("HTTP não deve ser chamado no sandbox."));
-
-        var strategy = CreateShopeeStrategy(
-            new PassthroughUrlExpansionService(),
-            CreateAffiliateClient(EmptyShopeeOptions(), handler));
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService());
 
         var link = await strategy.GenerateDeepLinkAsync(ProductUrl, Guid.NewGuid(), AffiliateId);
 
-        Assert.Contains(ShopeeSandboxLinkBuilder.DefaultTrackingCode, link, StringComparison.Ordinal);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.TrackingCodeQuery, out var tracking));
-        Assert.Equal(ShopeeSandboxLinkBuilder.DefaultTrackingCode, tracking);
+        Assert.Contains("/universal-link/product/123/456", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
+        Assert.Equal(ExpectedUniversalSubId, subId);
+        Assert.DoesNotContain("tracking_code=", link, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -213,19 +208,14 @@ public class ShopeeLinkConversionTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        var recorder = new RecordingShopeeClient();
         var strategy = CreateShopeeStrategy(
-            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance),
-            recorder);
+            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance));
 
         var link = await strategy.GenerateDeepLinkAsync("https://s.shopee.com.br/share", Guid.NewGuid(), AffiliateId);
 
-        Assert.Equal("https://shopee.com.br/product/888/999", recorder.LastExpandedUrl);
-        Assert.True(ShopeeProductUrlParser.TryParse(recorder.LastExpandedUrl, out var ids));
-        Assert.Equal("888", ids.ShopId);
-        Assert.Equal("999", ids.ItemId);
+        Assert.Contains("/universal-link/product/888/999", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
+        Assert.Equal(ExpectedUniversalSubId, subId);
     }
 
     [Fact]
@@ -245,21 +235,17 @@ public class ShopeeLinkConversionTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        var recorder = new RecordingShopeeClient();
         var strategy = CreateShopeeStrategy(
-            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance),
-            recorder);
+            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance));
 
         var link = await strategy.GenerateDeepLinkAsync(shortUrl, Guid.NewGuid(), AffiliateId);
 
         Assert.True(ShopeeLinkHostMatcher.IsShopeeUrl(shortUrl));
         Assert.True(ShopeeLinkHostMatcher.IsShortenerUrl(shortUrl));
-        Assert.Equal("https://shopee.com.br/product/123456/789012", recorder.LastExpandedUrl);
-        Assert.True(ShopeeProductUrlParser.TryParse(recorder.LastExpandedUrl, out var ids));
-        Assert.Equal("123456", ids.ShopId);
-        Assert.Equal("789012", ids.ItemId);
+        Assert.Contains("/universal-link/product/123456/789012", link, StringComparison.Ordinal);
+        Assert.DoesNotContain("extraParams", link, StringComparison.OrdinalIgnoreCase);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
+        Assert.Equal(ExpectedUniversalSubId, subId);
     }
 
     [Fact]
@@ -276,10 +262,8 @@ public class ShopeeLinkConversionTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        var recorder = new RecordingShopeeClient();
         var strategy = CreateShopeeStrategy(
-            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance),
-            recorder);
+            new UrlExpansionService(new StubHttpClientFactory(handler), NullLogger<UrlExpansionService>.Instance));
 
         var link = await strategy.GenerateDeepLinkAsync(shortUrl, Guid.NewGuid(), AffiliateId);
 
@@ -288,9 +272,6 @@ public class ShopeeLinkConversionTests
         Assert.Contains("utm_source=affiliate", link, StringComparison.Ordinal);
         Assert.Contains("sub_id=tecflow_test", link, StringComparison.Ordinal);
         Assert.Contains("short_hash=taeej22s", link, StringComparison.Ordinal);
-        Assert.Equal(
-            ShopeeCommissionUrlBuilder.ToUniversalWebUrl(ShopeeProductUrlParser.HomologIds),
-            recorder.LastExpandedUrl);
     }
 
     [Fact]
@@ -382,22 +363,15 @@ public class ShopeeLinkConversionTests
         Assert.Equal("22197624557", parsed.ItemId);
 
         var context = new AffiliateLinkGenerationContext { UserId = 10 };
-        var client = new RecordingShopeeClient();
-        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), client, context: context);
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), context: context);
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
         Assert.False(string.IsNullOrWhiteSpace(link));
-        Assert.Contains("1226120317", link, StringComparison.Ordinal);
-        Assert.Contains("22197624557", link, StringComparison.Ordinal);
-        Assert.Contains("/product/1226120317/22197624557", client.LastExpandedUrl, StringComparison.Ordinal);
-        Assert.DoesNotContain("extraParams", client.LastExpandedUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("199163985057", client.LastExpandedUrl, StringComparison.Ordinal);
-        Assert.Equal("https://shopee.com.br/product/1226120317/22197624557",
-            ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal)
-                ? universal
-                : null);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
-        Assert.Equal("shop-sandbox", affiliateTag);
+        Assert.Contains("/universal-link/product/1226120317/22197624557", link, StringComparison.Ordinal);
+        Assert.DoesNotContain("extraParams", link, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("199163985057", link, StringComparison.Ordinal);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
+        Assert.Equal(ExpectedUniversalSubId, subId);
         Assert.Equal(link, context.OfficialShortenedShopeeUrl);
     }
 
@@ -414,19 +388,16 @@ public class ShopeeLinkConversionTests
         var context = new AffiliateLinkGenerationContext { UserId = 10 };
         var strategy = CreateShopeeStrategy(
             new PassthroughUrlExpansionService(),
-            new ThrowingShopeeClient(),
             environmentName: "Production",
             context: context);
 
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
         Assert.False(string.IsNullOrWhiteSpace(link));
-        Assert.Contains("1226120317", link, StringComparison.Ordinal);
-        Assert.Contains("19899301031", link, StringComparison.Ordinal);
-        Assert.Contains("/product/1226120317/19899301031", link, StringComparison.Ordinal);
+        Assert.Contains("/universal-link/product/1226120317/19899301031", link, StringComparison.Ordinal);
         Assert.Equal(link, context.OfficialShortenedShopeeUrl);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.AffiliateIdQuery, out var affiliateTag));
-        Assert.Equal("shop-sandbox", affiliateTag);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
+        Assert.Equal(ExpectedUniversalSubId, subId);
     }
 
     [Fact]
@@ -444,38 +415,45 @@ public class ShopeeLinkConversionTests
     }
 
     [Fact]
-    public async Task ShopeeLinkStrategy_ShouldPutTrackingCodeAndUserTenantSubIdOnCommissionUrl()
+    public async Task ShopeeLinkStrategy_ShouldBuildUniversalDeeplinkWithFriendlyNameSubId()
     {
-        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), new RecordingShopeeClient());
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService());
 
         var link = await strategy.GenerateDeepLinkAsync(ProductUrl, Guid.NewGuid(), AffiliateId);
 
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.TrackingCodeQuery, out var tracking));
-        Assert.Equal(ShopeeCommissionUrlBuilder.DefaultTrackingCode, tracking);
+        Assert.StartsWith("https://shopee.com.br/universal-link/product/123/456?", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
-        Assert.Equal("https://shopee.com.br/product/123/456", universal);
-        Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.TrackingCodeQuery, ShopeeCommissionUrlBuilder.DefaultTrackingCode));
-        Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.SubIdQuery, ExpectedSubId));
+        Assert.Equal(ExpectedUniversalSubId, subId);
+        Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.SubIdQuery, ExpectedUniversalSubId));
         Assert.False(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.DeepLinkQuery, out _));
     }
 
     [Fact]
-    public async Task ShopeeLinkStrategy_ShouldMapNativeDeepLinkToUniversalAndDeepLinkParams()
+    public async Task ShopeeLinkStrategy_ShouldUseTrackingIdAsSubIdWhenConfiguredOnStore()
+    {
+        var store = CreateStore();
+        store.ShopId = "aff-tracking-42";
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), store: store);
+
+        var link = await strategy.GenerateDeepLinkAsync(ProductUrl, Guid.NewGuid(), AffiliateId);
+
+        Assert.Contains("/universal-link/product/123/456", link, StringComparison.Ordinal);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
+        Assert.Equal("aff-tracking-42", subId);
+    }
+
+    [Fact]
+    public async Task ShopeeLinkStrategy_ShouldMapNativeDeepLinkToUniversalDeeplink()
     {
         const string native = "shopee://product?itemid=999&shopid=888";
-        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), new RecordingShopeeClient());
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService());
 
         var link = await strategy.GenerateDeepLinkAsync(native, Guid.NewGuid(), AffiliateId);
 
         Assert.True(ShopeeLinkHostMatcher.IsNativeDeepLink(native));
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
-        Assert.Equal("https://shopee.com.br/product/888/999", universal);
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.DeepLinkQuery, out var deepLink));
-        Assert.Equal(native, deepLink);
+        Assert.Contains("/universal-link/product/888/999", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
+        Assert.Equal(ExpectedUniversalSubId, subId);
     }
 
     [Fact]
@@ -483,18 +461,17 @@ public class ShopeeLinkConversionTests
     {
         const string original =
             "https://shopee.com.br/produto-i.1.2?q=Cadeira%20Gamer%20%26%20Kids&extraParams=%7B%22x%22%3A1%7D&sp_atk=tok";
-        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), new RecordingShopeeClient());
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService());
 
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
         Assert.DoesNotContain("extraParams", link, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sp_atk", link, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("q=Cadeira", link, StringComparison.Ordinal);
+        Assert.Contains("/universal-link/product/1/2", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal(ExpectedSubId, subId);
-        Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.SubIdQuery, ExpectedSubId));
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
-        Assert.Equal("https://shopee.com.br/product/1/2", universal);
+        Assert.Equal(ExpectedUniversalSubId, subId);
+        Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.SubIdQuery, ExpectedUniversalSubId));
     }
 
     [Fact]
@@ -597,13 +574,12 @@ public class ShopeeLinkConversionTests
 
     private static ShopeeLinkStrategy CreateShopeeStrategy(
         IUrlExpansionService expansion,
-        IShopeeAffiliateLinkClient client,
         string environmentName = "Homologacao",
-        AffiliateLinkGenerationContext? context = null) =>
+        AffiliateLinkGenerationContext? context = null,
+        IntegracaoLoja? store = null) =>
         new(
             expansion,
-            new FixedStoreResolver(CreateStore()),
-            client,
+            new FixedStoreResolver(store ?? CreateStore()),
             context ?? new AffiliateLinkGenerationContext { UserId = 10 },
             EmptyShopeeOptions(),
             CreateHostEnvironment(environmentName),
@@ -615,7 +591,6 @@ public class ShopeeLinkConversionTests
                 new ShopeeLinkStrategy(
                     new PassthroughUrlExpansionService(),
                     new FixedStoreResolver(CreateStore()),
-                    new RecordingShopeeClient(),
                     new AffiliateLinkGenerationContext { UserId = 10 },
                     EmptyShopeeOptions(),
                     CreateHostEnvironment(),
@@ -679,7 +654,7 @@ public class ShopeeLinkConversionTests
             Id = 1,
             UserId = 10,
             TenantId = TestTenantId,
-            ShopId = "shop-sandbox",
+            ShopId = "ul-10-loja-homolog",
             FriendlyName = "Loja Homolog",
             AccessToken = "token",
             PlatformType = MarketplaceType.Shopee

@@ -15,7 +15,6 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
 {
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeResolver;
-    private readonly IShopeeAffiliateLinkClient _shopeeAffiliateClient;
     private readonly IAffiliateLinkGenerationContext _generationContext;
     private readonly ShopeeIntegrationOptions _options;
     private readonly IHostEnvironment _hostEnvironment;
@@ -24,7 +23,6 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
     public ShopeeLinkStrategy(
         IUrlExpansionService urlExpansionService,
         IIntegracaoLojaScopeResolver storeResolver,
-        IShopeeAffiliateLinkClient shopeeAffiliateClient,
         IAffiliateLinkGenerationContext generationContext,
         IOptions<ShopeeIntegrationOptions> options,
         IHostEnvironment hostEnvironment,
@@ -32,7 +30,6 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
     {
         _urlExpansionService = urlExpansionService;
         _storeResolver = storeResolver;
-        _shopeeAffiliateClient = shopeeAffiliateClient;
         _generationContext = generationContext;
         _options = options.Value;
         _hostEnvironment = hostEnvironment;
@@ -73,15 +70,11 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
                 desktopIds.ShopId,
                 desktopIds.ItemId);
 
-            var cleanProductUrl = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(desktopIds);
-            return await ConvertCleanProductUrlAsync(
+            return ConvertCleanProductUrl(
                 store,
-                cleanProductUrl,
                 desktopIds,
                 originalUrl.Trim(),
-                affiliateId,
-                usedHomologIds: false,
-                cancellationToken);
+                usedHomologIds: false);
         }
 
         var workingUrl = ShopeeProductUrlParser.Sanitize(originalUrl);
@@ -156,14 +149,11 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
                 workingUrl);
         }
 
-        return await ConvertCleanProductUrlAsync(
+        return ConvertCleanProductUrl(
             store,
-            usedHomologIds ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds) : workingUrl,
             productIds,
             originalUrl.Trim(),
-            affiliateId,
-            usedHomologIds,
-            cancellationToken);
+            usedHomologIds);
     }
 
     public static bool TryExtractDesktopProductIds(string? url, out ShopeeProductUrlIds ids)
@@ -184,78 +174,36 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         return !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId);
     }
 
-    private async Task<string> ConvertCleanProductUrlAsync(
+    private string ConvertCleanProductUrl(
         IntegracaoLoja store,
-        string workingUrl,
         ShopeeProductUrlIds productIds,
         string originalUrl,
-        string affiliateId,
-        bool usedHomologIds,
-        CancellationToken cancellationToken)
+        bool usedHomologIds)
     {
-        var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
-            _hostEnvironment.EnvironmentName,
-            authorizationCode: null)
-            || _options.IsSandboxMode;
-
+        var subId = ShopeeCommissionUrlBuilder.ResolveUniversalSubId(store);
         var affiliateUrl = usedHomologIds
             ? ShopeeCommissionUrlBuilder.BuildHomologConvertedLink(
                 ShopeeProductUrlParser.TryExtractShortHash(originalUrl))
-            : BuildAffiliateUrlFromProductIds(store, productIds, originalUrl.Trim(), affiliateId);
+            : ShopeeCommissionUrlBuilder.BuildUniversalDeeplink(productIds, subId);
 
-        string? generated = null;
-        try
-        {
-            generated = await _shopeeAffiliateClient.GenerateCustomLinkAsync(
-                store,
-                workingUrl,
-                affiliateId,
-                _generationContext.CustomNickname,
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Falha ao obter o link reduzido oficial da Shopee. UserId={UserId} StoreId={StoreId} TenantId={TenantId} ShopId={ShopId} OriginalUrl={OriginalUrl} HomologFallback={HomologFallback} ExceptionType={ExceptionType} Causa={Causa}",
-                store.UserId,
-                store.Id,
-                store.TenantId,
-                store.ShopId,
-                originalUrl,
-                allowHomologFallback,
-                ex.GetType().FullName,
-                ex.ToString());
-        }
+        _logger.LogInformation(
+            "Shopee Universal Link gerado sem Open API. ShopId={ShopId} ItemId={ItemId} SubId={SubId} StoreId={StoreId} OriginalUrl={OriginalUrl}",
+            productIds.ShopId,
+            productIds.ItemId,
+            subId,
+            store.Id,
+            originalUrl);
 
-        if (!string.IsNullOrWhiteSpace(generated) && !usedHomologIds)
-        {
-            var tracked = ApplyCommissionTracking(
-                generated,
-                store,
-                productIds,
-                originalUrl.Trim(),
-                affiliateId);
-            AssignOfficialShortUrl(tracked, generated, originalUrl);
-            return tracked;
-        }
-
-        AssignOfficialShortUrl(affiliateUrl, generated, originalUrl);
+        AssignOfficialShortUrl(affiliateUrl, originalUrl);
         return affiliateUrl;
     }
 
-    private void AssignOfficialShortUrl(string affiliateUrl, string? generatedOrApiUrl, string originalUrl)
+    private void AssignOfficialShortUrl(string affiliateUrl, string originalUrl)
     {
         if (ShopeeOfficialShortUrl.IsOfficialShortener(_generationContext.OfficialShortenedShopeeUrl))
         {
             _generationContext.OfficialShortenedShopeeUrl =
                 ShopeeOfficialShortUrl.Sanitize(_generationContext.OfficialShortenedShopeeUrl!);
-            return;
-        }
-
-        if (ShopeeOfficialShortUrl.IsOfficialShortener(generatedOrApiUrl))
-        {
-            _generationContext.OfficialShortenedShopeeUrl = ShopeeOfficialShortUrl.Sanitize(generatedOrApiUrl!);
             return;
         }
 
@@ -266,52 +214,5 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         }
 
         _generationContext.OfficialShortenedShopeeUrl = affiliateUrl;
-    }
-
-    private string BuildAffiliateUrlFromProductIds(
-        IntegracaoLoja store,
-        ShopeeProductUrlIds productIds,
-        string originalUrl,
-        string affiliateId)
-    {
-        var canonical = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
-        return ApplyCommissionTracking(canonical, store, productIds, originalUrl, affiliateId);
-    }
-
-    private string ApplyCommissionTracking(
-        string generatedUrl,
-        IntegracaoLoja store,
-        ShopeeProductUrlIds productIds,
-        string originalUrl,
-        string affiliateId)
-    {
-        var trackingCode = string.IsNullOrWhiteSpace(_options.SandboxTrackingCode)
-            ? ShopeeCommissionUrlBuilder.DefaultTrackingCode
-            : _options.SandboxTrackingCode.Trim();
-
-        var subId = ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId);
-        var universalLink = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
-        var deepLink = ShopeeLinkHostMatcher.IsNativeDeepLink(originalUrl)
-            ? originalUrl.Trim()
-            : null;
-        var resolvedAffiliateId = !string.IsNullOrWhiteSpace(store.ShopId)
-            ? store.ShopId
-            : affiliateId;
-
-        _logger.LogInformation(
-            "Shopee URL de comissão. TrackingCode={TrackingCode} SubId={SubId} ShopId={ShopId} ItemId={ItemId} AffiliateId={AffiliateId}",
-            trackingCode,
-            subId,
-            productIds.ShopId,
-            productIds.ItemId,
-            resolvedAffiliateId);
-
-        return ShopeeCommissionUrlBuilder.Merge(
-            generatedUrl,
-            trackingCode,
-            subId,
-            universalLink,
-            deepLink,
-            resolvedAffiliateId);
     }
 }

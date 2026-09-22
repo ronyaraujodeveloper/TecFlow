@@ -6,6 +6,7 @@ using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Enums;
 using TecFlow.Database.Filter;
 
 namespace TecFlow.API.Controllers;
@@ -120,6 +121,16 @@ public class IntegracoesController : ControllerBase
     private void ApplyHomologFallbacks(IntegracaoLojaDto dto)
     {
         if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Homologacao"))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+        {
+            dto.FriendlyName = "Loja Homolog";
+        }
+
+        if (dto.PlatformType == MarketplaceType.Shopee)
         {
             return;
         }

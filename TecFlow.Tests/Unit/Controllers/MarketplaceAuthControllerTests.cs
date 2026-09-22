@@ -225,14 +225,14 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
-    public async Task VincularManualAsync_ShouldReturnBadRequestEnvelope_WhenShopIdAndCodeAreSwapped()
+    public async Task VincularManualAsync_ShouldReturnOk_WhenShopeeTrackingIdIsAlphanumeric()
     {
         var lojas = new Mock<IIntegracaoLojaService>();
         lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IntegracaoLojaResponseDto
             {
-                Status = false,
-                Descricao = "Shop ID da Shopee deve ser um número inteiro (ex.: 123456)."
+                Status = true,
+                Descricao = "Conta Shopee vinculada no modo Universal Link."
             });
 
         var swapped = new IntegracaoLojaDto
@@ -245,10 +245,9 @@ public class MarketplaceAuthControllerTests
 
         var action = await CreateController(lojas: lojas.Object).VincularManualAsync(swapped, CancellationToken.None);
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(action.Result);
-        var envelope = Assert.IsType<ResponseDto>(badRequest.Value);
-        Assert.False(envelope.Status);
-        Assert.Contains("número inteiro", envelope.Descricao, StringComparison.OrdinalIgnoreCase);
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        var envelope = Assert.IsType<MarketplaceAccountResponseDto>(ok.Value);
+        Assert.True(envelope.Status);
     }
 
     [Fact]

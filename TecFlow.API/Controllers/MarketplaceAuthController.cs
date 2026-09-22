@@ -283,6 +283,16 @@ public class MarketplaceAuthController : ControllerBase
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+        {
+            dto.FriendlyName = "Loja Homolog";
+        }
+
+        if (dto.PlatformType == MarketplaceType.Shopee)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
         {
             dto.AuthorizationCode = "code_teste";

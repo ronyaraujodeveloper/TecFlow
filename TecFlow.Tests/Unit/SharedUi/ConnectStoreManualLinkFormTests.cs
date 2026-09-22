@@ -24,19 +24,21 @@ public class ConnectStoreManualLinkFormTests
     }
 
     [Fact]
-    public void TryValidate_ShouldRejectSwappedShopeeShopId_WhenNotHomolog()
+    public void TryValidate_ShouldAcceptShopeeShopIdEvenWhenAlphanumeric()
     {
         var ok = ConnectStoreManualLinkForm.TryValidate(
             MarketplaceType.Shopee,
             "Loja Homolog",
             "123456",
             "code_teste",
-            out _,
-            out _,
+            out var code,
+            out var shopId,
             out var error);
 
-        Assert.False(ok);
-        Assert.Contains("número inteiro", error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("123456", code);
+        Assert.Equal("code_teste", shopId);
     }
 
     [Fact]
@@ -54,12 +56,27 @@ public class ConnectStoreManualLinkFormTests
 
         Assert.True(ok);
         Assert.Null(error);
-        Assert.Equal("code_teste", code);
-        Assert.Equal("123456", shopId);
+        Assert.Equal("code_teste", shopId);
     }
 
     [Fact]
-    public void TryValidate_ShouldRejectBlankFields()
+    public void TryValidate_ShouldAcceptShopeeFriendlyNameWithoutCredentials()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            authorizationCode: null,
+            shopId: null,
+            out _,
+            out _,
+            out var error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldRejectBlankFields_WhenTikTokShop()
     {
         var ok = ConnectStoreManualLinkForm.TryValidate(
             MarketplaceType.TikTokShop,

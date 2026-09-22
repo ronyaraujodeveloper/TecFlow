@@ -48,7 +48,6 @@ public class AffiliateLinkGenerationServiceTests
             new ShopeeLinkStrategy(
                 new NoOpUrlExpansionService(),
                 new NoOpStoreResolver(),
-                new NoOpShopeeClient(),
                 new AffiliateLinkGenerationContext(),
                 Microsoft.Extensions.Options.Options.Create(new TecFlow.Business.Integrations.Shopee.ShopeeIntegrationOptions()),
                 CreateHostEnvironment(),
@@ -97,17 +96,6 @@ public class AffiliateLinkGenerationServiceTests
             MarketplaceType expectedPlatform,
             CancellationToken cancellationToken = default) =>
             throw new AffiliateLinkGenerationException("Loja mock indisponível.");
-    }
-
-    private sealed class NoOpShopeeClient : IShopeeAffiliateLinkClient
-    {
-        public Task<string> GenerateCustomLinkAsync(
-            TecFlow.Database.Entity.IntegracaoLoja store,
-            string expandedProductUrl,
-            string affiliateId,
-            string? customNickname,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(expandedProductUrl);
     }
 
     private sealed class NoOpShortLinkService : IShortLinkService

@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` → regex `i.(shopId).(itemId)` (query `extraParams` ignorada) → `ShopeeAffiliateLinkClient.generateCustomLink`. Se a API oficial falhar ou as credenciais estiverem vazias, `ShortenedShopeeUrl = AffiliateUrl` e o encurtador TecFlow (`ShortenedUrl`) segue normalmente. Loja ativa: `IntegracaoLojaScopeResolver` + `AppDbContext` (`AutomacaoSociais`). Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id={TrackingId|FriendlyName|UserId}` **sem Open API / App Key / App Secret**. Encurtador TecFlow (`ShortenedUrl`) segue normalmente. Loja Shopee: `ConnectStoreModal` (apelido + Tracking ID opcional) → `IntegracaoLojaService.LinkShopeeUniversalAccountAsync` → `AppDbContext` (`AutomacaoSociais`). Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
 
 ```mermaid
 flowchart LR
@@ -28,10 +28,9 @@ flowchart LR
   SHORT[ShortAffiliateLink]
   LOG[LinkClickLog]
 
-  STR -->|produto + UserId/TenantId| AFF
-  AFF -->|sucesso br.shp.ee| SHPEE
-  AFF -->|falha/credenciais vazias| FALL[ShortenedShopeeUrl = AffiliateUrl]
-  AFF --> BLD
+  STR -->|shopId/itemId| UNI[universal-link/product]
+  UNI -->|sub_id TrackingId ou FriendlyName| AFFURL
+  STR -.->|Open API opcional não bloqueia| AFF
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT --> LOG

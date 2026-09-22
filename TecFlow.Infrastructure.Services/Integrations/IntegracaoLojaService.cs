@@ -93,6 +93,11 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         ApplyHomologFallbacks(dto);
 
+        if (dto.PlatformType == MarketplaceType.Shopee)
+        {
+            return await LinkShopeeUniversalAccountAsync(userId, dto, cancellationToken);
+        }
+
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
         {
             return Fail("Código de autorização OAuth é obrigatório.");
@@ -103,22 +108,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("ShopId é obrigatório.");
         }
 
-        if (dto.PlatformType == MarketplaceType.Shopee)
-        {
-            if (!long.TryParse(dto.ShopId.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var shopId)
-                || shopId <= 0)
-            {
-                return Fail("Shop ID da Shopee deve ser um número inteiro (ex.: 123456).");
-            }
-
-            dto.ShopId = shopId.ToString(CultureInfo.InvariantCulture);
-        }
-        else
-        {
-            dto.ShopId = dto.ShopId.Trim();
-        }
-
         dto.AuthorizationCode = dto.AuthorizationCode.Trim();
+        dto.ShopId = dto.ShopId.Trim();
 
         if (string.IsNullOrWhiteSpace(dto.FriendlyName))
         {
@@ -351,9 +342,14 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             dto.PlatformType = MarketplaceType.Shopee;
         }
 
-        if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+        if (dto.PlatformType == MarketplaceType.Shopee)
         {
-            dto.FriendlyName = "Loja Homolog";
+            if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+            {
+                dto.FriendlyName = "Loja Homolog";
+            }
+
+            return;
         }
 
         var code = dto.AuthorizationCode?.Trim() ?? string.Empty;
@@ -381,6 +377,137 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         dto.AuthorizationCode = code;
         dto.ShopId = shop;
+    }
+
+    private async Task<IntegracaoLojaResponseDto> LinkShopeeUniversalAccountAsync(
+        int userId,
+        IntegracaoLojaDto dto,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(dto.FriendlyName))
+        {
+            return Fail("Informe um apelido / nome amigável para a conta Shopee.");
+        }
+
+        var user = await _userAccountRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            return Fail("Usuário não encontrado.");
+        }
+
+        var trackingId = FirstNonEmpty(dto.TrackingId, dto.ShopId);
+        var shopKey = string.IsNullOrWhiteSpace(trackingId)
+            ? $"ul-{userId}-{Slug(dto.FriendlyName)}"
+            : trackingId;
+        dto.ShopId = shopKey;
+
+        var expiresAt = DateTime.UtcNow.AddYears(10);
+        var placeholderToken = HomologMarketplaceAuth.StubAccessToken;
+
+        var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, MarketplaceType.Shopee)
+            ?? new MarketplaceAccount
+            {
+                TenantId = user.TenantId,
+                UserId = userId.ToString(CultureInfo.InvariantCulture),
+                ShopId = shopKey,
+                MarketplaceType = MarketplaceType.Shopee
+            };
+
+        marketplaceAccount.UserId = userId.ToString(CultureInfo.InvariantCulture);
+        marketplaceAccount.TenantId = user.TenantId;
+        marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
+        marketplaceAccount.ShopName = dto.FriendlyName.Trim();
+        marketplaceAccount.ShopId = shopKey;
+        marketplaceAccount.AccessToken = string.IsNullOrWhiteSpace(marketplaceAccount.AccessToken)
+            ? placeholderToken
+            : marketplaceAccount.AccessToken;
+        marketplaceAccount.ExpiresAt = expiresAt;
+        marketplaceAccount.IsActive = true;
+        marketplaceAccount.MarketplaceType = MarketplaceType.Shopee;
+        marketplaceAccount.Touch();
+
+        try
+        {
+            await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
+        }
+        catch (Exception ex)
+        {
+            return Fail(MarketplaceAuthService.FormatSqlError(ex));
+        }
+
+        var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
+            userId,
+            shopKey,
+            MarketplaceType.Shopee,
+            cancellationToken);
+
+        if (existing is not null)
+        {
+            existing.FriendlyName = dto.FriendlyName.Trim();
+            existing.AccessToken = placeholderToken;
+            existing.ExpiresAt = expiresAt;
+            existing.Status = MarketplaceIntegrationStatus.Active;
+            existing.Touch();
+            await _integracaoLojaRepository.UpdateAsync(existing, cancellationToken);
+
+            return new IntegracaoLojaResponseDto
+            {
+                Status = true,
+                Descricao = "Conta Shopee vinculada no modo Universal Link.",
+                Data = ToAccountDto(marketplaceAccount, existing)
+            };
+        }
+
+        var integration = new IntegracaoLoja
+        {
+            UserId = userId,
+            TenantId = user.TenantId,
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = shopKey,
+            FriendlyName = dto.FriendlyName.Trim(),
+            AccessToken = placeholderToken,
+            ExpiresAt = expiresAt,
+            Status = MarketplaceIntegrationStatus.Active,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _integracaoLojaRepository.AddAsync(integration, cancellationToken);
+
+        return new IntegracaoLojaResponseDto
+        {
+            Status = true,
+            Descricao = "Conta Shopee vinculada no modo Universal Link.",
+            Data = ToAccountDto(marketplaceAccount, integration)
+        };
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string Slug(string value)
+    {
+        var chars = value
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .ToArray();
+        var slug = new string(chars).Trim('-');
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            return "conta";
+        }
+
+        return slug.Length <= 80 ? slug : slug[..80];
     }
 
     private string ResolveLinkSuccessMessage(IntegracaoLojaDto dto, string fallback) =>

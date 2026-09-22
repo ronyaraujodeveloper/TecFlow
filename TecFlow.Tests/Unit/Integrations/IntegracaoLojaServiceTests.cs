@@ -46,16 +46,7 @@ public class IntegracaoLojaServiceTests
 
         var accounts = new Mock<IMarketplaceAccountRepository>();
         accounts.Setup(repository => repository.GetByShopAsync("123456", MarketplaceType.Shopee))
-            .ReturnsAsync(new MarketplaceAccount
-            {
-                TenantId = user.TenantId,
-                ShopId = "123456",
-                ShopName = "123456",
-                MarketplaceType = MarketplaceType.Shopee,
-                AccessToken = HomologMarketplaceAuth.StubAccessToken,
-                RefreshToken = HomologMarketplaceAuth.StubRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddDays(30)
-            });
+            .ReturnsAsync((MarketplaceAccount?)null);
         accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
             .Returns(Task.CompletedTask);
 
@@ -72,46 +63,52 @@ public class IntegracaoLojaServiceTests
         var result = await service.LinkAsync(7, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
-            AuthorizationCode = "code_teste",
             ShopId = "123456",
+            TrackingId = "123456",
             FriendlyName = "Loja Homolog"
         });
 
         Assert.True(result.Status);
-        Assert.Equal(HomologMarketplaceAuth.ManualLinkSuccessMessage, result.Descricao);
+        Assert.Contains("Universal Link", result.Descricao, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(saved);
         Assert.Equal("123456", saved!.ShopId);
-        Assert.Equal(HomologMarketplaceAuth.StubAccessToken, saved.AccessToken);
+        Assert.Equal("Loja Homolog", saved.FriendlyName);
         auth.Verify(
             service => service.CallbackAndGenerateTokensAsync(
-                MarketplaceType.Shopee,
-                HomologMarketplaceAuth.StubAuthorizationCode,
-                "123456",
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<string?>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Fact]
-    public async Task LinkAsync_ShouldFail_WhenShopeeShopIdIsNotNumeric()
+    public async Task LinkAsync_ShouldPersistAlphanumericTrackingId_WhenShopeeUniversalLink()
     {
-        var service = new IntegracaoLojaService(
-            new Mock<IIntegracaoLojaRepository>().Object,
-            new Mock<IUserAccountRepository>().Object,
-            new Mock<IMarketplaceAccountRepository>().Object,
-            new Mock<IMarketplaceAuthService>().Object,
-            Production());
+        var (service, stores, auth, _) = CreateShopeeLinkMocks(userId: 1, shopKey: "loja-abc");
+        IntegracaoLoja? saved = null;
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
 
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
-            AuthorizationCode = "code_teste",
-            ShopId = "loja-abc",
+            TrackingId = "loja-abc",
             FriendlyName = "Loja Homolog"
         });
 
-        Assert.False(result.Status);
-        Assert.Contains("número inteiro", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Status);
+        Assert.Equal("loja-abc", saved!.ShopId);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
     }
 
     [Fact]
@@ -131,45 +128,13 @@ public class IntegracaoLojaServiceTests
     }
 
     [Fact]
-    public async Task LinkAsync_ShouldFailWithoutThrowing_WhenAuthorizationCodeAndShopIdAreSwapped()
+    public async Task LinkAsync_ShouldPersistShopeeAccount_WhenAuthorizationCodeIsBlank()
     {
-        var auth = new Mock<IMarketplaceAuthService>();
-        var service = new IntegracaoLojaService(
-            new Mock<IIntegracaoLojaRepository>().Object,
-            new Mock<IUserAccountRepository>().Object,
-            new Mock<IMarketplaceAccountRepository>().Object,
-            auth.Object,
-            Production());
-
-        var result = await service.LinkAsync(1, new IntegracaoLojaDto
-        {
-            PlatformType = MarketplaceType.Shopee,
-            AuthorizationCode = "123456",
-            ShopId = "code_teste",
-            FriendlyName = "Loja Homolog"
-        });
-
-        Assert.False(result.Status);
-        Assert.Contains("número inteiro", result.Descricao, StringComparison.OrdinalIgnoreCase);
-        auth.Verify(
-            service => service.CallbackAndGenerateTokensAsync(
-                It.IsAny<MarketplaceType>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<string?>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task LinkAsync_ShouldFailWithoutThrowing_WhenCodeAndShopIdAreBlank()
-    {
-        var service = new IntegracaoLojaService(
-            new Mock<IIntegracaoLojaRepository>().Object,
-            new Mock<IUserAccountRepository>().Object,
-            new Mock<IMarketplaceAccountRepository>().Object,
-            new Mock<IMarketplaceAuthService>().Object,
-            Production());
+        var (service, stores, _, _) = CreateShopeeLinkMocks(userId: 1, shopKey: "ul-1-loja-homolog");
+        IntegracaoLoja? saved = null;
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
 
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
@@ -179,56 +144,46 @@ public class IntegracaoLojaServiceTests
             FriendlyName = "Loja Homolog"
         });
 
-        Assert.False(result.Status);
-        Assert.Equal("Código de autorização OAuth é obrigatório.", result.Descricao);
+        Assert.True(result.Status);
+        Assert.Equal("ul-1-loja-homolog", saved!.ShopId);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldUseShopIdAsTracking_WhenShopeePayloadLooksSwapped()
+    {
+        var (service, stores, auth, _) = CreateShopeeLinkMocks(userId: 1, shopKey: "code_teste");
+        IntegracaoLoja? saved = null;
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            AuthorizationCode = "123456",
+            ShopId = "code_teste",
+            FriendlyName = "Loja Homolog"
+        });
+
+        Assert.True(result.Status);
+        Assert.Equal("code_teste", saved!.ShopId);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task LinkAsync_ShouldAcceptSwappedStubPayload_WhenHomologacao()
     {
-        var user = new UserAccount
-        {
-            Id = 1,
-            Name = "Demo",
-            Email = "demo@tecso.local",
-            PasswordHash = "hash",
-            TenantId = Guid.NewGuid()
-        };
-
-        var users = new Mock<IUserAccountRepository>();
-        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
-
-        var auth = new Mock<IMarketplaceAuthService>();
-        auth.Setup(service => service.CallbackAndGenerateTokensAsync(
-                MarketplaceType.Shopee,
-                HomologMarketplaceAuth.StubAuthorizationCode,
-                "123456",
-                It.IsAny<CancellationToken>(),
-                It.IsAny<string?>()))
-            .ReturnsAsync(new MarketplaceTokenResult { Success = true, ShopId = "123456", MarketplaceType = MarketplaceType.Shopee, ExpiresAt = DateTime.UtcNow.AddDays(1) });
-
-        var accounts = new Mock<IMarketplaceAccountRepository>();
-        accounts.Setup(repository => repository.GetByShopAsync("123456", MarketplaceType.Shopee))
-            .ReturnsAsync(new MarketplaceAccount
-            {
-                TenantId = user.TenantId,
-                ShopId = "123456",
-                ShopName = "123456",
-                MarketplaceType = MarketplaceType.Shopee,
-                AccessToken = HomologMarketplaceAuth.StubAccessToken,
-                ExpiresAt = DateTime.UtcNow.AddDays(1)
-            });
-        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
-            .Returns(Task.CompletedTask);
-
-        var stores = new Mock<IIntegracaoLojaRepository>();
-        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
-                1, "123456", MarketplaceType.Shopee, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IntegracaoLoja?)null);
+        var (service, stores, auth, _) = CreateShopeeLinkMocks(userId: 1, shopKey: "code_teste", homolog: true);
         stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object, Homolog());
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
@@ -239,13 +194,13 @@ public class IntegracaoLojaServiceTests
 
         Assert.True(result.Status);
         auth.Verify(
-            service => service.CallbackAndGenerateTokensAsync(
-                MarketplaceType.Shopee,
-                HomologMarketplaceAuth.StubAuthorizationCode,
-                "123456",
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<string?>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Fact]
@@ -289,6 +244,47 @@ public class IntegracaoLojaServiceTests
         Assert.Single(result.DataList);
         Assert.Equal("123456", result.DataList![0].ShopId);
         Assert.Equal("Loja Homolog", result.DataList[0].FriendlyName);
+    }
+
+    private static (
+        IntegracaoLojaService Service,
+        Mock<IIntegracaoLojaRepository> Stores,
+        Mock<IMarketplaceAuthService> Auth,
+        Mock<IMarketplaceAccountRepository> Accounts)
+        CreateShopeeLinkMocks(int userId, string shopKey, bool homolog = false)
+    {
+        var user = new UserAccount
+        {
+            Id = userId,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync(shopKey, MarketplaceType.Shopee))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
+
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                userId, shopKey, MarketplaceType.Shopee, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            homolog ? Homolog() : Production());
+
+        return (service, stores, auth, accounts);
     }
 
     private static IHostEnvironment Production() => Environment("Production");

@@ -14,7 +14,9 @@
                 <div class="modal-header border-0 pb-0">
                     <div>
                         <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
-                        <p class="text-muted small mb-0">Escolha a plataforma, defina um apelido e inicie o OAuth.</p>
+                        <p class="text-muted small mb-0">
+                            Shopee usa Universal Link (sem App Key / App Secret). Informe o apelido e, se quiser, o Tracking ID.
+                        </p>
                     </div>
                     <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
                 </div>
@@ -55,36 +57,54 @@
                                disabled="@_linking" />
                     </div>
 
-                    <details class="marketplace-manual-link small" open>
-                        <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <label class="form-label" for="auth-code">Authorization code</label>
-                                <input id="auth-code"
-                                       name="authorizationCode"
-                                       type="text"
-                                       class="form-control form-control-sm"
-                                       placeholder="code_teste"
-                                       autocomplete="off"
-                                       @bind="_authorizationCode"
-                                       @bind:event="oninput"
-                                       disabled="@_linking" />
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="shop-id">Shop ID</label>
-                                <input id="shop-id"
-                                       name="shopId"
-                                       type="text"
-                                       class="form-control form-control-sm"
-                                       inputmode="numeric"
-                                       placeholder="123456"
-                                       autocomplete="off"
-                                       @bind="_shopId"
-                                       @bind:event="oninput"
-                                       disabled="@_linking" />
-                            </div>
+                    @if (_platform == MarketplaceType.Shopee)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="tracking-id">ID de afiliado / Tracking ID (opcional)</label>
+                            <input id="tracking-id"
+                                   type="text"
+                                   class="form-control"
+                                   maxlength="128"
+                                   placeholder="Usado no sub_id do Universal Link"
+                                   autocomplete="off"
+                                   @bind="_trackingId"
+                                   @bind:event="oninput"
+                                   disabled="@_linking" />
                         </div>
-                    </details>
+                    }
+                    else
+                    {
+                        <details class="marketplace-manual-link small" open>
+                            <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label" for="auth-code">Authorization code</label>
+                                    <input id="auth-code"
+                                           name="authorizationCode"
+                                           type="text"
+                                           class="form-control form-control-sm"
+                                           placeholder="code_teste"
+                                           autocomplete="off"
+                                           @bind="_authorizationCode"
+                                           @bind:event="oninput"
+                                           disabled="@_linking" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="shop-id">Shop ID</label>
+                                    <input id="shop-id"
+                                           name="shopId"
+                                           type="text"
+                                           class="form-control form-control-sm"
+                                           inputmode="numeric"
+                                           placeholder="123456"
+                                           autocomplete="off"
+                                           @bind="_shopId"
+                                           @bind:event="oninput"
+                                           disabled="@_linking" />
+                                </div>
+                            </div>
+                        </details>
+                    }
                 </div>
 
                 <div class="modal-footer border-0 flex-column flex-sm-row gap-2">
@@ -92,13 +112,16 @@
                         Cancelar
                     </button>
                     <button type="button"
-                            class="btn btn-outline-primary btn-touch w-100 w-sm-auto"
+                            class="btn btn-primary btn-touch w-100 w-sm-auto"
                             @onclick="VincularManualmenteDirect">
-                        @(_linking ? "Vinculando..." : "Vincular manualmente")
+                        @(_linking ? "Salvando..." : (_platform == MarketplaceType.Shopee ? "Salvar conta Shopee" : "Vincular manualmente"))
                     </button>
-                    <button type="button" class="btn btn-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
-                        @(_linking ? "Redirecionando..." : "Conectar via OAuth")
-                    </button>
+                    @if (_platform != MarketplaceType.Shopee)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
+                            @(_linking ? "Redirecionando..." : "Conectar via OAuth")
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -116,6 +139,7 @@
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
     private string _friendlyName = string.Empty;
+    private string _trackingId = string.Empty;
     private string _authorizationCode = string.Empty;
     private string _shopId = string.Empty;
     private string? _formError;
@@ -167,12 +191,41 @@
         try
         {
             var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
+            var trackingId = (await ReadInputAsync("tracking-id", _trackingId)).Trim();
             var authorizationCode = (await ReadInputAsync("auth-code", _authorizationCode)).Trim();
             var shopIdInput = (await ReadInputAsync("shop-id", _shopId)).Trim();
 
             if (string.IsNullOrWhiteSpace(friendlyName))
             {
-                friendlyName = "Loja Homolog";
+                _formError = "Informe um apelido para identificar a loja.";
+                return;
+            }
+
+            if (_platform == MarketplaceType.Shopee)
+            {
+                _friendlyName = friendlyName;
+                _trackingId = trackingId;
+                _formError = null;
+                _linking = true;
+
+                var shopeeResponse = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
+                {
+                    PlatformType = MarketplaceType.Shopee,
+                    FriendlyName = _friendlyName,
+                    TrackingId = string.IsNullOrWhiteSpace(_trackingId) ? null : _trackingId,
+                    ShopId = _trackingId
+                });
+
+                if (shopeeResponse.Status)
+                {
+                    await OnLojaVinculada.InvokeAsync();
+                    return;
+                }
+
+                _formError = string.IsNullOrWhiteSpace(shopeeResponse.Descricao)
+                    ? "Não foi possível vincular a loja."
+                    : shopeeResponse.Descricao;
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(authorizationCode))
@@ -252,6 +305,7 @@
     {
         _platform = MarketplaceType.Shopee;
         _friendlyName = string.Empty;
+        _trackingId = string.Empty;
         _authorizationCode = string.Empty;
         _shopId = string.Empty;
         _formError = null;

@@ -29,6 +29,13 @@ public static class ConnectStoreManualLinkForm
             return false;
         }
 
+        if (platform == MarketplaceType.Shopee)
+        {
+            authorizationCodeTrimmed = authorizationCode?.Trim() ?? string.Empty;
+            shopIdNormalized = shopId?.Trim() ?? string.Empty;
+            return true;
+        }
+
         var shopIdInput = shopId?.Trim() ?? string.Empty;
         if (!long.TryParse(
                 shopIdInput,

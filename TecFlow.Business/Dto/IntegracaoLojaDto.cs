@@ -23,4 +23,9 @@ public class IntegracaoLojaDto
     [JsonPropertyName("friendlyName")]
     [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string FriendlyName { get; set; } = string.Empty;
+
+    /// <summary>ID de afiliado / Tracking ID da Shopee (opcional; usado em sub_id do Universal Link).</summary>
+    [JsonPropertyName("trackingId")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
+    public string? TrackingId { get; set; }
 }

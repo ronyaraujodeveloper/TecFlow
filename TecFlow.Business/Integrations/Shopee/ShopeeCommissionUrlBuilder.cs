@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Database.Entity;
 
 namespace TecFlow.Business.Integrations.Shopee;
 
@@ -47,6 +48,41 @@ public static class ShopeeCommissionUrlBuilder
 
     public static string ToUniversalWebUrl(ShopeeProductUrlIds ids) =>
         $"https://shopee.com.br/product/{ids.ShopId}/{ids.ItemId}";
+
+    public static string ToUniversalDeeplinkUrl(ShopeeProductUrlIds ids) =>
+        $"https://shopee.com.br/universal-link/product/{ids.ShopId}/{ids.ItemId}";
+
+    public static bool IsGeneratedUniversalShopKey(string? shopId) =>
+        !string.IsNullOrWhiteSpace(shopId)
+        && shopId.Trim().StartsWith("ul-", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>sub_id do Universal Link: Tracking ID da conta, senão apelido, senão UserId.</summary>
+    public static string ResolveUniversalSubId(IntegracaoLoja store)
+    {
+        if (!string.IsNullOrWhiteSpace(store.ShopId) && !IsGeneratedUniversalShopKey(store.ShopId))
+        {
+            return store.ShopId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(store.FriendlyName))
+        {
+            return store.FriendlyName.Trim();
+        }
+
+        if (store.UserId > 0)
+        {
+            return $"u{store.UserId}";
+        }
+
+        return HomologTrackingSubId;
+    }
+
+    public static string BuildUniversalDeeplink(ShopeeProductUrlIds ids, string subId)
+    {
+        var path = ToUniversalDeeplinkUrl(ids);
+        var resolved = string.IsNullOrWhiteSpace(subId) ? HomologTrackingSubId : subId.Trim();
+        return $"{path}?{FormatQueryPair(SubIdQuery, resolved)}";
+    }
 
     public static string EncodeQueryComponent(string value) =>
         Uri.EscapeDataString(value ?? string.Empty);

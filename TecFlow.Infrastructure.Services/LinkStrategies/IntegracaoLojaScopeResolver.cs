@@ -74,6 +74,11 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
                 "A loja selecionada está inativa. Reconecte-a em Minhas Lojas / Integrações.");
         }
 
+        if (store.PlatformType == MarketplaceType.Shopee)
+        {
+            return store;
+        }
+
         if (store.Status == MarketplaceIntegrationStatus.Expired || store.ExpiresAt <= DateTime.UtcNow)
         {
             throw new AffiliateLinkGenerationException(

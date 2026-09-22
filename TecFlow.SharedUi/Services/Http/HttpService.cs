@@ -111,6 +111,17 @@ public class HttpService : IHttpService
                     return ApiResult<TResponse>.Fail(FormatIisError(content), (int)response.StatusCode);
                 }
 
+                if (data is GerarLinkAfiliadoResponseDto affiliate)
+                {
+                    affiliate.NormalizeHttp200();
+                    if (!affiliate.HasConvertedLink && !affiliate.Success)
+                    {
+                        return ApiResult<TResponse>.Fail(
+                            FirstNonEmpty(affiliate.Message, affiliate.Descricao, "Não foi possível gerar o link de comissão."),
+                            (int)response.StatusCode);
+                    }
+                }
+
                 return ApiResult<TResponse>.Ok(data);
             }
 

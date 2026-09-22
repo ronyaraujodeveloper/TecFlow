@@ -2,7 +2,7 @@
 @using TecFlow.SharedUi.Helpers
 @inject IJSRuntime Js
 
-@if (Response is { Success: true } response && !string.IsNullOrWhiteSpace(response.ShortenedUrl))
+@if (Response is { HasConvertedLink: true } response)
 {
     <section id="link-generator-result"
              class="link-generator-result card border-0 shadow-sm mt-4"

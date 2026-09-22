@@ -58,7 +58,7 @@ public class GeradorLinksServiceTests
         var result = await api.GenerateAsync(request);
 
         Assert.Equal(AffiliateLinkApiService.GeneratePath, capturedPath);
-        Assert.Equal("api/afiliados/links/gerar", capturedPath);
+        Assert.Equal("api/links/convert", capturedPath);
         Assert.NotNull(captured);
         Assert.Equal(ProductUrl, captured!.OriginalUrl);
         Assert.Equal("shop-sandbox", captured.ShopId);
@@ -109,11 +109,34 @@ public class GeradorLinksServiceTests
 
         Assert.NotNull(captured);
         Assert.Equal(HttpMethod.Post, captured!.Method);
-        Assert.Contains("api/afiliados/links/gerar", captured.RequestUri!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("api/links/convert", captured.RequestUri!.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.True(result.Success);
         Assert.Equal(ShortUrl, result.Data!.ShortenedUrl);
         Assert.Equal("Shopee", result.Data.PlatformDetected);
         Assert.True(result.Data.Success);
+    }
+
+    [Fact]
+    public async Task HttpService_ShouldCapture200OkFromLinksConvert_WithConvertedUrlAlias()
+    {
+        const string json =
+            """{"status":true,"descricao":"OK","convertedUrl":"http://localhost:5001/r/taeej22s","platformDetected":"Shopee"}""";
+
+        var handler = StubHttpMessageHandler.WithJsonResponse(json, HttpStatusCode.OK);
+        var http = new HttpService(
+            new NamedClientFactory(handler),
+            new StaticTokenProvider("token-teste"),
+            NullLogger<HttpService>.Instance);
+
+        var result = await http.PostAsync<GerarLinkAfiliadoDto, GerarLinkAfiliadoResponseDto>(
+            AffiliateLinkApiService.GeneratePath,
+            new GerarLinkAfiliadoDto { OriginalUrl = "https://br.shp.ee/taeej22s" });
+
+        Assert.True(result.Success);
+        Assert.True(result.Data!.HasConvertedLink);
+        Assert.Equal("http://localhost:5001/r/taeej22s", result.Data.ShortenedUrl);
+        Assert.Equal("http://localhost:5001/r/taeej22s", result.Data.ConvertedUrl);
+        Assert.Equal("Shopee", result.Data.PlatformDetected);
     }
 
     [Fact]

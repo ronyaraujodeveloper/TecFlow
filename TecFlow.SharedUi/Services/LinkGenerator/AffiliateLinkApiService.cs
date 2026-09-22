@@ -8,7 +8,8 @@ namespace TecFlow.SharedUi.Services.LinkGenerator;
 
 public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
 {
-    public const string GeneratePath = "api/afiliados/links/gerar";
+    public const string GeneratePath = "api/links/convert";
+    public const string LegacyGeneratePath = "api/afiliados/links/gerar";
     public const string HistoryPath = "api/afiliados/links/historico";
 
     private readonly IHttpService _httpService;

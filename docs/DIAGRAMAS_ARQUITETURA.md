@@ -35,7 +35,7 @@ flowchart LR
   BLD --> SHORT
   SHORT --> LOG
   BLD --> OUT
-  UI[GeradorLinks.razor] -->|POST /api/afiliados/links/gerar| API[AffiliateLinksController]
+  UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
   API --> STR
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]

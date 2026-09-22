@@ -52,6 +52,7 @@ public class AffiliateLinksController : ControllerBase
 
     /// <summary>Gera link de comissão encurtado a partir da URL bruta e loja ativa.</summary>
     [HttpPost("gerar")]
+    [HttpPost("/api/links/convert")]
     public async Task<ActionResult<GerarLinkAfiliadoResponseDto>> GenerateAsync(
         [FromBody] GerarLinkAfiliadoDto request,
         CancellationToken cancellationToken)

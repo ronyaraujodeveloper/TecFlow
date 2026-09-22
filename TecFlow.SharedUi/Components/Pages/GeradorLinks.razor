@@ -274,7 +274,12 @@
 
             var result = await AffiliateLinkApi.GenerateAsync(request);
 
-            if (result.Success && result.Data?.Success == true)
+            if (result.Success && result.Data is not null)
+            {
+                result.Data.NormalizeHttp200();
+            }
+
+            if (result.Success && result.Data is { HasConvertedLink: true })
             {
                 _generatedResponse = result.Data;
                 _feedbackMessage = null;

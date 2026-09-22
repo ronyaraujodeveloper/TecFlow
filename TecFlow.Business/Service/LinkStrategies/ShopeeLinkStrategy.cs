@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using System.Text.RegularExpressions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Entity;
 
 namespace TecFlow.Business.Service.LinkStrategies;
 
@@ -37,6 +39,10 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         _logger = logger;
     }
 
+    private static readonly Regex DesktopItemRegex = new(
+        @"i\.(?<shopId>\d+)\.(?<itemId>\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public MarketplaceType PlatformType => MarketplaceType.Shopee;
 
     public string PlatformName => "Shopee";
@@ -59,6 +65,24 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             _generationContext.UserId,
             MarketplaceType.Shopee,
             cancellationToken);
+
+        if (TryExtractDesktopProductIds(originalUrl, out var desktopIds))
+        {
+            _logger.LogInformation(
+                "Shopee desktop i.shop.item extraído. ShopId={ShopId} ItemId={ItemId}",
+                desktopIds.ShopId,
+                desktopIds.ItemId);
+
+            var cleanProductUrl = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(desktopIds);
+            return await ConvertCleanProductUrlAsync(
+                store,
+                cleanProductUrl,
+                desktopIds,
+                originalUrl.Trim(),
+                affiliateId,
+                usedHomologIds: false,
+                cancellationToken);
+        }
 
         var workingUrl = ShopeeProductUrlParser.Sanitize(originalUrl);
         if (string.IsNullOrWhiteSpace(workingUrl))
@@ -132,6 +156,48 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
                 workingUrl);
         }
 
+        return await ConvertCleanProductUrlAsync(
+            store,
+            usedHomologIds ? ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds) : workingUrl,
+            productIds,
+            originalUrl.Trim(),
+            affiliateId,
+            usedHomologIds,
+            cancellationToken);
+    }
+
+    public static bool TryExtractDesktopProductIds(string? url, out ShopeeProductUrlIds ids)
+    {
+        ids = default;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var match = DesktopItemRegex.Match(url);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        ids = new ShopeeProductUrlIds(match.Groups["shopId"].Value, match.Groups["itemId"].Value);
+        return !string.IsNullOrWhiteSpace(ids.ShopId) && !string.IsNullOrWhiteSpace(ids.ItemId);
+    }
+
+    private async Task<string> ConvertCleanProductUrlAsync(
+        IntegracaoLoja store,
+        string workingUrl,
+        ShopeeProductUrlIds productIds,
+        string originalUrl,
+        string affiliateId,
+        bool usedHomologIds,
+        CancellationToken cancellationToken)
+    {
+        var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
+            _hostEnvironment.EnvironmentName,
+            authorizationCode: null)
+            || _options.IsSandboxMode;
+
         string generated;
         try
         {
@@ -174,7 +240,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
     }
 
     private string BuildAffiliateUrlFromProductIds(
-        TecFlow.Database.Entity.IntegracaoLoja store,
+        IntegracaoLoja store,
         ShopeeProductUrlIds productIds,
         string originalUrl,
         string affiliateId)
@@ -185,7 +251,7 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
 
     private string ApplyCommissionTracking(
         string generatedUrl,
-        TecFlow.Database.Entity.IntegracaoLoja store,
+        IntegracaoLoja store,
         ShopeeProductUrlIds productIds,
         string originalUrl,
         string affiliateId)

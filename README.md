@@ -380,7 +380,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.2.3. Persistência de Telemetria:** Confirmar que a chamada grava corretamente um novo registro na tabela `LinkClickLog` com o `TenantId`/`ShopId` e metadados de acesso.
 
 #### 19.3. Conexão End-to-End no Frontend (TecFlow.WebUi)
-- [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend.
+- [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend, com `_isLoading`, alerta vermelho se a loja não estiver selecionada e `StateHasChanged()` após sucesso.
 - [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (Shopee) e `ShortenedUrl` (`http://localhost:5001/r/code`) com cópia independente via `tecflow-clipboard.js` e compartilhamento WhatsApp/Telegram.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no banco PostgreSQL.
 ---

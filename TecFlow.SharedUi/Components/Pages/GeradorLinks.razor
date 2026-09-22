@@ -41,7 +41,7 @@
                        value="@_productUrl"
                        @oninput="HandleUrlInput"
                        @onblur="HandleUrlBlur"
-                       disabled="@_isGenerating"
+                       disabled="@_isLoading"
                        autocomplete="off"
                        inputmode="url"
                        aria-invalid="@(_feedbackIsError ? "true" : "false")" />
@@ -58,9 +58,9 @@
             <div class="link-generator-actions mt-4">
                 <button type="submit"
                         class="btn btn-primary btn-lg btn-touch w-100 link-generator-submit"
-                        disabled="@(!CanGenerate)"
-                        aria-busy="@_isGenerating">
-                    @if (_isGenerating)
+                        disabled="@(_isLoading || string.IsNullOrWhiteSpace(_productUrl))"
+                        aria-busy="@_isLoading">
+                    @if (_isLoading)
                     {
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <span>Gerando link...</span>
@@ -114,7 +114,7 @@
     private string? _detectionHint;
     private string? _feedbackMessage;
     private bool _feedbackIsError;
-    private bool _isGenerating;
+    private bool _isLoading;
     private bool _integrationsLoaded;
     private MarketplaceDefinition? _detectedPlatform;
     private GerarLinkAfiliadoResponseDto? _generatedResponse;
@@ -122,7 +122,7 @@
     private readonly HashSet<MarketplaceType> _connectedPlatforms = [];
 
     private bool CanGenerate =>
-        !_isGenerating
+        !_isLoading
         && _integrationsLoaded
         && _detectedPlatform is { IsBackendReady: true }
         && IsPlatformConnected(_detectedPlatform)
@@ -242,25 +242,35 @@
         ClearFeedback();
         ClearGeneratedResult();
         AnalyzeUrl(_productUrl);
-
-        if (_detectedPlatform is null || StoreScope.ActiveStoreId is not int activeStoreId || activeStoreId <= 0)
-        {
-            ShowError(_detectedPlatform is null
-                ? "URL inválida. Cole um link de produto da Shopee ou TikTok Shop."
-                : "Selecione uma loja ativa no topo do painel antes de gerar o link.");
-            return;
-        }
-
-        if (!ActiveStoreMatchesDetectedPlatform())
-        {
-            ShowError("A loja selecionada no topo não corresponde à plataforma do link colado.");
-            return;
-        }
-
-        _isGenerating = true;
+        _isLoading = true;
+        StateHasChanged();
 
         try
         {
+            if (string.IsNullOrWhiteSpace(_productUrl))
+            {
+                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+                return;
+            }
+
+            if (_detectedPlatform is null)
+            {
+                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+                return;
+            }
+
+            if (StoreScope.ActiveStoreId is not int activeStoreId || activeStoreId <= 0)
+            {
+                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+                return;
+            }
+
+            if (!ActiveStoreMatchesDetectedPlatform())
+            {
+                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+                return;
+            }
+
             var activeStore = StoreScope.ActiveStore;
             var request = new GerarLinkAfiliadoDto
             {
@@ -285,22 +295,26 @@
                 _feedbackMessage = null;
                 _feedbackIsError = false;
                 _historyRefreshToken++;
+                StateHasChanged();
                 await ScrollToResultPanelAsync();
             }
             else
             {
                 _generatedResponse = null;
                 ShowError(ResolveConversionError(result.ErrorMessage, result.Data?.Message));
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro inesperado ao gerar link de comissão.");
-            ShowError("Erro inesperado ao gerar link de comissão.");
+            ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+            StateHasChanged();
         }
         finally
         {
-            _isGenerating = false;
+            _isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -366,7 +380,7 @@
         }
 
         return string.IsNullOrWhiteSpace(raw)
-            ? "Não foi possível gerar o link de comissão."
+            ? "Não foi possível converter este link. Verifique se uma loja está selecionada."
             : raw;
     }
 

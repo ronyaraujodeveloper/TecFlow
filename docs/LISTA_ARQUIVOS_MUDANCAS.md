@@ -500,7 +500,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShopeeLinkHostMatcher.cs** — hosts `shopee.com.br`, `br.shp.ee`, `shp.ee`, `shope.ee`.
 - [x] **ShopeeProductUrlParser.cs** — regex `i.(shopId).(itemId)` em URLs desktop, sanitização de `extraParams`/`sp_atk`/`xptdk` e HTTP 400 com alerta Blazor de formato não reconhecido.
 - [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
-- [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — unshorten + parse antes do generateCustomLink.
+- [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop (Titans Atlas), URL limpa + tags da loja, unshorten quando necessário.
 
 ### Fase 19.2.2 — URL rastreada de comissão
 
@@ -517,7 +517,7 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.3.1 — Integração GeradorLinks.razor
 
-- [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; spinner e alertas de erro.
+- [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; `_isLoading`, spinner, alerta vermelho e `StateHasChanged()` no sucesso.
 - [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `originalUrl`, `affiliateUrl` e `shortenedUrl`.
 - [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (oficial Shopee) e `ShortenedUrl` (`/r/code`).
 - [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.

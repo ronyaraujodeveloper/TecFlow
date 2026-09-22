@@ -27,14 +27,14 @@ flowchart LR
   BLD[ShopeeCommissionUrlBuilder]
   SHORT[ShortAffiliateLink]
   LOG[LinkClickLog]
-  OUT[URL rastreada]
 
   STR -->|produto + UserId/TenantId| AFF
   AFF --> BLD
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT --> LOG
-  BLD --> OUT
+  BLD --> AFFURL[AffiliateUrl Shopee]
+  SHORT --> SHORTURL[ShortenedUrl localhost:5001/r]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
   API --> STR
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]

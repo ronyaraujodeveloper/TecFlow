@@ -57,6 +57,9 @@ public class LinkClickLogTests
             userId: 10);
 
         Assert.True(result.Success);
+        Assert.Equal(ProductUrl, result.OriginalUrl);
+        Assert.Equal(ConvertedUrl, result.AffiliateUrl);
+        Assert.Equal("http://localhost:5001/r/abcdef1", result.ShortenedUrl);
         Assert.NotNull(recorder.LastAdded);
         Assert.Equal(affiliateLinkId, recorder.LastAdded!.AffiliateLinkId);
         Assert.Equal(TestTenantId, recorder.LastAdded.TenantId);

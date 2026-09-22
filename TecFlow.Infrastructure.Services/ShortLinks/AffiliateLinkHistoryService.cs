@@ -78,7 +78,14 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
 
     private AffiliateLinkHistoryItemDto MapItem(Core.Entities.ShortAffiliateLink link, int clickCount)
     {
-        var baseUrl = (_options.PublicBaseUrl ?? "http://localhost:5001/r").TrimEnd('/');
+        var configured = (_options.PublicBaseUrl ?? string.Empty).Trim();
+        var baseUrl = string.IsNullOrWhiteSpace(configured)
+            ? "http://localhost:5001/r"
+            : configured.TrimEnd('/');
+        if (!baseUrl.EndsWith("/r", StringComparison.OrdinalIgnoreCase))
+        {
+            baseUrl = $"{baseUrl.TrimEnd('/')}/r";
+        }
 
         return new AffiliateLinkHistoryItemDto
         {

@@ -518,14 +518,15 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.3.1 — Integração GeradorLinks.razor
 
 - [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; spinner e alertas de erro.
-- [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `convertedUrl`.
+- [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `originalUrl`, `affiliateUrl` e `shortenedUrl`.
+- [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (oficial Shopee) e `ShortenedUrl` (`/r/code`).
 - [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.
 - [x] **GeradorLinksServiceTests.cs** — mock HTTP POST e DTO de resposta com link convertido.
 
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.
-- [x] **LinkGeneratorResultPanel.razor** — destaque do link, Copiado!, Web Share, WhatsApp e Telegram.
+- [x] **LinkGeneratorResultPanel.razor** — dois campos de cópia: afiliado Shopee (`AffiliateUrl`) e rastreio TecFlow (`ShortenedUrl` em `http://localhost:5001/r/code`).
 - [x] **AffiliateShareLinkBuilder.cs** — URIs `api.whatsapp.com/send` e `t.me/share/url` com URL encoding.
 - [x] **AffiliateShareLinkBuilderTests.cs** — encoding de espaços, `&` e query string.
 

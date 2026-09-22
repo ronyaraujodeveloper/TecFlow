@@ -66,6 +66,9 @@ public class AffiliateLinksControllerTests
             {
                 Success = true,
                 Message = "OK",
+                OriginalUrl = "https://shopee.com.br/produto",
+                AffiliateUrl = "https://shopee.com.br/produto?tracking_code=tecflow_sandbox_subid",
+                ConvertedUrl = "https://shopee.com.br/produto?tracking_code=tecflow_sandbox_subid",
                 ShortenedUrl = "http://localhost:5001/r/abc1234",
                 PlatformDetected = "Shopee"
             });
@@ -76,7 +79,10 @@ public class AffiliateLinksControllerTests
             CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
-        Assert.Equal("http://localhost:5001/r/abc1234", Assert.IsType<GerarLinkAfiliadoResponseDto>(ok.Value).ShortenedUrl);
+        var body = Assert.IsType<GerarLinkAfiliadoResponseDto>(ok.Value);
+        Assert.Equal("https://shopee.com.br/produto", body.OriginalUrl);
+        Assert.Equal("https://shopee.com.br/produto?tracking_code=tecflow_sandbox_subid", body.AffiliateUrl);
+        Assert.Equal("http://localhost:5001/r/abc1234", body.ShortenedUrl);
     }
 
     [Fact]

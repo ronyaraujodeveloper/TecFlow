@@ -97,7 +97,16 @@ public sealed class ShortLinkService : IShortLinkService
 
     private string BuildPublicUrl(string shortCode)
     {
-        var baseUrl = (_options.PublicBaseUrl ?? "http://localhost:5001/r").TrimEnd('/');
+        var configured = (_options.PublicBaseUrl ?? string.Empty).Trim();
+        var baseUrl = string.IsNullOrWhiteSpace(configured)
+            ? "http://localhost:5001/r"
+            : configured.TrimEnd('/');
+
+        if (!baseUrl.EndsWith("/r", StringComparison.OrdinalIgnoreCase))
+        {
+            baseUrl = $"{baseUrl.TrimEnd('/')}/r";
+        }
+
         return $"{baseUrl}/{shortCode}";
     }
 }

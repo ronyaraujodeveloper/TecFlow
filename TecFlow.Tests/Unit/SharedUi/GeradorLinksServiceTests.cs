@@ -37,6 +37,9 @@ public class GeradorLinksServiceTests
                 {
                     Success = true,
                     Message = "Link de afiliado gerado com sucesso.",
+                    OriginalUrl = ProductUrl,
+                    AffiliateUrl = "https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid",
+                    ConvertedUrl = "https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid",
                     ShortenedUrl = ShortUrl,
                     PlatformDetected = "Shopee",
                     AffiliateLinkId = Guid.Parse("11111111-2222-3333-4444-555555555555")
@@ -66,6 +69,8 @@ public class GeradorLinksServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
         Assert.True(result.Data!.Success);
+        Assert.Equal(ProductUrl, result.Data.OriginalUrl);
+        Assert.Equal("https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid", result.Data.AffiliateUrl);
         Assert.Equal(ShortUrl, result.Data.ShortenedUrl);
         Assert.Equal("Shopee", result.Data.PlatformDetected);
         loading.Verify(service => service.BeginScope("Gerando link de comissão..."), Times.Once);
@@ -82,6 +87,9 @@ public class GeradorLinksServiceTests
             {
                 Success = true,
                 Message = "Link de afiliado gerado com sucesso.",
+                OriginalUrl = ProductUrl,
+                AffiliateUrl = "https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid",
+                ConvertedUrl = "https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid",
                 ShortenedUrl = ShortUrl,
                 PlatformDetected = "Shopee",
                 AffiliateLinkId = Guid.NewGuid()
@@ -111,7 +119,9 @@ public class GeradorLinksServiceTests
         Assert.Equal(HttpMethod.Post, captured!.Method);
         Assert.Contains("api/links/convert", captured.RequestUri!.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.True(result.Success);
-        Assert.Equal(ShortUrl, result.Data!.ShortenedUrl);
+        Assert.Equal(ProductUrl, result.Data!.OriginalUrl);
+        Assert.Equal("https://shopee.com.br/produto-i.123.456?tracking_code=tecflow_sandbox_subid", result.Data.AffiliateUrl);
+        Assert.Equal(ShortUrl, result.Data.ShortenedUrl);
         Assert.Equal("Shopee", result.Data.PlatformDetected);
         Assert.True(result.Data.Success);
     }
@@ -137,6 +147,34 @@ public class GeradorLinksServiceTests
         Assert.Equal("http://localhost:5001/r/taeej22s", result.Data.ShortenedUrl);
         Assert.Equal("http://localhost:5001/r/taeej22s", result.Data.ConvertedUrl);
         Assert.Equal("Shopee", result.Data.PlatformDetected);
+    }
+
+    [Fact]
+    public async Task HttpService_ShouldCaptureDualAffiliateAndShortenedUrlsFromLinksConvert()
+    {
+        const string json =
+            """{"status":true,"descricao":"OK","originalUrl":"https://br.shp.ee/taeej22s","affiliateUrl":"https://shopee.com.br/universal-link/product/999999/888888?utm_source=affiliate&sub_id=tecflow_test","convertedUrl":"https://shopee.com.br/universal-link/product/999999/888888?utm_source=affiliate&sub_id=tecflow_test","shortenedUrl":"http://localhost:5001/r/taeej22s","platformDetected":"Shopee"}""";
+
+        var handler = StubHttpMessageHandler.WithJsonResponse(json, HttpStatusCode.OK);
+        var http = new HttpService(
+            new NamedClientFactory(handler),
+            new StaticTokenProvider("token-teste"),
+            NullLogger<HttpService>.Instance);
+
+        var result = await http.PostAsync<GerarLinkAfiliadoDto, GerarLinkAfiliadoResponseDto>(
+            AffiliateLinkApiService.GeneratePath,
+            new GerarLinkAfiliadoDto { OriginalUrl = "https://br.shp.ee/taeej22s" });
+
+        Assert.True(result.Success);
+        Assert.True(result.Data!.HasConvertedLink);
+        Assert.Equal("https://br.shp.ee/taeej22s", result.Data.OriginalUrl);
+        Assert.Equal(
+            "https://shopee.com.br/universal-link/product/999999/888888?utm_source=affiliate&sub_id=tecflow_test",
+            result.Data.AffiliateUrl);
+        Assert.Equal(
+            "https://shopee.com.br/universal-link/product/999999/888888?utm_source=affiliate&sub_id=tecflow_test",
+            result.Data.ConvertedUrl);
+        Assert.Equal("http://localhost:5001/r/taeej22s", result.Data.ShortenedUrl);
     }
 
     [Fact]

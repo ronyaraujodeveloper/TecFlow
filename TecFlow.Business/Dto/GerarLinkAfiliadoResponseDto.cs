@@ -7,9 +7,16 @@ public class GerarLinkAfiliadoResponseDto
 
     public string Message { get; set; } = string.Empty;
 
+    /// <summary>URL enviada pelo usuário.</summary>
+    public string OriginalUrl { get; set; } = string.Empty;
+
+    /// <summary>URL oficial de afiliado da Shopee (tag de rastreio).</summary>
+    public string AffiliateUrl { get; set; } = string.Empty;
+
+    /// <summary>URL interna TecFlow de telemetria (http://localhost:5001/r/code).</summary>
     public string ShortenedUrl { get; set; } = string.Empty;
 
-    /// <summary>Alias homologação (`POST /api/links/convert`).</summary>
+    /// <summary>Alias de <see cref="AffiliateUrl"/> para o contrato `POST /api/links/convert`.</summary>
     public string ConvertedUrl { get; set; } = string.Empty;
 
     public bool Status { get; set; }
@@ -21,10 +28,11 @@ public class GerarLinkAfiliadoResponseDto
     public Guid AffiliateLinkId { get; set; }
 
     public string ResolvedShortUrl =>
-        FirstNonEmpty(ShortenedUrl, ConvertedUrl);
+        FirstNonEmpty(ShortenedUrl, LooksLikeTecFlowShort(ConvertedUrl) ? ConvertedUrl : null);
 
     public bool HasConvertedLink =>
-        !string.IsNullOrWhiteSpace(ResolvedShortUrl);
+        !string.IsNullOrWhiteSpace(AffiliateUrl)
+        || !string.IsNullOrWhiteSpace(ResolvedShortUrl);
 
     public void NormalizeHttp200()
     {
@@ -33,14 +41,19 @@ public class GerarLinkAfiliadoResponseDto
             Success = true;
         }
 
-        if (string.IsNullOrWhiteSpace(ShortenedUrl) && !string.IsNullOrWhiteSpace(ConvertedUrl))
+        if (string.IsNullOrWhiteSpace(AffiliateUrl) && !string.IsNullOrWhiteSpace(ConvertedUrl) && !LooksLikeTecFlowShort(ConvertedUrl))
         {
-            ShortenedUrl = ConvertedUrl;
+            AffiliateUrl = ConvertedUrl.Trim();
         }
 
-        if (string.IsNullOrWhiteSpace(ConvertedUrl) && !string.IsNullOrWhiteSpace(ShortenedUrl))
+        if (string.IsNullOrWhiteSpace(ConvertedUrl) && !string.IsNullOrWhiteSpace(AffiliateUrl))
         {
-            ConvertedUrl = ShortenedUrl;
+            ConvertedUrl = AffiliateUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(ShortenedUrl) && LooksLikeTecFlowShort(ConvertedUrl))
+        {
+            ShortenedUrl = ConvertedUrl.Trim();
         }
 
         if (string.IsNullOrWhiteSpace(Message) && !string.IsNullOrWhiteSpace(Descricao))
@@ -54,6 +67,10 @@ public class GerarLinkAfiliadoResponseDto
             Status = true;
         }
     }
+
+    private static bool LooksLikeTecFlowShort(string? url) =>
+        !string.IsNullOrWhiteSpace(url)
+        && url.Contains("/r/", StringComparison.OrdinalIgnoreCase);
 
     private static string FirstNonEmpty(params string?[] values)
     {

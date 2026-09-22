@@ -95,7 +95,12 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             return new GerarLinkAfiliadoResponseDto
             {
                 Success = true,
+                Status = true,
                 Message = "Link de afiliado gerado com sucesso.",
+                Descricao = "Link de afiliado gerado com sucesso.",
+                OriginalUrl = request.OriginalUrl.Trim(),
+                AffiliateUrl = generatedLink,
+                ConvertedUrl = generatedLink,
                 ShortenedUrl = publicShortUrl,
                 PlatformDetected = strategy.PlatformName,
                 AffiliateLinkId = affiliateLinkId
@@ -136,6 +141,9 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         {
             Success = false,
             Message = message,
+            OriginalUrl = string.Empty,
+            AffiliateUrl = string.Empty,
+            ConvertedUrl = string.Empty,
             ShortenedUrl = string.Empty,
             PlatformDetected = string.Empty
         };

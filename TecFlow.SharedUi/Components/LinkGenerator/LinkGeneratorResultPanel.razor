@@ -24,33 +24,67 @@
                 <span class="link-generator-result-check" aria-hidden="true">✓</span>
             </div>
 
-            <label class="form-label small text-muted mb-1" for="generated-short-url">
-                URL encurtada TecFlow
-            </label>
-            <div class="link-generator-result-url-wrap">
-                <output id="generated-short-url"
-                        class="link-generator-result-url font-monospace"
-                        for="product-url">
-                    @response.ShortenedUrl
-                </output>
-            </div>
+            @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
+            {
+                <label class="form-label small text-muted mb-1" for="generated-affiliate-url">
+                    Link de Afiliado Direto (Shopee)
+                </label>
+                <div class="link-generator-result-url-wrap">
+                    <output id="generated-affiliate-url"
+                            class="link-generator-result-url font-monospace"
+                            for="product-url">
+                        @response.AffiliateUrl
+                    </output>
+                </div>
+                <div class="d-grid mt-2 mb-4">
+                    <button type="button"
+                            class="btn btn-lg btn-touch @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
+                            disabled="@_isCopying"
+                            aria-live="polite"
+                            @onclick="() => CopyLinkAsync(response.AffiliateUrl, CopyTarget.Affiliate)">
+                        @if (_copiedAffiliate)
+                        {
+                            <span>Copiado!</span>
+                        }
+                        else
+                        {
+                            <span>Copiar link de afiliado</span>
+                        }
+                    </button>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
+            {
+                <label class="form-label small text-muted mb-1" for="generated-short-url">
+                    Link Encurtado com Rastreio TecFlow
+                </label>
+                <div class="link-generator-result-url-wrap">
+                    <output id="generated-short-url"
+                            class="link-generator-result-url font-monospace"
+                            for="product-url">
+                        @response.ResolvedShortUrl
+                    </output>
+                </div>
+                <div class="d-grid mt-2">
+                    <button type="button"
+                            class="btn btn-lg btn-touch @(_copiedShort ? "btn-success" : "btn-outline-primary")"
+                            disabled="@_isCopying"
+                            aria-live="polite"
+                            @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
+                        @if (_copiedShort)
+                        {
+                            <span>Copiado!</span>
+                        }
+                        else
+                        {
+                            <span>Copiar link com rastreio</span>
+                        }
+                    </button>
+                </div>
+            }
 
             <div class="link-generator-result-actions d-grid d-sm-flex gap-2 mt-4">
-                <button type="button"
-                        class="btn btn-lg btn-touch flex-fill @(_copied ? "btn-success" : "btn-outline-primary")"
-                        disabled="@_isCopying"
-                        aria-live="polite"
-                        @onclick="CopyLinkAsync">
-                    @if (_copied)
-                    {
-                        <span>Copiado!</span>
-                    }
-                    else
-                    {
-                        <span>Copiar Link</span>
-                    }
-                </button>
-
                 <button type="button"
                         class="btn btn-primary btn-lg btn-touch flex-fill link-generator-share-btn"
                         disabled="@_isSharing"
@@ -63,16 +97,16 @@
             </div>
 
             <div class="link-generator-fallback-share mt-3" aria-label="Compartilhar em aplicativos">
-                <p class="small text-muted mb-2">Ou envie direto:</p>
+                <p class="small text-muted mb-2">Ou envie direto o link com rastreio:</p>
                 <div class="d-grid d-sm-flex gap-2">
                     <a class="btn btn-success btn-touch flex-fill"
-                       href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ShortenedUrl, response.PlatformDetected)"
+                       href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(ShareUrl(response), response.PlatformDetected)"
                        target="_blank"
                        rel="noopener noreferrer">
                         WhatsApp
                     </a>
                     <a class="btn btn-info text-white btn-touch flex-fill"
-                       href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ShortenedUrl, response.PlatformDetected)"
+                       href="@AffiliateShareLinkBuilder.BuildTelegramUri(ShareUrl(response), response.PlatformDetected)"
                        target="_blank"
                        rel="noopener noreferrer">
                         Telegram
@@ -93,23 +127,32 @@
 @code {
     [Parameter, EditorRequired] public GerarLinkAfiliadoResponseDto? Response { get; set; }
 
-    private bool _copied;
+    private bool _copiedAffiliate;
+    private bool _copiedShort;
     private bool _isCopying;
     private bool _isSharing;
     private string? _actionMessage;
     private bool _actionIsError;
+    private string? _lastResponseKey;
 
     protected override void OnParametersSet()
     {
-        if (Response?.ShortenedUrl is null)
+        var key = $"{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}";
+        if (!string.Equals(key, _lastResponseKey, StringComparison.Ordinal))
         {
+            _lastResponseKey = key;
             ResetActionState();
         }
     }
 
-    private async Task CopyLinkAsync()
+    private static string ShareUrl(GerarLinkAfiliadoResponseDto response) =>
+        !string.IsNullOrWhiteSpace(response.ResolvedShortUrl)
+            ? response.ResolvedShortUrl
+            : response.AffiliateUrl;
+
+    private async Task CopyLinkAsync(string? url, CopyTarget target)
     {
-        if (Response?.ShortenedUrl is not { Length: > 0 } url)
+        if (string.IsNullOrWhiteSpace(url))
         {
             return;
         }
@@ -122,12 +165,16 @@
             var copied = await CopyViaClipboardInteropAsync(url);
             if (copied)
             {
-                _copied = true;
+                _copiedAffiliate = target == CopyTarget.Affiliate;
+                _copiedShort = target == CopyTarget.Short;
                 _actionIsError = false;
-                _actionMessage = "Link copiado para a área de transferência.";
+                _actionMessage = target == CopyTarget.Affiliate
+                    ? "Link de afiliado copiado para a área de transferência."
+                    : "Link com rastreio TecFlow copiado para a área de transferência.";
                 StateHasChanged();
                 await Task.Delay(2200);
-                _copied = false;
+                _copiedAffiliate = false;
+                _copiedShort = false;
                 _actionMessage = null;
             }
             else
@@ -162,7 +209,13 @@
 
     private async Task ShareLinkAsync()
     {
-        if (Response?.ShortenedUrl is not { Length: > 0 } url)
+        if (Response is null)
+        {
+            return;
+        }
+
+        var url = ShareUrl(Response);
+        if (string.IsNullOrWhiteSpace(url))
         {
             return;
         }
@@ -221,11 +274,18 @@
 
     private void ResetActionState()
     {
-        _copied = false;
+        _copiedAffiliate = false;
+        _copiedShort = false;
         _isCopying = false;
         _isSharing = false;
         _actionMessage = null;
         _actionIsError = false;
+    }
+
+    private enum CopyTarget
+    {
+        Affiliate,
+        Short
     }
 
     private sealed class ShareLinkResult

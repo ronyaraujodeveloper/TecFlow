@@ -256,6 +256,7 @@ public class HttpServiceVincularManualTests
         return new IntegracaoLojaApiService(
             new NamedClientFactory(handler),
             new StaticTokenProvider("jwt"),
+            new EmptyAuthenticationStateProvider(),
             loading.Object,
             NullLogger<IntegracaoLojaApiService>.Instance);
     }

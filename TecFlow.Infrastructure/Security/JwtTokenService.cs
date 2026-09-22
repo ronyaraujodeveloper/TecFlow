@@ -21,18 +21,21 @@ namespace TecFlow.Infrastructure.Security
         {
             string? JwtKey = _configuration["Jwt:Key"] ?? _configuration["Jwt:Secret"];
             var key = Encoding.UTF8.GetBytes(JwtKey ?? string.Empty);
+            var issuer = _configuration["Jwt:Issuer"] ?? "TecFlowAPI";
+            var audience = _configuration["Jwt:Audience"] ?? "TecFlowClient";
 
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
                 new(ClaimTypes.Email, usuario.Email),
                 new(ClaimTypes.Name, usuario.Name),
                 new(TecFlow.Core.Security.TecFlowClaimTypes.TenantId, usuario.TenantId.ToString())
             };
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"] ?? "TecFlowAPI",
-                audience: _configuration["Jwt:Audience"] ?? "TecFlowClient",
+                issuer: issuer,
+                audience: audience,
                 claims: claims.AsEnumerable(),
                 expires: DateTime.UtcNow.AddHours(8),
                 signingCredentials: new SigningCredentials(

@@ -59,6 +59,7 @@ public class MarketplaceOAuthConnectServiceTests
         var api = new IntegracaoLojaApiService(
             new NamedClientFactory(handler),
             new StaticTokenProvider("jwt-token"),
+            new EmptyAuthenticationStateProvider(),
             loading.Object,
             NullLogger<IntegracaoLojaApiService>.Instance);
 
@@ -90,6 +91,7 @@ public class MarketplaceOAuthConnectServiceTests
         var api = new IntegracaoLojaApiService(
             new NamedClientFactory(handler),
             new StaticTokenProvider(null),
+            new EmptyAuthenticationStateProvider(),
             loading.Object,
             NullLogger<IntegracaoLojaApiService>.Instance);
 
@@ -167,6 +169,7 @@ public class MarketplaceOAuthConnectServiceTests
         var api = new IntegracaoLojaApiService(
             new NamedClientFactory(handler),
             new StaticTokenProvider("jwt-token"),
+            new EmptyAuthenticationStateProvider(),
             loading.Object,
             NullLogger<IntegracaoLojaApiService>.Instance);
 
@@ -197,6 +200,7 @@ public class MarketplaceOAuthConnectServiceTests
         var api = new IntegracaoLojaApiService(
             new NamedClientFactory(handler),
             new StaticTokenProvider("jwt-token"),
+            new EmptyAuthenticationStateProvider(),
             loading.Object,
             NullLogger<IntegracaoLojaApiService>.Instance);
 

@@ -9,6 +9,9 @@ public static class HomologMarketplaceAuth
     public const string ManualLinkSuccessMessage =
         "Loja vinculada manualmente com sucesso em modo de homologação.";
 
+    /// <summary>UserId usado em IIS/homologação quando o JWT não traz NameIdentifier.</summary>
+    public const int FallbackUserId = 1;
+
     public const string StubCodePrefix = "code_";
 
     public static bool IsStubAuthorizationCode(string? code) => IsHomologStubCode(code);

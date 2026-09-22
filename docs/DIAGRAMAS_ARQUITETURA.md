@@ -1150,7 +1150,7 @@ sequenceDiagram
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)
-  UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer)
+  UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer; fallback UserId=1 no IIS)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
   SVC->>DB: Upsert MarketplaceAccounts
   alt SQL/exceção

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -75,46 +76,44 @@ builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.In
 builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.API", enableAspNetCoreInstrumentation: true);
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]
+    ?? throw new InvalidOperationException("JWT Secret is missing in configuration (Jwt:Key / Jwt:Secret).");
+var jwtIssuer = string.IsNullOrWhiteSpace(jwtSection["Issuer"]) ? "TecFlowAPI" : jwtSection["Issuer"]!;
+var jwtAudience = string.IsNullOrWhiteSpace(jwtSection["Audience"]) ? "TecFlowClient" : jwtSection["Audience"]!;
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
-if (jwtSection.Exists())
+builder.Services.AddAuthentication(options =>
 {
-    var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"];
-    if (string.IsNullOrEmpty(jwtSecret))
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.MapInboundClaims = true;
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        throw new InvalidOperationException("JWT Secret is missing in configuration.");
-    }
-
-    var jwtIssuer = jwtSection["Issuer"];
-    var jwtAudience = string.IsNullOrWhiteSpace(jwtSection["Audience"])
-        ? "TecFlowClient"
-        : jwtSection["Audience"];
-
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = !string.IsNullOrEmpty(jwtIssuer),
-            ValidIssuer = jwtIssuer,
-            ValidateAudience = true,
-            ValidAudience = jwtAudience,
-            ValidAudiences = new[] { jwtAudience, "TecFlowClient" },
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.FromMinutes(2)
-        };
-    });
-}
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidAudiences = new[] { jwtAudience, "TecFlowClient" },
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = signingKey,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(2),
+        NameClaimType = ClaimTypes.NameIdentifier,
+        RoleClaimType = ClaimTypes.Role
+    };
+});
 
 var app = builder.Build();
 
 app.UseTecFlowTelemetry();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Homologação/IIS: exposto globalmente para diagnóstico (restringir por ambiente após validação).
 app.UseSwagger();

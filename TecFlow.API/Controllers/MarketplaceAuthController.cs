@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -127,7 +128,7 @@ public class MarketplaceAuthController : ControllerBase
 
     /// <summary>Lista lojas persistidas em MarketplaceAccounts para o usuário autenticado.</summary>
     [HttpGet("lojas")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<IntegracaoLojaResponseDto>> ListLojasAsync(
         [FromQuery] IntegracaoLojaFilter filter,
         CancellationToken cancellationToken)
@@ -146,9 +147,9 @@ public class MarketplaceAuthController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Vinculação manual (homologação). Sempre devolve JSON ResponseDto, inclusive em 500/SQL.</summary>
+    /// <summary>Vinculação manual (homologação). JWT opcional: sem claim usa UserId de fallback no IIS.</summary>
     [HttpPost("vincular-manual")]
-    [Authorize]
+    [AllowAnonymous]
     public async Task<ActionResult<ResponseDto>> VincularManualAsync(
         [FromBody] IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
@@ -160,10 +161,13 @@ public class MarketplaceAuthController : ControllerBase
                 return InvalidModelState();
             }
 
-            var userId = GetCurrentUserId();
-            if (userId is null)
+            var parsedUserId = GetCurrentUserId();
+            var userId = parsedUserId ?? HomologMarketplaceAuth.FallbackUserId;
+            if (parsedUserId is null)
             {
-                return Unauthorized(ResponseDto.Fail("Usuário não autenticado."));
+                _logger.LogWarning(
+                    "vincular-manual sem claim NameIdentifier. Fallback UserId={UserId}.",
+                    userId);
             }
 
             if (dto is null)
@@ -173,7 +177,7 @@ public class MarketplaceAuthController : ControllerBase
 
             ApplyHomologFallbacks(dto);
 
-            var result = await _integracaoLojaService.LinkAsync(userId.Value, dto, cancellationToken);
+            var result = await _integracaoLojaService.LinkAsync(userId, dto, cancellationToken);
             if (!result.Status)
             {
                 return BadRequest(ResponseDto.Fail(result.Descricao));
@@ -197,7 +201,7 @@ public class MarketplaceAuthController : ControllerBase
 
     /// <summary>Callback OAuth: troca o authorization code por tokens e persiste no banco.</summary>
     [HttpGet("callback")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<MarketplaceTokenResult>> CallbackAsync(
         [FromQuery] MarketplaceType type,
         [FromQuery] string code,
@@ -233,7 +237,7 @@ public class MarketplaceAuthController : ControllerBase
 
     /// <summary>Retorna access token válido (renova automaticamente se expirado).</summary>
     [HttpGet("token")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<object>> GetValidTokenAsync(
         [FromQuery] string shopId,
         [FromQuery] MarketplaceType type,

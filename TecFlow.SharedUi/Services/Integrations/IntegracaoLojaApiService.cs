@@ -1,10 +1,13 @@
-﻿using System.Net.Http.Json;
-using System.Net;
+﻿using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
+using TecFlow.Core.Security;
 using TecFlow.Database.Filter;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Serialization;
@@ -42,17 +45,20 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAccessTokenProvider _accessTokenProvider;
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
     private readonly ILoadingService _loadingService;
     private readonly ILogger<IntegracaoLojaApiService> _logger;
 
     public IntegracaoLojaApiService(
         IHttpClientFactory httpClientFactory,
         IAccessTokenProvider accessTokenProvider,
+        AuthenticationStateProvider authenticationStateProvider,
         ILoadingService loadingService,
         ILogger<IntegracaoLojaApiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _accessTokenProvider = accessTokenProvider;
+        _authenticationStateProvider = authenticationStateProvider;
         _loadingService = loadingService;
         _logger = logger;
     }
@@ -99,7 +105,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
                 HttpMethod.Get,
                 BuildAuthorizeRelativeUrl(platformType, redirectUri, state, friendlyName, lojaId));
 
-            await ApplyBearerAsync(request, cancellationToken);
+            await ApplyBearerAsync(client, request, cancellationToken);
 
             using var response = await client.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -164,7 +170,7 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
             var client = _httpClientFactory.CreateClient("Orquestrador");
             using var request = new HttpRequestMessage(method, relativeUrl);
 
-            await ApplyBearerAsync(request, cancellationToken);
+            await ApplyBearerAsync(client, request, cancellationToken);
 
             if (body is not null)
             {
@@ -236,20 +242,39 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
         }
     }
 
-    private async Task ApplyBearerAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    private async Task ApplyBearerAsync(
+        HttpClient httpClient,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
     {
-        var accessToken = await _accessTokenProvider.GetAccessTokenAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(accessToken))
+        var token = await ResolveJwtAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
         {
+            Console.WriteLine("[IntegracaoLojaApi] Bearer JWT nulo/vazio — a API pode responder 401.");
             _logger.LogWarning(
-                "JWT ausente ao chamar {Method} {Url}. A API deve responder 401.",
+                "JWT ausente ao chamar {Method} {Url}.",
                 request.Method,
                 request.RequestUri);
+            httpClient.DefaultRequestHeaders.Authorization = null;
             return;
         }
 
-        request.Headers.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
+        var header = new AuthenticationHeaderValue("Bearer", token.Trim());
+        httpClient.DefaultRequestHeaders.Authorization = header;
+        request.Headers.Authorization = header;
+        Console.WriteLine($"[IntegracaoLojaApi] Bearer JWT anexado com sucesso (tamanho={token.Trim().Length}).");
+    }
+
+    private async Task<string?> ResolveJwtAsync(CancellationToken cancellationToken)
+    {
+        var token = await _accessTokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            return token;
+        }
+
+        var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        return state.User.FindFirst(TecFlowClaimTypes.AccessToken)?.Value;
     }
 
     private IntegracaoLojaResponseDto? TryDeserializeEnvelope(string json)

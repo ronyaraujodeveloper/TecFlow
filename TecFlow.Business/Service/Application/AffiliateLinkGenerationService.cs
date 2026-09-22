@@ -140,7 +140,9 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         new()
         {
             Success = false,
+            Status = false,
             Message = message,
+            Descricao = message,
             OriginalUrl = string.Empty,
             AffiliateUrl = string.Empty,
             ConvertedUrl = string.Empty,

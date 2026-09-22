@@ -318,6 +318,8 @@ public class ShopeeLinkConversionTests
     [Theory]
     [InlineData("https://shopee.com.br/Cadeira-Gamer-i.123456.789012", "123456", "789012")]
     [InlineData("https://shopee.com.br/product-name-i.123456.7891011", "123456", "7891011")]
+    [InlineData("https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557", "1226120317", "22197624557")]
+    [InlineData("https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557?extraParams=%7B%22foo%22%3A1%7D&sp_atk=abc&xptdk=xyz", "1226120317", "22197624557")]
     [InlineData("https://shopee.com.br/product/111/222", "111", "222")]
     [InlineData("https://shopee.com.br/universal-link/product/999999/888888", "999999", "888888")]
     [InlineData("https://shopee.com.br/item/333/444", "333", "444")]
@@ -331,6 +333,59 @@ public class ShopeeLinkConversionTests
         Assert.True(ShopeeProductUrlParser.TryParse(url, out var ids));
         Assert.Equal(shopId, ids.ShopId);
         Assert.Equal(itemId, ids.ItemId);
+    }
+
+    [Fact]
+    public void ShopeeProductUrlParser_ShouldSanitizeNoisyQueryParamsFromTitansAtlasUrl()
+    {
+        const string dirty =
+            "https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557"
+            + "?extraParams=%7B%22display_model%22%3A%7B%22id%22%3A0%7D%7D&sp_atk=token&xptdk=track&utm_source=share";
+
+        var clean = ShopeeProductUrlParser.Sanitize(dirty);
+
+        Assert.Equal(
+            "https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557",
+            clean);
+        Assert.DoesNotContain("extraParams", clean, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sp_atk", clean, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("xptdk", clean, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ShopeeProductUrlParser.TryParse(clean, out var ids));
+        Assert.Equal("1226120317", ids.ShopId);
+        Assert.Equal("22197624557", ids.ItemId);
+    }
+
+    [Fact]
+    public void ShopeeProductUrlParser_ParseOrThrow_ShouldReturnFriendlyUnrecognizedMessage()
+    {
+        var ex = Assert.Throws<AffiliateLinkGenerationException>(
+            () => ShopeeProductUrlParser.ParseOrThrow("https://shopee.com.br/categoria/moveis"));
+
+        Assert.Equal(ShopeeProductUrlParser.UnrecognizedLinkMessage, ex.Message);
+    }
+
+    [Fact]
+    public async Task ShopeeLinkStrategy_ShouldConvertTitansAtlasProductUrlWithNoisyQuery()
+    {
+        const string original =
+            "https://shopee.com.br/Cadeira-Gamer-Titans-Atlas-Preta-i.1226120317.22197624557"
+            + "?extraParams=%7B%22foo%22%3A1%7D&sp_atk=abc&xptdk=xyz";
+
+        var client = new RecordingShopeeClient();
+        var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), client);
+
+        var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
+
+        Assert.False(string.IsNullOrWhiteSpace(link));
+        Assert.Contains("1226120317", client.LastExpandedUrl, StringComparison.Ordinal);
+        Assert.Contains("22197624557", client.LastExpandedUrl, StringComparison.Ordinal);
+        Assert.DoesNotContain("extraParams", client.LastExpandedUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sp_atk", client.LastExpandedUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.TrackingCodeQuery, out _));
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
+        Assert.Equal(ExpectedSubId, subId);
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
+        Assert.Equal("https://shopee.com.br/product/1226120317/22197624557", universal);
     }
 
     [Fact]
@@ -369,20 +424,22 @@ public class ShopeeLinkConversionTests
     }
 
     [Fact]
-    public async Task ShopeeLinkStrategy_ShouldPreserveUrlEncodingForSpecialCharacters()
+    public async Task ShopeeLinkStrategy_ShouldSanitizeProductUrlAndEncodeCommissionQuery()
     {
-        const string original = "https://shopee.com.br/produto-i.1.2?q=Cadeira%20Gamer%20%26%20Kids";
+        const string original =
+            "https://shopee.com.br/produto-i.1.2?q=Cadeira%20Gamer%20%26%20Kids&extraParams=%7B%22x%22%3A1%7D&sp_atk=tok";
         var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), new RecordingShopeeClient());
 
         var link = await strategy.GenerateDeepLinkAsync(original, Guid.NewGuid(), AffiliateId);
 
-        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, "q", out var promo));
-        Assert.Equal("Cadeira Gamer & Kids", promo);
-        Assert.Contains("q=Cadeira%20Gamer%20%26%20Kids", link, StringComparison.Ordinal);
-        Assert.DoesNotContain("q=Cadeira Gamer & Kids", link, StringComparison.Ordinal);
+        Assert.DoesNotContain("extraParams", link, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sp_atk", link, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("q=Cadeira", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
         Assert.Equal(ExpectedSubId, subId);
         Assert.True(ShopeeCommissionUrlBuilder.ContainsEncodedQueryPair(link, ShopeeCommissionUrlBuilder.SubIdQuery, ExpectedSubId));
+        Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.UniversalLinkQuery, out var universal));
+        Assert.Equal("https://shopee.com.br/product/1/2", universal);
     }
 
     [Fact]

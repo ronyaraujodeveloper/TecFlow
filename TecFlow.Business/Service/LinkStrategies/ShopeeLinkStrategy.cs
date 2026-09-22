@@ -60,12 +60,18 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
             MarketplaceType.Shopee,
             cancellationToken);
 
-        var workingUrl = originalUrl.Trim();
+        var workingUrl = ShopeeProductUrlParser.Sanitize(originalUrl);
+        if (string.IsNullOrWhiteSpace(workingUrl))
+        {
+            workingUrl = originalUrl.Trim();
+        }
+
         if (ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl)
             || !ShopeeProductUrlParser.TryParse(workingUrl, out _))
         {
             _logger.LogInformation("Expandindo URL encurtada Shopee antes da geração do link de afiliado.");
-            workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+            workingUrl = ShopeeProductUrlParser.Sanitize(
+                await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken));
         }
 
         var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
@@ -75,14 +81,29 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
 
         if (!CanProcess(workingUrl) && !allowHomologFallback)
         {
-            throw new AffiliateLinkGenerationException(
-                "Não foi possível identificar a URL canônica do produto Shopee após expandir o link.");
+            throw new AffiliateLinkGenerationException(ShopeeProductUrlParser.UnrecognizedLinkMessage);
         }
 
-        var productIds = ShopeeProductUrlParser.ParseOrThrow(
-            workingUrl,
-            originalUrl.Trim(),
-            allowHomologFallback);
+        ShopeeProductUrlIds productIds;
+        try
+        {
+            productIds = ShopeeProductUrlParser.ParseOrThrow(
+                workingUrl,
+                originalUrl.Trim(),
+                allowHomologFallback);
+        }
+        catch (AffiliateLinkGenerationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao analisar URL Shopee: {Url}", originalUrl);
+            throw new AffiliateLinkGenerationException(
+                ShopeeProductUrlParser.UnrecognizedLinkMessage,
+                ex);
+        }
+
         var usedHomologIds = productIds.ShopId == ShopeeProductUrlParser.HomologShopId
             && productIds.ItemId == ShopeeProductUrlParser.HomologItemId
             && !ShopeeProductUrlParser.TryParse(workingUrl, out _);
@@ -98,10 +119,17 @@ public sealed class ShopeeLinkStrategy : IPlatformLinkStrategy
         }
         else
         {
+            workingUrl = ShopeeProductUrlParser.Sanitize(workingUrl);
+            if (string.IsNullOrWhiteSpace(workingUrl) || !ShopeeProductUrlParser.TryParse(workingUrl, out _))
+            {
+                workingUrl = ShopeeCommissionUrlBuilder.ToUniversalWebUrl(productIds);
+            }
+
             _logger.LogInformation(
-                "Shopee URL expandida extraída. ShopId={ShopId} ItemId={ItemId}",
+                "Shopee URL expandida extraída. ShopId={ShopId} ItemId={ItemId} CleanUrl={CleanUrl}",
                 productIds.ShopId,
-                productIds.ItemId);
+                productIds.ItemId,
+                workingUrl);
         }
 
         string generated;

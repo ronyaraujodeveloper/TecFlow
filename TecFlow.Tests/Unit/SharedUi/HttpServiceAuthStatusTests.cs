@@ -46,7 +46,7 @@ public class HttpServiceAuthStatusTests
 
         Assert.False(result.Success);
         Assert.Equal(500, result.StatusCode);
-        Assert.Equal("Erro na API (500).", result.ErrorMessage);
+        Assert.Equal("Internal Server Error", result.ErrorMessage);
     }
 
     private sealed class NamedClientFactory : IHttpClientFactory

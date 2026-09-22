@@ -498,7 +498,7 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.2.1 — PlatformLinkResolver, unshorten e extração ShopId/ItemId
 
 - [x] **ShopeeLinkHostMatcher.cs** — hosts `shopee.com.br`, `br.shp.ee`, `shp.ee`, `shope.ee`.
-- [x] **ShopeeProductUrlParser.cs** — extração flexível de ShopId/ItemId (`-i.`, `/product|/item|/universal-link`, query `shopId`/`itemId`) e fallback de homologação (`999999`/`888888`).
+- [x] **ShopeeProductUrlParser.cs** — extração flexível de ShopId/ItemId (`-i.`, `/product|/item|/universal-link`, query `shopId`/`itemId`), sanitização de `extraParams`/`sp_atk`/`xptdk` e mensagem amigável de formato não reconhecido.
 - [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
 - [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — unshorten + parse antes do generateCustomLink.
 

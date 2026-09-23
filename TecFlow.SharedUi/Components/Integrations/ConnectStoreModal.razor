@@ -15,7 +15,7 @@
                     <div>
                         <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
                         <p class="text-muted small mb-0">
-                            Shopee usa Universal Link (sem App Key / App Secret). Informe o apelido e, se quiser, o Tracking ID.
+                            Shopee usa Universal Link (sem App Key / App Secret). Informe o apelido e o ID do Afiliado.
                         </p>
                     </div>
                     <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
@@ -57,22 +57,21 @@
                                disabled="@_linking" />
                     </div>
 
-                    @if (_platform == MarketplaceType.Shopee)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" for="tracking-id">ID de afiliado / Tracking ID (opcional)</label>
-                            <input id="tracking-id"
-                                   type="text"
-                                   class="form-control"
-                                   maxlength="128"
-                                   placeholder="Usado no sub_id do Universal Link"
-                                   autocomplete="off"
-                                   @bind="_trackingId"
-                                   @bind:event="oninput"
-                                   disabled="@_linking" />
-                        </div>
-                    }
-                    else
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="tracking-id">ID do Afiliado (Affiliate ID / Tracking ID)</label>
+                        <input id="tracking-id"
+                               type="text"
+                               class="form-control"
+                               maxlength="64"
+                               placeholder="18325850271"
+                               inputmode="numeric"
+                               autocomplete="off"
+                               @bind="_trackingId"
+                               @bind:event="oninput"
+                               disabled="@_linking" />
+                    </div>
+
+                    @if (_platform != MarketplaceType.Shopee)
                     {
                         <details class="marketplace-manual-link small" open>
                             <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
@@ -212,8 +211,7 @@
                 {
                     PlatformType = MarketplaceType.Shopee,
                     FriendlyName = _friendlyName,
-                    TrackingId = string.IsNullOrWhiteSpace(_trackingId) ? null : _trackingId,
-                    ShopId = _trackingId
+                    TrackingId = string.IsNullOrWhiteSpace(_trackingId) ? null : _trackingId
                 });
 
                 if (shopeeResponse.Status)
@@ -256,7 +254,8 @@
                 PlatformType = _platform,
                 FriendlyName = _friendlyName,
                 AuthorizationCode = _authorizationCode,
-                ShopId = _shopId
+                ShopId = _shopId,
+                TrackingId = string.IsNullOrWhiteSpace(trackingId) ? null : trackingId
             });
 
             if (response.Status)

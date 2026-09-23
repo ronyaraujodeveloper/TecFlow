@@ -446,6 +446,10 @@ namespace TecFlow.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AffiliateTrackingId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Cnpj")
                         .HasMaxLength(18)
                         .HasColumnType("nvarchar(18)");
@@ -1204,6 +1208,10 @@ namespace TecFlow.Data.Migrations
                     b.Property<string>("AccessToken")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AffiliateTrackingId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

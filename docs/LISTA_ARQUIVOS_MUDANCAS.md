@@ -501,7 +501,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShopeeProductUrlParser.cs** — regex `i.(shopId).(itemId)` em URLs desktop, sanitização de `extraParams`/`sp_atk`/`xptdk` e HTTP 400 com alerta Blazor de formato não reconhecido.
 - [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
 - [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop; Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id=...` sem Open API.
-- [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — Shopee: plataforma, apelido e Tracking ID opcional (sem App Key / App Secret).
+- [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — Shopee: plataforma, apelido e campo `ID do Afiliado (Affiliate ID / Tracking ID)` (ex.: `18325850271`); persistido em `MarketplaceAccounts.AffiliateTrackingId`.
+- [x] **MarketplaceStoreCard.razor** — exibe `Shop ID` e `Affiliate ID` no card de Minhas Lojas.
+- [x] **TecFlow.Data/Migrations/20260922220000_AddAffiliateTrackingId.cs** — coluna `AffiliateTrackingId` (`nvarchar(64)`) em `MarketplaceAccounts` e `IntegracaoLoja`.
 
 ### Fase 19.2.2 — URL rastreada de comissão
 

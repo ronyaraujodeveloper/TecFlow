@@ -100,6 +100,9 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
                 ? existing.FriendlyName
                 : account.FriendlyName;
             existing.UserId = string.IsNullOrWhiteSpace(account.UserId) ? existing.UserId : account.UserId;
+            existing.AffiliateTrackingId = string.IsNullOrWhiteSpace(account.AffiliateTrackingId)
+                ? existing.AffiliateTrackingId
+                : account.AffiliateTrackingId;
             existing.IsActive = account.IsActive;
             existing.AccessToken = account.AccessToken;
             existing.RefreshToken = account.RefreshToken;

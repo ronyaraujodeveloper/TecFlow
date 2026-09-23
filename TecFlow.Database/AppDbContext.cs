@@ -75,6 +75,7 @@ public class AppDbContext : DbContext
             entity.Property(account => account.FriendlyName).HasMaxLength(256).IsRequired();
             entity.Property(account => account.ShopId).HasMaxLength(128).IsRequired();
             entity.Property(account => account.ShopName).HasMaxLength(256).IsRequired();
+            entity.Property(account => account.AffiliateTrackingId).HasMaxLength(64);
             entity.Property(account => account.AccessToken).IsRequired();
             entity.Property(account => account.IsActive).HasDefaultValue(true);
             entity.Property(account => account.MarketplaceType).HasConversion<int>();
@@ -108,6 +109,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("IntegracaoLoja");
             entity.HasIndex(i => new { i.UserId, i.ShopId, i.PlatformType }).IsUnique();
+            entity.Property(i => i.AffiliateTrackingId).HasMaxLength(64);
             entity.HasOne(i => i.User)
                 .WithMany()
                 .HasForeignKey(i => i.UserId)

@@ -59,6 +59,11 @@ public static class ShopeeCommissionUrlBuilder
     /// <summary>sub_id do Universal Link: Tracking ID da conta, senão apelido, senão UserId.</summary>
     public static string ResolveUniversalSubId(IntegracaoLoja store)
     {
+        if (!string.IsNullOrWhiteSpace(store.AffiliateTrackingId))
+        {
+            return store.AffiliateTrackingId.Trim();
+        }
+
         if (!string.IsNullOrWhiteSpace(store.ShopId) && !IsGeneratedUniversalShopKey(store.ShopId))
         {
             return store.ShopId.Trim();

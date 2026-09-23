@@ -582,6 +582,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
                 existing.RefreshExpiresAt = account.RefreshExpiresAt;
                 existing.IsActive = account.IsActive;
                 existing.MarketplaceType = account.MarketplaceType;
+                if (!string.IsNullOrWhiteSpace(account.AffiliateTrackingId))
+                {
+                    existing.AffiliateTrackingId = account.AffiliateTrackingId;
+                }
                 existing.Touch();
             }
 

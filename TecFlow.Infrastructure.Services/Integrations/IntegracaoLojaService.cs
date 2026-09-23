@@ -147,6 +147,10 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopName = dto.FriendlyName.Trim();
         marketplaceAccount.IsActive = true;
+        if (!string.IsNullOrWhiteSpace(dto.TrackingId))
+        {
+            marketplaceAccount.AffiliateTrackingId = dto.TrackingId.Trim();
+        }
         try
         {
             await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
@@ -167,6 +171,10 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         if (existing is not null)
         {
             existing.FriendlyName = dto.FriendlyName.Trim();
+            if (!string.IsNullOrWhiteSpace(dto.TrackingId))
+            {
+                existing.AffiliateTrackingId = dto.TrackingId.Trim();
+            }
             existing.AccessToken = marketplaceAccount.AccessToken;
             existing.RefreshToken = marketplaceAccount.RefreshToken;
             existing.ExpiresAt = marketplaceAccount.ExpiresAt;
@@ -189,6 +197,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             PlatformType = dto.PlatformType,
             ShopId = dto.ShopId.Trim(),
             FriendlyName = dto.FriendlyName.Trim(),
+            AffiliateTrackingId = string.IsNullOrWhiteSpace(dto.TrackingId) ? null : dto.TrackingId.Trim(),
             AccessToken = marketplaceAccount.AccessToken,
             RefreshToken = marketplaceAccount.RefreshToken,
             ExpiresAt = marketplaceAccount.ExpiresAt,
@@ -299,6 +308,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             UserId = item.UserId,
             TenantId = item.TenantId,
             ShopId = item.ShopId,
+            AffiliateTrackingId = item.AffiliateTrackingId ?? string.Empty,
             FriendlyName = item.FriendlyName,
             ShopName = string.IsNullOrWhiteSpace(item.FriendlyName) ? item.ShopId : item.FriendlyName,
             PlatformType = item.PlatformType,
@@ -321,6 +331,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             UserId = parsedUserId,
             TenantId = account.TenantId,
             ShopId = account.ShopId,
+            AffiliateTrackingId = FirstNonEmpty(account.AffiliateTrackingId, integration?.AffiliateTrackingId),
             FriendlyName = string.IsNullOrWhiteSpace(account.FriendlyName) ? account.ShopName : account.FriendlyName,
             ShopName = string.IsNullOrWhiteSpace(account.ShopName) ? account.ShopId : account.ShopName,
             PlatformType = account.MarketplaceType,
@@ -395,10 +406,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("Usuário não encontrado.");
         }
 
-        var trackingId = FirstNonEmpty(dto.TrackingId, dto.ShopId);
-        var shopKey = string.IsNullOrWhiteSpace(trackingId)
-            ? $"ul-{userId}-{Slug(dto.FriendlyName)}"
-            : trackingId;
+        var affiliateTrackingId = FirstNonEmpty(dto.TrackingId);
+        var shopKey = $"ul-{userId}-{Slug(dto.FriendlyName)}";
         dto.ShopId = shopKey;
 
         var expiresAt = DateTime.UtcNow.AddYears(10);
@@ -418,6 +427,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopId = shopKey;
+        marketplaceAccount.AffiliateTrackingId = string.IsNullOrWhiteSpace(affiliateTrackingId)
+            ? marketplaceAccount.AffiliateTrackingId
+            : affiliateTrackingId;
         marketplaceAccount.AccessToken = string.IsNullOrWhiteSpace(marketplaceAccount.AccessToken)
             ? placeholderToken
             : marketplaceAccount.AccessToken;
@@ -444,6 +456,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         if (existing is not null)
         {
             existing.FriendlyName = dto.FriendlyName.Trim();
+            existing.AffiliateTrackingId = string.IsNullOrWhiteSpace(affiliateTrackingId)
+                ? existing.AffiliateTrackingId
+                : affiliateTrackingId;
             existing.AccessToken = placeholderToken;
             existing.ExpiresAt = expiresAt;
             existing.Status = MarketplaceIntegrationStatus.Active;
@@ -465,6 +480,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             PlatformType = MarketplaceType.Shopee,
             ShopId = shopKey,
             FriendlyName = dto.FriendlyName.Trim(),
+            AffiliateTrackingId = affiliateTrackingId,
             AccessToken = placeholderToken,
             ExpiresAt = expiresAt,
             Status = MarketplaceIntegrationStatus.Active,

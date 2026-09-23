@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id={TrackingId|FriendlyName|UserId}` **sem Open API / App Key / App Secret**. Encurtador TecFlow (`ShortenedUrl`) segue normalmente. Loja Shopee: `ConnectStoreModal` (apelido + Tracking ID opcional) → `IntegracaoLojaService.LinkShopeeUniversalAccountAsync` → `AppDbContext` (`AutomacaoSociais`). Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id={AffiliateTrackingId|FriendlyName|UserId}` **sem Open API / App Key / App Secret**. Encurtador TecFlow (`ShortenedUrl`) segue normalmente. Loja Shopee: `ConnectStoreModal` (apelido + `ID do Afiliado`) → `IntegracaoLojaService.LinkShopeeUniversalAccountAsync` → `MarketplaceAccounts.AffiliateTrackingId` (`AutomacaoSociais`). Card `MarketplaceStoreCard` mostra Shop ID e Affiliate ID. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
 
 ```mermaid
 flowchart LR
@@ -1150,7 +1150,7 @@ sequenceDiagram
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
-  UI->>UI: lê inputs; Shop ID 123456 / code_teste se vazio
+  UI->>UI: lê apelido + Affiliate ID (ex. 18325850271); Shop ID 123456 / code_teste se vazio (TikTok)
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)
   UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer; fallback UserId=1 no IIS)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)

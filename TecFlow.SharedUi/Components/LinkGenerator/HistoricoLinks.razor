@@ -94,9 +94,17 @@
                             @item.ShortenedUrl
                         </p>
 
-                        <div class="link-history-clicks">
-                            <span class="link-history-clicks-value">@item.ClickCount</span>
-                            <span class="link-history-clicks-label">cliques</span>
+                        <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                            <div class="link-history-clicks">
+                                <span class="link-history-clicks-value">@item.ClickCount</span>
+                                <span class="link-history-clicks-label">cliques</span>
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
+                                    @onclick="() => VisualizarAsync(item)">
+                                <i class="bi bi-eye" aria-hidden="true"></i>
+                                Visualizar
+                            </button>
                         </div>
                     </div>
                 </article>
@@ -113,6 +121,7 @@
                             <th scope="col">Link encurtado</th>
                             <th scope="col">Data</th>
                             <th scope="col" class="text-end">Cliques</th>
+                            <th scope="col" class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -136,6 +145,14 @@
                                 <td class="text-end">
                                     <span class="link-history-clicks-inline">@item.ClickCount</span>
                                 </td>
+                                <td class="text-end">
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
+                                            @onclick="() => VisualizarAsync(item)">
+                                        <i class="bi bi-eye" aria-hidden="true"></i>
+                                        Visualizar
+                                    </button>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -147,6 +164,7 @@
 
 @code {
     [Parameter] public int RefreshToken { get; set; }
+    [Parameter] public EventCallback<ShortAffiliateLinkDto> OnVisualizar { get; set; }
 
     private readonly List<AffiliateLinkHistoryItemDto> _items = [];
     private MarketplaceType? _platformFilter;
@@ -253,4 +271,14 @@
     }
 
     private void ClearLoadError() => _loadError = null;
+
+    private async Task VisualizarAsync(AffiliateLinkHistoryItemDto item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        await OnVisualizar.InvokeAsync(ShortAffiliateLinkDto.FromHistory(item));
+    }
 }

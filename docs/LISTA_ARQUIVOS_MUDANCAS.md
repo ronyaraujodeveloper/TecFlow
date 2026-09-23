@@ -532,6 +532,7 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.3.1 — Integração GeradorLinks.razor
 
 - [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; `_isLoading`, spinner, alerta vermelho e `StateHasChanged()` no sucesso.
+- [x] **GeradorLinks.razor** / **HistoricoLinks.razor** — coluna **Ações** com botão Visualizar (`bi-eye`); `VisualizarLink(ShortAffiliateLinkDto)` preenche o painel de comissão, o campo do produto e faz scroll suave.
 - [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `originalUrl`, `affiliateUrl` e `shortenedUrl`.
 - [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`/r/code`).
 - [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.

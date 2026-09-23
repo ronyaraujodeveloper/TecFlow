@@ -28,13 +28,16 @@
         return { success: false, cancelled: false, method: "fallback" };
     },
 
-    scrollIntoViewById: function (elementId) {
+    scrollIntoViewById: function (elementId, block) {
         const element = document.getElementById(elementId);
         if (!element) {
             return false;
         }
 
-        element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        element.scrollIntoView({
+            behavior: "smooth",
+            block: block || "nearest"
+        });
         return true;
     },
 

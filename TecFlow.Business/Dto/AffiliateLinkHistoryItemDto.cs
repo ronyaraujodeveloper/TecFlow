@@ -15,9 +15,36 @@ public class AffiliateLinkHistoryItemDto
 
     public string OriginalUrl { get; set; } = string.Empty;
 
+    public string AffiliateUrl { get; set; } = string.Empty;
+
     public string ShortenedUrl { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
 
     public int ClickCount { get; set; }
+}
+
+/// <summary>Projeção de <c>ShortAffiliateLink</c> para a ação Visualizar no gerador.</summary>
+public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
+{
+    public static ShortAffiliateLinkDto FromHistory(AffiliateLinkHistoryItemDto item)
+    {
+        if (item is ShortAffiliateLinkDto typed)
+        {
+            return typed;
+        }
+
+        return new ShortAffiliateLinkDto
+        {
+            AffiliateLinkId = item.AffiliateLinkId,
+            PlatformType = item.PlatformType,
+            PlatformName = item.PlatformName ?? string.Empty,
+            DisplayTitle = item.DisplayTitle ?? string.Empty,
+            OriginalUrl = item.OriginalUrl ?? string.Empty,
+            AffiliateUrl = item.AffiliateUrl ?? string.Empty,
+            ShortenedUrl = item.ShortenedUrl ?? string.Empty,
+            CreatedAt = item.CreatedAt,
+            ClickCount = item.ClickCount
+        };
+    }
 }

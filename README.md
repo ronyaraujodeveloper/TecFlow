@@ -309,6 +309,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
   - Renderizar listagem responsiva contendo o histórico de links processados.
   - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
+  - Botão **Visualizar** no histórico recarrega o painel "Seus links de comissão" (OriginalUrl, AffiliateUrl, ShortenedUrl, plataforma) e o campo Link do produto, com scroll suave até o formulário.
 
 ### 🔑 Fase 12: Autenticação Social e Identidade Omnichannel (Gmail, Apple, Facebook) 🌐
 

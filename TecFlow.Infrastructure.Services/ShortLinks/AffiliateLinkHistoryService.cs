@@ -94,6 +94,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             PlatformName = GetPlatformName(link.PlatformType),
             DisplayTitle = BuildDisplayTitle(link.CustomNickname, link.OriginalUrl),
             OriginalUrl = link.OriginalUrl,
+            AffiliateUrl = string.IsNullOrWhiteSpace(link.AffiliateUrl) ? link.DestinationUrl : link.AffiliateUrl,
             ShortenedUrl = $"{baseUrl}/{link.ShortCode}",
             CreatedAt = link.CreatedAt,
             ClickCount = clickCount

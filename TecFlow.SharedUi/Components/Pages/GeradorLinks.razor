@@ -27,7 +27,7 @@
         </p>
     </header>
 
-    <section class="link-generator-card card border-0 shadow-sm mx-auto">
+    <section id="link-generator-form" class="link-generator-card card border-0 shadow-sm mx-auto">
         <div class="card-body p-3 p-md-4">
             <form @onsubmit="GenerateLinkAsync" @onsubmit:preventDefault="true">
             <label class="form-label fw-semibold" for="product-url">
@@ -84,7 +84,7 @@
 
     <LinkGeneratorResultPanel Response="@_generatedResponse" />
 
-    <HistoricoLinks RefreshToken="@_historyRefreshToken" />
+    <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" />
 
     <section class="link-generator-platforms mt-4 mx-auto" aria-label="Marketplaces suportados">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
@@ -382,6 +382,51 @@
     }
 
     private void ClearGeneratedResult() => _generatedResponse = null;
+
+    private async Task VisualizarLink(ShortAffiliateLinkDto item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        _productUrl = item.OriginalUrl?.Trim() ?? string.Empty;
+        AnalyzeUrl(_productUrl);
+        ClearFeedback();
+
+        _generatedResponse = new GerarLinkAfiliadoResponseDto
+        {
+            Success = true,
+            Status = true,
+            OriginalUrl = _productUrl,
+            AffiliateUrl = FirstNonEmpty(item.AffiliateUrl),
+            ConvertedUrl = FirstNonEmpty(item.AffiliateUrl),
+            ShortenedUrl = item.ShortenedUrl?.Trim() ?? string.Empty,
+            PlatformDetected = string.IsNullOrWhiteSpace(item.PlatformName)
+                ? item.PlatformType.ToString()
+                : item.PlatformName,
+            AffiliateLinkId = item.AffiliateLinkId,
+            Message = "Link carregado do histórico.",
+            Descricao = "Link carregado do histórico."
+        };
+
+        await InvokeAsync(StateHasChanged);
+        await ScrollToFormAsync();
+    }
+
+    private async Task ScrollToFormAsync()
+    {
+        try
+        {
+            await Task.Delay(50);
+            await Js.InvokeVoidAsync("tecFlowAppInterop.scrollIntoViewById", "link-generator-form", "start");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Não foi possível rolar até o formulário do gerador.");
+            await ScrollToResultPanelAsync();
+        }
+    }
 
     private async Task ScrollToResultPanelAsync()
     {

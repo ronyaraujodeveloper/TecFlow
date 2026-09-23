@@ -125,6 +125,69 @@ public class IntegracaoLojaServiceTests
     }
 
     [Fact]
+    public async Task LinkAsync_ShouldPersistTikTokShopAccount_WithFriendlyNameAndTrackingId()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-tt-1-loja-tiktok", MarketplaceType.TikTokShop))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-tt-1-loja-tiktok", MarketplaceType.TikTokShop, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.TikTokShop,
+            TrackingId = "18325850271",
+            FriendlyName = "Loja TikTok"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("TikTok Shop", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-tt-1-loja-tiktok", saved!.ShopId);
+        Assert.Equal(MarketplaceType.TikTokShop, saved.PlatformType);
+        Assert.Equal("18325850271", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.TikTokShop, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task LinkAsync_ShouldFailWithoutThrowing_WhenDtoIsNull()
     {
         var users = new Mock<IUserAccountRepository>();

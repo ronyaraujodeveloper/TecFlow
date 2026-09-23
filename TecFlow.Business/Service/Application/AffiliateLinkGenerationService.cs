@@ -2,6 +2,7 @@
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Core.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace TecFlow.Business.Service.Application;
@@ -107,11 +108,15 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                     _generationContext.ReferrerUrl,
                     cancellationToken);
 
-                var officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim();
-                if (string.IsNullOrWhiteSpace(officialShort)
-                    || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+                var officialShort = string.Empty;
+                if (strategy.PlatformType == MarketplaceType.Shopee)
                 {
-                    officialShort = generatedLink;
+                    officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(officialShort)
+                        || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+                    {
+                        officialShort = generatedLink;
+                    }
                 }
 
                 variants.Add(new AffiliateLinkAccountVariantDto

@@ -74,7 +74,7 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
                 "A loja selecionada está inativa. Reconecte-a em Minhas Lojas / Integrações.");
         }
 
-        if (store.PlatformType == MarketplaceType.Shopee)
+        if (store.PlatformType is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
         {
             return store;
         }

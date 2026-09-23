@@ -41,6 +41,12 @@ flowchart LR
   BLD --> SHPEE[ShortenedShopeeUrl br.shp.ee]
   SHORT --> SHORTURL[ShortenedUrl localhost:5001/storeSlug/code]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
+  TT[TikTokShopLinkStrategy]
+  TTB[TikTokShopCommissionUrlBuilder]
+  TT -->|productId + sub_id TrackingId/FriendlyName| TTAFF[shop.tiktok.com/view/product]
+  TTB --> TTAFF
+  TTAFF --> SHORT
+  UI -->|TikTok Shop URLs| TT
   HIST[HistoricoLinks] -->|Visualizar / Editar ShortAffiliateLinkDto| UI
   UI -->|checkboxes StoreIds| API
   ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL
@@ -1158,7 +1164,7 @@ sequenceDiagram
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: VincularManualmenteDirect (type=button)
-  UI->>UI: lê apelido + Affiliate ID (ex. 18325850271); Shop ID 123456 / code_teste se vazio (TikTok)
+  UI->>UI: lê apelido + Affiliate ID; Shopee e TikTok Shop sem OAuth (Universal Link)
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)
   UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer; fallback UserId=1 no IIS)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)

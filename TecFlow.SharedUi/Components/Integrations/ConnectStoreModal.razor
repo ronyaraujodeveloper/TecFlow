@@ -15,7 +15,7 @@
                     <div>
                         <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
                         <p class="text-muted small mb-0">
-                            Shopee usa Universal Link (sem App Key / App Secret). Informe o apelido e o ID do Afiliado.
+                            Shopee e TikTok Shop usam link de afiliado com Tracking ID (sem App Key / App Secret). Informe o apelido e o ID do Afiliado.
                         </p>
                     </div>
                     <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
@@ -71,7 +71,7 @@
                                disabled="@_linking" />
                     </div>
 
-                    @if (_platform != MarketplaceType.Shopee)
+                    @if (_platform is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
                     {
                         <details class="marketplace-manual-link small" open>
                             <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
@@ -113,9 +113,9 @@
                     <button type="button"
                             class="btn btn-primary btn-touch w-100 w-sm-auto"
                             @onclick="VincularManualmenteDirect">
-                        @(_linking ? "Salvando..." : (_platform == MarketplaceType.Shopee ? "Salvar conta Shopee" : "Vincular manualmente"))
+                        @(_linking ? "Salvando..." : (_platform is MarketplaceType.Shopee or MarketplaceType.TikTokShop ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
                     </button>
-                    @if (_platform != MarketplaceType.Shopee)
+                    @if (_platform is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
                     {
                         <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
                             @(_linking ? "Redirecionando..." : "Conectar via OAuth")
@@ -137,6 +137,7 @@
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
+    private string _platformLabel => _platform == MarketplaceType.TikTokShop ? "TikTok Shop" : "Shopee";
     private string _friendlyName = string.Empty;
     private string _trackingId = string.Empty;
     private string _authorizationCode = string.Empty;
@@ -200,30 +201,30 @@
                 return;
             }
 
-            if (_platform == MarketplaceType.Shopee)
+            if (_platform is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
             {
                 _friendlyName = friendlyName;
                 _trackingId = trackingId;
                 _formError = null;
                 _linking = true;
 
-                var shopeeResponse = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
+                var linkedResponse = await IntegracaoApi.LinkAsync(new IntegracaoLojaDto
                 {
-                    PlatformType = MarketplaceType.Shopee,
+                    PlatformType = _platform,
                     FriendlyName = _friendlyName,
                     TrackingId = string.IsNullOrWhiteSpace(_trackingId) ? null : _trackingId
                 });
 
-                if (shopeeResponse.Status)
+                if (linkedResponse.Status)
                 {
                     await InvokeAsync(StateHasChanged);
                     await OnLojaVinculada.InvokeAsync();
                     return;
                 }
 
-                _formError = string.IsNullOrWhiteSpace(shopeeResponse.Descricao)
+                _formError = string.IsNullOrWhiteSpace(linkedResponse.Descricao)
                     ? "Não foi possível vincular a loja."
-                    : shopeeResponse.Descricao;
+                    : linkedResponse.Descricao;
                 return;
             }
 

@@ -8,7 +8,7 @@ public static class LinkStrategyServiceCollectionExtensions
     public static IServiceCollection AddAffiliateLinkStrategyServices(this IServiceCollection services)
     {
         services.AddScoped<IPlatformLinkStrategy, ShopeeLinkStrategy>();
-        services.AddScoped<IPlatformLinkStrategy, TikTokLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, TikTokShopLinkStrategy>();
         services.AddScoped<PlatformLinkResolver>();
         services.AddScoped<IAffiliateLinkGenerationContext, AffiliateLinkGenerationContext>();
         services.AddScoped<IAffiliateLinkGenerationService, AffiliateLinkGenerationService>();

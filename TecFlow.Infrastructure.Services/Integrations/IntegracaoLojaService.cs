@@ -122,9 +122,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         var persistUserId = user.Id;
 
-        if (dto.PlatformType == MarketplaceType.Shopee)
+        if (dto.PlatformType is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
         {
-            return await LinkShopeeUniversalAccountAsync(user, dto, cancellationToken);
+            return await LinkUniversalAccountAsync(user, dto, cancellationToken);
         }
 
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
@@ -340,11 +340,13 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             dto.PlatformType = MarketplaceType.Shopee;
         }
 
-        if (dto.PlatformType == MarketplaceType.Shopee)
+        if (dto.PlatformType is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
         {
             if (string.IsNullOrWhiteSpace(dto.FriendlyName))
             {
-                dto.FriendlyName = "Loja Homolog";
+                dto.FriendlyName = dto.PlatformType == MarketplaceType.TikTokShop
+                    ? "Loja TikTok Homolog"
+                    : "Loja Homolog";
             }
 
             return;
@@ -377,32 +379,35 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         dto.ShopId = shop;
     }
 
-    private async Task<IntegracaoLojaResponseDto> LinkShopeeUniversalAccountAsync(
+    private async Task<IntegracaoLojaResponseDto> LinkUniversalAccountAsync(
         UserAccount user,
         IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
     {
+        var platform = dto.PlatformType;
+        var platformLabel = platform == MarketplaceType.TikTokShop ? "TikTok Shop" : "Shopee";
         if (string.IsNullOrWhiteSpace(dto.FriendlyName))
         {
-            return Fail("Informe um apelido / nome amigável para a conta Shopee.");
+            return Fail($"Informe um apelido / nome amigável para a conta {platformLabel}.");
         }
 
         var persistUserId = user.Id;
         var persistUserKey = persistUserId.ToString(CultureInfo.InvariantCulture);
         var affiliateTrackingId = FirstNonEmpty(dto.TrackingId);
-        var shopKey = $"ul-{persistUserId}-{Slug(dto.FriendlyName)}";
+        var shopPrefix = platform == MarketplaceType.TikTokShop ? "ul-tt" : "ul";
+        var shopKey = $"{shopPrefix}-{persistUserId}-{Slug(dto.FriendlyName)}";
         dto.ShopId = shopKey;
 
         var expiresAt = DateTime.UtcNow.AddYears(10);
         var placeholderToken = HomologMarketplaceAuth.StubAccessToken;
 
-        var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, MarketplaceType.Shopee)
+        var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, platform)
             ?? new MarketplaceAccount
             {
                 TenantId = user.TenantId,
                 UserId = persistUserKey,
                 ShopId = shopKey,
-                MarketplaceType = MarketplaceType.Shopee
+                MarketplaceType = platform
             };
 
         marketplaceAccount.UserId = persistUserKey;
@@ -419,7 +424,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             : marketplaceAccount.AccessToken;
         marketplaceAccount.ExpiresAt = expiresAt;
         marketplaceAccount.IsActive = true;
-        marketplaceAccount.MarketplaceType = MarketplaceType.Shopee;
+        marketplaceAccount.MarketplaceType = platform;
         marketplaceAccount.Touch();
 
         await _marketplaceAccountService.PrepareForPersistAsync(marketplaceAccount, user, cancellationToken);
@@ -437,7 +442,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
             persistUserId,
             shopKey,
-            MarketplaceType.Shopee,
+            platform,
             cancellationToken);
 
         if (existing is not null)
@@ -455,7 +460,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return new IntegracaoLojaResponseDto
             {
                 Status = true,
-                Descricao = "Conta Shopee vinculada no modo Universal Link.",
+                Descricao = $"Conta {platformLabel} vinculada no modo Universal Link.",
                 Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, existing)
             };
         }
@@ -464,7 +469,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             UserId = persistUserId,
             TenantId = marketplaceAccount.TenantId,
-            PlatformType = MarketplaceType.Shopee,
+            PlatformType = platform,
             ShopId = shopKey,
             FriendlyName = dto.FriendlyName.Trim(),
             AffiliateTrackingId = affiliateTrackingId,
@@ -479,7 +484,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return new IntegracaoLojaResponseDto
         {
             Status = true,
-            Descricao = "Conta Shopee vinculada no modo Universal Link.",
+            Descricao = $"Conta {platformLabel} vinculada no modo Universal Link.",
             Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, integration)
         };
     }

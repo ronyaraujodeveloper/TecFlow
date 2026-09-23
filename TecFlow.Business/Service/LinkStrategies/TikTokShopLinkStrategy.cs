@@ -1,11 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using TecFlow.Business.Integrations.Auth;
+using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
 
-/// <summary>Estratégia TikTok Shop com expansão de URLs sociais e integração de afiliados.</summary>
-public sealed class TikTokLinkStrategy : IPlatformLinkStrategy
+/// <summary>
+/// Estratégia TikTok Shop: reconhece URLs oficiais/encurtadas, extrai productId
+/// e injeta TrackingId/FriendlyName em sub_id no link shop.tiktok.com/view/product.
+/// </summary>
+public sealed class TikTokShopLinkStrategy : IPlatformLinkStrategy
 {
     private static readonly string[] SupportedHosts =
     [
@@ -28,21 +34,21 @@ public sealed class TikTokLinkStrategy : IPlatformLinkStrategy
 
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeResolver;
-    private readonly ITikTokAffiliateLinkClient _tikTokAffiliateClient;
     private readonly IAffiliateLinkGenerationContext _generationContext;
-    private readonly ILogger<TikTokLinkStrategy> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
+    private readonly ILogger<TikTokShopLinkStrategy> _logger;
 
-    public TikTokLinkStrategy(
+    public TikTokShopLinkStrategy(
         IUrlExpansionService urlExpansionService,
         IIntegracaoLojaScopeResolver storeResolver,
-        ITikTokAffiliateLinkClient tikTokAffiliateClient,
         IAffiliateLinkGenerationContext generationContext,
-        ILogger<TikTokLinkStrategy> logger)
+        IHostEnvironment hostEnvironment,
+        ILogger<TikTokShopLinkStrategy> logger)
     {
         _urlExpansionService = urlExpansionService;
         _storeResolver = storeResolver;
-        _tikTokAffiliateClient = tikTokAffiliateClient;
         _generationContext = generationContext;
+        _hostEnvironment = hostEnvironment;
         _logger = logger;
     }
 
@@ -52,7 +58,7 @@ public sealed class TikTokLinkStrategy : IPlatformLinkStrategy
 
     public bool CanProcess(string url)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(TikTokShopProductUrlParser.Sanitize(url), UriKind.Absolute, out var uri))
         {
             return false;
         }
@@ -80,25 +86,34 @@ public sealed class TikTokLinkStrategy : IPlatformLinkStrategy
             MarketplaceType.TikTokShop,
             cancellationToken);
 
-        var workingUrl = originalUrl.Trim();
-        if (ShouldExpand(workingUrl) || !CanProcess(workingUrl))
+        var workingUrl = TikTokShopProductUrlParser.Sanitize(originalUrl);
+        if (ShouldExpand(workingUrl) || !TikTokShopProductUrlParser.TryParse(workingUrl, out _))
         {
-            _logger.LogInformation("Expandindo URL encurtada antes da geração do link TikTok Shop.");
-            workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+            _logger.LogInformation("Expandindo URL encurtada TikTok Shop antes da geração do link de afiliado.");
+            workingUrl = TikTokShopProductUrlParser.Sanitize(
+                await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken));
         }
 
-        if (!CanProcess(workingUrl))
+        var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
+            _hostEnvironment.EnvironmentName,
+            authorizationCode: null);
+
+        if (!CanProcess(workingUrl) && !allowHomologFallback)
         {
-            throw new AffiliateLinkGenerationException(
-                "Não foi possível identificar a URL canônica do produto TikTok Shop após expandir o link.");
+            throw new AffiliateLinkGenerationException(TikTokShopProductUrlParser.UnrecognizedLinkMessage);
         }
 
-        return await _tikTokAffiliateClient.GenerateAffiliateLinkAsync(
-            store,
-            workingUrl,
-            affiliateId,
-            _generationContext.CustomNickname,
-            cancellationToken);
+        var productId = TikTokShopProductUrlParser.ParseOrThrow(workingUrl, allowHomologFallback);
+        var subId = TikTokShopCommissionUrlBuilder.ResolveSubId(store);
+        var affiliateUrl = TikTokShopCommissionUrlBuilder.BuildProductAffiliateUrl(productId, subId);
+
+        _logger.LogInformation(
+            "TikTok Shop affiliate URL gerada. ProductId={ProductId} SubId={SubId} StoreId={StoreId}",
+            productId,
+            subId,
+            store.Id);
+
+        return affiliateUrl;
     }
 
     private static bool ShouldExpand(string url)
@@ -109,8 +124,8 @@ public sealed class TikTokLinkStrategy : IPlatformLinkStrategy
         }
 
         var host = uri.Host.ToLowerInvariant();
-        return ExpandableHosts.Any(h =>
-            host.Equals(h, StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith("." + h, StringComparison.OrdinalIgnoreCase));
+        return ExpandableHosts.Any(item =>
+            host.Equals(item, StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith("." + item, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace TecFlow.Business.Dto;
+﻿using TecFlow.Core.Enums;
+
+namespace TecFlow.Business.Dto;
 
 /// <summary>Envelope de resposta para geração de link de afiliado.</summary>
 public class GerarLinkAfiliadoResponseDto
@@ -72,7 +74,7 @@ public class GerarLinkAfiliadoResponseDto
             AffiliateUrl = item.AffiliateUrl,
             ConvertedUrl = item.AffiliateUrl,
             ShortenedUrl = item.ShortenedUrl?.Trim() ?? string.Empty,
-            ShortenedShopeeUrl = item.AffiliateUrl,
+            ShortenedShopeeUrl = item.PlatformType == MarketplaceType.Shopee ? item.AffiliateUrl : string.Empty,
             PlatformDetected = string.IsNullOrWhiteSpace(item.PlatformName)
                 ? item.PlatformType.ToString()
                 : item.PlatformName,
@@ -139,7 +141,9 @@ public class GerarLinkAfiliadoResponseDto
             ShortenedShopeeUrl = AffiliateUrl.Trim();
         }
 
-        if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl) && !string.IsNullOrWhiteSpace(AffiliateUrl))
+        if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl)
+            && !string.IsNullOrWhiteSpace(AffiliateUrl)
+            && !PlatformDetected.Contains("TikTok", StringComparison.OrdinalIgnoreCase))
         {
             ShortenedShopeeUrl = AffiliateUrl.Trim();
         }

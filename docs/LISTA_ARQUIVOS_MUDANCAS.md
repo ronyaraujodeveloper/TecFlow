@@ -548,6 +548,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **HistoricoLinks.razor** — ação Editar com modal de contas (inativação lógica).
 - [x] **TecFlow.Data/Migrations/20260923200000_AddShortAffiliateLinkAccounts.cs** — tabela e backfill no SQL Server.
 
+### Fase 19.4 — TikTok Shop Link Strategy
+
+- [x] **TikTokShopLinkStrategy.cs** — hosts `tiktok.com` / `shop.tiktok.com` / `vt.tiktok.com`; extrai `productId`; `sub_id` com TrackingId ou FriendlyName. Substitui `TikTokLinkStrategy.cs`.
+- [x] **TikTokShopProductUrlParser.cs** / **TikTokShopCommissionUrlBuilder.cs** — parse de path/query e URL `https://shop.tiktok.com/view/product/{id}?sub_id=`.
+- [x] **LinkStrategyServiceCollectionExtensions.cs** — registra `TikTokShopLinkStrategy` no `PlatformLinkResolver`.
+- [x] **ConnectStoreModal.razor** — cadastro TikTok Shop com apelido e Tracking ID (mesmo fluxo Universal Link da Shopee).
+- [x] **TikTokShopLinkStrategyTests.cs** — parse de URLs, expansão de encurtador e injeção de `sub_id`.
+
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.

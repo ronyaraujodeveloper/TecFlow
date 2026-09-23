@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -7,16 +8,21 @@ using TecFlow.Database.MultiTenancy;
 
 namespace TecFlow.Infrastructure.Services.Repositories;
 
-public class MarketplaceAccountRepository : IMarketplaceAccountRepository
-{
-    private readonly AppDbContext _context;
-    private readonly ICurrentTenantService _currentTenant;
-
-    public MarketplaceAccountRepository(AppDbContext context, ICurrentTenantService currentTenant)
+    public class MarketplaceAccountRepository : IMarketplaceAccountRepository
     {
-        _context = context;
-        _currentTenant = currentTenant;
-    }
+        private readonly AppDbContext _context;
+        private readonly ICurrentTenantService _currentTenant;
+        private readonly ITenantProvisioningService _tenantProvisioning;
+
+        public MarketplaceAccountRepository(
+            AppDbContext context,
+            ICurrentTenantService currentTenant,
+            ITenantProvisioningService tenantProvisioning)
+        {
+            _context = context;
+            _currentTenant = currentTenant;
+            _tenantProvisioning = tenantProvisioning;
+        }
 
     public Task<MarketplaceAccount?> GetByShopAsync(string shopId, MarketplaceType marketplaceType)
     {
@@ -73,6 +79,10 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
 
     public async Task UpsertAsync(MarketplaceAccount account)
     {
+        var tenant = await _tenantProvisioning.EnsurePersistedTenantAsync(
+            account.TenantId == Guid.Empty ? (Guid?)null : account.TenantId);
+        account.TenantId = tenant.Id;
+
         var existing = await _context.MarketplaceAccounts
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(a =>

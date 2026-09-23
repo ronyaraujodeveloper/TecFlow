@@ -6,6 +6,7 @@ using Moq;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -25,13 +26,19 @@ public class MarketplaceAuthServiceTests
     private readonly MarketplaceSignatureService _signatureService = new();
 
     private readonly Mock<IHostEnvironment> _hostEnvironment = new();
+    private readonly Mock<ITenantProvisioningService> _tenants = new();
 
     private readonly AppDbContext _db = CreateDbContext();
 
     public MarketplaceAuthServiceTests()
     {
-        _currentTenant.Setup(t => t.TenantId).Returns(Guid.NewGuid());
+        var tenantId = Guid.NewGuid();
+        _currentTenant.Setup(t => t.TenantId).Returns(tenantId);
         _hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Homologacao");
+        _tenants.Setup(service => service.EnsurePersistedTenantAsync(It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Tenant { Id = tenantId, Name = "Tenant Principal", IsActive = true });
+        _tenants.Setup(service => service.EnsureTenantForUserAsync(It.IsAny<UserAccount>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Tenant { Id = tenantId, Name = "Tenant Principal", IsActive = true });
     }
 
     private MarketplaceAuthService CreateService() =>
@@ -45,7 +52,8 @@ public class MarketplaceAuthServiceTests
             MarketplaceTestOptionsFactory.TikTokOptions(),
             MarketplaceTestOptionsFactory.ShopeeOptions(),
             NullLogger<MarketplaceAuthService>.Instance,
-            _hostEnvironment.Object);
+            _hostEnvironment.Object,
+            _tenants.Object);
 
     private static AppDbContext CreateDbContext()
     {
@@ -115,7 +123,8 @@ public class MarketplaceAuthServiceTests
                 AuthPartnerPath = string.Empty
             }),
             NullLogger<MarketplaceAuthService>.Instance,
-            _hostEnvironment.Object);
+            _hostEnvironment.Object,
+            _tenants.Object);
 
         var url = service.GenerateAuthorizationUrl(
             MarketplaceType.Shopee,

@@ -3,11 +3,13 @@ using Moq;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
 using TecFlow.Database.Filter;
 using TecFlow.Infrastructure.Services.Integrations;
+using TecFlow.Infrastructure.Services.Tenancy;
 
 namespace TecFlow.Tests.Unit.Integrations;
 
@@ -61,7 +63,7 @@ public class IntegracaoLojaServiceTests
             .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
             .Returns(Task.CompletedTask);
 
-        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object, Production());
+        var service = new IntegracaoLojaService(stores.Object, users.Object, accounts.Object, auth.Object, AccountPrep(users), Production());
         var result = await service.LinkAsync(7, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
@@ -125,11 +127,13 @@ public class IntegracaoLojaServiceTests
     [Fact]
     public async Task LinkAsync_ShouldFailWithoutThrowing_WhenDtoIsNull()
     {
+        var users = new Mock<IUserAccountRepository>();
         var service = new IntegracaoLojaService(
             new Mock<IIntegracaoLojaRepository>().Object,
-            new Mock<IUserAccountRepository>().Object,
+            users.Object,
             new Mock<IMarketplaceAccountRepository>().Object,
             new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users),
             Production());
 
         var result = await service.LinkAsync(1, null!);
@@ -242,11 +246,13 @@ public class IntegracaoLojaServiceTests
         stores.Setup(repository => repository.ListByUserIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<IntegracaoLoja>());
 
+        var users = new Mock<IUserAccountRepository>();
         var service = new IntegracaoLojaService(
             stores.Object,
-            new Mock<IUserAccountRepository>().Object,
+            users.Object,
             accounts.Object,
             new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users),
             Production());
 
         var result = await service.ListByUserAsync(7, new IntegracaoLojaFilter { Page = 1, PageSize = 20 });
@@ -299,6 +305,7 @@ public class IntegracaoLojaServiceTests
             users.Object,
             accounts.Object,
             new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users),
             Production());
 
         var result = await service.LinkAsync(99, new IntegracaoLojaDto
@@ -315,6 +322,37 @@ public class IntegracaoLojaServiceTests
         Assert.Equal("18325850271", savedAccount.TrackingId);
         Assert.Equal("18325850271", savedAccount.AffiliateTrackingId);
         Assert.Equal(3, saved!.UserId);
+        Assert.Equal(fallbackUser.TenantId, savedAccount.TenantId);
+        Assert.NotEqual(Guid.Empty, savedAccount.TenantId);
+    }
+
+    private static MarketplaceAccountService AccountPrep(Mock<IUserAccountRepository> users)
+    {
+        var tenants = new Mock<ITenantProvisioningService>();
+        tenants.Setup(service => service.EnsureTenantForUserAsync(It.IsAny<UserAccount>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserAccount user, CancellationToken _) =>
+            {
+                if (user.TenantId == Guid.Empty)
+                {
+                    user.TenantId = TenantProvisioningService.DefaultTenantId;
+                }
+
+                return new Tenant
+                {
+                    Id = user.TenantId,
+                    Name = "Tenant Principal",
+                    IsActive = true
+                };
+            });
+        tenants.Setup(service => service.EnsurePersistedTenantAsync(It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid? preferred, CancellationToken _) => new Tenant
+            {
+                Id = preferred is { } id && id != Guid.Empty ? id : TenantProvisioningService.DefaultTenantId,
+                Name = "Tenant Principal",
+                IsActive = true
+            });
+
+        return new MarketplaceAccountService(tenants.Object, users.Object);
     }
 
     private static (
@@ -353,6 +391,7 @@ public class IntegracaoLojaServiceTests
             users.Object,
             accounts.Object,
             auth.Object,
+            AccountPrep(users),
             homolog ? Homolog() : Production());
 
         return (service, stores, auth, accounts);

@@ -16,7 +16,7 @@ $WarningPreference = 'SilentlyContinue';
 
 1.2. Atualizar Migrations do Banco de Dados (SQL Server — `AutomacaoSociais`)
 
-O IIS (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`) e o `appsettings.Homologacao.json` usam **SQL Server** `localhost\SQLEXPRESS` / `AutomacaoSociais` (`Database:Provider=SqlServer`). Cadastro de lojas e conversão de links gravam nesse banco.
+O IIS (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`) e o `appsettings.Homologacao.json` usam **SQL Server** `localhost\SQLEXPRESS` / `AutomacaoSociais` (`Database:Provider=SqlServer`). Cadastro de lojas e conversão de links gravam nesse banco. O runtime garante um registro em `Tenants` (`Tenant Principal`) antes de inserir `MarketplaceAccounts` (FK `FK_MarketplaceAccounts_Tenants_TenantId`).
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'

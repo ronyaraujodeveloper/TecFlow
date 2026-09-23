@@ -20,6 +20,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     private readonly IUserAccountRepository _userAccountRepository;
     private readonly IMarketplaceAccountRepository _marketplaceAccountRepository;
     private readonly IMarketplaceAuthService _marketplaceAuthService;
+    private readonly MarketplaceAccountService _marketplaceAccountService;
     private readonly IHostEnvironment _hostEnvironment;
 
     public IntegracaoLojaService(
@@ -27,12 +28,14 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         IUserAccountRepository userAccountRepository,
         IMarketplaceAccountRepository marketplaceAccountRepository,
         IMarketplaceAuthService marketplaceAuthService,
+        MarketplaceAccountService marketplaceAccountService,
         IHostEnvironment hostEnvironment)
     {
         _integracaoLojaRepository = integracaoLojaRepository;
         _userAccountRepository = userAccountRepository;
         _marketplaceAccountRepository = marketplaceAccountRepository;
         _marketplaceAuthService = marketplaceAuthService;
+        _marketplaceAccountService = marketplaceAccountService;
         _hostEnvironment = hostEnvironment;
     }
 
@@ -172,6 +175,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             marketplaceAccount.AffiliateTrackingId = dto.TrackingId.Trim();
             marketplaceAccount.TrackingId = marketplaceAccount.AffiliateTrackingId;
         }
+
+        await _marketplaceAccountService.PrepareForPersistAsync(marketplaceAccount, user, cancellationToken);
+        user.TenantId = marketplaceAccount.TenantId;
         try
         {
             await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
@@ -214,7 +220,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         var integration = new IntegracaoLoja
         {
             UserId = persistUserId,
-            TenantId = user.TenantId,
+            TenantId = marketplaceAccount.TenantId,
             PlatformType = dto.PlatformType,
             ShopId = dto.ShopId.Trim(),
             FriendlyName = dto.FriendlyName.Trim(),
@@ -416,6 +422,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.MarketplaceType = MarketplaceType.Shopee;
         marketplaceAccount.Touch();
 
+        await _marketplaceAccountService.PrepareForPersistAsync(marketplaceAccount, user, cancellationToken);
+        user.TenantId = marketplaceAccount.TenantId;
+
         try
         {
             await _marketplaceAccountRepository.UpsertAsync(marketplaceAccount);
@@ -454,7 +463,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         var integration = new IntegracaoLoja
         {
             UserId = persistUserId,
-            TenantId = user.TenantId,
+            TenantId = marketplaceAccount.TenantId,
             PlatformType = MarketplaceType.Shopee,
             ShopId = shopKey,
             FriendlyName = dto.FriendlyName.Trim(),

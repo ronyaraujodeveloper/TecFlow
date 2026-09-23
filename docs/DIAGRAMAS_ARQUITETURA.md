@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` (fallback para o primeiro usuário / demo homologação se a claim JWT não existir). `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
+**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
 
 ```mermaid
 flowchart LR

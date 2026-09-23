@@ -111,6 +111,8 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens; `TrackingId`/`ShopId`/`AppKey`/`AppSecret` anuláveis para registros antigos.
 - [x] **TecFlow.Business/Mappings/MarketplaceAccountMapper.cs** — projeção nula-segura para `MarketplaceAccountDto` e `ConvertLinkResponseDto`.
 - [x] **TecFlow.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** — se o UserId do JWT não existir em `Usuarios`, usa o primeiro usuário do SQL Server (ou cria o demo de homologação) antes de gravar `MarketplaceAccount.UserId`.
+- [x] **TecFlow.Infrastructure.Services/Integrations/MarketplaceAccountService.cs** — `PrepareForPersistAsync` grava `TenantId` de `dbo.Tenants` e `UserId` de `dbo.Usuarios`.
+- [x] **TecFlow.Tests/Unit/MultiTenancy/TenantProvisioningServiceTests.cs** — cria `Tenant Principal` quando `Tenants` está vazia.
 - [x] **TecFlow.Data/Migrations/20260922233000_AddMarketplaceAccountOptionalCredentials.cs** — colunas opcionais `TrackingId`/`AppKey`/`AppSecret`.
 - [x] **TecFlow.Data/Migrations/20260922250000_AddShortAffiliateLinkAffiliateUrlAndAccount.cs** — `AffiliateUrl` e `MarketplaceAccountId` em `ShortAffiliateLinks` (SQL Server).
 - [x] **TecFlow.Infrastructure.Services/ShortLinks/ShortLinkService.cs** — persiste `ShortAffiliateLink` com `SaveChangesAsync()` no SQLEXPRESS.
@@ -128,7 +130,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Database/AppDbContext.cs** — filtros globais, `SaveChanges` com `TenantId`, criptografia em `MarketplaceAccount`.
 - [x] **TecFlow.Infrastructure/Security/CurrentTenantService.cs** — JWT + header `X-TecFlow-Shop-Id`.
 - [x] **TecFlow.Infrastructure/Security/JwtTokenService.cs** — claim `TecFlow:tenant_id`; emite `aud=TecFlowClient`.
-- [x] **TecFlow.Infrastructure.Services/Tenancy/TenantProvisioningService.cs** — tenant automático no cadastro de usuário.
+- [x] **TecFlow.Infrastructure.Services/Tenancy/TenantProvisioningService.cs** — `EnsurePersistedTenantAsync` cria `Tenant Principal` se `dbo.Tenants` estiver vazia; `EnsureTenantForUserAsync` corrige `Usuarios.TenantId` órfão.
 - [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceAccountRepository.cs** — listagem consolidada / por loja.
 - [x] Repositórios adaptados: **ProductRepository**, **MarketplaceTokenRepository**, **MarketplaceOrderRepository** (`ListConsolidated*`, `ListForShop*`).
 - [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — persiste `MarketplaceAccount` no OAuth.

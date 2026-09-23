@@ -1,4 +1,7 @@
-﻿using TecFlow.Core.Entities;
+﻿using Moq;
+using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Infrastructure.Services.Integrations;
 
@@ -28,7 +31,7 @@ public class MarketplaceAccountMappingTests
             CreatedAt = DateTime.UtcNow
         };
 
-        var service = new MarketplaceAccountService();
+        var service = CreateService();
 
         var dto = service.MapToDto(account);
         var convert = service.MapToConvertLinkResponse(account);
@@ -64,10 +67,15 @@ public class MarketplaceAccountMappingTests
             CreatedAt = DateTime.UtcNow
         };
 
-        var dto = new MarketplaceAccountService().MapToDto(account);
+        var dto = CreateService().MapToDto(account);
 
         Assert.Equal("18325850271", dto.TrackingId);
         Assert.Equal("18325850271", dto.AffiliateTrackingId);
         Assert.Equal("ul-7-loja-homolog", dto.ShopId);
     }
+
+    private static MarketplaceAccountService CreateService() =>
+        new(
+            new Mock<ITenantProvisioningService>().Object,
+            new Mock<IUserAccountRepository>().Object);
 }

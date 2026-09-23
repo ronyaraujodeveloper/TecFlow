@@ -11,6 +11,7 @@ using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Repositories;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -32,6 +33,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private readonly ShopeeIntegrationOptions _shopeeOptions;
     private readonly ILogger<MarketplaceAuthService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly ITenantProvisioningService _tenantProvisioning;
 
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
@@ -43,7 +45,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         IOptions<TikTokShopIntegrationOptions> tikTokOptions,
         IOptions<ShopeeIntegrationOptions> shopeeOptions,
         ILogger<MarketplaceAuthService> logger,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        ITenantProvisioningService tenantProvisioning)
     {
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
@@ -55,6 +58,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         _shopeeOptions = shopeeOptions.Value;
         _logger = logger;
         _hostEnvironment = hostEnvironment;
+        _tenantProvisioning = tenantProvisioning;
     }
 
     public string GenerateAuthorizationUrl(MarketplaceType type, string redirectUri, string? state = null)
@@ -125,15 +129,14 @@ public class MarketplaceAuthService : IMarketplaceAuthService
                 return Fail(type, shopId, "Access token não retornado pela plataforma.");
             }
 
-            var tenantId = await ResolveTenantIdForShopAsync(shopId, type);
-            if (tenantId is null)
-            {
-                return Fail(type, shopId, "Faça login no painel TecFlow antes de vincular uma nova loja.");
-            }
+            var tenant = await _tenantProvisioning.EnsurePersistedTenantAsync(
+                _currentTenant.TenantId,
+                cancellationToken);
+            var tenantId = tenant.Id;
 
             var entity = new MarketplaceToken
             {
-                TenantId = tenantId.Value,
+                TenantId = tenantId,
                 ShopId = shopId,
                 MarketplaceType = type,
                 AccessToken = tokenPayload.AccessToken,
@@ -149,7 +152,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
             await PersistMarketplaceAccountAsync(new MarketplaceAccount
             {
-                TenantId = tenantId.Value,
+                TenantId = tenantId,
                 UserId = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId.Trim(),
                 ShopId = shopId.Trim(),
                 ShopName = shopId.Trim(),
@@ -534,27 +537,16 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         }
     }
 
-    private async Task<Guid?> ResolveTenantIdForShopAsync(string shopId, MarketplaceType type)
-    {
-        if (_currentTenant.TenantId is { } activeTenant && activeTenant != Guid.Empty)
-        {
-            return activeTenant;
-        }
-
-        var existing = await _tokenRepository.GetByShopAndMarketplaceIgnoreTenantAsync(shopId, type);
-        if (existing is null || existing.TenantId == Guid.Empty)
-        {
-            return null;
-        }
-
-        return existing.TenantId;
-    }
-
     private bool ShouldSkipRemoteOAuth(string code) =>
         HomologMarketplaceAuth.ShouldSkipRemoteOAuth(_hostEnvironment.EnvironmentName, code);
 
     private async Task PersistMarketplaceAccountAsync(MarketplaceAccount account, CancellationToken cancellationToken)
     {
+        var tenant = await _tenantProvisioning.EnsurePersistedTenantAsync(
+            account.TenantId == Guid.Empty ? (Guid?)null : account.TenantId,
+            cancellationToken);
+        account.TenantId = tenant.Id;
+
         EnsureMarketplaceAccountCanBeInserted(account);
 
         try

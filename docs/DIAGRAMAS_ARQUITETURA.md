@@ -39,7 +39,7 @@ flowchart LR
   SHORT --> LOG
   BLD --> AFFURL[AffiliateUrl longa]
   BLD --> SHPEE[ShortenedShopeeUrl br.shp.ee]
-  SHORT --> SHORTURL[ShortenedUrl localhost:5001/r]
+  SHORT --> SHORTURL[ShortenedUrl localhost:5001/storeSlug/code]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
   HIST[HistoricoLinks] -->|Visualizar ShortAffiliateLinkDto| UI
   API --> STR

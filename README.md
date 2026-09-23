@@ -125,7 +125,7 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
      - `OriginalUrl`: Link bruto colado pelo usuário.
      - `AffiliateUrl`: Link direto da plataforma com tag de afiliado.
      - `ShortenedShopeeUrl` / `ShortenedPlatformUrl`: Link reduzido oficial da plataforma.
-     - `TecFlowTrackingUrl`: Link interno de telemetria `/r/{code}`.
+     - `TecFlowTrackingUrl`: Link interno de telemetria `/{storeSlug}/{code}`.
      
 ### 🎯 Cobertura por módulo
 - [x] **Unidade — algoritmos:** `ValidationHelperTests`, `OrderStateMachineTests`
@@ -425,7 +425,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 #### 19.3. Conexão End-to-End no Frontend (TecFlow.WebUi)
 - [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend, com `_isLoading`, alerta vermelho se a loja não estiver selecionada e `StateHasChanged()` após sucesso.
-- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/r/code`) em cards com cópia independente via `tecflow-clipboard.js`.
+- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/{storeSlug}/{code}`) em cards com cópia independente via `tecflow-clipboard.js`.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

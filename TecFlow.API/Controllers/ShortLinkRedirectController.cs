@@ -5,7 +5,7 @@ using TecFlow.Business.Interfaces.Services;
 
 namespace TecFlow.API.Controllers;
 
-/// <summary>Redirect público do encurtador interno TecFlow (/r/{shortCode}).</summary>
+/// <summary>Redirect público do encurtador interno TecFlow ({storeSlug}/{code}).</summary>
 [ApiController]
 [AllowAnonymous]
 public class ShortLinkRedirectController : ControllerBase
@@ -24,16 +24,24 @@ public class ShortLinkRedirectController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>Compatível com links antigos /r/{code}.</summary>
+    [HttpGet("/r/{code}")]
+    public Task<IActionResult> RedirectLegacyAsync(string code, CancellationToken cancellationToken) =>
+        RedirectByCodeAsync(code, cancellationToken);
+
     /// <summary>Resolve código curto, registra telemetria e redireciona ao marketplace.</summary>
-    [HttpGet("/r/{shortCode}")]
-    public async Task<IActionResult> RedirectAsync(string shortCode, CancellationToken cancellationToken)
+    [HttpGet("/{storeSlug:regex(^[[A-Za-z]][[A-Za-z0-9]]{{0,79}}$)}/{code:length(6,8)}")]
+    public Task<IActionResult> RedirectAsync(string storeSlug, string code, CancellationToken cancellationToken) =>
+        RedirectByCodeAsync(code, cancellationToken);
+
+    private async Task<IActionResult> RedirectByCodeAsync(string code, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(shortCode) || shortCode.Length is < 6 or > 8)
+        if (string.IsNullOrWhiteSpace(code) || code.Length is < 6 or > 8)
         {
             return NotFound();
         }
 
-        var normalizedCode = shortCode.Trim().ToLowerInvariant();
+        var normalizedCode = code.Trim().ToLowerInvariant();
         var link = await _shortLinkRepository.GetByShortCodeAsync(normalizedCode, cancellationToken);
 
         if (link is null)

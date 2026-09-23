@@ -76,6 +76,8 @@ public class ShortLinkPersistenceTests
         Assert.Equal(account.Id, saved.MarketplaceAccountId);
         Assert.Equal(DateTime.UtcNow.Date, saved.CreatedAt.Date);
         Assert.Contains(saved.ShortCode, publicUrl, StringComparison.Ordinal);
+        Assert.Contains("LojaHomolog", publicUrl, StringComparison.Ordinal);
+        Assert.DoesNotContain("/r/", publicUrl, StringComparison.Ordinal);
         Assert.Equal(saved.AffiliateLinkId, affiliateLinkId);
     }
 

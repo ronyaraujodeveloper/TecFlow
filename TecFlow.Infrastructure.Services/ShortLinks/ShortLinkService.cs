@@ -11,6 +11,7 @@ using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.Entity;
 using TecFlow.Infrastructure.Services.Repositories;
+using TecFlow.Util.Text;
 
 namespace TecFlow.Infrastructure.Services.ShortLinks;
 
@@ -72,7 +73,7 @@ public sealed class ShortLinkService : IShortLinkService
         }
 
         var affiliateUrl = destinationUrl.Trim();
-        var marketplaceAccountId = await ResolveMarketplaceAccountIdAsync(
+        var (marketplaceAccountId, storeFriendlyName) = await ResolveStoreIdentityAsync(
             tenantId,
             integracaoLojaId,
             platformType,
@@ -100,7 +101,7 @@ public sealed class ShortLinkService : IShortLinkService
         await _context.ShortAffiliateLinks.AddAsync(entity, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var publicUrl = BuildPublicUrl(shortCode);
+        var publicUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, storeFriendlyName, shortCode);
         _logger.LogInformation(
             "Link encurtado TecFlow criado. Code={ShortCode}, AffiliateLinkId={AffiliateLinkId}, Platform={Platform}",
             shortCode,
@@ -110,55 +111,54 @@ public sealed class ShortLinkService : IShortLinkService
         return (publicUrl, entity.AffiliateLinkId);
     }
 
-    private async Task<int?> ResolveMarketplaceAccountIdAsync(
+    private async Task<(int? AccountId, string FriendlyName)> ResolveStoreIdentityAsync(
         Guid tenantId,
         int? integracaoLojaId,
         MarketplaceType platformType,
         CancellationToken cancellationToken)
     {
-        if (integracaoLojaId is not int lojaId || lojaId <= 0)
+        string? lojaName = null;
+        string? shopId = null;
+        if (integracaoLojaId is int lojaId && lojaId > 0)
         {
-            return null;
+            var loja = await _context.IntegracaoLojas
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(item => item.Id == lojaId)
+                .Select(item => new { item.ShopId, item.FriendlyName })
+                .FirstOrDefaultAsync(cancellationToken);
+            shopId = loja?.ShopId;
+            lojaName = loja?.FriendlyName;
         }
 
-        var shopId = await _context.IntegracaoLojas
-            .AsNoTracking()
-            .IgnoreQueryFilters()
-            .Where(loja => loja.Id == lojaId)
-            .Select(loja => loja.ShopId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(shopId))
+        int? accountId = null;
+        string? accountName = null;
+        if (!string.IsNullOrWhiteSpace(shopId))
         {
-            return null;
+            var query = _context.MarketplaceAccounts
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(account => account.ShopId == shopId && account.MarketplaceType == platformType);
+
+            if (tenantId != Guid.Empty)
+            {
+                query = query.Where(account => account.TenantId == tenantId);
+            }
+
+            var account = await query
+                .Select(item => new { item.Id, item.FriendlyName })
+                .FirstOrDefaultAsync(cancellationToken);
+            accountId = account?.Id;
+            accountName = account?.FriendlyName;
         }
 
-        var query = _context.MarketplaceAccounts
-            .AsNoTracking()
-            .IgnoreQueryFilters()
-            .Where(account => account.ShopId == shopId && account.MarketplaceType == platformType);
+        var friendlyName = !string.IsNullOrWhiteSpace(accountName)
+            ? accountName
+            : !string.IsNullOrWhiteSpace(lojaName)
+                ? lojaName
+                : "loja";
 
-        if (tenantId != Guid.Empty)
-        {
-            query = query.Where(account => account.TenantId == tenantId);
-        }
-
-        return await query.Select(account => (int?)account.Id).FirstOrDefaultAsync(cancellationToken);
-    }
-
-    private string BuildPublicUrl(string shortCode)
-    {
-        var configured = (_options.PublicBaseUrl ?? string.Empty).Trim();
-        var baseUrl = string.IsNullOrWhiteSpace(configured)
-            ? "http://localhost:5001/r"
-            : configured.TrimEnd('/');
-
-        if (!baseUrl.EndsWith("/r", StringComparison.OrdinalIgnoreCase))
-        {
-            baseUrl = $"{baseUrl.TrimEnd('/')}/r";
-        }
-
-        return $"{baseUrl}/{shortCode}";
+        return (accountId, friendlyName);
     }
 }
 

@@ -1,12 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Configuration;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
 using TecFlow.Database.Filter;
 using TecFlow.Database.Pagin;
+using TecFlow.Util.Text;
 
 namespace TecFlow.Infrastructure.Services.ShortLinks;
 
@@ -14,17 +17,20 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
 {
     private readonly IShortAffiliateLinkRepository _shortLinkRepository;
     private readonly ILinkClickLogRepository _clickLogRepository;
+    private readonly AppDbContext _context;
     private readonly ShortLinkOptions _options;
     private readonly ILogger<AffiliateLinkHistoryService> _logger;
 
     public AffiliateLinkHistoryService(
         IShortAffiliateLinkRepository shortLinkRepository,
         ILinkClickLogRepository clickLogRepository,
+        AppDbContext context,
         IOptions<ShortLinkOptions> options,
         ILogger<AffiliateLinkHistoryService> logger)
     {
         _shortLinkRepository = shortLinkRepository;
         _clickLogRepository = clickLogRepository;
+        _context = context;
         _options = options.Value;
         _logger = logger;
     }
@@ -42,10 +48,12 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
                 items.Select(item => item.AffiliateLinkId),
                 cancellationToken);
 
+            var storeNames = await LoadStoreFriendlyNamesAsync(items, cancellationToken);
+
             var page = filter.Page < 1 ? 1 : filter.Page;
             var pageSize = PagedListHelper.NormalizePageSize(filter.PageSize);
             var dtoItems = items
-                .Select(link => MapItem(link, clickCounts.GetValueOrDefault(link.AffiliateLinkId)))
+                .Select(link => MapItem(link, clickCounts.GetValueOrDefault(link.AffiliateLinkId), storeNames))
                 .ToList();
 
             var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -76,15 +84,15 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         }
     }
 
-    private AffiliateLinkHistoryItemDto MapItem(Core.Entities.ShortAffiliateLink link, int clickCount)
+    private AffiliateLinkHistoryItemDto MapItem(
+        Core.Entities.ShortAffiliateLink link,
+        int clickCount,
+        IReadOnlyDictionary<int, string> storeNames)
     {
-        var configured = (_options.PublicBaseUrl ?? string.Empty).Trim();
-        var baseUrl = string.IsNullOrWhiteSpace(configured)
-            ? "http://localhost:5001/r"
-            : configured.TrimEnd('/');
-        if (!baseUrl.EndsWith("/r", StringComparison.OrdinalIgnoreCase))
+        string? friendlyName = null;
+        if (link.MarketplaceAccountId is int accountId)
         {
-            baseUrl = $"{baseUrl.TrimEnd('/')}/r";
+            storeNames.TryGetValue(accountId, out friendlyName);
         }
 
         return new AffiliateLinkHistoryItemDto
@@ -95,10 +103,35 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             DisplayTitle = BuildDisplayTitle(link.CustomNickname, link.OriginalUrl),
             OriginalUrl = link.OriginalUrl,
             AffiliateUrl = string.IsNullOrWhiteSpace(link.AffiliateUrl) ? link.DestinationUrl : link.AffiliateUrl,
-            ShortenedUrl = $"{baseUrl}/{link.ShortCode}",
+            ShortenedUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, friendlyName, link.ShortCode),
             CreatedAt = link.CreatedAt,
             ClickCount = clickCount
         };
+    }
+
+    private async Task<Dictionary<int, string>> LoadStoreFriendlyNamesAsync(
+        IReadOnlyList<Core.Entities.ShortAffiliateLink> items,
+        CancellationToken cancellationToken)
+    {
+        var accountIds = items
+            .Where(item => item.MarketplaceAccountId is > 0)
+            .Select(item => item.MarketplaceAccountId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (accountIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.MarketplaceAccounts
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(account => accountIds.Contains(account.Id))
+            .ToDictionaryAsync(
+                account => account.Id,
+                account => account.FriendlyName ?? string.Empty,
+                cancellationToken);
     }
 
     private static string GetPlatformName(MarketplaceType platformType) => platformType switch

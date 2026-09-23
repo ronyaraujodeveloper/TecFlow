@@ -13,7 +13,7 @@ public class GerarLinkAfiliadoResponseDto
     /// <summary>URL oficial de afiliado da Shopee (tag de rastreio).</summary>
     public string AffiliateUrl { get; set; } = string.Empty;
 
-    /// <summary>URL interna TecFlow de telemetria (http://localhost:5001/r/code).</summary>
+    /// <summary>URL interna TecFlow de telemetria (http://localhost:5001/{storeSlug}/{code}).</summary>
     public string ShortenedUrl { get; set; } = string.Empty;
 
     /// <summary>URL encurtada oficial da Shopee (https://br.shp.ee/...).</summary>
@@ -87,9 +87,23 @@ public class GerarLinkAfiliadoResponseDto
         }
     }
 
-    private static bool LooksLikeTecFlowShort(string? url) =>
-        !string.IsNullOrWhiteSpace(url)
-        && url.Contains("/r/", StringComparison.OrdinalIgnoreCase);
+    private static bool LooksLikeTecFlowShort(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        if (url.Contains("/r/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            url,
+            @"/[A-Za-z][A-Za-z0-9]{0,79}/[A-Za-z0-9]{6,8}(?:[/?#]|$)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
 
     private static bool LooksLikeShopeeOfficialShort(string? url) =>
         !string.IsNullOrWhiteSpace(url)

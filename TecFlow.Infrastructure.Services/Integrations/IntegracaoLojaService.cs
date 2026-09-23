@@ -41,13 +41,15 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         IntegracaoLojaFilter filter,
         CancellationToken cancellationToken = default)
     {
-        filter.UserId = userId;
-        var userKey = userId.ToString(CultureInfo.InvariantCulture);
+        var owner = await ResolvePersistableUserAsync(userId);
+        var persistUserId = owner?.Id ?? userId;
+        filter.UserId = persistUserId;
+        var userKey = persistUserId.ToString(CultureInfo.InvariantCulture);
 
         try
         {
             var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
-            var integrations = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
+            var integrations = await _integracaoLojaRepository.ListByUserIdAsync(persistUserId, cancellationToken);
 
             var dtos = new List<MarketplaceAccountDto>();
             foreach (var account in accounts)
@@ -109,9 +111,17 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         ApplyHomologFallbacks(dto);
 
+        var user = await ResolvePersistableUserAsync(userId);
+        if (user is null)
+        {
+            return Fail("Usuário não encontrado.");
+        }
+
+        var persistUserId = user.Id;
+
         if (dto.PlatformType == MarketplaceType.Shopee)
         {
-            return await LinkShopeeUniversalAccountAsync(userId, dto, cancellationToken);
+            return await LinkShopeeUniversalAccountAsync(user, dto, cancellationToken);
         }
 
         if (string.IsNullOrWhiteSpace(dto.AuthorizationCode))
@@ -132,18 +142,12 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("Nome amigável da loja é obrigatório.");
         }
 
-        var user = await _userAccountRepository.GetByIdAsync(userId);
-        if (user is null)
-        {
-            return Fail("Usuário não encontrado.");
-        }
-
         var oauthResult = await _marketplaceAuthService.CallbackAndGenerateTokensAsync(
             dto.PlatformType,
             dto.AuthorizationCode.Trim(),
             dto.ShopId.Trim(),
             cancellationToken,
-            userId.ToString(CultureInfo.InvariantCulture));
+            persistUserId.ToString(CultureInfo.InvariantCulture));
 
         if (!oauthResult.Success)
         {
@@ -159,7 +163,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("Tokens OAuth gerados, mas não foi possível localizar a conta marketplace persistida.");
         }
 
-        marketplaceAccount.UserId = userId.ToString(CultureInfo.InvariantCulture);
+        marketplaceAccount.UserId = persistUserId.ToString(CultureInfo.InvariantCulture);
         marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopName = dto.FriendlyName.Trim();
         marketplaceAccount.IsActive = true;
@@ -178,7 +182,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
 
         var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
-            userId,
+            persistUserId,
             dto.ShopId.Trim(),
             dto.PlatformType,
             cancellationToken);
@@ -209,7 +213,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         var integration = new IntegracaoLoja
         {
-            UserId = userId,
+            UserId = persistUserId,
             TenantId = user.TenantId,
             PlatformType = dto.PlatformType,
             ShopId = dto.ShopId.Trim(),
@@ -368,7 +372,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     }
 
     private async Task<IntegracaoLojaResponseDto> LinkShopeeUniversalAccountAsync(
-        int userId,
+        UserAccount user,
         IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
     {
@@ -377,14 +381,10 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return Fail("Informe um apelido / nome amigável para a conta Shopee.");
         }
 
-        var user = await _userAccountRepository.GetByIdAsync(userId);
-        if (user is null)
-        {
-            return Fail("Usuário não encontrado.");
-        }
-
+        var persistUserId = user.Id;
+        var persistUserKey = persistUserId.ToString(CultureInfo.InvariantCulture);
         var affiliateTrackingId = FirstNonEmpty(dto.TrackingId);
-        var shopKey = $"ul-{userId}-{Slug(dto.FriendlyName)}";
+        var shopKey = $"ul-{persistUserId}-{Slug(dto.FriendlyName)}";
         dto.ShopId = shopKey;
 
         var expiresAt = DateTime.UtcNow.AddYears(10);
@@ -394,12 +394,12 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             ?? new MarketplaceAccount
             {
                 TenantId = user.TenantId,
-                UserId = userId.ToString(CultureInfo.InvariantCulture),
+                UserId = persistUserKey,
                 ShopId = shopKey,
                 MarketplaceType = MarketplaceType.Shopee
             };
 
-        marketplaceAccount.UserId = userId.ToString(CultureInfo.InvariantCulture);
+        marketplaceAccount.UserId = persistUserKey;
         marketplaceAccount.TenantId = user.TenantId;
         marketplaceAccount.FriendlyName = dto.FriendlyName.Trim();
         marketplaceAccount.ShopName = dto.FriendlyName.Trim();
@@ -426,7 +426,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
 
         var existing = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
-            userId,
+            persistUserId,
             shopKey,
             MarketplaceType.Shopee,
             cancellationToken);
@@ -453,7 +453,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         var integration = new IntegracaoLoja
         {
-            UserId = userId,
+            UserId = persistUserId,
             TenantId = user.TenantId,
             PlatformType = MarketplaceType.Shopee,
             ShopId = shopKey,
@@ -473,6 +473,58 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             Descricao = "Conta Shopee vinculada no modo Universal Link.",
             Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, integration)
         };
+    }
+
+    private async Task<UserAccount?> ResolvePersistableUserAsync(int claimedUserId)
+    {
+        if (claimedUserId > 0)
+        {
+            var claimed = await _userAccountRepository.GetByIdIgnoringFiltersAsync(claimedUserId)
+                ?? await _userAccountRepository.GetByIdAsync(claimedUserId);
+            if (claimed is not null)
+            {
+                return claimed;
+            }
+        }
+
+        var fallback = await _userAccountRepository.GetByIdIgnoringFiltersAsync(HomologMarketplaceAuth.FallbackUserId)
+            ?? await _userAccountRepository.GetByIdAsync(HomologMarketplaceAuth.FallbackUserId);
+        if (fallback is not null)
+        {
+            return fallback;
+        }
+
+        var first = await _userAccountRepository.GetFirstIgnoringFiltersAsync();
+        if (first is not null)
+        {
+            return first;
+        }
+
+        foreach (var email in new[] { "demo@tecso.local", "demo@TecFlow.local" })
+        {
+            var byEmail = await _userAccountRepository.GetByEmailAsync(email);
+            if (byEmail is not null)
+            {
+                return byEmail;
+            }
+        }
+
+        try
+        {
+            return await _userAccountRepository.CreateAsync(new UserAccount
+            {
+                Name = "Homolog",
+                Email = "demo@tecso.local",
+                PasswordHash = "homolog-placeholder-hash",
+                Plan = "Free",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        catch
+        {
+            return await _userAccountRepository.GetByEmailAsync("demo@tecso.local")
+                ?? await _userAccountRepository.GetFirstIgnoringFiltersAsync();
+        }
     }
 
     private static string FirstNonEmpty(params string?[] values)

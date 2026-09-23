@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link. Após a conversão, `ShortLinkService` grava `ShortAffiliateLink` no SQL Server (`AutomacaoSociais`) com `OriginalUrl`, `AffiliateUrl`, `ShortCode`, `PlatformType`, `MarketplaceAccountId` e `SaveChangesAsync` antes do DTO. Listagem/edição de lojas: `MarketplaceAccountRepository` lê e persiste `DbSet MarketplaceAccounts`. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
+**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` (fallback para o primeiro usuário / demo homologação se a claim JWT não existir). `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
 
 ```mermaid
 flowchart LR

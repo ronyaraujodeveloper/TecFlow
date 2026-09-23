@@ -30,6 +30,28 @@ namespace TecFlow.Infrastructure.Services.Repositories
             return await _context.UserAccounts.FindAsync(id);
         }
 
+        public async Task<UserAccount?> GetByIdIgnoringFiltersAsync(int id)
+        {
+            if (id <= 0)
+            {
+                return null;
+            }
+
+            return await _context.UserAccounts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(usuario => usuario.Id == id);
+        }
+
+        public async Task<UserAccount?> GetFirstIgnoringFiltersAsync()
+        {
+            return await _context.UserAccounts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .OrderBy(usuario => usuario.Id)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IEnumerable<UserAccount>> GetAllAsync()
         {
             return await _context.UserAccounts.ToListAsync();

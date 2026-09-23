@@ -243,6 +243,7 @@
         _connectModalError = null;
         _pageMessage = "Loja vinculada com sucesso.";
         _pageMessageIsError = false;
+        await InvokeAsync(StateHasChanged);
         await ObterLojasAsync();
     }
 

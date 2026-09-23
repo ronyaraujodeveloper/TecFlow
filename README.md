@@ -8,7 +8,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 ## 🛠️ Stack Tecnológica Definida
 - **Backend:** .NET 8.0 Web API (C#)
 - **Frontend:** Blazor WebApp — projeto **`TecFlow.WebUi`** (ASP.NET Core .NET 8.0)
-- **Banco de Dados:** SQL Server local (`AutomacaoSociais`) via `Database:Provider=SqlServer`; PostgreSQL permanece na homologação IIS (`appsettings.Homologacao.json`)
+- **Banco de Dados:** SQL Server (`localhost\SQLEXPRESS` / `AutomacaoSociais`) via `Database:Provider=SqlServer` no Development e na Homologação IIS; PostgreSQL permanece apenas como assembly de migrations legado em `TecFlow.Infrastructure`.
 - **ORM:** Entity Framework Core 8 — `UseSqlServer` (`TecFlow.Data`) ou `UseNpgsql` (`TecFlow.Infrastructure`) conforme o provider
 
 ---

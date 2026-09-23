@@ -216,6 +216,7 @@
 
                 if (shopeeResponse.Status)
                 {
+                    await InvokeAsync(StateHasChanged);
                     await OnLojaVinculada.InvokeAsync();
                     return;
                 }
@@ -260,6 +261,7 @@
 
             if (response.Status)
             {
+                await InvokeAsync(StateHasChanged);
                 await OnLojaVinculada.InvokeAsync();
                 return;
             }

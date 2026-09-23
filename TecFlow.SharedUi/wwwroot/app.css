@@ -757,6 +757,31 @@ html, body {
     color: #fff;
 }
 
+.marketplace-platform-badge--amazon {
+    background: #ff9900;
+    color: #111111;
+}
+
+.marketplace-platform-badge--casasbahia {
+    background: #e30613;
+    color: #fff;
+}
+
+.marketplace-platform-badge--kabum {
+    background: #ff5a00;
+    color: #111111;
+}
+
+.marketplace-platform-badge--magalu {
+    background: #0086ff;
+    color: #fff;
+}
+
+.marketplace-platform-badge--mercadolivre {
+    background: #fff159;
+    color: #2d2d2d;
+}
+
 .marketplace-platform-picker {
     grid-template-columns: 1fr;
 }
@@ -937,6 +962,18 @@ html, body {
 .link-generator-input-wrap--magalu {
     border-color: #0086ff;
     box-shadow: 0 0 0 0.2rem rgba(0, 134, 255, 0.18);
+    animation: link-generator-pulse 1.4s ease-in-out 1;
+}
+
+.link-generator-input-wrap--kabum {
+    border-color: #ff5a00;
+    box-shadow: 0 0 0 0.2rem rgba(255, 90, 0, 0.22);
+    animation: link-generator-pulse 1.4s ease-in-out 1;
+}
+
+.link-generator-input-wrap--casasbahia {
+    border-color: #e30613;
+    box-shadow: 0 0 0 0.2rem rgba(227, 6, 19, 0.22);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
@@ -1191,6 +1228,16 @@ html, body {
     background: linear-gradient(135deg, #0086ff, #5eb3ff);
 }
 
+.marketplace-chip--kabum .marketplace-chip-icon {
+    background: linear-gradient(135deg, #111111, #ff5a00);
+    color: #fff;
+}
+
+.marketplace-chip--casasbahia .marketplace-chip-icon {
+    background: linear-gradient(135deg, #e30613, #ff4d4d);
+    color: #fff;
+}
+
 .marketplace-chip--connected {
     opacity: 1;
     filter: none;
@@ -1227,6 +1274,16 @@ html, body {
 .marketplace-chip--magalu.marketplace-chip--detected {
     border-color: #0086ff;
     box-shadow: 0 0.5rem 1.25rem rgba(0, 134, 255, 0.22);
+}
+
+.marketplace-chip--kabum.marketplace-chip--detected {
+    border-color: #ff5a00;
+    box-shadow: 0 0.5rem 1.25rem rgba(255, 90, 0, 0.28);
+}
+
+.marketplace-chip--casasbahia.marketplace-chip--detected {
+    border-color: #e30613;
+    box-shadow: 0 0.5rem 1.25rem rgba(227, 6, 19, 0.28);
 }
 
 .marketplace-chip--coming-soon {

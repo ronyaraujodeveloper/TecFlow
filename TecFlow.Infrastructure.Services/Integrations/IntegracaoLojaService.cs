@@ -122,7 +122,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         var persistUserId = user.Id;
 
-        if (dto.PlatformType is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
+        if (dto.PlatformType.IsUniversalAffiliatePlatform())
         {
             return await LinkUniversalAccountAsync(user, dto, cancellationToken);
         }
@@ -340,13 +340,20 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             dto.PlatformType = MarketplaceType.Shopee;
         }
 
-        if (dto.PlatformType is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
+        if (dto.PlatformType.IsUniversalAffiliatePlatform())
         {
             if (string.IsNullOrWhiteSpace(dto.FriendlyName))
             {
-                dto.FriendlyName = dto.PlatformType == MarketplaceType.TikTokShop
-                    ? "Loja TikTok Homolog"
-                    : "Loja Homolog";
+                dto.FriendlyName = dto.PlatformType.GetDisplayName() switch
+                {
+                    "TikTok Shop" => "Loja TikTok Homolog",
+                    "Mercado Livre" => "Loja Mercado Livre Homolog",
+                    "Amazon" => "Loja Amazon Homolog",
+                    "Magazine Luiza" => "Loja Magalu Homolog",
+                    "Kabum!" => "Loja Kabum Homolog",
+                    "Casas Bahia" => "Loja Casas Bahia Homolog",
+                    _ => "Loja Homolog"
+                };
             }
 
             return;
@@ -385,7 +392,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         CancellationToken cancellationToken)
     {
         var platform = dto.PlatformType;
-        var platformLabel = platform == MarketplaceType.TikTokShop ? "TikTok Shop" : "Shopee";
+        var platformLabel = platform.GetDisplayName();
         if (string.IsNullOrWhiteSpace(dto.FriendlyName))
         {
             return Fail($"Informe um apelido / nome amigável para a conta {platformLabel}.");
@@ -394,7 +401,16 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         var persistUserId = user.Id;
         var persistUserKey = persistUserId.ToString(CultureInfo.InvariantCulture);
         var affiliateTrackingId = FirstNonEmpty(dto.TrackingId);
-        var shopPrefix = platform == MarketplaceType.TikTokShop ? "ul-tt" : "ul";
+        var shopPrefix = platform switch
+        {
+            MarketplaceType.TikTokShop => "ul-tt",
+            MarketplaceType.MercadoLivre => "ul-ml",
+            MarketplaceType.Amazon => "ul-am",
+            MarketplaceType.MagazineLuiza => "ul-mg",
+            MarketplaceType.Kabum => "ul-kb",
+            MarketplaceType.CasasBahia => "ul-cb",
+            _ => "ul"
+        };
         var shopKey = $"{shopPrefix}-{persistUserId}-{Slug(dto.FriendlyName)}";
         dto.ShopId = shopKey;
 

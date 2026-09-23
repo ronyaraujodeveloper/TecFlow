@@ -35,6 +35,35 @@ public sealed class MarketplaceTypeJsonConverter : JsonConverter<MarketplaceType
                 return parsed;
             }
 
+            if (raw.Contains("kabum", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.Kabum;
+            }
+
+            if (raw.Contains("casasbahia", StringComparison.OrdinalIgnoreCase)
+                || raw.Contains("casas bahia", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.CasasBahia;
+            }
+
+            if (raw.Contains("amazon", StringComparison.OrdinalIgnoreCase)
+                || raw.Contains("amzn", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.Amazon;
+            }
+
+            if (raw.Contains("magalu", StringComparison.OrdinalIgnoreCase)
+                || raw.Contains("magazine", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.MagazineLuiza;
+            }
+
+            if (raw.Contains("mercado", StringComparison.OrdinalIgnoreCase)
+                || raw.Contains("mlb", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.MercadoLivre;
+            }
+
             if (raw.Contains("tiktok", StringComparison.OrdinalIgnoreCase))
             {
                 return MarketplaceType.TikTokShop;

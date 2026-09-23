@@ -46,7 +46,36 @@ flowchart LR
   TT -->|productId + sub_id TrackingId/FriendlyName| TTAFF[shop.tiktok.com/view/product]
   TTB --> TTAFF
   TTAFF --> SHORT
-  UI -->|TikTok Shop URLs| TT
+  ML[MercadoLivreLinkStrategy]
+  MLB[MercadoLivreCommissionUrlBuilder]
+  ML -->|matt_tool TrackingId / matt_word FriendlyName| MLAFF[mercadolivre.com.br/p/MLB]
+  MLB --> MLAFF
+  MLAFF --> SHORT
+  AMZ[AmazonLinkStrategy]
+  AMZB[AmazonCommissionUrlBuilder]
+  AMZ -->|ASIN + tag TrackingId| AMAFF[amazon.com.br/dp/ASIN]
+  AMZB --> AMAFF
+  AMAFF --> SHORT
+  MAG[MagazineLuizaLinkStrategy]
+  MAGB[MagazineLuizaCommissionUrlBuilder]
+  MAG -->|loja parceira ou parceiro=| MAGAFF[magazinevoce.com.br/loja/p/id]
+  MAGB --> MAGAFF
+  MAGAFF --> SHORT
+  KB[KabumLinkStrategy]
+  KBB[KabumCommissionUrlBuilder]
+  KB -->|productId + sub_id TrackingId| KBAFF[kabum.com.br/produto/id]
+  KBB --> KBAFF
+  KBAFF --> SHORT
+  CB[CasasBahiaLinkStrategy]
+  CBB[CasasBahiaCommissionUrlBuilder]
+  CB -->|parceiro TrackingId / sub_id FriendlyName| CBAFF[casasbahia.com.br/p/id]
+  CBB --> CBAFF
+  CBAFF --> SHORT
+  UI -->|Casas Bahia cb.com.br| CB
+  UI -->|Kabum kb.um| KB
+  UI -->|Magalu magalu.me| MAG
+  UI -->|Amazon URLs amzn.to a.co| AMZ
+  UI -->|Mercado Livre URLs| ML
   HIST[HistoricoLinks] -->|Visualizar / Editar ShortAffiliateLinkDto| UI
   UI -->|checkboxes StoreIds| API
   ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL

@@ -66,7 +66,7 @@ public class MarketplaceAuthControllerTests
     public void GetPlatformAuthorizationUrl_ShouldReturnBadRequest_WhenPlatformIsUnknown()
     {
         var controller = CreateController();
-        var result = controller.GetPlatformAuthorizationUrl("amazon", "https://callback");
+        var result = controller.GetPlatformAuthorizationUrl("aliexpress", "https://callback");
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }

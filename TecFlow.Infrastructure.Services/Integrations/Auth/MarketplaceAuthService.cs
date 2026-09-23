@@ -631,7 +631,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             missing.Add(nameof(account.FriendlyName));
         }
 
-        if (account.MarketplaceType is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
+        if (!account.MarketplaceType.IsUniversalAffiliatePlatform())
         {
             missing.Add("PlatformType");
         }

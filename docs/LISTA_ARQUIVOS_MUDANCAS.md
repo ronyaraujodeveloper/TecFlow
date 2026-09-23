@@ -556,6 +556,47 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreModal.razor** — cadastro TikTok Shop com apelido e Tracking ID (mesmo fluxo Universal Link da Shopee).
 - [x] **TikTokShopLinkStrategyTests.cs** — parse de URLs, expansão de encurtador e injeção de `sub_id`.
 
+### Fase 19.5 — Mercado Livre Link Strategy
+
+- [x] **MercadoLivreLinkStrategy.cs** — hosts `mercadolivre.com.br` / `produto.mercadolivre.com.br` / `mercadolivre.com/sec` / `ml.com.br`; extrai MLB; `matt_tool` + `matt_word`.
+- [x] **MercadoLivreProductUrlParser.cs** / **MercadoLivreCommissionUrlBuilder.cs** — parse MLB e preservação de query em `/sec/`.
+- [x] **ConnectStoreModal.razor** — opção Mercado Livre (badge amarelo) com Nome Amigável e Matt Tool ID.
+- [x] **GeradorLinks.razor** — chip Mercado Livre no seletor de marketplaces e detecção de URL MLB /sec/.
+- [x] **MarketplaceUrlDetector.cs** — Mercado Livre `IsBackendReady`.
+- [x] **MercadoLivreLinkStrategyTests.cs** — parse de URLs e injeção `matt_tool`/`matt_word`.
+
+### Fase 19.6 — Amazon Link Strategy
+
+- [x] **AmazonLinkStrategy.cs** — hosts `amazon.com.br` / `amazon.com` / `amzn.to` / `a.co`; extrai ASIN; injeta `tag`.
+- [x] **AmazonProductUrlParser.cs** / **AmazonCommissionUrlBuilder.cs** — parse `/dp/` `/gp/product/` e expansão de encurtador.
+- [x] **ConnectStoreModal.razor** — opção Amazon (badge laranja/preto) com Nome Amigável e Tag de Associado.
+- [x] **GeradorLinks.razor** — chip Amazon no seletor de marketplaces (`IsBackendReady`).
+- [x] **AmazonLinkStrategyTests.cs** — parse de URLs canônicas/curtas e injeção de `tag`.
+
+### Fase 19.7 — Magazine Luiza Link Strategy
+
+- [x] **MagazineLuizaLinkStrategy.cs** — hosts `magazineluiza.com.br` / `magazinevoce.com.br` / `magalu.me` / `mglz.ne`; extrai `/p/{id}`.
+- [x] **MagazineLuizaProductUrlParser.cs** / **MagazineLuizaCommissionUrlBuilder.cs** — Magazine Você ou `?parceiro=` e expansão de encurtador.
+- [x] **ConnectStoreModal.razor** — opção Magazine Luiza (badge azul) com Nome Amigável e loja parceira.
+- [x] **GeradorLinks.razor** — chip Magalu no seletor (`IsBackendReady`).
+- [x] **MagazineLuizaLinkStrategyTests.cs** — parse de URLs e montagem dos links de afiliado.
+
+### Fase 19.8 — Kabum! Link Strategy
+
+- [x] **KabumLinkStrategy.cs** — hosts `kabum.com.br` / `kb.um` / `kabum.me`; extrai `/produto/{id}`; injeta `sub_id` e `utm_source=afiliado`.
+- [x] **KabumProductUrlParser.cs** / **KabumCommissionUrlBuilder.cs** — parse e expansão de encurtador.
+- [x] **ConnectStoreModal.razor** — opção Kabum! (badge laranja/preto) com Nome Amigável e Tracking ID.
+- [x] **GeradorLinks.razor** — chip Kabum! no seletor (`IsBackendReady`).
+- [x] **KabumLinkStrategyTests.cs** — parse de URLs e injeção dos parâmetros de comissão.
+
+### Fase 19.9 — Casas Bahia Link Strategy
+
+- [x] **CasasBahiaLinkStrategy.cs** — hosts `casasbahia.com.br` / `cb.com.br` / `casasbahia.app.link`; extrai `/p/{id}` ou `{id}/p`.
+- [x] **CasasBahiaProductUrlParser.cs** / **CasasBahiaCommissionUrlBuilder.cs** — `parceiro` + `sub_id` e expansão de encurtador.
+- [x] **ConnectStoreModal.razor** — opção Casas Bahia (badge vermelho) com Nome Amigável e ID de Parceiro.
+- [x] **GeradorLinks.razor** — chip Casas Bahia no seletor (`IsBackendReady`).
+- [x] **CasasBahiaLinkStrategyTests.cs** — parse de URLs e injeção de rastreio.
+
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.

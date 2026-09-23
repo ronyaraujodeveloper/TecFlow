@@ -28,6 +28,29 @@ public static class MarketplacePlatformRoute
             case "tiktokshop":
                 type = MarketplaceType.TikTokShop;
                 return true;
+            case "mercadolivre":
+            case "mercadolibre":
+            case "mlb":
+                type = MarketplaceType.MercadoLivre;
+                return true;
+            case "amazon":
+            case "amzn":
+                type = MarketplaceType.Amazon;
+                return true;
+            case "magalu":
+            case "magazineluiza":
+            case "magazinevoce":
+                type = MarketplaceType.MagazineLuiza;
+                return true;
+            case "kabum":
+            case "kabumloja":
+                type = MarketplaceType.Kabum;
+                return true;
+            case "casasbahia":
+            case "via":
+            case "cb":
+                type = MarketplaceType.CasasBahia;
+                return true;
             default:
                 type = default;
                 return false;

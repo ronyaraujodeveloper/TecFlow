@@ -65,6 +65,11 @@ public class LinkClickLog
     {
         MarketplaceType.Shopee => "Shopee",
         MarketplaceType.TikTokShop => "TikTok Shop",
+        MarketplaceType.MercadoLivre => "Mercado Livre",
+        MarketplaceType.Amazon => "Amazon",
+        MarketplaceType.MagazineLuiza => "Magazine Luiza",
+        MarketplaceType.Kabum => "Kabum!",
+        MarketplaceType.CasasBahia => "Casas Bahia",
         _ => platformType.ToString()
     };
 }

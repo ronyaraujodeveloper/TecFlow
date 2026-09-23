@@ -15,7 +15,7 @@
                     <div>
                         <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
                         <p class="text-muted small mb-0">
-                            Shopee e TikTok Shop usam link de afiliado com Tracking ID (sem App Key / App Secret). Informe o apelido e o ID do Afiliado.
+                            Shopee, TikTok Shop, Mercado Livre, Amazon, Magazine Luiza, Kabum! e Casas Bahia usam link de afiliado (Tracking ID / parceiro), sem App Key / App Secret. Informe o apelido e o ID do Afiliado.
                         </p>
                     </div>
                     <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
@@ -30,6 +30,36 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Plataforma</label>
                         <div class="marketplace-platform-picker d-grid gap-2">
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.CasasBahia)"
+                                    disabled="@_linking"
+                                    @onclick="() => SelectPlatform(MarketplaceType.CasasBahia)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--casasbahia">Casas Bahia</span>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Kabum)"
+                                    disabled="@_linking"
+                                    @onclick="() => SelectPlatform(MarketplaceType.Kabum)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--kabum">Kabum!</span>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MagazineLuiza)"
+                                    disabled="@_linking"
+                                    @onclick="() => SelectPlatform(MarketplaceType.MagazineLuiza)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--magalu">Magazine Luiza</span>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Amazon)"
+                                    disabled="@_linking"
+                                    @onclick="() => SelectPlatform(MarketplaceType.Amazon)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--amazon">Amazon</span>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MercadoLivre)"
+                                    disabled="@_linking"
+                                    @onclick="() => SelectPlatform(MarketplaceType.MercadoLivre)">
+                                <span class="marketplace-platform-badge marketplace-platform-badge--mercadolivre">Mercado Livre</span>
+                            </button>
                             <button type="button"
                                     class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
                                     disabled="@_linking"
@@ -58,20 +88,20 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold" for="tracking-id">ID do Afiliado (Affiliate ID / Tracking ID)</label>
+                        <label class="form-label fw-semibold" for="tracking-id">@TrackingIdLabel</label>
                         <input id="tracking-id"
                                type="text"
                                class="form-control"
                                maxlength="64"
-                               placeholder="18325850271"
-                               inputmode="numeric"
+                               placeholder="@TrackingIdPlaceholder"
+                               inputmode="@TrackingIdInputMode"
                                autocomplete="off"
                                @bind="_trackingId"
                                @bind:event="oninput"
                                disabled="@_linking" />
                     </div>
 
-                    @if (_platform is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
+                    @if (!_platform.IsUniversalAffiliatePlatform())
                     {
                         <details class="marketplace-manual-link small" open>
                             <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
@@ -113,9 +143,9 @@
                     <button type="button"
                             class="btn btn-primary btn-touch w-100 w-sm-auto"
                             @onclick="VincularManualmenteDirect">
-                        @(_linking ? "Salvando..." : (_platform is MarketplaceType.Shopee or MarketplaceType.TikTokShop ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
+                        @(_linking ? "Salvando..." : (_platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
                     </button>
-                    @if (_platform is not MarketplaceType.Shopee and not MarketplaceType.TikTokShop)
+                    @if (!_platform.IsUniversalAffiliatePlatform())
                     {
                         <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
                             @(_linking ? "Redirecionando..." : "Conectar via OAuth")
@@ -137,7 +167,31 @@
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
-    private string _platformLabel => _platform == MarketplaceType.TikTokShop ? "TikTok Shop" : "Shopee";
+    private string _platformLabel => _platform.GetDisplayName();
+    private string TrackingIdLabel => _platform switch
+    {
+        MarketplaceType.MercadoLivre => "ID de Afiliado / Matt Tool ID",
+        MarketplaceType.Amazon => "Tag de Associado / Tracking ID",
+        MarketplaceType.MagazineLuiza => "ID de Afiliado / Nome da Loja Parceira",
+        MarketplaceType.Kabum => "ID de Afiliado / Tracking ID",
+        MarketplaceType.CasasBahia => "ID de Afiliado / ID de Parceiro",
+        _ => "ID do Afiliado (Affiliate ID / Tracking ID)"
+    };
+    private string TrackingIdPlaceholder => _platform switch
+    {
+        MarketplaceType.MercadoLivre => "123456789",
+        MarketplaceType.Amazon => "sualoja-20",
+        MarketplaceType.MagazineLuiza => "magazinematos",
+        MarketplaceType.Kabum => "tecflow_kabum",
+        MarketplaceType.CasasBahia => "tecflow_cb",
+        _ => "18325850271"
+    };
+    private string TrackingIdInputMode => _platform is MarketplaceType.Amazon
+        or MarketplaceType.MagazineLuiza
+        or MarketplaceType.Kabum
+        or MarketplaceType.CasasBahia
+        ? "text"
+        : "numeric";
     private string _friendlyName = string.Empty;
     private string _trackingId = string.Empty;
     private string _authorizationCode = string.Empty;
@@ -201,7 +255,7 @@
                 return;
             }
 
-            if (_platform is MarketplaceType.Shopee or MarketplaceType.TikTokShop)
+            if (_platform.IsUniversalAffiliatePlatform())
             {
                 _friendlyName = friendlyName;
                 _trackingId = trackingId;

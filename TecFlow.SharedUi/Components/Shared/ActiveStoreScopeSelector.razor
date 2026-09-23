@@ -135,6 +135,11 @@
     {
         MarketplaceType.TikTokShop => "TT",
         MarketplaceType.Shopee => "SP",
+        MarketplaceType.MercadoLivre => "ML",
+        MarketplaceType.Amazon => "AM",
+        MarketplaceType.MagazineLuiza => "MG",
+        MarketplaceType.Kabum => "KB",
+        MarketplaceType.CasasBahia => "CB",
         _ => platform.ToString()[..Math.Min(2, platform.ToString().Length)]
     };
 
@@ -142,6 +147,11 @@
     {
         MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
         MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
+        MarketplaceType.MercadoLivre => "marketplace-platform-badge--mercadolivre",
+        MarketplaceType.Amazon => "marketplace-platform-badge--amazon",
+        MarketplaceType.MagazineLuiza => "marketplace-platform-badge--magalu",
+        MarketplaceType.Kabum => "marketplace-platform-badge--kabum",
+        MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
         _ => string.Empty
     };
 

@@ -9,7 +9,9 @@ public enum SupportedMarketplaceKey
     TikTokShop,
     Amazon,
     MercadoLivre,
-    Magalu
+    Magalu,
+    Kabum,
+    CasasBahia
 }
 
 public sealed record MarketplaceDefinition(
@@ -47,24 +49,40 @@ public static class MarketplaceUrlDetector
             "AM",
             "marketplace-chip--amazon",
             ["amazon.com", "amazon.com.br", "amzn.to", "a.co"],
-            null,
-            false),
+            MarketplaceType.Amazon,
+            true),
         new(
             SupportedMarketplaceKey.MercadoLivre,
             "Mercado Livre",
             "ML",
             "marketplace-chip--mercadolivre",
-            ["mercadolivre.com.br", "mercadolibre.com", "mercadolivre.com", "ml.com.br"],
-            null,
-            false),
+            ["mercadolivre.com.br", "produto.mercadolivre.com.br", "mercadolivre.com", "mercadolibre.com", "ml.com.br"],
+            MarketplaceType.MercadoLivre,
+            true),
         new(
             SupportedMarketplaceKey.Magalu,
-            "Magalu",
+            "Magazine Luiza",
             "MG",
             "marketplace-chip--magalu",
-            ["magazineluiza.com.br", "magalu.com.br", "magazinevoce.com.br"],
-            null,
-            false)
+            ["magazineluiza.com.br", "magalu.com.br", "magazinevoce.com.br", "magalu.me", "mglz.ne"],
+            MarketplaceType.MagazineLuiza,
+            true),
+        new(
+            SupportedMarketplaceKey.Kabum,
+            "Kabum!",
+            "KB",
+            "marketplace-chip--kabum",
+            ["kabum.com.br", "kb.um", "kabum.me"],
+            MarketplaceType.Kabum,
+            true),
+        new(
+            SupportedMarketplaceKey.CasasBahia,
+            "Casas Bahia",
+            "CB",
+            "marketplace-chip--casasbahia",
+            ["casasbahia.com.br", "cb.com.br", "casasbahia.app.link"],
+            MarketplaceType.CasasBahia,
+            true)
     ];
 
     public static MarketplaceDefinition? Detect(string? url)

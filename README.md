@@ -96,10 +96,12 @@ O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a a
 | :--- | :--- | :--- | :--- |
 | **Shopee** | `ShopeeLinkStrategy.cs` | Suportado (br.shp.ee / app) | 🟢 **Concluído (Homologação)** |
 | **TikTok Shop** | `TikTokShopLinkStrategy.cs` | Link de afiliado `shop.tiktok.com/view/product/{id}?sub_id=` | 🟢 **Concluído (Homologação)** |
-| **Mercado Livre** | `MercadoLivreLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
-| **Amazon** | `AmazonLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+| **Mercado Livre** | `MercadoLivreLinkStrategy.cs` | `matt_tool` + `matt_word` em `/p/{MLB}` e `/sec/` | 🟢 **Concluído** |
+| **Amazon** | `AmazonLinkStrategy.cs` | `tag` de associado em `/dp/{ASIN}` (expande `amzn.to` / `a.co`) | 🟢 **Concluído** |
+| **Kabum!** | `KabumLinkStrategy.cs` | `sub_id` + `utm_source=afiliado` em `/produto/{id}` (expande `kb.um`) | 🟢 **Concluído** |
+| **Casas Bahia** | `CasasBahiaLinkStrategy.cs` | `parceiro` + `sub_id` em `/p/{id}` (expande `cb.com.br`) | 🟢 **Concluído** |
 | **AliExpress** | `AliExpressLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
-| **Magazine Luiza** | `MagaluLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
+| **Magazine Luiza** | `MagazineLuizaLinkStrategy.cs` | Magazine Você `/{loja}/p/{id}/` ou `?parceiro=` (expande `magalu.me`) | 🟢 **Concluído** |
 
 ---
 
@@ -430,6 +432,11 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/{storeSlug}/{code}`) em cards com cópia independente via `tecflow-clipboard.js`. Combo **Conta selecionada** quando o produto tem mais de uma conta ativa.
 - [x] **19.3.4. Múltiplas contas:** `ShortAffiliateLinkAccounts.IsActive`; geração em lote; inativação lógica ao desmarcar.
 - [x] **19.4. TikTok Shop:** `TikTokShopLinkStrategy` converte URLs oficiais/encurtadas com `sub_id` (Tracking ID ou nome amigável); cadastro na modal Conectar nova loja.
+- [x] **19.5. Mercado Livre:** `MercadoLivreLinkStrategy` injeta `matt_tool` e `matt_word`; cadastro com Matt Tool ID.
+- [x] **19.6. Amazon:** `AmazonLinkStrategy` extrai ASIN, expande `amzn.to`/`a.co` e injeta `tag` da conta; cadastro com Tag de Associado.
+- [x] **19.7. Magazine Luiza:** `MagazineLuizaLinkStrategy` monta Magazine Você / `parceiro` e expande `magalu.me`; cadastro com nome da loja parceira.
+- [x] **19.8. Kabum!:** `KabumLinkStrategy` injeta `sub_id` e `utm_source=afiliado`; expande `kb.um`; cadastro com Tracking ID.
+- [x] **19.9. Casas Bahia:** `CasasBahiaLinkStrategy` injeta `parceiro` e `sub_id`; expande `cb.com.br` / app.link; cadastro com ID de Parceiro.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

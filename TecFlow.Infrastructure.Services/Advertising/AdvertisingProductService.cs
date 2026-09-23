@@ -145,6 +145,14 @@ public class AdvertisingProductService : IAdvertisingProductService
                 $"{originalUrl}{separator}utm_source=tecflow&sub_id={trackingCode}&mmp_pid={platformProductId ?? "shopee"}",
             MarketplaceType.TikTokShop =>
                 $"{originalUrl}{separator}affiliate_id=tecflow&campaign_id={trackingCode}&product_id={platformProductId ?? ""}",
+            MarketplaceType.Amazon =>
+                $"{originalUrl}{separator}tag={trackingCode}",
+            MarketplaceType.MagazineLuiza =>
+                $"{originalUrl}{separator}parceiro={trackingCode}",
+            MarketplaceType.Kabum =>
+                $"{originalUrl}{separator}sub_id={trackingCode}&utm_source=afiliado",
+            MarketplaceType.CasasBahia =>
+                $"{originalUrl}{separator}parceiro={trackingCode}&sub_id={trackingCode}",
             _ => originalUrl
         };
 

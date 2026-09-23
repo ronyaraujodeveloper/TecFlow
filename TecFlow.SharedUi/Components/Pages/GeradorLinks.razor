@@ -37,7 +37,7 @@
             <div class="link-generator-input-wrap @GetInputWrapClass()">
                 <input id="product-url"
                        class="form-control form-control-lg link-generator-input"
-                       placeholder="Cole aqui o link do produto da Shopee, TikTok, Amazon..."
+                       placeholder="Cole aqui o link do produto da Shopee, TikTok, Amazon, Magalu, Kabum! ou Casas Bahia..."
                        value="@_productUrl"
                        @oninput="HandleUrlInput"
                        @onblur="HandleUrlBlur"
@@ -329,7 +329,7 @@
 
         if (_detectedPlatform is null)
         {
-            _detectionHint = "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre ou Magalu.";
+            _detectionHint = "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre, Magalu, Kabum! ou Casas Bahia.";
             return;
         }
 

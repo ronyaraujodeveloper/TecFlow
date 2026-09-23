@@ -143,7 +143,14 @@ public class GerarLinkAfiliadoResponseDto
 
         if (string.IsNullOrWhiteSpace(ShortenedShopeeUrl)
             && !string.IsNullOrWhiteSpace(AffiliateUrl)
-            && !PlatformDetected.Contains("TikTok", StringComparison.OrdinalIgnoreCase))
+            && !PlatformDetected.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Mercado", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Amazon", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Magazine", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Magalu", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Kabum", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("Casas Bahia", StringComparison.OrdinalIgnoreCase)
+            && !PlatformDetected.Contains("CasasBahia", StringComparison.OrdinalIgnoreCase))
         {
             ShortenedShopeeUrl = AffiliateUrl.Trim();
         }

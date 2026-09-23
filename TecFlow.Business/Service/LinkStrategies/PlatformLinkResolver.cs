@@ -43,7 +43,7 @@ public sealed class PlatformLinkResolver
             url);
 
         throw new AffiliateLinkGenerationException(
-            "Plataforma não suportada para a URL informada. Marketplaces disponíveis: Shopee e TikTok Shop.");
+            "Plataforma não suportada para a URL informada. Marketplaces disponíveis: Shopee, TikTok Shop, Mercado Livre, Amazon, Magazine Luiza, Kabum! e Casas Bahia.");
     }
 
     private static string TryGetHost(string url) =>

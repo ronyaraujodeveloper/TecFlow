@@ -9,6 +9,11 @@ public static class LinkStrategyServiceCollectionExtensions
     {
         services.AddScoped<IPlatformLinkStrategy, ShopeeLinkStrategy>();
         services.AddScoped<IPlatformLinkStrategy, TikTokShopLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, MercadoLivreLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, AmazonLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, MagazineLuizaLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, KabumLinkStrategy>();
+        services.AddScoped<IPlatformLinkStrategy, CasasBahiaLinkStrategy>();
         services.AddScoped<PlatformLinkResolver>();
         services.AddScoped<IAffiliateLinkGenerationContext, AffiliateLinkGenerationContext>();
         services.AddScoped<IAffiliateLinkGenerationService, AffiliateLinkGenerationService>();

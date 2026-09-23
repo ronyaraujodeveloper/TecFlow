@@ -188,6 +188,321 @@ public class IntegracaoLojaServiceTests
     }
 
     [Fact]
+    public async Task LinkAsync_ShouldPersistMercadoLivreAccount_WithFriendlyNameAndMattToolId()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-ml-1-loja-ml", MarketplaceType.MercadoLivre))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-ml-1-loja-ml", MarketplaceType.MercadoLivre, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.MercadoLivre,
+            TrackingId = "987654321",
+            FriendlyName = "Loja ML"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("Mercado Livre", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-ml-1-loja-ml", saved!.ShopId);
+        Assert.Equal(MarketplaceType.MercadoLivre, saved.PlatformType);
+        Assert.Equal("987654321", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.MercadoLivre, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldPersistAmazonAccount_WithFriendlyNameAndAssociateTag()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-am-1-loja-amazon", MarketplaceType.Amazon))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-am-1-loja-amazon", MarketplaceType.Amazon, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Amazon,
+            TrackingId = "sualoja-20",
+            FriendlyName = "Loja Amazon"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("Amazon", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-am-1-loja-amazon", saved!.ShopId);
+        Assert.Equal(MarketplaceType.Amazon, saved.PlatformType);
+        Assert.Equal("sualoja-20", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.Amazon, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldPersistMagazineLuizaAccount_WithFriendlyNameAndPartnerStore()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-mg-1-loja-magalu", MarketplaceType.MagazineLuiza))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-mg-1-loja-magalu", MarketplaceType.MagazineLuiza, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.MagazineLuiza,
+            TrackingId = "magazinematos",
+            FriendlyName = "Loja Magalu"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("Magazine Luiza", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-mg-1-loja-magalu", saved!.ShopId);
+        Assert.Equal(MarketplaceType.MagazineLuiza, saved.PlatformType);
+        Assert.Equal("magazinematos", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.MagazineLuiza, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldPersistKabumAccount_WithFriendlyNameAndTrackingId()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-kb-1-loja-kabum", MarketplaceType.Kabum))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-kb-1-loja-kabum", MarketplaceType.Kabum, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Kabum,
+            TrackingId = "tecflow_kabum",
+            FriendlyName = "Loja Kabum"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("Kabum", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-kb-1-loja-kabum", saved!.ShopId);
+        Assert.Equal(MarketplaceType.Kabum, saved.PlatformType);
+        Assert.Equal("tecflow_kabum", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.Kabum, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldPersistCasasBahiaAccount_WithFriendlyNameAndParceiroId()
+    {
+        var user = new UserAccount
+        {
+            Id = 1,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync("ul-cb-1-loja-cb", MarketplaceType.CasasBahia))
+            .ReturnsAsync((MarketplaceAccount?)null);
+        MarketplaceAccount? savedAccount = null;
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Callback<MarketplaceAccount>(account => savedAccount = account)
+            .Returns(Task.CompletedTask);
+
+        IntegracaoLoja? saved = null;
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                1, "ul-cb-1-loja-cb", MarketplaceType.CasasBahia, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+        stores.Setup(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Callback<IntegracaoLoja, CancellationToken>((entity, _) => saved = entity)
+            .Returns(Task.CompletedTask);
+
+        var auth = new Mock<IMarketplaceAuthService>();
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            auth.Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(1, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.CasasBahia,
+            TrackingId = "tecflow_cb",
+            FriendlyName = "Loja CB"
+        });
+
+        Assert.True(result.Status);
+        Assert.Contains("Casas Bahia", result.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("ul-cb-1-loja-cb", saved!.ShopId);
+        Assert.Equal(MarketplaceType.CasasBahia, saved.PlatformType);
+        Assert.Equal("tecflow_cb", saved.AffiliateTrackingId);
+        Assert.Equal(MarketplaceType.CasasBahia, savedAccount!.MarketplaceType);
+        auth.Verify(
+            s => s.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task LinkAsync_ShouldFailWithoutThrowing_WhenDtoIsNull()
     {
         var users = new Mock<IUserAccountRepository>();

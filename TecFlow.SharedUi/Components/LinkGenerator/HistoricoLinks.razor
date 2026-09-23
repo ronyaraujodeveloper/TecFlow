@@ -49,6 +49,30 @@
                 @onclick="() => SetPlatformFilterAsync(MarketplaceType.TikTokShop)">
             TikTok
         </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.Amazon)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.Amazon)">
+            Amazon
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.MagazineLuiza)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.MagazineLuiza)">
+            Magalu
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.Kabum)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.Kabum)">
+            Kabum!
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.CasasBahia)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.CasasBahia)">
+            Casas Bahia
+        </button>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_loadError))
@@ -272,6 +296,11 @@
     {
         MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
         MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
+        MarketplaceType.MercadoLivre => "marketplace-platform-badge--mercadolivre",
+        MarketplaceType.Amazon => "marketplace-platform-badge--amazon",
+        MarketplaceType.MagazineLuiza => "marketplace-platform-badge--magalu",
+        MarketplaceType.Kabum => "marketplace-platform-badge--kabum",
+        MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
         _ => string.Empty
     };
 

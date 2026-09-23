@@ -97,6 +97,26 @@ try {
 
     $root = (Resolve-Path $SolutionRoot).Path
 
+    Write-Host "Aplicando migrations SQL Server (Development / TecFlow.Data)..."
+    $env:ASPNETCORE_ENVIRONMENT = "Development"
+    & dotnet ef database update `
+        --project (Join-Path $root "TecFlow.Data\TecFlow.Data.csproj") `
+        --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
+        --context AppDbContext
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet ef database update (SQL Server) falhou (exit $LASTEXITCODE)."
+    }
+
+    Write-Host "Aplicando migrations PostgreSQL (Homologacao / IIS / TecFlow.Infrastructure)..."
+    $env:ASPNETCORE_ENVIRONMENT = "Homologacao"
+    & dotnet ef database update `
+        --project (Join-Path $root "TecFlow.Infrastructure\TecFlow.Infrastructure.csproj") `
+        --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
+        --context AppDbContext
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet ef database update (PostgreSQL) falhou (exit $LASTEXITCODE)."
+    }
+
     if ($Projeto -in @("Api", "All")) {
         Publish-TecFlowProject `
             -ProjectPath (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `

@@ -14,12 +14,20 @@ $WarningPreference = 'SilentlyContinue';
 .\NormalizarEncodingPrecoce.ps1;
 ```
 
-1.2. Atualizar Migrations do Banco de Dados (SQL Server — `AutomacaoSociais`)
+1.2. Atualizar Migrations do Banco de Dados
+
+**SQL Server** (`AutomacaoSociais` / `Development` — `TecFlow.Data`):
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
 ```
-O `AppDbContextFactory` lê `Database:Provider=SqlServer` e `ConnectionStrings:DefaultConnection` da `TecFlow.API` (`Server=localhost\SQLEXPRESS;Database=AutomacaoSociais;Integrated Security=True;TrustServerCertificate=True;`). As migrations SQL Server vivem em `TecFlow.Data` (não usar `Tecso.Infrastructure`, `TecFlow.Infrastructure` nem `-c Homologacao` como contexto).
+
+**PostgreSQL** (`automacaosociais` / `Homologacao` — IIS `ASPNETCORE_ENVIRONMENT=Homologacao`, migrations em `TecFlow.Infrastructure`). Obrigatório para evitar Npgsql `42703` (coluna inexistente: `TrackingId`, `AffiliateTrackingId`, `AppKey`, `AppSecret`):
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
+dotnet ef database update --project .\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+```
+O `AppDbContextFactory` lê `Database:Provider` e `ConnectionStrings:DefaultConnection` da `TecFlow.API` conforme o ambiente. SQL Server: `TecFlow.Data`. PostgreSQL/IIS: `TecFlow.Infrastructure`.
 
 1.3. Recompilar a Solution (Clean e Build em Release)
 ```powershell
@@ -47,6 +55,13 @@ Remove-Item -Path "C:\inetpub\tecflow\webui\*" -Recurse -Force -ErrorAction Sile
 dotnet publish .\TecFlow.API\TecFlow.API.csproj -c Release -o C:\inetpub\tecflow\api
 dotnet publish .\TecFlow.WebUi\TecFlow.WebUi.csproj -c Release -o C:\inetpub\tecflow\webui
 ```
+
+2.3.1. Reaplicar migrations no banco do IIS (PostgreSQL Homologacao) após o publish
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
+dotnet ef database update --project .\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+```
+Garante que novas colunas/tabelas existam no PostgreSQL usado pelo pool `TecFlowApiPool` (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`).
 
 2.4. Iniciar os Pools do IIS e Reciclar o Servidor
 ```powershell

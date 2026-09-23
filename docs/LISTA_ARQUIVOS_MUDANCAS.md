@@ -112,6 +112,8 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.Business/Mappings/MarketplaceAccountMapper.cs** — projeção nula-segura para `MarketplaceAccountDto` e `ConvertLinkResponseDto`.
 - [x] **TecFlow.Infrastructure.Services/Integrations/MarketplaceAccountService.cs** — mapper da listagem/conversão sem `NullReferenceException`.
 - [x] **TecFlow.Data/Migrations/20260922233000_AddMarketplaceAccountOptionalCredentials.cs** — colunas opcionais `TrackingId`/`AppKey`/`AppSecret`.
+- [x] **TecFlow.Infrastructure/Migrations/20260922240000_AddMarketplaceAccountOptionalCredentialsPg.cs** — mesmas colunas no PostgreSQL do IIS (`Homologacao`) para evitar Npgsql `42703`.
+- [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** — `dotnet ef database update` SQL Server + PostgreSQL no build/deploy.
 - [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
 - [x] **TecFlow.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
 - [x] **TecFlow.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.

@@ -996,6 +996,11 @@ namespace TecFlow.Data.Migrations
                     b.Property<Guid>("AffiliateLinkId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AffiliateUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1013,6 +1018,9 @@ namespace TecFlow.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<int?>("MarketplaceAccountId")
+                        .HasColumnType("int");
 
                     b.Property<string>("OriginalUrl")
                         .IsRequired()
@@ -1040,6 +1048,8 @@ namespace TecFlow.Data.Migrations
 
                     b.HasIndex("AffiliateLinkId")
                         .IsUnique();
+
+                    b.HasIndex("MarketplaceAccountId");
 
                     b.HasIndex("ShortCode")
                         .IsUnique();
@@ -1614,6 +1624,14 @@ namespace TecFlow.Data.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.ShortAffiliateLink", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.MarketplaceAccount", null)
+                        .WithMany()
+                        .HasForeignKey("MarketplaceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("TecFlow.Database.Entity.LinkClickLog", b =>

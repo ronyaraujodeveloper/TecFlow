@@ -26,7 +26,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("DefaultConnection não configurada.");
-        var provider = configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
+        var provider = configuration.GetValue<string>("Database:Provider") ?? "SqlServer";
 
         var encryptionService = EncryptionServiceCollectionExtensions.CreateEncryptionService(configuration);
 

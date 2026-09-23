@@ -90,8 +90,8 @@ public class MarketplaceAccountRepository : IMarketplaceAccountRepository
                     : account.ShopName;
             }
 
-            account.IsActive = true;
-            await _context.MarketplaceAccounts.AddAsync(account);
+        await _context.MarketplaceAccounts.AddAsync(account);
+        await _context.SaveChangesAsync();
         }
         else
         {

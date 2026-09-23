@@ -31,7 +31,7 @@ namespace TecFlow.Infrastructure.Services
             var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
 
-            var provider = configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
+            var provider = configuration.GetValue<string>("Database:Provider") ?? "SqlServer";
 
             return AddTecFlowInfrastructureDataInternal(services, connectionString, provider, configuration);
         }

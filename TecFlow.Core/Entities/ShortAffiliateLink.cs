@@ -30,10 +30,34 @@ public class ShortAffiliateLink : BaseEntity, ITenantScopedEntity
 
     public int? IntegracaoLojaId { get; set; }
 
+    /// <summary>FK da conta em MarketplaceAccounts (SQL Server).</summary>
+    public int? MarketplaceAccountId { get; set; }
+
     public Guid TenantId { get; set; }
+
+    /// <summary>URL de afiliado gerada (Universal Link / tag de comissão).</summary>
+    [Required]
+    [MaxLength(2048)]
+    public string AffiliateUrl { get; set; } = string.Empty;
 
     [MaxLength(256)]
     public string? CustomNickname { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Alias de <see cref="ShortCode"/> para o contrato mobile/offline.</summary>
+    [NotMapped]
+    public string Code
+    {
+        get => ShortCode;
+        set => ShortCode = value;
+    }
+
+    /// <summary>Alias de <see cref="PlatformType"/>.</summary>
+    [NotMapped]
+    public MarketplaceType Platform
+    {
+        get => PlatformType;
+        set => PlatformType = value;
+    }
 }

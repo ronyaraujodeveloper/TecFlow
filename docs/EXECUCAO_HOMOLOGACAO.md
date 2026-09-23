@@ -14,20 +14,17 @@ $WarningPreference = 'SilentlyContinue';
 .\NormalizarEncodingPrecoce.ps1;
 ```
 
-1.2. Atualizar Migrations do Banco de Dados
+1.2. Atualizar Migrations do Banco de Dados (SQL Server — `AutomacaoSociais`)
 
-**SQL Server** (`AutomacaoSociais` / `Development` — `TecFlow.Data`):
+O IIS (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`) e o `appsettings.Homologacao.json` usam **SQL Server** `localhost\SQLEXPRESS` / `AutomacaoSociais` (`Database:Provider=SqlServer`). Cadastro de lojas e conversão de links gravam nesse banco.
+
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
-```
-
-**PostgreSQL** (`automacaosociais` / `Homologacao` — IIS `ASPNETCORE_ENVIRONMENT=Homologacao`, migrations em `TecFlow.Infrastructure`). Obrigatório para evitar Npgsql `42703` (coluna inexistente: `TrackingId`, `AffiliateTrackingId`, `AppKey`, `AppSecret`):
-```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
-dotnet ef database update --project .\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
 ```
-O `AppDbContextFactory` lê `Database:Provider` e `ConnectionStrings:DefaultConnection` da `TecFlow.API` conforme o ambiente. SQL Server: `TecFlow.Data`. PostgreSQL/IIS: `TecFlow.Infrastructure`.
+Migrations SQL Server: `TecFlow.Data` + `AppDbContext`. Não usar `TecFlow.Infrastructure` (PostgreSQL) para o fluxo de homologação IIS.
 
 1.3. Recompilar a Solution (Clean e Build em Release)
 ```powershell
@@ -56,12 +53,12 @@ dotnet publish .\TecFlow.API\TecFlow.API.csproj -c Release -o C:\inetpub\tecflow
 dotnet publish .\TecFlow.WebUi\TecFlow.WebUi.csproj -c Release -o C:\inetpub\tecflow\webui
 ```
 
-2.3.1. Reaplicar migrations no banco do IIS (PostgreSQL Homologacao) após o publish
+2.3.1. Reaplicar migrations no SQL Server do IIS após o publish
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
-dotnet ef database update --project .\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
 ```
-Garante que novas colunas/tabelas existam no PostgreSQL usado pelo pool `TecFlowApiPool` (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`).
+Garante que `MarketplaceAccounts` e `ShortAffiliateLinks` existam em `AutomacaoSociais` (SQLEXPRESS) usado pelo pool `TecFlowApiPool`.
 
 2.4. Iniciar os Pools do IIS e Reciclar o Servidor
 ```powershell

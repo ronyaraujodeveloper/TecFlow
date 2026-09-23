@@ -19,7 +19,7 @@ namespace TecFlow.Infrastructure.Services
         private readonly ILogger<AppConfiguration> _logger; // Injetar o logger
 
         // Propriedades Existentes
-        public string DatabaseProvider => _configuration.GetValue<string>("Database:Provider") ?? "PostgreSQL";
+        public string DatabaseProvider => _configuration.GetValue<string>("Database:Provider") ?? "SqlServer";
         public string DatabaseConnectionString => _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is missing.");
         public string OpenAI_ApiKey => _configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API Key is missing.");
         public string Gemini_ApiKey => _configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Gemini API Key is missing.");

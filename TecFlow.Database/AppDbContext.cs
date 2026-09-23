@@ -289,6 +289,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(link => link.ShortCode).IsUnique();
             entity.HasIndex(link => link.AffiliateLinkId).IsUnique();
             entity.HasIndex(link => new { link.UserId, link.CreatedAt });
+            entity.Property(link => link.AffiliateUrl).HasMaxLength(2048);
+            entity.HasOne<MarketplaceAccount>()
+                .WithMany()
+                .HasForeignKey(link => link.MarketplaceAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<LinkClickLog>(entity =>

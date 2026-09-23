@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link. Listagem de lojas: `MarketplaceAccountMapper` trata `TrackingId`/`ShopId`/`AppKey`/`AppSecret` nulos em registros antigos de `MarketplaceAccounts` sem `NullReferenceException`. Card `MarketplaceStoreCard` mostra Shop ID e Affiliate ID. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link. Após a conversão, `ShortLinkService` grava `ShortAffiliateLink` no SQL Server (`AutomacaoSociais`) com `OriginalUrl`, `AffiliateUrl`, `ShortCode`, `PlatformType`, `MarketplaceAccountId` e `SaveChangesAsync` antes do DTO. Listagem/edição de lojas: `MarketplaceAccountRepository` lê e persiste `DbSet MarketplaceAccounts`. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
 
 ```mermaid
 flowchart LR
@@ -26,6 +26,7 @@ flowchart LR
   AFF[ShopeeAffiliateLinkClient]
   BLD[ShopeeCommissionUrlBuilder]
   SHORT[ShortAffiliateLink]
+  SQL[(SQL Server AutomacaoSociais)]
   LOG[LinkClickLog]
 
   STR -->|shopId/itemId| UNI[universal-link/product]
@@ -33,12 +34,16 @@ flowchart LR
   STR -.->|Open API opcional não bloqueia| AFF
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
+  SHORT -->|SaveChangesAsync| SQL
+  LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL
   SHORT --> LOG
   BLD --> AFFURL[AffiliateUrl longa]
   BLD --> SHPEE[ShortenedShopeeUrl br.shp.ee]
   SHORT --> SHORTURL[ShortenedUrl localhost:5001/r]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
   API --> STR
+  MINHAS[MinhasLojas.razor] -->|GET/POST marketplace-auth| ACC[MarketplaceAccountsController]
+  ACC --> LOJAS
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
 ```

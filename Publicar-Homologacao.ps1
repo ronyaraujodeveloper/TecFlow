@@ -104,17 +104,17 @@ try {
         --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
         --context AppDbContext
     if ($LASTEXITCODE -ne 0) {
-        throw "dotnet ef database update (SQL Server) falhou (exit $LASTEXITCODE)."
+        throw "dotnet ef database update (SQL Server/Development) falhou (exit $LASTEXITCODE)."
     }
 
-    Write-Host "Aplicando migrations PostgreSQL (Homologacao / IIS / TecFlow.Infrastructure)..."
+    Write-Host "Aplicando migrations SQL Server (Homologacao IIS / AutomacaoSociais)..."
     $env:ASPNETCORE_ENVIRONMENT = "Homologacao"
     & dotnet ef database update `
-        --project (Join-Path $root "TecFlow.Infrastructure\TecFlow.Infrastructure.csproj") `
+        --project (Join-Path $root "TecFlow.Data\TecFlow.Data.csproj") `
         --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
         --context AppDbContext
     if ($LASTEXITCODE -ne 0) {
-        throw "dotnet ef database update (PostgreSQL) falhou (exit $LASTEXITCODE)."
+        throw "dotnet ef database update (SQL Server/Homologacao) falhou (exit $LASTEXITCODE)."
     }
 
     if ($Projeto -in @("Api", "All")) {

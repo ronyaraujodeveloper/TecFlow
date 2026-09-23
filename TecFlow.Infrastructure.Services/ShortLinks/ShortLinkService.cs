@@ -19,15 +19,18 @@ public sealed class ShortLinkService : IShortLinkService
     private const int MaxUniqueAttempts = 8;
 
     private readonly IShortAffiliateLinkRepository _shortLinkRepository;
+    private readonly AppDbContext _context;
     private readonly ShortLinkOptions _options;
     private readonly ILogger<ShortLinkService> _logger;
 
     public ShortLinkService(
         IShortAffiliateLinkRepository shortLinkRepository,
+        AppDbContext context,
         IOptions<ShortLinkOptions> options,
         ILogger<ShortLinkService> logger)
     {
         _shortLinkRepository = shortLinkRepository;
+        _context = context;
         _options = options.Value;
         _logger = logger;
     }
@@ -68,22 +71,34 @@ public sealed class ShortLinkService : IShortLinkService
                 "Não foi possível gerar um código curto único. Tente novamente.");
         }
 
+        var affiliateUrl = destinationUrl.Trim();
+        var marketplaceAccountId = await ResolveMarketplaceAccountIdAsync(
+            tenantId,
+            integracaoLojaId,
+            platformType,
+            cancellationToken);
+
         var entity = new ShortAffiliateLink
         {
             AffiliateLinkId = Guid.NewGuid(),
             ShortCode = shortCode,
-            DestinationUrl = destinationUrl.Trim(),
+            Code = shortCode,
+            DestinationUrl = affiliateUrl,
+            AffiliateUrl = affiliateUrl,
             OriginalUrl = originalUrl.Trim(),
             PlatformType = platformType,
+            Platform = platformType,
             UserId = userId,
             IntegracaoLojaId = integracaoLojaId,
+            MarketplaceAccountId = marketplaceAccountId,
             TenantId = tenantId,
             CustomNickname = customNickname?.Trim(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 
-        await _shortLinkRepository.AddAsync(entity, cancellationToken);
+        await _context.ShortAffiliateLinks.AddAsync(entity, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         var publicUrl = BuildPublicUrl(shortCode);
         _logger.LogInformation(
@@ -93,6 +108,42 @@ public sealed class ShortLinkService : IShortLinkService
             platformType);
 
         return (publicUrl, entity.AffiliateLinkId);
+    }
+
+    private async Task<int?> ResolveMarketplaceAccountIdAsync(
+        Guid tenantId,
+        int? integracaoLojaId,
+        MarketplaceType platformType,
+        CancellationToken cancellationToken)
+    {
+        if (integracaoLojaId is not int lojaId || lojaId <= 0)
+        {
+            return null;
+        }
+
+        var shopId = await _context.IntegracaoLojas
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(loja => loja.Id == lojaId)
+            .Select(loja => loja.ShopId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(shopId))
+        {
+            return null;
+        }
+
+        var query = _context.MarketplaceAccounts
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(account => account.ShopId == shopId && account.MarketplaceType == platformType);
+
+        if (tenantId != Guid.Empty)
+        {
+            query = query.Where(account => account.TenantId == tenantId);
+        }
+
+        return await query.Select(account => (int?)account.Id).FirstOrDefaultAsync(cancellationToken);
     }
 
     private string BuildPublicUrl(string shortCode)

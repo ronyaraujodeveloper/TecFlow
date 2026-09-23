@@ -15,6 +15,28 @@ public interface IShortLinkService
         int? integracaoLojaId,
         string? customNickname,
         CancellationToken cancellationToken = default);
+
+    Task<Guid> ResolveLinkGroupIdAsync(
+        int userId,
+        string originalUrl,
+        MarketplaceType platformType,
+        CancellationToken cancellationToken = default);
+
+    Task<ShortLinkCreateResult> EnsureForStoreAsync(
+        string destinationUrl,
+        string originalUrl,
+        MarketplaceType platformType,
+        int userId,
+        Guid tenantId,
+        int integracaoLojaId,
+        Guid linkGroupId,
+        string? customNickname,
+        CancellationToken cancellationToken = default);
+
+    Task DeactivateUnselectedAccountsAsync(
+        Guid linkGroupId,
+        IReadOnlyCollection<int> selectedIntegracaoLojaIds,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILinkClickTelemetryService

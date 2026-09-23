@@ -58,7 +58,7 @@ dotnet publish .\TecFlow.WebUi\TecFlow.WebUi.csproj -c Release -o C:\inetpub\tec
 $env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
 dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
 ```
-Garante que `MarketplaceAccounts` e `ShortAffiliateLinks` existam em `AutomacaoSociais` (SQLEXPRESS) usado pelo pool `TecFlowApiPool`.
+Garante que `MarketplaceAccounts`, `ShortAffiliateLinks` e `ShortAffiliateLinkAccounts` existam em `AutomacaoSociais` (SQLEXPRESS) usado pelo pool `TecFlowApiPool`.
 
 2.4. Iniciar os Pools do IIS e Reciclar o Servidor
 ```powershell

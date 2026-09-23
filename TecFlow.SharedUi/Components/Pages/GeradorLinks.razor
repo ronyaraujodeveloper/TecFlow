@@ -55,6 +55,35 @@
                 </p>
             }
 
+            @if (_detectedPlatform is { IsBackendReady: true } && AccountsForDetectedPlatform.Count > 0)
+            {
+                <div class="link-generator-accounts mt-3" role="group" aria-label="Contas da plataforma">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <label class="form-label fw-semibold mb-0">Contas @_detectedPlatform.DisplayName</label>
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0"
+                                disabled="@_isLoading"
+                                @onclick="ToggleSelectAllDetectedAccounts">
+                            @(AreAllDetectedAccountsSelected() ? "Limpar seleção" : "Selecionar todas")
+                        </button>
+                    </div>
+                    @foreach (var store in AccountsForDetectedPlatform)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="@($"store-account-{store.Id}")"
+                                   checked="@_selectedStoreIds.Contains(store.Id)"
+                                   disabled="@_isLoading"
+                                   @onchange="e => ToggleAccountSelection(store.Id, e)" />
+                            <label class="form-check-label" for="@($"store-account-{store.Id}")">
+                                @(string.IsNullOrWhiteSpace(store.FriendlyName) ? store.ShopId : store.FriendlyName)
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+
             <div class="link-generator-actions mt-4">
                 <button type="submit"
                         class="btn btn-primary btn-lg btn-touch w-100 link-generator-submit"
@@ -84,7 +113,58 @@
 
     <LinkGeneratorResultPanel Response="@_generatedResponse" />
 
-    <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" />
+    <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" OnEditar="AbrirEdicaoAsync" />
+
+    @if (_editItem is not null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="edit-link-accounts-title">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="edit-link-accounts-title">Editar contas do link</h2>
+                            <p class="text-muted small mb-0">Desmarcar uma conta inativa o vínculo e preserva o histórico de cliques.</p>
+                        </div>
+                        <button type="button" class="btn-close" aria-label="Fechar" @onclick="FecharEdicao"></button>
+                    </div>
+                    <div class="modal-body pt-3">
+                        <p class="small text-break mb-3">@_editItem.OriginalUrl</p>
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <span class="fw-semibold small">Contas</span>
+                            <button type="button" class="btn btn-link btn-sm p-0" @onclick="ToggleSelectAllEditAccounts">
+                                @(AreAllEditAccountsSelected() ? "Limpar seleção" : "Selecionar todas")
+                            </button>
+                        </div>
+                        @foreach (var store in AccountsForEdit)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="@($"edit-store-{store.Id}")"
+                                       checked="@_editSelectedStoreIds.Contains(store.Id)"
+                                       disabled="@_isSavingEdit"
+                                       @onchange="e => ToggleEditAccountSelection(store.Id, e)" />
+                                <label class="form-check-label" for="@($"edit-store-{store.Id}")">
+                                    @(string.IsNullOrWhiteSpace(store.FriendlyName) ? store.ShopId : store.FriendlyName)
+                                </label>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_editError))
+                        {
+                            <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">@_editError</div>
+                        }
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@_isSavingEdit" @onclick="FecharEdicao">Cancelar</button>
+                        <button type="button" class="btn btn-primary btn-touch" disabled="@_isSavingEdit" @onclick="SalvarEdicaoAsync">
+                            @(_isSavingEdit ? "Salvando..." : "Salvar contas")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
 
     <section class="link-generator-platforms mt-4 mx-auto" aria-label="Marketplaces suportados">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
@@ -120,6 +200,22 @@
     private GerarLinkAfiliadoResponseDto? _generatedResponse;
     private int _historyRefreshToken;
     private readonly HashSet<MarketplaceType> _connectedPlatforms = [];
+    private readonly List<MarketplaceAccountDto> _stores = [];
+    private readonly HashSet<int> _selectedStoreIds = [];
+    private readonly HashSet<int> _editSelectedStoreIds = [];
+    private ShortAffiliateLinkDto? _editItem;
+    private string? _editError;
+    private bool _isSavingEdit;
+
+    private IReadOnlyList<MarketplaceAccountDto> AccountsForDetectedPlatform =>
+        _detectedPlatform?.IntegrationType is { } platform
+            ? _stores.Where(store => store.PlatformType == platform && store.Status == MarketplaceIntegrationStatus.Active).ToList()
+            : [];
+
+    private IReadOnlyList<MarketplaceAccountDto> AccountsForEdit =>
+        _editItem is null
+            ? []
+            : _stores.Where(store => store.PlatformType == _editItem.PlatformType).ToList();
 
     private bool CanGenerate =>
         !_isLoading
@@ -176,6 +272,9 @@
 
             if (response.Status && response.DataList is { Count: > 0 })
             {
+                _stores.Clear();
+                _stores.AddRange(response.DataList);
+
                 foreach (var store in response.DataList)
                 {
                     if (store.Status == MarketplaceIntegrationStatus.Active)
@@ -246,20 +345,14 @@
             return;
         }
 
-        if (StoreScope.ActiveStoreId is null or <= 0)
+        if (AccountsForDetectedPlatform.Count == 0)
         {
-            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Selecione uma loja ativa no topo do painel.";
-            return;
-        }
-
-        if (!ActiveStoreMatchesDetectedPlatform())
-        {
-            _detectionHint =
-                $"{_detectedPlatform.DisplayName} detectado, mas a loja selecionada no topo é de outra plataforma.";
+            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Conecte uma conta ativa em Minhas Lojas.";
             return;
         }
 
         _detectionHint = $"{_detectedPlatform.DisplayName} identificado com sucesso. Pronto para gerar comissão.";
+        EnsureDetectedAccountsSelected();
     }
 
     private async Task GenerateLinkAsync()
@@ -284,27 +377,23 @@
                 return;
             }
 
-            if (StoreScope.ActiveStoreId is not int activeStoreId || activeStoreId <= 0)
+            var selectedStores = AccountsForDetectedPlatform
+                .Where(store => _selectedStoreIds.Contains(store.Id))
+                .ToList();
+
+            if (selectedStores.Count == 0)
             {
-                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
+                ShowError("Selecione ao menos uma conta da plataforma para gerar o link.");
                 return;
             }
 
-            if (!ActiveStoreMatchesDetectedPlatform())
-            {
-                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
-                return;
-            }
-
-            var activeStore = StoreScope.ActiveStore;
             var request = new GerarLinkAfiliadoDto
             {
                 OriginalUrl = _productUrl.Trim(),
-                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(activeStoreId),
-                TenantId = activeStore is not null && activeStore.TenantId != Guid.Empty
-                    ? activeStore.TenantId
-                    : null,
-                ShopId = string.IsNullOrWhiteSpace(activeStore?.ShopId) ? null : activeStore.ShopId
+                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(selectedStores[0].Id),
+                StoreIds = selectedStores.Select(store => IntegracaoLojaScopeHelper.EncodeStoreScope(store.Id)).ToList(),
+                TenantId = selectedStores[0].TenantId != Guid.Empty ? selectedStores[0].TenantId : null,
+                ShopId = string.IsNullOrWhiteSpace(selectedStores[0].ShopId) ? null : selectedStores[0].ShopId
             };
 
             var result = await AffiliateLinkApi.GenerateAsync(request);
@@ -394,24 +483,199 @@
         AnalyzeUrl(_productUrl);
         ClearFeedback();
 
-        _generatedResponse = new GerarLinkAfiliadoResponseDto
-        {
-            Success = true,
-            Status = true,
-            OriginalUrl = _productUrl,
-            AffiliateUrl = FirstNonEmpty(item.AffiliateUrl),
-            ConvertedUrl = FirstNonEmpty(item.AffiliateUrl),
-            ShortenedUrl = item.ShortenedUrl?.Trim() ?? string.Empty,
-            PlatformDetected = string.IsNullOrWhiteSpace(item.PlatformName)
-                ? item.PlatformType.ToString()
-                : item.PlatformName,
-            AffiliateLinkId = item.AffiliateLinkId,
-            Message = "Link carregado do histórico.",
-            Descricao = "Link carregado do histórico."
-        };
+        _generatedResponse = GerarLinkAfiliadoResponseDto.FromHistory(item);
+        SyncSelectedStoresFromResponse(_generatedResponse);
 
         await InvokeAsync(StateHasChanged);
         await ScrollToFormAsync();
+    }
+
+    private Task AbrirEdicaoAsync(ShortAffiliateLinkDto item)
+    {
+        _editItem = item;
+        _editError = null;
+        _editSelectedStoreIds.Clear();
+        foreach (var account in item.Accounts.Where(account => account.IsActive && account.StoreId > 0))
+        {
+            _editSelectedStoreIds.Add(account.StoreId);
+        }
+
+        if (_editSelectedStoreIds.Count == 0)
+        {
+            foreach (var store in AccountsForEdit.Where(store => store.Status == MarketplaceIntegrationStatus.Active))
+            {
+                _editSelectedStoreIds.Add(store.Id);
+            }
+        }
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void FecharEdicao()
+    {
+        _editItem = null;
+        _editError = null;
+        _isSavingEdit = false;
+        _editSelectedStoreIds.Clear();
+    }
+
+    private async Task SalvarEdicaoAsync()
+    {
+        if (_editItem is null)
+        {
+            return;
+        }
+
+        var selectedStores = AccountsForEdit.Where(store => _editSelectedStoreIds.Contains(store.Id)).ToList();
+        if (selectedStores.Count == 0)
+        {
+            _editError = "Selecione ao menos uma conta ou mantenha o histórico inativo apenas desmarcando após gerar novamente.";
+            return;
+        }
+
+        _isSavingEdit = true;
+        _editError = null;
+        StateHasChanged();
+
+        try
+        {
+            var request = new GerarLinkAfiliadoDto
+            {
+                OriginalUrl = _editItem.OriginalUrl.Trim(),
+                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(selectedStores[0].Id),
+                StoreIds = selectedStores.Select(store => IntegracaoLojaScopeHelper.EncodeStoreScope(store.Id)).ToList(),
+                TenantId = selectedStores[0].TenantId != Guid.Empty ? selectedStores[0].TenantId : null,
+                ShopId = string.IsNullOrWhiteSpace(selectedStores[0].ShopId) ? null : selectedStores[0].ShopId
+            };
+
+            var result = await AffiliateLinkApi.GenerateAsync(request);
+            if (result.Success && result.Data is not null)
+            {
+                result.Data.NormalizeHttp200();
+            }
+
+            if (result.Success && result.Data is { HasConvertedLink: true })
+            {
+                _generatedResponse = result.Data;
+                _productUrl = result.Data.OriginalUrl;
+                AnalyzeUrl(_productUrl);
+                _historyRefreshToken++;
+                FecharEdicao();
+                await ScrollToResultPanelAsync();
+            }
+            else
+            {
+                _editError = ResolveConversionError(result.ErrorMessage, result.Data?.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao atualizar contas do link de comissão.");
+            _editError = "Não foi possível atualizar as contas. Tente novamente.";
+        }
+        finally
+        {
+            _isSavingEdit = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleAccountSelection(int storeId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool flag && flag || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        if (isChecked)
+        {
+            _selectedStoreIds.Add(storeId);
+        }
+        else
+        {
+            _selectedStoreIds.Remove(storeId);
+        }
+    }
+
+    private void ToggleEditAccountSelection(int storeId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool flag && flag || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        if (isChecked)
+        {
+            _editSelectedStoreIds.Add(storeId);
+        }
+        else
+        {
+            _editSelectedStoreIds.Remove(storeId);
+        }
+    }
+
+    private void ToggleSelectAllDetectedAccounts()
+    {
+        var accounts = AccountsForDetectedPlatform;
+        if (AreAllDetectedAccountsSelected())
+        {
+            foreach (var store in accounts)
+            {
+                _selectedStoreIds.Remove(store.Id);
+            }
+        }
+        else
+        {
+            foreach (var store in accounts)
+            {
+                _selectedStoreIds.Add(store.Id);
+            }
+        }
+    }
+
+    private void ToggleSelectAllEditAccounts()
+    {
+        var accounts = AccountsForEdit;
+        if (AreAllEditAccountsSelected())
+        {
+            _editSelectedStoreIds.Clear();
+        }
+        else
+        {
+            foreach (var store in accounts)
+            {
+                _editSelectedStoreIds.Add(store.Id);
+            }
+        }
+    }
+
+    private bool AreAllDetectedAccountsSelected()
+    {
+        var accounts = AccountsForDetectedPlatform;
+        return accounts.Count > 0 && accounts.All(store => _selectedStoreIds.Contains(store.Id));
+    }
+
+    private bool AreAllEditAccountsSelected()
+    {
+        var accounts = AccountsForEdit;
+        return accounts.Count > 0 && accounts.All(store => _editSelectedStoreIds.Contains(store.Id));
+    }
+
+    private void EnsureDetectedAccountsSelected()
+    {
+        var accounts = AccountsForDetectedPlatform;
+        if (accounts.Count == 0)
+        {
+            return;
+        }
+
+        if (!_selectedStoreIds.Overlaps(accounts.Select(store => store.Id)))
+        {
+            foreach (var store in accounts)
+            {
+                _selectedStoreIds.Add(store.Id);
+            }
+        }
+    }
+
+    private void SyncSelectedStoresFromResponse(GerarLinkAfiliadoResponseDto response)
+    {
+        foreach (var account in response.Accounts.Where(item => item.IsActive && item.StoreId > 0))
+        {
+            _selectedStoreIds.Add(account.StoreId);
+        }
     }
 
     private async Task ScrollToFormAsync()

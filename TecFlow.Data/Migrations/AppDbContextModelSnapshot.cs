@@ -1019,6 +1019,9 @@ namespace TecFlow.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("LinkGroupId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int?>("MarketplaceAccountId")
                         .HasColumnType("int");
 
@@ -1049,6 +1052,8 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("AffiliateLinkId")
                         .IsUnique();
 
+                    b.HasIndex("LinkGroupId");
+
                     b.HasIndex("MarketplaceAccountId");
 
                     b.HasIndex("ShortCode")
@@ -1057,6 +1062,52 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("ShortAffiliateLinks");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.ShortAffiliateLinkAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IntegracaoLojaId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasDefaultValue(true)
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("LinkGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("MarketplaceAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ShortAffiliateLinkId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkGroupId");
+
+                    b.HasIndex("ShortAffiliateLinkId");
+
+                    b.HasIndex("LinkGroupId", "IntegracaoLojaId")
+                        .IsUnique();
+
+                    b.ToTable("ShortAffiliateLinkAccounts", (string)null);
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.Tenant", b =>
@@ -1632,6 +1683,19 @@ namespace TecFlow.Data.Migrations
                         .WithMany()
                         .HasForeignKey("MarketplaceAccountId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AccountLinks");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.ShortAffiliateLinkAccount", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.ShortAffiliateLink", "AffiliateLink")
+                        .WithMany("AccountLinks")
+                        .HasForeignKey("ShortAffiliateLinkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AffiliateLink");
                 });
 
             modelBuilder.Entity("TecFlow.Database.Entity.LinkClickLog", b =>

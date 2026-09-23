@@ -24,6 +24,22 @@
                 <span class="link-generator-result-check" aria-hidden="true">✓</span>
             </div>
 
+            @if (response.Accounts.Count(account => account.IsActive && account.StoreId > 0) > 1)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="selected-commission-account">Conta selecionada:</label>
+                    <select id="selected-commission-account"
+                            class="form-select"
+                            value="@_selectedStoreId"
+                            @onchange="HandleAccountChanged">
+                        @foreach (var account in response.Accounts.Where(item => item.IsActive))
+                        {
+                            <option value="@account.StoreId">@account.StoreName</option>
+                        }
+                    </select>
+                </div>
+            }
+
             <div class="row g-3">
                 @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
                 {
@@ -155,15 +171,35 @@
     private string? _actionMessage;
     private bool _actionIsError;
     private string? _lastResponseKey;
+    private int _selectedStoreId;
 
     protected override void OnParametersSet()
     {
-        var key = $"{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}";
+        var key = $"{Response?.LinkGroupId}|{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}|{Response?.Accounts.Count}";
         if (!string.Equals(key, _lastResponseKey, StringComparison.Ordinal))
         {
             _lastResponseKey = key;
             ResetActionState();
+            _selectedStoreId = Response?.SelectedStoreId
+                ?? Response?.Accounts.FirstOrDefault(account => account.IsActive)?.StoreId
+                ?? 0;
+            if (_selectedStoreId > 0)
+            {
+                Response?.ApplySelectedAccount(_selectedStoreId);
+            }
         }
+    }
+
+    private void HandleAccountChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var storeId) || Response is null)
+        {
+            return;
+        }
+
+        _selectedStoreId = storeId;
+        Response.ApplySelectedAccount(storeId);
+        ResetActionState();
     }
 
     private static string ShareUrl(GerarLinkAfiliadoResponseDto response) =>

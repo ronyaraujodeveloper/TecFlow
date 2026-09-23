@@ -99,12 +99,19 @@
                                 <span class="link-history-clicks-value">@item.ClickCount</span>
                                 <span class="link-history-clicks-label">cliques</span>
                             </div>
-                            <button type="button"
-                                    class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
-                                    @onclick="() => VisualizarAsync(item)">
-                                <i class="bi bi-eye" aria-hidden="true"></i>
-                                Visualizar
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
+                                        @onclick="() => VisualizarAsync(item)">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                    Visualizar
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm btn-touch"
+                                        @onclick="() => EditarAsync(item)">
+                                    Editar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -146,12 +153,19 @@
                                     <span class="link-history-clicks-inline">@item.ClickCount</span>
                                 </td>
                                 <td class="text-end">
-                                    <button type="button"
-                                            class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
-                                            @onclick="() => VisualizarAsync(item)">
-                                        <i class="bi bi-eye" aria-hidden="true"></i>
-                                        Visualizar
-                                    </button>
+                                    <div class="d-inline-flex gap-2">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
+                                                @onclick="() => VisualizarAsync(item)">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
+                                            Visualizar
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline-secondary btn-sm btn-touch"
+                                                @onclick="() => EditarAsync(item)">
+                                            Editar
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -165,6 +179,7 @@
 @code {
     [Parameter] public int RefreshToken { get; set; }
     [Parameter] public EventCallback<ShortAffiliateLinkDto> OnVisualizar { get; set; }
+    [Parameter] public EventCallback<ShortAffiliateLinkDto> OnEditar { get; set; }
 
     private readonly List<AffiliateLinkHistoryItemDto> _items = [];
     private MarketplaceType? _platformFilter;
@@ -280,5 +295,15 @@
         }
 
         await OnVisualizar.InvokeAsync(ShortAffiliateLinkDto.FromHistory(item));
+    }
+
+    private async Task EditarAsync(AffiliateLinkHistoryItemDto item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        await OnEditar.InvokeAsync(ShortAffiliateLinkDto.FromHistory(item));
     }
 }

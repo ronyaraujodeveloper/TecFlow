@@ -539,6 +539,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **AffiliateLinksController** — rotas `api/afiliados/links` e `api/affiliate-links`.
 - [x] **GeradorLinksServiceTests.cs** — mock HTTP POST e DTO de resposta com link convertido.
 
+### Fase 19.3.4 — Múltiplas contas da mesma plataforma
+
+- [x] **ShortAffiliateLinkAccount.cs** — associação loja/conta com `IsActive` (default true); desmarcar não apaga o registro.
+- [x] **ShortAffiliateLink.LinkGroupId** — agrupa as conversões do mesmo produto.
+- [x] **GeradorLinks.razor** — checkboxes e Selecionar todas; gera para todas as contas marcadas.
+- [x] **LinkGeneratorResultPanel.razor** — combo "Conta selecionada" quando há mais de uma conta ativa.
+- [x] **HistoricoLinks.razor** — ação Editar com modal de contas (inativação lógica).
+- [x] **TecFlow.Data/Migrations/20260923200000_AddShortAffiliateLinkAccounts.cs** — tabela e backfill no SQL Server.
+
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.

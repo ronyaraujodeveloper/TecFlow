@@ -45,9 +45,10 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             return Fail("Informe a URL do produto para gerar o link de afiliado.");
         }
 
-        if (request.StoreId == Guid.Empty)
+        var storeScopes = request.ResolveStoreScopes();
+        if (storeScopes.Count == 0)
         {
-            return Fail("Selecione uma loja ativa no topo do painel antes de gerar o link.");
+            return Fail("Selecione ao menos uma conta da plataforma antes de gerar o link.");
         }
 
         _generationContext.UserId = userId;
@@ -58,64 +59,106 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             var workingUrl = request.OriginalUrl.Trim();
             var (strategy, resolvedUrl) = await ResolveStrategyAsync(workingUrl, cancellationToken);
             var affiliateId = userId.ToString();
-
-            _generationContext.OfficialShortenedShopeeUrl = null;
-
-            var generatedLink = await strategy.GenerateDeepLinkAsync(
-                resolvedUrl,
-                request.StoreId,
-                affiliateId,
-                cancellationToken);
-
-            var store = await _storeScopeResolver.ResolveAsync(
-                request.StoreId,
+            var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(
                 userId,
+                workingUrl,
                 strategy.PlatformType,
                 cancellationToken);
 
-            var (publicShortUrl, affiliateLinkId) = await _shortLinkService.CreateShortLinkAsync(
-                generatedLink,
-                request.OriginalUrl.Trim(),
-                strategy.PlatformType,
-                userId,
-                store.TenantId,
-                store.Id,
-                request.CustomNickname,
-                cancellationToken);
+            var variants = new List<AffiliateLinkAccountVariantDto>();
+            GerarLinkAfiliadoResponseDto? lastSuccess = null;
 
-            await _telemetryService.RecordGenerationAsync(
-                affiliateLinkId,
-                store.TenantId,
-                store.ShopId ?? string.Empty,
-                request.OriginalUrl.Trim(),
-                generatedLink,
-                strategy.PlatformType,
-                _generationContext.ClientIpAddress,
-                _generationContext.UserAgent,
-                _generationContext.ReferrerUrl,
-                cancellationToken);
-
-            var officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim();
-            if (string.IsNullOrWhiteSpace(officialShort)
-                || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+            foreach (var storeScope in storeScopes)
             {
-                officialShort = generatedLink;
+                _generationContext.OfficialShortenedShopeeUrl = null;
+
+                var generatedLink = await strategy.GenerateDeepLinkAsync(
+                    resolvedUrl,
+                    storeScope,
+                    affiliateId,
+                    cancellationToken);
+
+                var store = await _storeScopeResolver.ResolveAsync(
+                    storeScope,
+                    userId,
+                    strategy.PlatformType,
+                    cancellationToken);
+
+                var created = await _shortLinkService.EnsureForStoreAsync(
+                    generatedLink,
+                    workingUrl,
+                    strategy.PlatformType,
+                    userId,
+                    store.TenantId,
+                    store.Id,
+                    linkGroupId,
+                    request.CustomNickname,
+                    cancellationToken);
+
+                await _telemetryService.RecordGenerationAsync(
+                    created.AffiliateLinkId,
+                    store.TenantId,
+                    store.ShopId ?? string.Empty,
+                    workingUrl,
+                    generatedLink,
+                    strategy.PlatformType,
+                    _generationContext.ClientIpAddress,
+                    _generationContext.UserAgent,
+                    _generationContext.ReferrerUrl,
+                    cancellationToken);
+
+                var officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim();
+                if (string.IsNullOrWhiteSpace(officialShort)
+                    || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+                {
+                    officialShort = generatedLink;
+                }
+
+                variants.Add(new AffiliateLinkAccountVariantDto
+                {
+                    AffiliateLinkId = created.AffiliateLinkId,
+                    StoreId = store.Id,
+                    StoreName = string.IsNullOrWhiteSpace(store.FriendlyName)
+                        ? (store.ShopId ?? $"Loja {store.Id}")
+                        : store.FriendlyName,
+                    AffiliateUrl = generatedLink,
+                    ShortenedUrl = created.PublicShortUrl,
+                    ShortenedShopeeUrl = officialShort,
+                    IsActive = true
+                });
+
+                lastSuccess = new GerarLinkAfiliadoResponseDto
+                {
+                    Success = true,
+                    Status = true,
+                    Message = "Link de afiliado gerado com sucesso.",
+                    Descricao = "Link de afiliado gerado com sucesso.",
+                    OriginalUrl = workingUrl,
+                    AffiliateUrl = generatedLink,
+                    ConvertedUrl = generatedLink,
+                    ShortenedUrl = created.PublicShortUrl,
+                    ShortenedShopeeUrl = officialShort,
+                    PlatformDetected = strategy.PlatformName,
+                    AffiliateLinkId = created.AffiliateLinkId,
+                    LinkGroupId = linkGroupId,
+                    SelectedStoreId = store.Id
+                };
             }
 
-            return new GerarLinkAfiliadoResponseDto
+            var selectedLojaIds = variants.Select(item => item.StoreId).Distinct().ToList();
+            await _shortLinkService.DeactivateUnselectedAccountsAsync(
+                linkGroupId,
+                selectedLojaIds,
+                cancellationToken);
+
+            if (lastSuccess is null)
             {
-                Success = true,
-                Status = true,
-                Message = "Link de afiliado gerado com sucesso.",
-                Descricao = "Link de afiliado gerado com sucesso.",
-                OriginalUrl = request.OriginalUrl.Trim(),
-                AffiliateUrl = generatedLink,
-                ConvertedUrl = generatedLink,
-                ShortenedUrl = publicShortUrl,
-                ShortenedShopeeUrl = officialShort,
-                PlatformDetected = strategy.PlatformName,
-                AffiliateLinkId = affiliateLinkId
-            };
+                return Fail("Não foi possível gerar o link de afiliado no momento. Tente novamente em instantes.");
+            }
+
+            lastSuccess.Accounts = variants.Where(item => item.IsActive).ToList();
+            lastSuccess.ApplySelectedAccount(lastSuccess.SelectedStoreId ?? lastSuccess.Accounts[0].StoreId);
+            return lastSuccess;
         }
         catch (AffiliateLinkGenerationException ex)
         {

@@ -19,6 +19,11 @@ public interface IShortAffiliateLinkRepository
         int userId,
         AffiliateLinkFilter filter,
         CancellationToken cancellationToken = default);
+
+    Task<List<ShortAffiliateLink>> ListByUserForGroupingAsync(
+        int userId,
+        AffiliateLinkFilter filter,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILinkClickLogRepository

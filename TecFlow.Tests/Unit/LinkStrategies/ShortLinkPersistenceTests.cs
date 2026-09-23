@@ -79,6 +79,92 @@ public class ShortLinkPersistenceTests
         Assert.Contains("LojaHomolog", publicUrl, StringComparison.Ordinal);
         Assert.DoesNotContain("/r/", publicUrl, StringComparison.Ordinal);
         Assert.Equal(saved.AffiliateLinkId, affiliateLinkId);
+        Assert.NotEqual(Guid.Empty, saved.LinkGroupId);
+        Assert.True(saved.IsActive);
+        var association = Assert.Single(db.ShortAffiliateLinkAccounts);
+        Assert.Equal(saved.Id, association.ShortAffiliateLinkId);
+        Assert.Equal(loja.Id, association.IntegracaoLojaId);
+        Assert.True(association.IsActive);
+    }
+
+    [Fact]
+    public async Task ShortLinkService_ShouldKeepInactiveAccountRow_WhenUnselected()
+    {
+        await using var db = CreateDbContext();
+        var first = await SeedStoreAsync(db, "loja-a", "Loja A");
+        var second = await SeedStoreAsync(db, "loja-b", "Loja B");
+        var service = CreateService(db);
+        const string original = "https://shopee.com.br/produto-i.123.456";
+
+        var groupId = await service.ResolveLinkGroupIdAsync(10, original, MarketplaceType.Shopee);
+        await service.EnsureForStoreAsync(
+            "https://shopee.com.br/a",
+            original,
+            MarketplaceType.Shopee,
+            10,
+            TestTenantId,
+            first.Loja.Id,
+            groupId,
+            null);
+        await service.EnsureForStoreAsync(
+            "https://shopee.com.br/b",
+            original,
+            MarketplaceType.Shopee,
+            10,
+            TestTenantId,
+            second.Loja.Id,
+            groupId,
+            null);
+
+        await service.DeactivateUnselectedAccountsAsync(groupId, [first.Loja.Id]);
+
+        Assert.Equal(2, db.ShortAffiliateLinks.Count());
+        Assert.Equal(2, db.ShortAffiliateLinkAccounts.Count());
+        Assert.True(db.ShortAffiliateLinks.Single(link => link.IntegracaoLojaId == first.Loja.Id).IsActive);
+        Assert.False(db.ShortAffiliateLinks.Single(link => link.IntegracaoLojaId == second.Loja.Id).IsActive);
+        Assert.False(db.ShortAffiliateLinkAccounts.Single(account => account.IntegracaoLojaId == second.Loja.Id).IsActive);
+        Assert.True(db.ShortAffiliateLinkAccounts.Single(account => account.IntegracaoLojaId == first.Loja.Id).IsActive);
+    }
+
+    private static ShortLinkService CreateService(AppDbContext db) =>
+        new(
+            new ShortAffiliateLinkRepository(db),
+            db,
+            Options.Create(new ShortLinkOptions()),
+            NullLogger<ShortLinkService>.Instance);
+
+    private static async Task<(MarketplaceAccount Account, IntegracaoLoja Loja)> SeedStoreAsync(
+        AppDbContext db,
+        string shopId,
+        string friendlyName)
+    {
+        var account = new MarketplaceAccount
+        {
+            TenantId = TestTenantId,
+            UserId = "10",
+            ShopId = shopId,
+            FriendlyName = friendlyName,
+            ShopName = friendlyName,
+            MarketplaceType = MarketplaceType.Shopee,
+            AccessToken = "token",
+            IsActive = true,
+            ExpiresAt = DateTime.UtcNow.AddDays(1),
+            CreatedAt = DateTime.UtcNow
+        };
+        db.MarketplaceAccounts.Add(account);
+        var loja = new IntegracaoLoja
+        {
+            UserId = 10,
+            TenantId = TestTenantId,
+            ShopId = shopId,
+            FriendlyName = friendlyName,
+            AccessToken = "token",
+            PlatformType = MarketplaceType.Shopee,
+            CreatedAt = DateTime.UtcNow
+        };
+        db.IntegracaoLojas.Add(loja);
+        await db.SaveChangesAsync();
+        return (account, loja);
     }
 
     private static AppDbContext CreateDbContext()

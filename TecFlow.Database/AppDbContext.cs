@@ -47,6 +47,7 @@ public class AppDbContext : DbContext
     public DbSet<InventoryMovement> InventoryMovements { get; set; } = null!;
     public DbSet<IntegracaoLoja> IntegracaoLojas { get; set; } = null!;
     public DbSet<ShortAffiliateLink> ShortAffiliateLinks { get; set; } = null!;
+    public DbSet<ShortAffiliateLinkAccount> ShortAffiliateLinkAccounts { get; set; } = null!;
     public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
@@ -289,11 +290,24 @@ public class AppDbContext : DbContext
             entity.HasIndex(link => link.ShortCode).IsUnique();
             entity.HasIndex(link => link.AffiliateLinkId).IsUnique();
             entity.HasIndex(link => new { link.UserId, link.CreatedAt });
+            entity.HasIndex(link => link.LinkGroupId);
             entity.Property(link => link.AffiliateUrl).HasMaxLength(2048);
             entity.HasOne<MarketplaceAccount>()
                 .WithMany()
                 .HasForeignKey(link => link.MarketplaceAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(link => link.AccountLinks)
+                .WithOne(account => account.AffiliateLink)
+                .HasForeignKey(account => account.ShortAffiliateLinkId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShortAffiliateLinkAccount>(entity =>
+        {
+            entity.ToTable("ShortAffiliateLinkAccounts");
+            entity.Property(account => account.IsActive).HasDefaultValue(true);
+            entity.HasIndex(account => account.LinkGroupId);
+            entity.HasIndex(account => new { account.LinkGroupId, account.IntegracaoLojaId }).IsUnique();
         });
 
         modelBuilder.Entity<LinkClickLog>(entity =>

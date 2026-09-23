@@ -22,6 +22,10 @@ public class AffiliateLinkHistoryItemDto
     public DateTime CreatedAt { get; set; }
 
     public int ClickCount { get; set; }
+
+    public Guid LinkGroupId { get; set; }
+
+    public List<AffiliateLinkAccountVariantDto> Accounts { get; set; } = [];
 }
 
 /// <summary>Projeção de <c>ShortAffiliateLink</c> para a ação Visualizar no gerador.</summary>
@@ -43,6 +47,8 @@ public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
             OriginalUrl = item.OriginalUrl ?? string.Empty,
             AffiliateUrl = item.AffiliateUrl ?? string.Empty,
             ShortenedUrl = item.ShortenedUrl ?? string.Empty,
+            LinkGroupId = item.LinkGroupId,
+            Accounts = item.Accounts ?? [],
             CreatedAt = item.CreatedAt,
             ClickCount = item.ClickCount
         };

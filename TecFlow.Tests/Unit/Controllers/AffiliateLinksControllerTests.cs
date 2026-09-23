@@ -28,6 +28,24 @@ public class AffiliateLinksControllerTests
         Assert.Equal("https://shopee.com.br/produto-i.1.2", dto!.OriginalUrl);
         Assert.Equal("123456", dto.ShopId);
         Assert.Equal(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"), dto.StoreId);
+        Assert.Empty(dto.StoreIds);
+    }
+
+    [Fact]
+    public void GerarLinkAfiliadoDto_ShouldResolveStoreScopesFromStoreIds()
+    {
+        var first = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var second = Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+        var dto = new GerarLinkAfiliadoDto
+        {
+            StoreId = first,
+            StoreIds = [first, second]
+        };
+
+        var scopes = dto.ResolveStoreScopes();
+        Assert.Equal(2, scopes.Count);
+        Assert.Contains(first, scopes);
+        Assert.Contains(second, scopes);
     }
 
     [Fact]

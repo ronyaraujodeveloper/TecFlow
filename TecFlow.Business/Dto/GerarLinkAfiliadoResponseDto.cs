@@ -30,13 +30,82 @@ public class GerarLinkAfiliadoResponseDto
 
     public Guid AffiliateLinkId { get; set; }
 
+    public Guid LinkGroupId { get; set; }
+
+    public int? SelectedStoreId { get; set; }
+
+    public List<AffiliateLinkAccountVariantDto> Accounts { get; set; } = [];
+
     public string ResolvedShortUrl =>
         FirstNonEmpty(ShortenedUrl, LooksLikeTecFlowShort(ConvertedUrl) ? ConvertedUrl : null);
 
     public bool HasConvertedLink =>
         !string.IsNullOrWhiteSpace(AffiliateUrl)
         || !string.IsNullOrWhiteSpace(ResolvedShortUrl)
-        || !string.IsNullOrWhiteSpace(ShortenedShopeeUrl);
+        || !string.IsNullOrWhiteSpace(ShortenedShopeeUrl)
+        || Accounts.Exists(account => account.IsActive && (!string.IsNullOrWhiteSpace(account.AffiliateUrl) || !string.IsNullOrWhiteSpace(account.ShortenedUrl)));
+
+    public void ApplySelectedAccount(int storeId)
+    {
+        var selected = Accounts.Find(account => account.StoreId == storeId && account.IsActive)
+            ?? Accounts.Find(account => account.IsActive);
+        if (selected is null)
+        {
+            return;
+        }
+
+        SelectedStoreId = selected.StoreId;
+        AffiliateUrl = selected.AffiliateUrl;
+        ConvertedUrl = selected.AffiliateUrl;
+        ShortenedUrl = selected.ShortenedUrl;
+        ShortenedShopeeUrl = selected.ShortenedShopeeUrl;
+        AffiliateLinkId = selected.AffiliateLinkId;
+    }
+
+    public static GerarLinkAfiliadoResponseDto FromHistory(ShortAffiliateLinkDto item)
+    {
+        var dto = new GerarLinkAfiliadoResponseDto
+        {
+            Success = true,
+            Status = true,
+            OriginalUrl = item.OriginalUrl?.Trim() ?? string.Empty,
+            AffiliateUrl = item.AffiliateUrl,
+            ConvertedUrl = item.AffiliateUrl,
+            ShortenedUrl = item.ShortenedUrl?.Trim() ?? string.Empty,
+            ShortenedShopeeUrl = item.AffiliateUrl,
+            PlatformDetected = string.IsNullOrWhiteSpace(item.PlatformName)
+                ? item.PlatformType.ToString()
+                : item.PlatformName,
+            AffiliateLinkId = item.AffiliateLinkId,
+            LinkGroupId = item.LinkGroupId,
+            Message = "Link carregado do histórico.",
+            Descricao = "Link carregado do histórico.",
+            Accounts = (item.Accounts ?? [])
+                .Where(account => account.IsActive)
+                .ToList()
+        };
+
+        if (dto.Accounts.Count == 0 && !string.IsNullOrWhiteSpace(dto.AffiliateUrl))
+        {
+            dto.Accounts.Add(new AffiliateLinkAccountVariantDto
+            {
+                AffiliateLinkId = item.AffiliateLinkId,
+                StoreId = 0,
+                StoreName = item.PlatformName,
+                AffiliateUrl = dto.AffiliateUrl,
+                ShortenedUrl = dto.ShortenedUrl,
+                ShortenedShopeeUrl = dto.ShortenedShopeeUrl,
+                IsActive = true
+            });
+        }
+
+        if (dto.Accounts.Count > 0)
+        {
+            dto.ApplySelectedAccount(dto.Accounts[0].StoreId);
+        }
+
+        return dto;
+    }
 
     public void NormalizeHttp200()
     {

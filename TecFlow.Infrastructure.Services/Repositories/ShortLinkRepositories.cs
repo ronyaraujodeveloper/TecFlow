@@ -74,6 +74,26 @@ public class ShortAffiliateLinkRepository : IShortAffiliateLinkRepository
 
         return (items, totalCount);
     }
+
+    public async Task<List<ShortAffiliateLink>> ListByUserForGroupingAsync(
+        int userId,
+        AffiliateLinkFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.ShortAffiliateLinks
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(link => link.UserId == userId);
+
+        if (filter.PlatformType is MarketplaceType platformType)
+        {
+            query = query.Where(link => link.PlatformType == platformType);
+        }
+
+        return await query
+            .OrderByDescending(link => link.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }
 
 public class LinkClickLogRepository : ILinkClickLogRepository

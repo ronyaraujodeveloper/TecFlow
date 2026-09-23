@@ -43,17 +43,23 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         try
         {
             filter ??= new AffiliateLinkFilter();
-            var (items, totalCount) = await _shortLinkRepository.ListByUserAsync(userId, filter, cancellationToken);
+            var items = await _shortLinkRepository.ListByUserForGroupingAsync(userId, filter, cancellationToken);
+            var grouped = GroupLinks(items, filter.LojaId);
             var clickCounts = await _clickLogRepository.GetClickCountsByAffiliateLinkIdsAsync(
-                items.Select(item => item.AffiliateLinkId),
+                grouped.SelectMany(group => group.Links.Select(link => link.AffiliateLinkId)),
                 cancellationToken);
 
-            var storeNames = await LoadStoreFriendlyNamesAsync(items, cancellationToken);
+            var storeNames = await LoadStoreFriendlyNamesAsync(
+                grouped.SelectMany(group => group.Links).ToList(),
+                cancellationToken);
 
             var page = filter.Page < 1 ? 1 : filter.Page;
             var pageSize = PagedListHelper.NormalizePageSize(filter.PageSize);
-            var dtoItems = items
-                .Select(link => MapItem(link, clickCounts.GetValueOrDefault(link.AffiliateLinkId), storeNames))
+            var totalCount = grouped.Count;
+            var dtoItems = grouped
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(group => MapGroup(group, clickCounts, storeNames))
                 .ToList();
 
             var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -84,9 +90,51 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         }
     }
 
-    private AffiliateLinkHistoryItemDto MapItem(
+    private static List<LinkGroup> GroupLinks(IReadOnlyList<Core.Entities.ShortAffiliateLink> items, int? lojaId)
+    {
+        var groups = items
+            .GroupBy(link => link.LinkGroupId == Guid.Empty ? link.AffiliateLinkId : link.LinkGroupId)
+            .Select(group => new LinkGroup
+            {
+                LinkGroupId = group.Key,
+                Links = group.OrderByDescending(link => link.IsActive).ThenByDescending(link => link.CreatedAt).ToList()
+            })
+            .Where(group => group.Links.Exists(link => link.IsActive) || group.Links.Count > 0)
+            .Where(group => lojaId is not int id || group.Links.Exists(link => link.IntegracaoLojaId == id))
+            .OrderByDescending(group => group.Links.Max(link => link.CreatedAt))
+            .ToList();
+
+        return groups;
+    }
+
+    private AffiliateLinkHistoryItemDto MapGroup(
+        LinkGroup group,
+        IReadOnlyDictionary<Guid, int> clickCounts,
+        IReadOnlyDictionary<int, string> storeNames)
+    {
+        var active = group.Links.Where(link => link.IsActive).ToList();
+        var primary = active.FirstOrDefault() ?? group.Links[0];
+        var variants = group.Links.Select(link => MapVariant(link, storeNames)).ToList();
+        var clickCount = group.Links.Sum(link => clickCounts.GetValueOrDefault(link.AffiliateLinkId));
+
+        return new AffiliateLinkHistoryItemDto
+        {
+            AffiliateLinkId = primary.AffiliateLinkId,
+            LinkGroupId = group.LinkGroupId,
+            PlatformType = primary.PlatformType,
+            PlatformName = GetPlatformName(primary.PlatformType),
+            DisplayTitle = BuildDisplayTitle(primary.CustomNickname, primary.OriginalUrl),
+            OriginalUrl = primary.OriginalUrl,
+            AffiliateUrl = string.IsNullOrWhiteSpace(primary.AffiliateUrl) ? primary.DestinationUrl : primary.AffiliateUrl,
+            ShortenedUrl = MapVariant(primary, storeNames).ShortenedUrl,
+            CreatedAt = group.Links.Min(link => link.CreatedAt),
+            ClickCount = clickCount,
+            Accounts = variants
+        };
+    }
+
+    private AffiliateLinkAccountVariantDto MapVariant(
         Core.Entities.ShortAffiliateLink link,
-        int clickCount,
         IReadOnlyDictionary<int, string> storeNames)
     {
         string? friendlyName = null;
@@ -95,17 +143,38 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             storeNames.TryGetValue(accountId, out friendlyName);
         }
 
+        return new AffiliateLinkAccountVariantDto
+        {
+            AffiliateLinkId = link.AffiliateLinkId,
+            StoreId = link.IntegracaoLojaId ?? 0,
+            MarketplaceAccountId = link.MarketplaceAccountId,
+            StoreName = string.IsNullOrWhiteSpace(friendlyName) ? $"Loja {link.IntegracaoLojaId}" : friendlyName,
+            AffiliateUrl = string.IsNullOrWhiteSpace(link.AffiliateUrl) ? link.DestinationUrl : link.AffiliateUrl,
+            ShortenedUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, friendlyName, link.ShortCode),
+            ShortenedShopeeUrl = string.IsNullOrWhiteSpace(link.AffiliateUrl) ? link.DestinationUrl : link.AffiliateUrl,
+            IsActive = link.IsActive
+        };
+    }
+
+    private AffiliateLinkHistoryItemDto MapItem(
+        Core.Entities.ShortAffiliateLink link,
+        int clickCount,
+        IReadOnlyDictionary<int, string> storeNames)
+    {
+        var variant = MapVariant(link, storeNames);
         return new AffiliateLinkHistoryItemDto
         {
             AffiliateLinkId = link.AffiliateLinkId,
+            LinkGroupId = link.LinkGroupId == Guid.Empty ? link.AffiliateLinkId : link.LinkGroupId,
             PlatformType = link.PlatformType,
             PlatformName = GetPlatformName(link.PlatformType),
             DisplayTitle = BuildDisplayTitle(link.CustomNickname, link.OriginalUrl),
             OriginalUrl = link.OriginalUrl,
-            AffiliateUrl = string.IsNullOrWhiteSpace(link.AffiliateUrl) ? link.DestinationUrl : link.AffiliateUrl,
-            ShortenedUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, friendlyName, link.ShortCode),
+            AffiliateUrl = variant.AffiliateUrl,
+            ShortenedUrl = variant.ShortenedUrl,
             CreatedAt = link.CreatedAt,
-            ClickCount = clickCount
+            ClickCount = clickCount,
+            Accounts = [variant]
         };
     }
 
@@ -155,5 +224,12 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
 
         var trimmed = originalUrl.Trim();
         return trimmed.Length <= 56 ? trimmed : trimmed[..53] + "...";
+    }
+
+    private sealed class LinkGroup
+    {
+        public Guid LinkGroupId { get; init; }
+
+        public List<Core.Entities.ShortAffiliateLink> Links { get; init; } = [];
     }
 }

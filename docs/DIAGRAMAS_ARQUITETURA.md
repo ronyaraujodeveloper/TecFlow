@@ -41,7 +41,9 @@ flowchart LR
   BLD --> SHPEE[ShortenedShopeeUrl br.shp.ee]
   SHORT --> SHORTURL[ShortenedUrl localhost:5001/storeSlug/code]
   UI[GeradorLinks.razor] -->|POST /api/links/convert| API[AffiliateLinksController]
-  HIST[HistoricoLinks] -->|Visualizar ShortAffiliateLinkDto| UI
+  HIST[HistoricoLinks] -->|Visualizar / Editar ShortAffiliateLinkDto| UI
+  UI -->|checkboxes StoreIds| API
+  ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL
   API --> STR
   MINHAS[MinhasLojas.razor] -->|GET/POST marketplace-auth| ACC[MarketplaceAccountsController]
   ACC --> LOJAS

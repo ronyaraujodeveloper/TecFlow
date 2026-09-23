@@ -297,5 +297,35 @@ public class LinkClickLogTests
             string? customNickname,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(("http://localhost:5001/r/abcdef1", _affiliateLinkId));
+
+        public Task<Guid> ResolveLinkGroupIdAsync(
+            int userId,
+            string originalUrl,
+            MarketplaceType platformType,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+
+        public Task<ShortLinkCreateResult> EnsureForStoreAsync(
+            string destinationUrl,
+            string originalUrl,
+            MarketplaceType platformType,
+            int userId,
+            Guid tenantId,
+            int integracaoLojaId,
+            Guid linkGroupId,
+            string? customNickname,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ShortLinkCreateResult
+            {
+                PublicShortUrl = "http://localhost:5001/r/abcdef1",
+                AffiliateLinkId = _affiliateLinkId,
+                ShortCode = "abcdef1"
+            });
+
+        public Task DeactivateUnselectedAccountsAsync(
+            Guid linkGroupId,
+            IReadOnlyCollection<int> selectedIntegracaoLojaIds,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

@@ -46,69 +46,253 @@ public sealed class ShortLinkService : IShortLinkService
         string? customNickname,
         CancellationToken cancellationToken = default)
     {
+        var groupId = await ResolveLinkGroupIdAsync(userId, originalUrl, platformType, cancellationToken);
+        if (integracaoLojaId is not int lojaId || lojaId <= 0)
+        {
+            throw new AffiliateLinkGenerationException("Loja não informada para gerar o link encurtado.");
+        }
+
+        var created = await EnsureForStoreAsync(
+            destinationUrl,
+            originalUrl,
+            platformType,
+            userId,
+            tenantId,
+            lojaId,
+            groupId,
+            customNickname,
+            cancellationToken);
+
+        return (created.PublicShortUrl, created.AffiliateLinkId);
+    }
+
+    public async Task<Guid> ResolveLinkGroupIdAsync(
+        int userId,
+        string originalUrl,
+        MarketplaceType platformType,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedUrl = originalUrl.Trim();
+        var existing = await _context.ShortAffiliateLinks
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(link =>
+                link.UserId == userId
+                && link.OriginalUrl == normalizedUrl
+                && link.PlatformType == platformType
+                && link.LinkGroupId != Guid.Empty)
+            .Select(link => link.LinkGroupId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return existing == Guid.Empty ? Guid.NewGuid() : existing;
+    }
+
+    public async Task<ShortLinkCreateResult> EnsureForStoreAsync(
+        string destinationUrl,
+        string originalUrl,
+        MarketplaceType platformType,
+        int userId,
+        Guid tenantId,
+        int integracaoLojaId,
+        Guid linkGroupId,
+        string? customNickname,
+        CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(destinationUrl))
         {
             throw new AffiliateLinkGenerationException("URL de destino do marketplace não informada.");
         }
 
-        var codeLength = _options.ShortCodeLength is >= 6 and <= 8
-            ? _options.ShortCodeLength
-            : 7;
-
-        string shortCode = string.Empty;
-        for (var attempt = 0; attempt < MaxUniqueAttempts; attempt++)
-        {
-            var candidate = ShortLinkCodeGenerator.Generate(codeLength);
-            if (!await _shortLinkRepository.ShortCodeExistsAsync(candidate, cancellationToken))
-            {
-                shortCode = candidate;
-                break;
-            }
-        }
-
-        if (string.IsNullOrEmpty(shortCode))
-        {
-            throw new AffiliateLinkGenerationException(
-                "Não foi possível gerar um código curto único. Tente novamente.");
-        }
-
         var affiliateUrl = destinationUrl.Trim();
+        var normalizedOriginal = originalUrl.Trim();
         var (marketplaceAccountId, storeFriendlyName) = await ResolveStoreIdentityAsync(
             tenantId,
             integracaoLojaId,
             platformType,
             cancellationToken);
 
-        var entity = new ShortAffiliateLink
+        var existing = await _context.ShortAffiliateLinks
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                link =>
+                    link.UserId == userId
+                    && link.OriginalUrl == normalizedOriginal
+                    && link.IntegracaoLojaId == integracaoLojaId
+                    && link.PlatformType == platformType,
+                cancellationToken);
+
+        ShortAffiliateLink entity;
+        if (existing is not null)
         {
-            AffiliateLinkId = Guid.NewGuid(),
-            ShortCode = shortCode,
-            Code = shortCode,
-            DestinationUrl = affiliateUrl,
-            AffiliateUrl = affiliateUrl,
-            OriginalUrl = originalUrl.Trim(),
-            PlatformType = platformType,
-            Platform = platformType,
-            UserId = userId,
-            IntegracaoLojaId = integracaoLojaId,
-            MarketplaceAccountId = marketplaceAccountId,
-            TenantId = tenantId,
-            CustomNickname = customNickname?.Trim(),
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
+            existing.DestinationUrl = affiliateUrl;
+            existing.AffiliateUrl = affiliateUrl;
+            existing.MarketplaceAccountId = marketplaceAccountId;
+            existing.LinkGroupId = linkGroupId == Guid.Empty ? existing.LinkGroupId : linkGroupId;
+            existing.CustomNickname = customNickname?.Trim() ?? existing.CustomNickname;
+            existing.IsActive = true;
+            existing.Touch();
+            entity = existing;
+        }
+        else
+        {
+            var shortCode = await GenerateUniqueShortCodeAsync(cancellationToken);
+            entity = new ShortAffiliateLink
+            {
+                AffiliateLinkId = Guid.NewGuid(),
+                LinkGroupId = linkGroupId == Guid.Empty ? Guid.NewGuid() : linkGroupId,
+                ShortCode = shortCode,
+                Code = shortCode,
+                DestinationUrl = affiliateUrl,
+                AffiliateUrl = affiliateUrl,
+                OriginalUrl = normalizedOriginal,
+                PlatformType = platformType,
+                Platform = platformType,
+                UserId = userId,
+                IntegracaoLojaId = integracaoLojaId,
+                MarketplaceAccountId = marketplaceAccountId,
+                TenantId = tenantId,
+                CustomNickname = customNickname?.Trim(),
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
 
-        await _context.ShortAffiliateLinks.AddAsync(entity, cancellationToken);
+            await _context.ShortAffiliateLinks.AddAsync(entity, cancellationToken);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
+        await UpsertAccountAssociationAsync(entity, cancellationToken);
 
-        var publicUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, storeFriendlyName, shortCode);
+        var publicUrl = ShortLinkPublicUrl.Build(_options.PublicBaseUrl, storeFriendlyName, entity.ShortCode);
         _logger.LogInformation(
-            "Link encurtado TecFlow criado. Code={ShortCode}, AffiliateLinkId={AffiliateLinkId}, Platform={Platform}",
-            shortCode,
+            "Link encurtado TecFlow persistido. Code={ShortCode}, AffiliateLinkId={AffiliateLinkId}, Loja={LojaId}, Ativo={IsActive}",
+            entity.ShortCode,
             entity.AffiliateLinkId,
-            platformType);
+            integracaoLojaId,
+            entity.IsActive);
 
-        return (publicUrl, entity.AffiliateLinkId);
+        return new ShortLinkCreateResult
+        {
+            PublicShortUrl = publicUrl,
+            AffiliateLinkId = entity.AffiliateLinkId,
+            ShortCode = entity.ShortCode
+        };
+    }
+
+    public async Task DeactivateUnselectedAccountsAsync(
+        Guid linkGroupId,
+        IReadOnlyCollection<int> selectedIntegracaoLojaIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (linkGroupId == Guid.Empty)
+        {
+            return;
+        }
+
+        var selected = selectedIntegracaoLojaIds.ToHashSet();
+        var links = await _context.ShortAffiliateLinks
+            .IgnoreQueryFilters()
+            .Where(link => link.LinkGroupId == linkGroupId)
+            .ToListAsync(cancellationToken);
+
+        var associations = await _context.ShortAffiliateLinkAccounts
+            .IgnoreQueryFilters()
+            .Where(account => account.LinkGroupId == linkGroupId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var link in links)
+        {
+            var lojaId = link.IntegracaoLojaId ?? 0;
+            if (lojaId > 0 && selected.Contains(lojaId))
+            {
+                continue;
+            }
+
+            if (!link.IsActive)
+            {
+                continue;
+            }
+
+            link.IsActive = false;
+            link.Touch();
+        }
+
+        foreach (var association in associations)
+        {
+            if (selected.Contains(association.IntegracaoLojaId))
+            {
+                continue;
+            }
+
+            if (!association.IsActive)
+            {
+                continue;
+            }
+
+            association.IsActive = false;
+            association.Touch();
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertAccountAssociationAsync(
+        ShortAffiliateLink entity,
+        CancellationToken cancellationToken)
+    {
+        var lojaId = entity.IntegracaoLojaId ?? 0;
+        if (lojaId <= 0)
+        {
+            return;
+        }
+
+        var association = await _context.ShortAffiliateLinkAccounts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                account => account.LinkGroupId == entity.LinkGroupId && account.IntegracaoLojaId == lojaId,
+                cancellationToken);
+
+        if (association is null)
+        {
+            association = new ShortAffiliateLinkAccount
+            {
+                TenantId = entity.TenantId,
+                LinkGroupId = entity.LinkGroupId,
+                ShortAffiliateLinkId = entity.Id,
+                IntegracaoLojaId = lojaId,
+                MarketplaceAccountId = entity.MarketplaceAccountId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.ShortAffiliateLinkAccounts.AddAsync(association, cancellationToken);
+        }
+        else
+        {
+            association.ShortAffiliateLinkId = entity.Id;
+            association.MarketplaceAccountId = entity.MarketplaceAccountId;
+            association.IsActive = true;
+            association.Touch();
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<string> GenerateUniqueShortCodeAsync(CancellationToken cancellationToken)
+    {
+        var codeLength = _options.ShortCodeLength is >= 6 and <= 8
+            ? _options.ShortCodeLength
+            : 7;
+
+        for (var attempt = 0; attempt < MaxUniqueAttempts; attempt++)
+        {
+            var candidate = ShortLinkCodeGenerator.Generate(codeLength);
+            if (!await _shortLinkRepository.ShortCodeExistsAsync(candidate, cancellationToken))
+            {
+                return candidate;
+            }
+        }
+
+        throw new AffiliateLinkGenerationException(
+            "Não foi possível gerar um código curto único. Tente novamente.");
     }
 
     private async Task<(int? AccountId, string FriendlyName)> ResolveStoreIdentityAsync(

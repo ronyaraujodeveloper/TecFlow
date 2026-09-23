@@ -12,6 +12,11 @@ public class ShortAffiliateLink : BaseEntity, ITenantScopedEntity
     /// <summary>Identificador público UUID do link gerado (telemetria).</summary>
     public Guid AffiliateLinkId { get; set; } = Guid.NewGuid();
 
+    /// <summary>Agrupa as contas convertidas para o mesmo produto/URL original.</summary>
+    public Guid LinkGroupId { get; set; }
+
+    public ICollection<ShortAffiliateLinkAccount> AccountLinks { get; set; } = new List<ShortAffiliateLinkAccount>();
+
     [Required]
     [MaxLength(8)]
     public string ShortCode { get; set; } = string.Empty;

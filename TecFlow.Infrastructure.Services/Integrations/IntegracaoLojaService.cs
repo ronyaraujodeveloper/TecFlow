@@ -4,6 +4,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Mappings;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -42,43 +43,58 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     {
         filter.UserId = userId;
         var userKey = userId.ToString(CultureInfo.InvariantCulture);
-        var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
-        var integrations = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
 
-        var dtos = accounts
-            .Select(account =>
-            {
-                var integration = integrations.FirstOrDefault(item =>
-                    item.ShopId == account.ShopId && item.PlatformType == account.MarketplaceType);
-                return ToAccountDto(account, integration);
-            })
-            .ToList();
-
-        foreach (var integration in integrations)
+        try
         {
-            var alreadyListed = dtos.Any(item =>
-                item.ShopId == integration.ShopId && item.PlatformType == integration.PlatformType);
-            if (!alreadyListed)
+            var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
+            var integrations = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
+
+            var dtos = new List<MarketplaceAccountDto>();
+            foreach (var account in accounts)
             {
-                dtos.Add(ToAccountDto(integration));
+                try
+                {
+                    var integration = integrations.FirstOrDefault(item =>
+                        item.ShopId == account.ShopId && item.PlatformType == account.MarketplaceType);
+                    dtos.Add(MarketplaceAccountMapper.ToDto(account, integration));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERRO MAP MarketplaceAccount]: {ex.Message} - {ex.StackTrace}");
+                }
             }
+
+            foreach (var integration in integrations)
+            {
+                var alreadyListed = dtos.Any(item =>
+                    item.ShopId == integration.ShopId && item.PlatformType == integration.PlatformType);
+                if (!alreadyListed)
+                {
+                    dtos.Add(MarketplaceAccountMapper.ToDto(integration));
+                }
+            }
+
+            if (filter.PlatformType.HasValue)
+            {
+                dtos = dtos.Where(item => item.PlatformType == filter.PlatformType.Value).ToList();
+            }
+
+            dtos = dtos.OrderByDescending(item => item.CreatedAt).ToList();
+            var (pageItems, meta) = PagedListHelper.Slice(dtos, filter);
+
+            return new IntegracaoLojaResponseDto
+            {
+                Status = true,
+                Descricao = "OK",
+                DataList = pageItems.ToList(),
+                Paging = PagingInfoDto.FromMeta(meta)
+            };
         }
-
-        if (filter.PlatformType.HasValue)
+        catch (Exception ex)
         {
-            dtos = dtos.Where(item => item.PlatformType == filter.PlatformType.Value).ToList();
+            Console.WriteLine($"[ERRO SQL MarketplaceAccounts]: {ex.Message} - {ex.StackTrace}");
+            return Fail($"Erro do Servidor/SQL: {ex.Message}");
         }
-
-        dtos = dtos.OrderByDescending(item => item.CreatedAt).ToList();
-        var (pageItems, meta) = PagedListHelper.Slice(dtos, filter);
-
-        return new IntegracaoLojaResponseDto
-        {
-            Status = true,
-            Descricao = "OK",
-            DataList = pageItems.ToList(),
-            Paging = PagingInfoDto.FromMeta(meta)
-        };
     }
 
     public async Task<IntegracaoLojaResponseDto> LinkAsync(
@@ -150,6 +166,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         if (!string.IsNullOrWhiteSpace(dto.TrackingId))
         {
             marketplaceAccount.AffiliateTrackingId = dto.TrackingId.Trim();
+            marketplaceAccount.TrackingId = marketplaceAccount.AffiliateTrackingId;
         }
         try
         {
@@ -175,7 +192,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             {
                 existing.AffiliateTrackingId = dto.TrackingId.Trim();
             }
-            existing.AccessToken = marketplaceAccount.AccessToken;
+            existing.AccessToken = marketplaceAccount.AccessToken ?? string.Empty;
             existing.RefreshToken = marketplaceAccount.RefreshToken;
             existing.ExpiresAt = marketplaceAccount.ExpiresAt;
             existing.Status = status;
@@ -186,7 +203,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             {
                 Status = true,
                 Descricao = ResolveLinkSuccessMessage(dto, "Integração atualizada com sucesso."),
-                Data = ToAccountDto(marketplaceAccount, existing)
+                Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, existing)
             };
         }
 
@@ -198,7 +215,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             ShopId = dto.ShopId.Trim(),
             FriendlyName = dto.FriendlyName.Trim(),
             AffiliateTrackingId = string.IsNullOrWhiteSpace(dto.TrackingId) ? null : dto.TrackingId.Trim(),
-            AccessToken = marketplaceAccount.AccessToken,
+            AccessToken = marketplaceAccount.AccessToken ?? string.Empty,
             RefreshToken = marketplaceAccount.RefreshToken,
             ExpiresAt = marketplaceAccount.ExpiresAt,
             Status = status,
@@ -211,7 +228,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             Status = true,
             Descricao = ResolveLinkSuccessMessage(dto, "Loja vinculada com sucesso."),
-            Data = ToAccountDto(marketplaceAccount, integration)
+            Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, integration)
         };
     }
 
@@ -240,7 +257,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         if (account is null && integration is not null)
         {
-            account = await _marketplaceAccountRepository.GetByShopAsync(integration.ShopId, integration.PlatformType);
+            account = await _marketplaceAccountRepository.GetByShopAsync(
+                integration.ShopId ?? string.Empty,
+                integration.PlatformType);
         }
 
         if (account is not null)
@@ -254,7 +273,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             integration = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
                 userId,
-                account.ShopId,
+                account.ShopId ?? string.Empty,
                 account.MarketplaceType,
                 cancellationToken);
         }
@@ -297,48 +316,6 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return expiresAt <= DateTime.UtcNow
             ? MarketplaceIntegrationStatus.Expired
             : MarketplaceIntegrationStatus.Active;
-    }
-
-    private static MarketplaceAccountDto ToAccountDto(IntegracaoLoja item)
-    {
-        item = SyncStatus(item);
-        return new MarketplaceAccountDto
-        {
-            Id = item.Id,
-            UserId = item.UserId,
-            TenantId = item.TenantId,
-            ShopId = item.ShopId,
-            AffiliateTrackingId = item.AffiliateTrackingId ?? string.Empty,
-            FriendlyName = item.FriendlyName,
-            ShopName = string.IsNullOrWhiteSpace(item.FriendlyName) ? item.ShopId : item.FriendlyName,
-            PlatformType = item.PlatformType,
-            ExpiresAt = item.ExpiresAt,
-            Status = item.Status,
-            CreatedAt = item.CreatedAt
-        };
-    }
-
-    private static MarketplaceAccountDto ToAccountDto(MarketplaceAccount account, IntegracaoLoja? integration)
-    {
-        _ = int.TryParse(account.UserId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedUserId);
-        var status = account.IsActive
-            ? ResolveStatus(account.ExpiresAt, MarketplaceIntegrationStatus.Active)
-            : MarketplaceIntegrationStatus.Inactive;
-
-        return new MarketplaceAccountDto
-        {
-            Id = integration?.Id ?? account.Id,
-            UserId = parsedUserId,
-            TenantId = account.TenantId,
-            ShopId = account.ShopId,
-            AffiliateTrackingId = FirstNonEmpty(account.AffiliateTrackingId, integration?.AffiliateTrackingId),
-            FriendlyName = string.IsNullOrWhiteSpace(account.FriendlyName) ? account.ShopName : account.FriendlyName,
-            ShopName = string.IsNullOrWhiteSpace(account.ShopName) ? account.ShopId : account.ShopName,
-            PlatformType = account.MarketplaceType,
-            ExpiresAt = account.ExpiresAt,
-            Status = status,
-            CreatedAt = account.CreatedAt
-        };
     }
 
     private void ApplyHomologFallbacks(IntegracaoLojaDto dto)
@@ -430,6 +407,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.AffiliateTrackingId = string.IsNullOrWhiteSpace(affiliateTrackingId)
             ? marketplaceAccount.AffiliateTrackingId
             : affiliateTrackingId;
+        marketplaceAccount.TrackingId = marketplaceAccount.AffiliateTrackingId;
         marketplaceAccount.AccessToken = string.IsNullOrWhiteSpace(marketplaceAccount.AccessToken)
             ? placeholderToken
             : marketplaceAccount.AccessToken;
@@ -469,7 +447,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             {
                 Status = true,
                 Descricao = "Conta Shopee vinculada no modo Universal Link.",
-                Data = ToAccountDto(marketplaceAccount, existing)
+                Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, existing)
             };
         }
 
@@ -493,7 +471,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             Status = true,
             Descricao = "Conta Shopee vinculada no modo Universal Link.",
-            Data = ToAccountDto(marketplaceAccount, integration)
+            Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, integration)
         };
     }
 

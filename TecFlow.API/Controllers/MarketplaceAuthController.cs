@@ -143,8 +143,28 @@ public class MarketplaceAuthController : ControllerBase
             });
         }
 
-        var result = await _integracaoLojaService.ListByUserAsync(userId, filter, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _integracaoLojaService.ListByUserAsync(userId, filter, cancellationToken);
+            if (!result.Status)
+            {
+                _logger.LogWarning("Falha ao listar MarketplaceAccounts: {Descricao}", result.Descricao);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao consultar MarketplaceAccounts no SQL Server");
+            _logger.LogError(ex, "Erro ao consultar MarketplaceAccounts no SQL Server");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new IntegracaoLojaResponseDto
+                {
+                    Status = false,
+                    Descricao = $"Erro do Servidor/SQL: {ex.Message}"
+                });
+        }
     }
 
     /// <summary>Vinculação manual (homologação). JWT opcional: sem claim usa UserId de fallback no IIS.</summary>

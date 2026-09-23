@@ -71,12 +71,14 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("MarketplaceAccounts");
             entity.HasKey(account => account.Id);
-            entity.Property(account => account.UserId).HasMaxLength(128).IsRequired();
-            entity.Property(account => account.FriendlyName).HasMaxLength(256).IsRequired();
-            entity.Property(account => account.ShopId).HasMaxLength(128).IsRequired();
-            entity.Property(account => account.ShopName).HasMaxLength(256).IsRequired();
+            entity.Property(account => account.UserId).HasMaxLength(128);
+            entity.Property(account => account.FriendlyName).HasMaxLength(256);
+            entity.Property(account => account.ShopId).HasMaxLength(128);
+            entity.Property(account => account.ShopName).HasMaxLength(256);
+            entity.Property(account => account.TrackingId).HasMaxLength(64);
             entity.Property(account => account.AffiliateTrackingId).HasMaxLength(64);
-            entity.Property(account => account.AccessToken).IsRequired();
+            entity.Property(account => account.AppKey).HasMaxLength(256);
+            entity.Property(account => account.AppSecret).HasMaxLength(512);
             entity.Property(account => account.IsActive).HasDefaultValue(true);
             entity.Property(account => account.MarketplaceType).HasConversion<int>();
             entity.HasIndex(account => new { account.TenantId, account.ShopId, account.MarketplaceType })
@@ -435,7 +437,10 @@ public class AppDbContext : DbContext
         var marketplaceAccount = modelBuilder.Entity<MarketplaceAccount>();
 
         marketplaceAccount.Property(a => a.AccessToken)
-            .HasConversion(encryptedString);
+            .HasConversion(encryptedNullableString);
+
+        marketplaceAccount.Property(a => a.AppSecret)
+            .HasConversion(encryptedNullableString);
 
         marketplaceAccount.Property(a => a.RefreshToken)
             .HasConversion(encryptedNullableString);
@@ -443,7 +448,7 @@ public class AppDbContext : DbContext
         var integracaoLoja = modelBuilder.Entity<IntegracaoLoja>();
 
         integracaoLoja.Property(i => i.AccessToken)
-            .HasConversion(encryptedString);
+            .HasConversion(encryptedNullableString);
 
         integracaoLoja.Property(i => i.RefreshToken)
             .HasConversion(encryptedNullableString);

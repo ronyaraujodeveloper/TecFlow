@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id={AffiliateTrackingId|FriendlyName|UserId}` **sem Open API / App Key / App Secret**. Encurtador TecFlow (`ShortenedUrl`) segue normalmente. Loja Shopee: `ConnectStoreModal` (apelido + `ID do Afiliado`) → `IntegracaoLojaService.LinkShopeeUniversalAccountAsync` → `MarketplaceAccounts.AffiliateTrackingId` (`AutomacaoSociais`). Card `MarketplaceStoreCard` mostra Shop ID e Affiliate ID. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
+**Gerador de links Shopee (Fase 19.2):** `PlatformLinkResolver` → `ShopeeLinkStrategy` extrai `shopId`/`itemId` e monta Universal Link. Listagem de lojas: `MarketplaceAccountMapper` trata `TrackingId`/`ShopId`/`AppKey`/`AppSecret` nulos em registros antigos de `MarketplaceAccounts` sem `NullReferenceException`. Card `MarketplaceStoreCard` mostra Shop ID e Affiliate ID. Parse inválido: `AffiliateLinksController` HTTP 400 + alerta vermelho em `GeradorLinks.razor`.
 
 ```mermaid
 flowchart LR
@@ -1154,7 +1154,8 @@ sequenceDiagram
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)
   UI->>API: POST /api/marketplace-auth/vincular-manual (Authorization Bearer; fallback UserId=1 no IIS)
   API->>SVC: LinkAsync (pula OAuth Shopee se Dev/Homologação ou code_*)
-  SVC->>DB: Upsert MarketplaceAccounts
+  SVC->>DB: SELECT MarketplaceAccounts (colunas TrackingId/ShopId/AppKey/AppSecret anuláveis)
+  SVC->>SVC: MarketplaceAccountMapper (NULL → string.Empty)
   alt SQL/exceção
     API-->>UI: HTTP 500 JSON ResponseDto.Fail("Erro do Servidor/SQL: ...")
   else corpo vazio / HttpRequestException

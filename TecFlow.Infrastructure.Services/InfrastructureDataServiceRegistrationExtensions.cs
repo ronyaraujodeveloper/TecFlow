@@ -104,6 +104,7 @@ namespace TecFlow.Infrastructure.Services
             services.AddTecFlowIdentity();
 
             services.AddScoped<IIntegracaoLojaService, IntegracaoLojaService>();
+            services.AddScoped<MarketplaceAccountService>();
 
             return services;
         }

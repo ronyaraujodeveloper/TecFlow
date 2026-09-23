@@ -108,7 +108,10 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 ### Fase 7.1 — Multi-Tenant / Multi-Conta Marketplace (jun/2026)
 
 - [x] **TecFlow.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
-- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens + CNPJ + `UserId`/`FriendlyName`/`IsActive`.
+- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens; `TrackingId`/`ShopId`/`AppKey`/`AppSecret` anuláveis para registros antigos.
+- [x] **TecFlow.Business/Mappings/MarketplaceAccountMapper.cs** — projeção nula-segura para `MarketplaceAccountDto` e `ConvertLinkResponseDto`.
+- [x] **TecFlow.Infrastructure.Services/Integrations/MarketplaceAccountService.cs** — mapper da listagem/conversão sem `NullReferenceException`.
+- [x] **TecFlow.Data/Migrations/20260922233000_AddMarketplaceAccountOptionalCredentials.cs** — colunas opcionais `TrackingId`/`AppKey`/`AppSecret`.
 - [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
 - [x] **TecFlow.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
 - [x] **TecFlow.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.

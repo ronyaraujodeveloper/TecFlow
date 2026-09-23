@@ -65,7 +65,7 @@ public sealed class TikTokAffiliateLinkClient : ITikTokAffiliateLinkClient
             jsonBody);
 
         var query =
-            $"?app_key={Uri.EscapeDataString(_options.AppKey)}&timestamp={timestamp}&sign={sign}&shop_id={Uri.EscapeDataString(store.ShopId)}";
+            $"?app_key={Uri.EscapeDataString(_options.AppKey)}&timestamp={timestamp}&sign={sign}&shop_id={Uri.EscapeDataString(store.ShopId ?? string.Empty)}";
         var requestUri = $"{path.TrimStart('/')}{query}";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);

@@ -210,7 +210,7 @@ public static class FilterQueryExtensions
 
         if (HasText(filter.FriendlyName))
         {
-            source = source.Where(x => x.FriendlyName.Contains(filter.FriendlyName!, StringComparison.OrdinalIgnoreCase));
+            source = source.Where(x => (x.FriendlyName ?? string.Empty).Contains(filter.FriendlyName!, StringComparison.OrdinalIgnoreCase));
         }
 
         if (HasText(filter.ShopId))

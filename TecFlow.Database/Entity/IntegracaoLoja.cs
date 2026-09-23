@@ -30,21 +30,18 @@ public class IntegracaoLoja : ITenantScopedEntity
 
     public MarketplaceType PlatformType { get; set; }
 
-    [Required]
     [MaxLength(128)]
-    public string ShopId { get; set; } = string.Empty;
+    public string? ShopId { get; set; }
 
-    [Required]
     [MaxLength(256)]
-    public string FriendlyName { get; set; } = string.Empty;
+    public string? FriendlyName { get; set; }
 
     /// <summary>ID de afiliado / Tracking ID (ex.: 18325850271).</summary>
     [MaxLength(64)]
     public string? AffiliateTrackingId { get; set; }
 
-    [Required]
     [JsonIgnore]
-    public string AccessToken { get; set; } = string.Empty;
+    public string? AccessToken { get; set; }
 
     [JsonIgnore]
     public string? RefreshToken { get; set; }

@@ -132,10 +132,21 @@
 
     protected override async Task OnInitializedAsync()
     {
-        StoreScope.OnStoreChanged += HandleStoreChanged;
-        await StoreScope.EnsureInitializedAsync();
-        await LoadIntegrationsAsync();
-        AnalyzeUrl(_productUrl);
+        try
+        {
+            StoreScope.OnStoreChanged += HandleStoreChanged;
+            await StoreScope.EnsureInitializedAsync();
+            await LoadIntegrationsAsync();
+            AnalyzeUrl(_productUrl);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
+            Logger.LogError(ex, "Erro ao inicializar o gerador de links.");
+            _feedbackIsError = true;
+            _feedbackMessage = "Não foi possível carregar as lojas do gerador. Tente atualizar a página.";
+            _integrationsLoaded = true;
+        }
     }
 
     public void Dispose()
@@ -172,11 +183,25 @@
                         _connectedPlatforms.Add(store.PlatformType);
                     }
                 }
+
+                var firstActive = response.DataList
+                    .Where(store => store.Status == MarketplaceIntegrationStatus.Active)
+                    .OrderByDescending(store => store.CreatedAt)
+                    .FirstOrDefault()
+                    ?? response.DataList.OrderByDescending(store => store.CreatedAt).First();
+
+                if (StoreScope.ActiveStoreId is null or <= 0)
+                {
+                    await StoreScope.SetActiveStoreAsync(firstActive);
+                }
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro ao carregar integrações para o gerador de links.");
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
+            _feedbackIsError = true;
+            _feedbackMessage = "Não foi possível carregar as lojas do gerador. Tente atualizar a página.";
         }
         finally
         {

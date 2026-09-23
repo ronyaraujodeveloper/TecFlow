@@ -86,7 +86,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             await _telemetryService.RecordGenerationAsync(
                 affiliateLinkId,
                 store.TenantId,
-                store.ShopId,
+                store.ShopId ?? string.Empty,
                 request.OriginalUrl.Trim(),
                 generatedLink,
                 strategy.PlatformType,

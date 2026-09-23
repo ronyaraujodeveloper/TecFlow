@@ -102,10 +102,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        AuthCookie.SyncSessionFromPrincipal(authState.User);
-        ApplyQueryFeedback();
-        await ObterLojasAsync();
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            AuthCookie.SyncSessionFromPrincipal(authState.User);
+            ApplyQueryFeedback();
+            await ObterLojasAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
+            Logger.LogError(ex, "Erro ao inicializar Minhas Lojas.");
+            _loadError = "Não foi possível carregar suas lojas integradas. Tente atualizar a página.";
+            _isLoading = false;
+        }
     }
 
     private void ApplyQueryFeedback()
@@ -162,7 +172,8 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro ao carregar lojas integradas.");
-            _loadError = "Erro inesperado ao carregar lojas integradas.";
+            Console.WriteLine($"[ERRO BLAZOR]: {ex.Message} - {ex.StackTrace}");
+            _loadError = "Não foi possível carregar suas lojas integradas. Tente atualizar a página.";
         }
         finally
         {

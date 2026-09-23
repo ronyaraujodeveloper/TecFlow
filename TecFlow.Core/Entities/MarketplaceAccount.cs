@@ -14,29 +14,41 @@ public class MarketplaceAccount : BaseEntity, ITenantScopedEntity, IShopScopedEn
     public Tenant? Tenant { get; set; }
 
     /// <summary>Identificador do usuário TecFlow (string para alinhar claims/JWT).</summary>
-    [Required]
     [MaxLength(128)]
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
 
     public MarketplaceType MarketplaceType { get; set; }
 
-    [Required]
     [MaxLength(256)]
-    public string FriendlyName { get; set; } = string.Empty;
+    public string? FriendlyName { get; set; }
 
-    [Required]
     [MaxLength(128)]
-    public string ShopId { get; set; } = string.Empty;
+    public string? ShopId { get; set; }
+
+    string IShopScopedEntity.ShopId
+    {
+        get => ShopId ?? string.Empty;
+        set => ShopId = value;
+    }
 
     [MaxLength(256)]
-    public string ShopName { get; set; } = string.Empty;
+    public string? ShopName { get; set; }
 
     /// <summary>ID de afiliado / Tracking ID da Shopee (ex.: 18325850271).</summary>
     [MaxLength(64)]
+    public string? TrackingId { get; set; }
+
+    /// <summary>Compatível com a coluna AffiliateTrackingId já persistida.</summary>
+    [MaxLength(64)]
     public string? AffiliateTrackingId { get; set; }
 
-    [Required]
-    public string AccessToken { get; set; } = string.Empty;
+    [MaxLength(256)]
+    public string? AppKey { get; set; }
+
+    [MaxLength(512)]
+    public string? AppSecret { get; set; }
+
+    public string? AccessToken { get; set; }
 
     public string? RefreshToken { get; set; }
 

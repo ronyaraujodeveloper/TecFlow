@@ -65,7 +65,7 @@ public class AffiliateAnalyticsService : IAffiliateAnalyticsService
         var scopedLoja = await ResolveLojaScopeAsync(ownerId, lojaId, cancellationToken);
 
         var shopIds = scopedLoja is not null
-            ? new List<string> { scopedLoja.ShopId }
+            ? new List<string> { scopedLoja.ShopId ?? string.Empty }
             : await _db.Products
                 .Where(p => p.OwnerId == ownerId && p.MarketplaceShopId != null)
                 .Select(p => p.MarketplaceShopId!)

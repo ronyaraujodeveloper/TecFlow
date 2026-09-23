@@ -1,5 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using TecFlow.Business.Dto;
+using TecFlow.Core.Enums;
 using TecFlow.SharedUi.Services.Integrations;
 using TecFlow.SharedUi.Services.State;
 
@@ -92,7 +93,9 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
 
         if (ActiveStore is null && _stores.Count > 0)
         {
-            await ApplyActiveStoreAsync(_stores[0], persist: true, cancellationToken);
+            var firstActive = _stores.FirstOrDefault(s => s.Status == MarketplaceIntegrationStatus.Active)
+                ?? _stores[0];
+            await ApplyActiveStoreAsync(firstActive, persist: true, cancellationToken);
         }
     }
 
@@ -123,7 +126,9 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
 
         if (ActiveStore is null && _stores.Count > 0)
         {
-            await ApplyActiveStoreAsync(_stores[0], persist: true, cancellationToken);
+            var firstActive = _stores.FirstOrDefault(s => s.Status == MarketplaceIntegrationStatus.Active)
+                ?? _stores[0];
+            await ApplyActiveStoreAsync(firstActive, persist: true, cancellationToken);
         }
         else if (ActiveStore is not null && _stores.All(s => s.Id != ActiveStore.Id))
         {
@@ -151,7 +156,9 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
 
             if (ActiveStore is null && _stores.Count > 0 && _browserRestored)
             {
-                await ApplyActiveStoreAsync(_stores[0], persist: true, cancellationToken);
+                var firstActive = _stores.FirstOrDefault(s => s.Status == MarketplaceIntegrationStatus.Active)
+                    ?? _stores[0];
+                await ApplyActiveStoreAsync(firstActive, persist: true, cancellationToken);
             }
         }
         catch (Exception ex)

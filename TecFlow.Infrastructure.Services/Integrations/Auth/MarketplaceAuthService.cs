@@ -585,6 +585,22 @@ public class MarketplaceAuthService : IMarketplaceAuthService
                 if (!string.IsNullOrWhiteSpace(account.AffiliateTrackingId))
                 {
                     existing.AffiliateTrackingId = account.AffiliateTrackingId;
+                    existing.TrackingId = account.AffiliateTrackingId;
+                }
+                if (!string.IsNullOrWhiteSpace(account.TrackingId))
+                {
+                    existing.TrackingId = account.TrackingId;
+                    existing.AffiliateTrackingId = string.IsNullOrWhiteSpace(existing.AffiliateTrackingId)
+                        ? account.TrackingId
+                        : existing.AffiliateTrackingId;
+                }
+                if (!string.IsNullOrWhiteSpace(account.AppKey))
+                {
+                    existing.AppKey = account.AppKey;
+                }
+                if (!string.IsNullOrWhiteSpace(account.AppSecret))
+                {
+                    existing.AppSecret = account.AppSecret;
                 }
                 existing.Touch();
             }

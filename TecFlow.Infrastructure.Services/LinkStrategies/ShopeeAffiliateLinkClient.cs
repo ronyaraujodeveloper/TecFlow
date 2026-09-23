@@ -64,7 +64,7 @@ public sealed class ShopeeAffiliateLinkClient : IShopeeAffiliateLinkClient
             var subIds = BuildSubIds(
                 affiliateId,
                 customNickname,
-                store.ShopId,
+                store.ShopId ?? string.Empty,
                 ShopeeCommissionUrlBuilder.BuildSubId(store.UserId, store.TenantId));
             var payload = new
             {

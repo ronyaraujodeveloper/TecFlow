@@ -17,9 +17,17 @@ public class MarketplaceAccountDto
     public string ShopId { get; set; } = string.Empty;
 
     /// <summary>ID de afiliado / Tracking ID (ex.: 18325850271).</summary>
+    [JsonPropertyName("trackingId")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
+    public string TrackingId { get; set; } = string.Empty;
+
     [JsonPropertyName("affiliateTrackingId")]
     [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string AffiliateTrackingId { get; set; } = string.Empty;
+
+    [JsonPropertyName("appKey")]
+    [JsonConverter(typeof(FlexibleJsonStringConverter))]
+    public string AppKey { get; set; } = string.Empty;
 
     public string FriendlyName { get; set; } = string.Empty;
 

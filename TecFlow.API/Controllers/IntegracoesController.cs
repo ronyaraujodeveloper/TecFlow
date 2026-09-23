@@ -42,8 +42,19 @@ public class IntegracoesController : ControllerBase
             return Unauthorized(IntegracaoLojaFail("Usuário não autenticado."));
         }
 
-        var result = await _integracaoLojaService.ListByUserAsync(userId.Value, filter, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _integracaoLojaService.ListByUserAsync(userId.Value, filter, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao consultar MarketplaceAccounts no SQL Server");
+            _logger.LogError(ex, "Erro ao consultar MarketplaceAccounts no SQL Server");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                IntegracaoLojaFail($"Erro do Servidor/SQL: {ex.Message}"));
+        }
     }
 
     /// <summary>Vincula nova loja marketplace via callback OAuth.</summary>

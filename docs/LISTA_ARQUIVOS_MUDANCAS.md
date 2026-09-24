@@ -644,6 +644,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **UrlExpansionService** / **PlatformLinkResolver.ExpandIfShortenedAsync** — HTTP unshorten com `AllowAutoRedirect`.
 - [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
 
+### Fase 19.18 — Encurtadores TikTok, Magalu e Mercado Livre
+
+- [x] **AffiliateTrackingIdValidator** — hosts `vt.tiktok.com`, `vm.tiktok.com`, `magazineluiza.onelink.me`, `meli.la` e `/sec/`; extração `@handle` / `matt_tool` / `parceiro`.
+- [x] **PlatformLinkResolverTests.cs** — parse e extração TikTok, Magazine Luiza e Mercado Livre.
+- [x] **ConnectStoreModal.razor** — "✅ Credencial {ID} extraída com sucesso para {Plataforma}!".
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

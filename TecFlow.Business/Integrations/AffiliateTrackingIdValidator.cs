@@ -14,11 +14,14 @@ public static class AffiliateTrackingIdValidator
     public static string DuplicateTrackingIdMessage(MarketplaceType platform) =>
         $"⚠️ Este ID de Afiliado já está cadastrado no sistema para a plataforma {platform.GetDisplayName()}. Não é permitido duplicar credenciais.";
 
+    public static string ExtractedCredentialMessage(string id, MarketplaceType platform) =>
+        $"✅ Credencial {id} extraída com sucesso para {platform.GetDisplayName()}!";
+
     public static string ExtractedFromShortLinkMessage(string id) =>
-        $"✅ ID de Afiliado {id} extraído com sucesso a partir do link encurtado!";
+        ExtractedCredentialMessage(id, MarketplaceType.Shopee);
 
     private static readonly string[] KnownParams =
-        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "tag", "matt_tool", "matt_word", "parceiro"];
+        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "tag", "matt_tool", "matt_word", "parceiro", "tt_from", "sec_uid", "penn", "penn_id", "afiliado"];
 
     private static readonly string[] ShortenerHosts =
     [
@@ -29,7 +32,18 @@ public static class AffiliateTrackingIdValidator
         "s.shopee.com",
         "amzn.to",
         "a.co",
-        "magalu.me"
+        "magalu.me",
+        "magazineluiza.onelink.me",
+        "magazinevoce.com.br",
+        "vt.tiktok.com",
+        "vm.tiktok.com",
+        "meli.la"
+    ];
+
+    private static readonly (string Host, string PathPrefix)[] ShortenerPathPrefixes =
+    [
+        ("mercadolivre.com", "/sec/"),
+        ("mercadolivre.com.br", "/sec/")
     ];
 
     private static readonly Regex[] ShopeeAffiliateIdPatterns =
@@ -50,10 +64,9 @@ public static class AffiliateTrackingIdValidator
         var trimmed = input.Trim().Trim('"', '\'');
         var marketplace = ParsePlatform(platform);
 
-        if (marketplace is MarketplaceType.Shopee
-            && TryExtractShopeeAffiliateId(trimmed, out var shopeeId))
+        if (TryExtractPlatformAffiliateId(marketplace, trimmed, out var extractedId))
         {
-            return Truncate(shopeeId);
+            return Truncate(extractedId);
         }
 
         var keys = StartsWithHttp(trimmed)
@@ -90,6 +103,16 @@ public static class AffiliateTrackingIdValidator
 
         return Truncate(trimmed);
     }
+
+    public static bool TryExtractPlatformAffiliateId(MarketplaceType platform, string? input, out string id) =>
+        platform switch
+        {
+            MarketplaceType.Shopee => TryExtractShopeeAffiliateId(input, out id),
+            MarketplaceType.TikTokShop => TryExtractTikTokAffiliateId(input, out id),
+            MarketplaceType.MagazineLuiza => TryExtractMagazineLuizaAffiliateId(input, out id),
+            MarketplaceType.MercadoLivre => TryExtractMercadoLivreAffiliateId(input, out id),
+            _ => TryExtractByKeys(platform, input, out id)
+        };
 
     public static bool TryExtractShopeeAffiliateId(string? input, out string id)
     {
@@ -163,6 +186,14 @@ public static class AffiliateTrackingIdValidator
 
             if (ShortenerHosts.Any(item =>
                     host == item || host.EndsWith("." + item, StringComparison.Ordinal)))
+            {
+                return true;
+            }
+
+            var path = uri.AbsolutePath ?? string.Empty;
+            if (ShortenerPathPrefixes.Any(item =>
+                    (host == item.Host || host.EndsWith("." + item.Host, StringComparison.Ordinal))
+                    && path.StartsWith(item.PathPrefix, StringComparison.OrdinalIgnoreCase)))
             {
                 return true;
             }
@@ -249,9 +280,9 @@ public static class AffiliateTrackingIdValidator
     {
         MarketplaceType.Amazon => ["tag"],
         MarketplaceType.Shopee => ["mmp_pid", "utm_source", "sub_id", "affiliate_id", "an_id"],
-        MarketplaceType.TikTokShop => ["sub_id", "affiliate_id"],
-        MarketplaceType.MercadoLivre => ["matt_tool", "matt_word"],
-        MarketplaceType.MagazineLuiza => ["parceiro", "sub_id"],
+        MarketplaceType.TikTokShop => ["tt_from", "sec_uid", "sub_id", "affiliate_id"],
+        MarketplaceType.MercadoLivre => ["matt_tool", "matt_word", "penn", "penn_id"],
+        MarketplaceType.MagazineLuiza => ["parceiro", "afiliado", "p", "sub_id"],
         MarketplaceType.Kabum => ["sub_id"],
         MarketplaceType.CasasBahia => ["parceiro", "sub_id"],
         _ => KnownParams
@@ -360,6 +391,112 @@ public static class AffiliateTrackingIdValidator
         slug = segments[0];
         return !string.Equals(slug, "p", StringComparison.OrdinalIgnoreCase)
             && slug.Length > 0;
+    }
+
+    private static bool TryExtractByKeys(MarketplaceType platform, string? input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        foreach (var key in KeysFor(platform))
+        {
+            if (!TryReadParam(input, key, out var value))
+            {
+                continue;
+            }
+
+            id = Truncate(value);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryExtractTikTokAffiliateId(string? input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        if (TryReadParam(input, "tt_from", out var ttFrom))
+        {
+            id = ttFrom;
+            return true;
+        }
+
+        if (TryReadParam(input, "sec_uid", out var secUid))
+        {
+            id = secUid;
+            return true;
+        }
+
+        var handle = Regex.Match(
+            input,
+            @"tiktok\.com/@([A-Za-z0-9._]+)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (handle.Success)
+        {
+            id = handle.Groups[1].Value;
+            return true;
+        }
+
+        return TryExtractByKeys(MarketplaceType.TikTokShop, input, out id);
+    }
+
+    private static bool TryExtractMagazineLuizaAffiliateId(string? input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        if (TryParseAbsoluteUri(EnsureAbsoluteHttpUrl(input), out var uri)
+            && TryMagazineVoceSlug(uri, out var slug))
+        {
+            id = slug;
+            return true;
+        }
+
+        foreach (var key in new[] { "parceiro", "afiliado", "p" })
+        {
+            if (!TryReadParam(input, key, out var value))
+            {
+                continue;
+            }
+
+            id = value;
+            return true;
+        }
+
+        return TryExtractByKeys(MarketplaceType.MagazineLuiza, input, out id);
+    }
+
+    private static bool TryExtractMercadoLivreAffiliateId(string? input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        foreach (var key in new[] { "matt_tool", "matt_word", "penn", "penn_id" })
+        {
+            if (!TryReadParam(input, key, out var value))
+            {
+                continue;
+            }
+
+            id = value;
+            return true;
+        }
+
+        return false;
     }
 
     private static string Decode(string value)

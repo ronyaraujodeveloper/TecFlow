@@ -68,6 +68,11 @@ public static class MercadoLivreProductUrlParser
         }
 
         var host = uri.Host.ToLowerInvariant();
+        if (host is "meli.la" || host.EndsWith(".meli.la", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
         var isMercadoLivreHost = host.Contains("mercadolivre", StringComparison.Ordinal)
             || host.Contains("mercadolibre", StringComparison.Ordinal)
             || host.Equals("ml.com.br", StringComparison.Ordinal)

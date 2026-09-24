@@ -20,7 +20,8 @@ public sealed class MercadoLivreLinkStrategy : IPlatformLinkStrategy
         "mercadolivre.com",
         "mercadolibre.com",
         "mercadolibre.com.br",
-        "ml.com.br"
+        "ml.com.br",
+        "meli.la"
     ];
 
     private readonly IUrlExpansionService _urlExpansionService;

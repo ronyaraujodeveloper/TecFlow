@@ -1195,8 +1195,8 @@ sequenceDiagram
   participant DB as MarketplaceAccounts
   UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
   UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita :// e /)
-  UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / shp.ee)
-  SVC->>SVC: regex mmp_pid=an_ / utm_source=an_ / sub_id
+  UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / vt.tiktok.com / magazineluiza.onelink.me / meli.la)
+  SVC->>SVC: regex mmp_pid=an_ / @handle / parceiro / matt_tool
   SVC->>DB: UNIQUE MarketplaceType+TrackingId (IsActive)
   UI->>API: POST /api/marketplace-auth/lojas/{id}/desconectar
   API->>SVC: UnlinkAsync → InativarContaAsync (AppDbContext SaveChanges IsActive=false)

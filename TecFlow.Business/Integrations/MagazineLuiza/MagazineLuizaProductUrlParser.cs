@@ -69,8 +69,10 @@ public static class MagazineLuizaProductUrlParser
 
         var host = uri.Host.ToLowerInvariant();
         return host is "magalu.me" or "www.magalu.me" or "mglz.ne" or "www.mglz.ne"
+            || host is "magazineluiza.onelink.me"
             || host.EndsWith(".magalu.me", StringComparison.Ordinal)
-            || host.EndsWith(".mglz.ne", StringComparison.Ordinal);
+            || host.EndsWith(".mglz.ne", StringComparison.Ordinal)
+            || host.EndsWith(".onelink.me", StringComparison.Ordinal);
     }
 
     public static string Sanitize(string? url)

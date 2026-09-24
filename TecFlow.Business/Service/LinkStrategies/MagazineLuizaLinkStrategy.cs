@@ -19,6 +19,7 @@ public sealed class MagazineLuizaLinkStrategy : IPlatformLinkStrategy
         "magazinevoce.com.br",
         "magalu.com.br",
         "magalu.me",
+        "magazineluiza.onelink.me",
         "mglz.ne"
     ];
 

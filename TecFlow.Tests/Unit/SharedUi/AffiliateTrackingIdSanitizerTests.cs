@@ -100,8 +100,8 @@ public class AffiliateTrackingIdSanitizerTests
 
         Assert.Equal("18325850271", id);
         Assert.Equal(
-            "✅ ID de Afiliado 18325850271 extraído com sucesso a partir do link encurtado!",
-            AffiliateTrackingIdSanitizer.ExtractedFromShortLinkMessage(id));
+            "✅ Credencial 18325850271 extraída com sucesso para Shopee!",
+            AffiliateTrackingIdSanitizer.ExtractedCredentialMessage(id, MarketplaceType.Shopee));
     }
 
     [Fact]
@@ -171,6 +171,9 @@ public class AffiliateTrackingIdSanitizerTests
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("s.shopee.com.br/xyz"));
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://amzn.to/abc123"));
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://magalu.me/xyz"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://vt.tiktok.com/ZSabc"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://meli.la/abc"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://magazineluiza.onelink.me/x"));
         Assert.False(AffiliateTrackingIdSanitizer.IsShortenerUrl("sualoja-20"));
     }
 

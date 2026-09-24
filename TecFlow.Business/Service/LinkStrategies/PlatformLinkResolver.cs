@@ -7,7 +7,7 @@ namespace TecFlow.Business.Service.LinkStrategies;
 
 /// <summary>
 /// Resolve dinamicamente a estratégia de link com base no domínio da URL original.
-/// Expande encurtadores Shopee (s.shopee.com.br, br.shp.ee, shope.ee, shp.ee) antes da extração.
+/// Expande encurtadores (Shopee, TikTok, Magalu, Mercado Livre) antes da extração.
 /// </summary>
 public sealed class PlatformLinkResolver
 {
@@ -47,7 +47,10 @@ public sealed class PlatformLinkResolver
     }
 
     public static string ExtractShopeeAffiliateId(string url) =>
-        AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(url, nameof(MarketplaceType.Shopee));
+        ExtractAffiliateId(url, MarketplaceType.Shopee);
+
+    public static string ExtractAffiliateId(string url, MarketplaceType platform) =>
+        AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(url, platform.ToString());
 
     public IPlatformLinkStrategy Resolve(string url)
     {

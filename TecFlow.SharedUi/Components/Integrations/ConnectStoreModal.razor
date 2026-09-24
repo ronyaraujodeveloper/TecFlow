@@ -323,14 +323,13 @@
             return;
         }
 
-        if (_platform == MarketplaceType.Shopee
-            && !string.IsNullOrWhiteSpace(extracted)
+        if (!string.IsNullOrWhiteSpace(extracted)
             && !AffiliateTrackingIdSanitizer.LooksLikeUrl(extracted)
             && (fromShortener
                 || AffiliateTrackingIdSanitizer.LooksLikeUrl(input)
-                || AffiliateTrackingIdSanitizer.TryExtractShopeeAffiliateId(input, out _)))
+                || AffiliateTrackingIdSanitizer.TryExtractPlatformAffiliateId(_platform, input, out _)))
         {
-            _extractSuccess = AffiliateTrackingIdSanitizer.ExtractedFromShortLinkMessage(extracted);
+            _extractSuccess = AffiliateTrackingIdSanitizer.ExtractedCredentialMessage(extracted, _platform);
             _formError = null;
             return;
         }

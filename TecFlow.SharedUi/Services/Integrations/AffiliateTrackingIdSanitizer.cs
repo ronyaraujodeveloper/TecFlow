@@ -23,11 +23,17 @@ public static class AffiliateTrackingIdSanitizer
 
     public static bool IsShortenerUrl(string? value) => AffiliateTrackingIdValidator.IsShortenerUrl(value);
 
+    public static bool TryExtractPlatformAffiliateId(MarketplaceType platform, string? input, out string id) =>
+        AffiliateTrackingIdValidator.TryExtractPlatformAffiliateId(platform, input, out id);
+
     public static bool TryExtractShopeeAffiliateId(string? input, out string id) =>
         AffiliateTrackingIdValidator.TryExtractShopeeAffiliateId(input, out id);
 
     public static string EnsureAbsoluteHttpUrl(string? value) =>
         AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(value);
+
+    public static string ExtractedCredentialMessage(string id, MarketplaceType platform) =>
+        AffiliateTrackingIdValidator.ExtractedCredentialMessage(id, platform);
 
     public static string ExtractedFromShortLinkMessage(string id) =>
         AffiliateTrackingIdValidator.ExtractedFromShortLinkMessage(id);

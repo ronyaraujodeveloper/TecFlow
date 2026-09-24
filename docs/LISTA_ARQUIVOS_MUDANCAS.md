@@ -665,7 +665,7 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.21 — TikTok `unique_id`
 
-- [x] **AffiliateTrackingIdValidator** / **PlatformLinkResolver** — prioriza `unique_id`, depois `user_id` e `sec_user_id`.
+- [x] **AffiliateTrackingIdValidator** / **PlatformLinkResolver** — regex `unique_id` / `user_id` / `sec_user_id`; depois fallback `@handle`.
 - [x] **ConnectStoreModal.razor** — auto-detect `vt.tiktok.com` / `shop.tiktok.com` como TikTok Shop.
 - [x] **PlatformLinkResolverTests** — `unique_id=amz.indica` → `amz.indica`.
 

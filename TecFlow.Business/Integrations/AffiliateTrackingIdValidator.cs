@@ -93,6 +93,18 @@ public static class AffiliateTrackingIdValidator
         new(@"sub_id=([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)
     ];
 
+    private static readonly Regex TikTokUniqueIdRegex = new(
+        @"(?:^|[?&#])unique_id=@?(?<id>[^&#]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex TikTokUserIdRegex = new(
+        @"(?:^|[?&#])user_id=(?<id>[0-9]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex TikTokSecUserIdRegex = new(
+        @"(?:^|[?&#])sec_user_id=(?<id>[^&#]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static string ExtractAffiliateIdFromUrl(string input, string platform)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -567,17 +579,20 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
-        if (TryReadTikTokCreatorParam(input, "unique_id", out id))
+        if (TryMatchTikTokRegex(TikTokUniqueIdRegex, input, out id)
+            || TryReadTikTokCreatorParam(input, "unique_id", out id))
         {
             return true;
         }
 
-        if (TryReadTikTokCreatorParam(input, "user_id", out id))
+        if (TryMatchTikTokRegex(TikTokUserIdRegex, input, out id)
+            || TryReadTikTokCreatorParam(input, "user_id", out id))
         {
             return true;
         }
 
-        if (TryReadTikTokCreatorParam(input, "sec_user_id", out id)
+        if (TryMatchTikTokRegex(TikTokSecUserIdRegex, input, out id)
+            || TryReadTikTokCreatorParam(input, "sec_user_id", out id)
             || TryReadTikTokCreatorParam(input, "sec_uid", out id))
         {
             return true;
@@ -602,6 +617,19 @@ public static class AffiliateTrackingIdValidator
         }
 
         return TryExtractByKeys(MarketplaceType.TikTokShop, input, out id);
+    }
+
+    private static bool TryMatchTikTokRegex(Regex pattern, string input, out string id)
+    {
+        id = string.Empty;
+        var match = pattern.Match(input);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        id = NormalizeTikTokHandle(Decode(match.Groups["id"].Value));
+        return !string.IsNullOrWhiteSpace(id) && !IsBooleanLiteral(id);
     }
 
     private static bool TryReadTikTokCreatorParam(string input, string key, out string id)

@@ -446,6 +446,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.16. Extração Shopee:** expande `s.shopee.com.br` / `br.shp.ee` / `shope.ee` e lê `mmp_pid=an_` / `utm_source=an_`.
 - [x] **19.17. Encurtadores multiplataforma:** TikTok (`vt`/`vm`), Magalu (`onelink`/`magazinevoce`) e Mercado Livre (`meli.la`/`/sec/`).
 - [x] **19.18. Auto-detecção ao colar URL:** o domínio define `SelectedPlatform`; unshorten devolve a URL destino (nunca `true`); extração TikTok/Magalu/ML após expandir.
+- [x] **19.19. Magalu promoter_id:** prioriza `promoter_id=` (ex.: `5321952`) e ignora `utm_source=divulgador`/`magalu`.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

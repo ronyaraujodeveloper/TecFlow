@@ -16,7 +16,7 @@ public static class AffiliateTrackingIdHelp
         MarketplaceType.MercadoLivre =>
             "Use o Matt Tool ID (número do parâmetro matt_tool, ex.: 123456789). Cole o ID ou um link de afiliado do Mercado Livre.",
         MarketplaceType.MagazineLuiza =>
-            "Use o slug da loja Magazine Você (ex.: magazinematos) ou o parâmetro parceiro. Cole o ID ou a URL completa da loja.",
+            "Use o promoter_id numérico da Magalu (ex.: 5321952). Cole o ID, um link magazineluiza.com.br/onelink ou o slug Magazine Você.",
         MarketplaceType.Kabum =>
             "Use o Tracking ID do programa de afiliados Kabum! (injetado em sub_id). Cole o ID ou um link com sub_id=.",
         MarketplaceType.CasasBahia =>

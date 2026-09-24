@@ -21,7 +21,7 @@ public static class AffiliateTrackingIdValidator
         ExtractedCredentialMessage(id, MarketplaceType.Shopee);
 
     private static readonly string[] KnownParams =
-        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "tag", "matt_tool", "matt_word", "parceiro", "tt_from", "sec_uid", "penn", "penn_id", "afiliado"];
+        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "utm_campaign", "promoter_id", "tag", "matt_tool", "matt_word", "parceiro", "tt_from", "sec_uid", "penn", "penn_id", "afiliado"];
 
     private static readonly string[] ShortenerHosts =
     [
@@ -120,7 +120,14 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
-            if (IsBooleanLiteral(value))
+            if (IsBooleanLiteral(value) || IsIgnoredMagaluUtmSource(marketplace, key, value))
+            {
+                continue;
+            }
+
+            if (marketplace is MarketplaceType.MagazineLuiza
+                && string.Equals(key, "utm_campaign", StringComparison.OrdinalIgnoreCase)
+                && !IsNumericAffiliateId(value))
             {
                 continue;
             }
@@ -384,7 +391,7 @@ public static class AffiliateTrackingIdValidator
         MarketplaceType.Shopee => ["mmp_pid", "utm_source", "sub_id", "affiliate_id", "an_id"],
         MarketplaceType.TikTokShop => ["tt_from", "sec_uid", "sub_id", "affiliate_id"],
         MarketplaceType.MercadoLivre => ["matt_tool", "matt_word", "penn", "penn_id"],
-        MarketplaceType.MagazineLuiza => ["parceiro", "afiliado", "p", "sub_id"],
+        MarketplaceType.MagazineLuiza => ["promoter_id", "utm_campaign", "parceiro", "afiliado", "p", "sub_id"],
         MarketplaceType.Kabum => ["sub_id"],
         MarketplaceType.CasasBahia => ["parceiro", "sub_id"],
         _ => KnownParams
@@ -533,7 +540,14 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
-            if (IsBooleanLiteral(value))
+            if (IsBooleanLiteral(value) || IsIgnoredMagaluUtmSource(platform, key, value))
+            {
+                continue;
+            }
+
+            if (platform is MarketplaceType.MagazineLuiza
+                && string.Equals(key, "utm_campaign", StringComparison.OrdinalIgnoreCase)
+                && !IsNumericAffiliateId(value))
             {
                 continue;
             }
@@ -589,6 +603,16 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
+        if (TryReadNumericParam(input, "promoter_id", out id))
+        {
+            return true;
+        }
+
+        if (TryReadNumericParam(input, "utm_campaign", out id))
+        {
+            return true;
+        }
+
         if (TryParseAbsoluteUri(EnsureAbsoluteHttpUrl(input), out var uri)
             && TryMagazineVoceSlug(uri, out var slug))
         {
@@ -603,7 +627,7 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
-            if (IsBooleanLiteral(value))
+            if (IsBooleanLiteral(value) || IsIgnoredMagaluUtmSource(MarketplaceType.MagazineLuiza, key, value))
             {
                 continue;
             }
@@ -613,6 +637,39 @@ public static class AffiliateTrackingIdValidator
         }
 
         return TryExtractByKeys(MarketplaceType.MagazineLuiza, input, out id);
+    }
+
+    private static bool TryReadNumericParam(string input, string key, out string id)
+    {
+        id = string.Empty;
+        if (!TryReadParam(input, key, out var value))
+        {
+            return false;
+        }
+
+        var digits = ExtractNumericSequence(value);
+        if (!IsNumericAffiliateId(digits))
+        {
+            return false;
+        }
+
+        id = digits;
+        return true;
+    }
+
+    private static bool IsNumericAffiliateId(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.All(char.IsDigit);
+
+    private static bool IsIgnoredMagaluUtmSource(MarketplaceType platform, string key, string value)
+    {
+        if (platform is not MarketplaceType.MagazineLuiza
+            || !string.Equals(key, "utm_source", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.Equals(value, "divulgador", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "magalu", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryExtractMercadoLivreAffiliateId(string? input, out string id)

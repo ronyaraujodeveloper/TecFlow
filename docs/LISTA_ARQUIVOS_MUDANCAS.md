@@ -657,6 +657,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **UrlExpansionService** — retorna string da URL final; `AllowAutoRedirect = true` e User-Agent de Chrome.
 - [x] **AffiliateTrackingIdValidator** — `p=` só como query param; extrai `@username` / `tt_from`, Magazine Você / `parceiro`, `matt_tool` / `penn`.
 
+### Fase 19.20 — Magalu `promoter_id`
+
+- [x] **AffiliateTrackingIdValidator** / **PlatformLinkResolver** — prioriza `promoter_id` numérico e `utm_campaign` numérico; ignora `utm_source=divulgador`/`magalu`.
+- [x] **ConnectStoreModal.razor** — auto-detect Magalu/ML/TikTok e Tracking ID `5321952` após expandir Onelink.
+- [x] **PlatformLinkResolverTests** — `promoter_id=5321952` → `5321952`.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

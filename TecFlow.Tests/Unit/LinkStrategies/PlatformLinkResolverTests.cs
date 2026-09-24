@@ -65,6 +65,36 @@ public class PlatformLinkResolverTests
     }
 
     [Fact]
+    public void ExtractAffiliateId_ShouldReadMagaluPromoterId5321952()
+    {
+        const string url =
+            "https://www.magazineluiza.com.br/produto/?partner_id=3440&promoter_id=5321952&utm_source=divulgador";
+
+        var id = PlatformLinkResolver.ExtractAffiliateId(url, MarketplaceType.MagazineLuiza);
+
+        Assert.Equal("5321952", id);
+        Assert.True(PlatformLinkResolver.TryDetectPlatformFromUrl(
+            "https://magazineluiza.onelink.me/abc?promoter_id=5321952",
+            out var platform));
+        Assert.Equal(MarketplaceType.MagazineLuiza, platform);
+        Assert.Equal(
+            "5321952",
+            PlatformLinkResolver.ExtractAffiliateId(
+                "https://magazineluiza.onelink.me/abc?promoter_id=5321952&utm_source=magalu",
+                MarketplaceType.MagazineLuiza));
+    }
+
+    [Fact]
+    public void ExtractAffiliateId_ShouldReadNumericUtmCampaignWhenPromoterIdIsMissing()
+    {
+        var id = PlatformLinkResolver.ExtractAffiliateId(
+            "https://www.magazineluiza.com.br/p/1/?utm_campaign=5321952&utm_source=divulgador",
+            MarketplaceType.MagazineLuiza);
+
+        Assert.Equal("5321952", id);
+    }
+
+    [Fact]
     public void ExtractAffiliateId_ShouldReadMagazineVoceStoreSlug()
     {
         var id = PlatformLinkResolver.ExtractAffiliateId(

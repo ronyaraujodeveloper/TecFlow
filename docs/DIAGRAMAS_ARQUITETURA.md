@@ -1194,7 +1194,7 @@ sequenceDiagram
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
-  UI->>UI: sanitiza Tracking ID colado (tag/sub_id/matt_tool/parceiro)
+  UI->>UI: ExtractAffiliateIdFromUrl (tag/sub_id/an_id/matt_tool/matt_word/parceiro)
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê apelido + Affiliate ID; Shopee e TikTok Shop sem OAuth (Universal Link)
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)

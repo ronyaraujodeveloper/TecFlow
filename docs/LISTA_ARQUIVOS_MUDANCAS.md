@@ -612,8 +612,9 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.13 — Ajuda "Como pegar meu ID?" no cadastro de loja
 
 - [x] **ConnectStoreModal.razor** / **app.css** — link com `bi-question-circle`, dica do formato e botão para o painel oficial (`target=_blank`).
-- [x] **AffiliateTrackingIdSanitizer.cs** / **AffiliateTrackingIdHelp.cs** — extração de `tag`, `sub_id`, `matt_tool`, `parceiro` e slug Magazine Você.
-- [x] **AffiliateTrackingIdSanitizerTests.cs** — URLs, query solta e ID puro.
+- [x] **AffiliateTrackingIdSanitizer.cs** / **AffiliateTrackingIdHelp.cs** — extração de `tag`, `sub_id`, `an_id`, `matt_tool`/`matt_word`, `parceiro` e slug Magazine Você.
+- [x] **AffiliateTrackingIdSanitizerTests.cs** — URLs, query solta, `an_id` Shopee e ID puro.
+- [x] **ConnectStoreModal.razor** — `ExtractAffiliateIdFromUrl` em `@oninput`/`@onchange` e dica de colar link de teste.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

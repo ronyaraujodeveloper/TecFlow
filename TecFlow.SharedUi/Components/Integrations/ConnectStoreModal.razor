@@ -109,7 +109,11 @@
                                autocomplete="off"
                                value="@_trackingId"
                                @oninput="OnTrackingIdInput"
+                               @onchange="OnTrackingIdInput"
                                disabled="@_linking" />
+                        <p class="affiliate-id-paste-hint small mb-0 mt-2">
+                            💡 Dica: Você pode colar aqui o ID direto OU qualquer link de teste do seu painel de afiliado. O TecFlow identificará e extrairá o seu código de rastreamento automaticamente!
+                        </p>
                         @if (_showIdHelp)
                         {
                             <div id="tracking-id-help"
@@ -243,7 +247,7 @@
         _formError = null;
         if (!string.IsNullOrWhiteSpace(_trackingId))
         {
-            _trackingId = AffiliateTrackingIdSanitizer.Extract(_platform, _trackingId);
+            _trackingId = ExtractAffiliateIdFromUrl(_trackingId, _platform.ToString());
         }
     }
 
@@ -252,8 +256,11 @@
     private void OnTrackingIdInput(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString() ?? string.Empty;
-        _trackingId = AffiliateTrackingIdSanitizer.Extract(_platform, raw);
+        _trackingId = ExtractAffiliateIdFromUrl(raw, _platform.ToString());
     }
+
+    private static string ExtractAffiliateIdFromUrl(string input, string platform) =>
+        AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(input, platform);
 
     private string GetPlatformOptionClass(MarketplaceType platform)
     {
@@ -302,9 +309,9 @@
         try
         {
             var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
-            var trackingId = AffiliateTrackingIdSanitizer.Extract(
-                _platform,
-                (await ReadInputAsync("tracking-id", _trackingId)).Trim());
+            var trackingId = ExtractAffiliateIdFromUrl(
+                (await ReadInputAsync("tracking-id", _trackingId)).Trim(),
+                _platform.ToString());
             var authorizationCode = (await ReadInputAsync("auth-code", _authorizationCode)).Trim();
             var shopIdInput = (await ReadInputAsync("shop-id", _shopId)).Trim();
 

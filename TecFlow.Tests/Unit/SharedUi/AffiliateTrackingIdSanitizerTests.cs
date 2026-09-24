@@ -80,6 +80,43 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldReadShopeeAnIdNumericSequence()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
+            "https://shopee.com.br/produto?an_id=18325850271&utm_source=affiliate",
+            "Shopee");
+
+        Assert.Equal("18325850271", id);
+    }
+
+    [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldReadMattWordWhenMattToolIsMissing()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
+            "https://www.mercadolivre.com.br/p/MLB123?matt_word=minhaloja",
+            "Mercado Livre");
+
+        Assert.Equal("minhaloja", id);
+    }
+
+    [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldReadMagaluSubId()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
+            "https://www.magazineluiza.com.br/p/123/?sub_id=magalu_parceiro",
+            "Magalu");
+
+        Assert.Equal("magalu_parceiro", id);
+    }
+
+    [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldKeepPlainIdUnchanged()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl("sualoja-20", "Amazon");
+        Assert.Equal("sualoja-20", id);
+    }
+
+    [Fact]
     public void Help_ShouldExposeOfficialPanelForAmazon()
     {
         Assert.Equal("https://associados.amazon.com.br/", AffiliateTrackingIdHelp.GetOfficialPanelUrl(MarketplaceType.Amazon));

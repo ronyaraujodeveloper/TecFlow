@@ -130,6 +130,31 @@ public class AffiliateLinksControllerTests
     }
 
     [Fact]
+    public async Task ListHistoryAsync_ShouldIgnoreLojaId_AndKeepPlatformFilter()
+    {
+        AffiliateLinkFilter? captured = null;
+        var history = new Mock<IAffiliateLinkHistoryService>();
+        history
+            .Setup(service => service.ListByUserAsync(7, It.IsAny<AffiliateLinkFilter>(), It.IsAny<CancellationToken>()))
+            .Callback<int, AffiliateLinkFilter, CancellationToken>((_, filter, _) => captured = filter)
+            .ReturnsAsync(new AffiliateLinkHistoryResponseDto { Status = true, Descricao = "OK" });
+
+        var controller = CreateController(history: history.Object);
+        var action = await controller.ListHistoryAsync(
+            new AffiliateLinkFilter { LojaId = 99, PlatformType = TecFlow.Core.Enums.MarketplaceType.Shopee },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        Assert.Equal(200, ok.StatusCode);
+        Assert.NotNull(captured);
+        Assert.Null(captured!.LojaId);
+        Assert.Equal(TecFlow.Core.Enums.MarketplaceType.Shopee, captured.PlatformType);
+        history.Verify(
+            service => service.ListByUserAsync(7, It.IsAny<AffiliateLinkFilter>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ListHistoryAsync_ShouldReturn401_WhenUserIsMissing()
     {
         var controller = CreateController(userId: null);
@@ -140,11 +165,12 @@ public class AffiliateLinksControllerTests
 
     private static AffiliateLinksController CreateController(
         IAffiliateLinkGenerationService? generation = null,
+        IAffiliateLinkHistoryService? history = null,
         string? userId = "7")
     {
         var controller = new AffiliateLinksController(
             generation ?? new Mock<IAffiliateLinkGenerationService>().Object,
-            new Mock<IAffiliateLinkHistoryService>().Object,
+            history ?? new Mock<IAffiliateLinkHistoryService>().Object,
             new Mock<IAffiliateLinkGenerationContext>().Object,
             NullLogger<AffiliateLinksController>.Instance);
 

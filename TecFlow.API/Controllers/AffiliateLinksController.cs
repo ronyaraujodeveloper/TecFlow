@@ -32,7 +32,10 @@ public class AffiliateLinksController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>Lista histórico de links gerados pelo usuário com contagem de cliques.</summary>
+    /// <summary>
+    /// Lista o histórico de links do tenant/usuário autenticado.
+    /// O seletor de loja do topo não filtra esta listagem; apenas <c>PlatformType</c> (abas Shopee, TikTok, etc.).
+    /// </summary>
     [HttpGet("historico")]
     public async Task<ActionResult<AffiliateLinkHistoryResponseDto>> ListHistoryAsync(
         [FromQuery] AffiliateLinkFilter filter,
@@ -46,6 +49,9 @@ public class AffiliateLinksController : ControllerBase
                 Descricao = "Usuário não autenticado."
             });
         }
+
+        filter ??= new AffiliateLinkFilter();
+        filter.LojaId = null;
 
         var result = await _historyService.ListByUserAsync(userId, filter, cancellationToken);
         return result.Status ? Ok(result) : BadRequest(result);

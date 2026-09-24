@@ -10,6 +10,7 @@ public class AffiliateLinkFilter : IPagedFilter
 
     public int PageSize { get; set; } = PagedListHelper.DefaultPageSize;
 
+    /// <summary>Reservado. O histórico GET ignora este campo para não ocultar outras plataformas.</summary>
     public int? LojaId { get; set; }
 
     public MarketplaceType? PlatformType { get; set; }

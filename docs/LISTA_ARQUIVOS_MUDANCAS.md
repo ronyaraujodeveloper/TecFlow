@@ -601,6 +601,14 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **ConnectStoreModal.razor** / **app.css** — grid `auto-fit` 3–4 colunas, badges 28px, modal sem scroll vertical.
 
+### Fase 19.12 — Histórico de links por tenant (sem filtro da loja ativa)
+
+- [x] **HistoricoLinks.razor** — lista todos os links ativos do tenant; abas de plataforma (inclui Mercado Livre); não usa `ActiveStoreId` como `LojaId`.
+- [x] **GeradorLinks.razor** — troca de loja no topo não zera o resultado nem o histórico.
+- [x] **AffiliateLinksControllerTests.cs** — histórico ignora `LojaId` e mantém `PlatformType`.
+- [x] **AffiliateLinksController** / **AffiliateLinkHistoryService** / **ShortAffiliateLinkRepository** — `GET historico` ignora `LojaId`, sem inner join de loja e grupos com `IsActive`.
+- [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — fechar o modal dispara `StateHasChanged` e recarrega o escopo de lojas.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

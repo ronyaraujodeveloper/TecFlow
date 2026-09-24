@@ -194,7 +194,7 @@
         _connectModalVisible = true;
     }
 
-    private void CloseConnectModal()
+    private async Task CloseConnectModal()
     {
         if (_isBusy)
         {
@@ -203,6 +203,8 @@
 
         _connectModalVisible = false;
         _connectModalError = null;
+        await InvokeAsync(StateHasChanged);
+        await StoreScope.RefreshStoresAsync();
     }
 
     private async Task StartOAuthAsync((MarketplaceType Platform, string FriendlyName) payload)

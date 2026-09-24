@@ -252,11 +252,9 @@
 
     private void HandleStoreChanged()
     {
-        _ = InvokeAsync(() =>
+        _ = InvokeAsync(async () =>
         {
-            ClearFeedback();
-            ClearGeneratedResult();
-            _historyRefreshToken++;
+            await LoadIntegrationsAsync();
             StateHasChanged();
         });
     }

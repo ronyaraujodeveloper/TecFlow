@@ -309,7 +309,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Acoplar a Web Share API para permitir o envio direto do link gerado para canais como WhatsApp, Telegram e redes sociais em dispositivos móveis.
 
 - [x] 11.3. Histórico Geral com Filtros por Plataforma e Métricas de Engajamento
-  - Renderizar listagem responsiva contendo o histórico de links processados.
+  - Renderizar listagem responsiva contendo o histórico de links processados do tenant (independente da loja ativa no topo; abas Shopee/TikTok/Magalu etc. filtram explicitamente).
   - Adicionar badges dinâmicos para identificar visualmente a plataforma de destino (Shopee, TikTok, Amazon, etc.) e o contador agregador de cliques em tempo real baseado no log de telemetria.
   - Botão **Visualizar** no histórico recarrega o painel "Seus links de comissão" (OriginalUrl, AffiliateUrl, ShortenedUrl, plataforma) e o campo Link do produto, com scroll suave até o formulário.
   - Botão **Editar** abre modal para marcar/desmarcar contas da mesma plataforma (`IsActive = false`, sem delete).

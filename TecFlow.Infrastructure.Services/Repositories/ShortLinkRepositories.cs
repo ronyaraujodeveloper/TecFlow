@@ -80,8 +80,9 @@ public class ShortAffiliateLinkRepository : IShortAffiliateLinkRepository
         AffiliateLinkFilter filter,
         CancellationToken cancellationToken = default)
     {
+        // Sem inner join em IntegracaoLoja/MarketplaceAccount: links de outras
+        // plataformas do mesmo tenant continuam visíveis. Tenant vem do query filter.
         var query = _context.ShortAffiliateLinks
-            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(link => link.UserId == userId);
 

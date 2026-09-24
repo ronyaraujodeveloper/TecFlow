@@ -12,14 +12,7 @@
         <div>
             <h2 class="h5 fw-bold mb-1">Histórico de links</h2>
             <p class="text-muted small mb-0">
-                @if (StoreScope.ActiveStore is { } activeStore)
-                {
-                    <span>Loja ativa: <strong>@activeStore.FriendlyName</strong></span>
-                }
-                else
-                {
-                    <span>Selecione uma loja no topo para filtrar o histórico.</span>
-                }
+                Links convertidos de todas as lojas do seu tenant. Use as abas abaixo para filtrar por plataforma.
             </p>
         </div>
         <button type="button"
@@ -48,6 +41,12 @@
                 disabled="@_isLoading"
                 @onclick="() => SetPlatformFilterAsync(MarketplaceType.TikTokShop)">
             TikTok
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.MercadoLivre)"
+                disabled="@_isLoading"
+                @onclick="() => SetPlatformFilterAsync(MarketplaceType.MercadoLivre)">
+            Mercado Livre
         </button>
         <button type="button"
                 class="btn btn-sm btn-touch @GetFilterButtonClass(MarketplaceType.Amazon)"
@@ -91,7 +90,7 @@
     {
         <div class="link-history-empty card border-0 shadow-sm text-center p-4">
             <p class="text-muted small mb-0">
-                Nenhum link gerado ainda para esta loja e filtro selecionados.
+                Nenhum link gerado ainda para o filtro selecionado.
             </p>
         </div>
     }
@@ -210,7 +209,6 @@
     private bool _isLoading = true;
     private string? _loadError;
     private int _lastRefreshToken = -1;
-    private int? _lastStoreId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -221,10 +219,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_lastRefreshToken != RefreshToken || _lastStoreId != StoreScope.ActiveStoreId)
+        if (_lastRefreshToken != RefreshToken)
         {
             _lastRefreshToken = RefreshToken;
-            _lastStoreId = StoreScope.ActiveStoreId;
             await LoadHistoryAsync();
         }
     }
@@ -236,7 +233,11 @@
 
     private void HandleStoreChanged()
     {
-        _ = InvokeAsync(LoadHistoryAsync);
+        _ = InvokeAsync(async () =>
+        {
+            await LoadHistoryAsync();
+            StateHasChanged();
+        });
     }
 
     private async Task SetPlatformFilterAsync(MarketplaceType? platform)
@@ -258,7 +259,7 @@
             {
                 Page = 1,
                 PageSize = 30,
-                LojaId = StoreScope.ActiveStoreId,
+                LojaId = null,
                 PlatformType = _platformFilter
             };
 
@@ -285,7 +286,6 @@
         {
             _isLoading = false;
             _lastRefreshToken = RefreshToken;
-            _lastStoreId = StoreScope.ActiveStoreId;
         }
     }
 

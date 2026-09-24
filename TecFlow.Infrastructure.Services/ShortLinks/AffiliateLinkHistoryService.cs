@@ -44,7 +44,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         {
             filter ??= new AffiliateLinkFilter();
             var items = await _shortLinkRepository.ListByUserForGroupingAsync(userId, filter, cancellationToken);
-            var grouped = GroupLinks(items, filter.LojaId);
+            var grouped = GroupLinks(items);
             var clickCounts = await _clickLogRepository.GetClickCountsByAffiliateLinkIdsAsync(
                 grouped.SelectMany(group => group.Links.Select(link => link.AffiliateLinkId)),
                 cancellationToken);
@@ -90,7 +90,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         }
     }
 
-    private static List<LinkGroup> GroupLinks(IReadOnlyList<Core.Entities.ShortAffiliateLink> items, int? lojaId)
+    private static List<LinkGroup> GroupLinks(IReadOnlyList<Core.Entities.ShortAffiliateLink> items)
     {
         var groups = items
             .GroupBy(link => link.LinkGroupId == Guid.Empty ? link.AffiliateLinkId : link.LinkGroupId)
@@ -99,8 +99,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
                 LinkGroupId = group.Key,
                 Links = group.OrderByDescending(link => link.IsActive).ThenByDescending(link => link.CreatedAt).ToList()
             })
-            .Where(group => group.Links.Exists(link => link.IsActive) || group.Links.Count > 0)
-            .Where(group => lojaId is not int id || group.Links.Exists(link => link.IntegracaoLojaId == id))
+            .Where(group => group.Links.Exists(link => link.IsActive))
             .OrderByDescending(group => group.Links.Max(link => link.CreatedAt))
             .ToList();
 

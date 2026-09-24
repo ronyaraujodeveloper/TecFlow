@@ -44,7 +44,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
             if (!AffiliateTrackingIdValidator.IsShortenerUrl(currentUrl)
                 && !string.Equals(currentUrl, originalUrl, StringComparison.OrdinalIgnoreCase))
             {
-                return currentUrl;
+                return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(currentUrl);
             }
         }
 
@@ -81,7 +81,8 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 currentUrl);
         }
 
-        return SanitizeExpandedUrl(currentUrl, originalUrl);
+        return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(
+            SanitizeExpandedUrl(currentUrl, originalUrl));
     }
 
     private async Task<string> FollowWithAutoRedirectAsync(string url, CancellationToken cancellationToken)
@@ -101,7 +102,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 || Uri.TryCreate(finalUrl, UriKind.Absolute, out _))
             {
                 _logger.LogDebug("ExpandUrl auto-redirect: {From} -> {To}", url, finalUrl);
-                return finalUrl;
+                return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(finalUrl);
             }
         }
         catch (Exception ex)
@@ -142,18 +143,22 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
     private static void EnsureBrowserUserAgent(HttpRequestMessage request)
     {
-        if (request.Headers.UserAgent.Count > 0)
+        if (request.Headers.UserAgent.Count == 0)
         {
-            return;
+            request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
         }
 
-        request.Headers.TryAddWithoutValidation(
-            "User-Agent",
-            BrowserUserAgent);
-        request.Headers.TryAddWithoutValidation(
-            "Accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-        request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+        if (!request.Headers.Contains("Accept"))
+        {
+            request.Headers.TryAddWithoutValidation(
+                "Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        }
+
+        request.Headers.Remove("Accept-Language");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9");
+        request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+        request.Headers.TryAddWithoutValidation("Referer", "https://www.tiktok.com/");
     }
 
     private const string BrowserUserAgent =

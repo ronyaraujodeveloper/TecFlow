@@ -105,6 +105,10 @@ public static class AffiliateTrackingIdValidator
         @"(?:^|[?&#])sec_user_id=(?<id>[^&#]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex TikTokBareHandleRegex = new(
+        @"^@?(?<id>[A-Za-z0-9._]{3,64})$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static string ExtractAffiliateIdFromUrl(string input, string platform)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -114,6 +118,10 @@ public static class AffiliateTrackingIdValidator
 
         var trimmed = input.Trim().Trim('"', '\'');
         var marketplace = ParsePlatform(platform);
+        if (marketplace is MarketplaceType.TikTokShop)
+        {
+            trimmed = UnwrapTikTokLoginRedirect(trimmed);
+        }
 
         if (TryExtractPlatformAffiliateId(marketplace, trimmed, out var extractedId)
             && !IsBooleanLiteral(extractedId))
@@ -227,6 +235,34 @@ public static class AffiliateTrackingIdValidator
         }
 
         return fallback ?? string.Empty;
+    }
+
+    public static string UnwrapTikTokLoginRedirect(string? url)
+    {
+        var current = (url ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(current))
+        {
+            return string.Empty;
+        }
+
+        for (var hop = 0; hop < 8; hop++)
+        {
+            if (!IsTikTokLoginRedirect(current, out var encodedRedirect))
+            {
+                return current;
+            }
+
+            var decoded = UrlDecodeRecursive(encodedRedirect);
+            if (string.IsNullOrWhiteSpace(decoded)
+                || string.Equals(decoded, current, StringComparison.OrdinalIgnoreCase))
+            {
+                return current;
+            }
+
+            current = decoded.Trim().Trim('"', '\'');
+        }
+
+        return current;
     }
 
     public static bool TryExtractPlatformAffiliateId(MarketplaceType platform, string? input, out string id) =>
@@ -579,6 +615,8 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
+        input = UnwrapTikTokLoginRedirect(input);
+
         if (TryMatchTikTokRegex(TikTokUniqueIdRegex, input, out id)
             || TryReadTikTokCreatorParam(input, "unique_id", out id))
         {
@@ -616,7 +654,86 @@ public static class AffiliateTrackingIdValidator
             return true;
         }
 
+        if (TryExtractTikTokBareHandle(input, out id))
+        {
+            return true;
+        }
+
         return TryExtractByKeys(MarketplaceType.TikTokShop, input, out id);
+    }
+
+    private static bool TryExtractTikTokBareHandle(string input, out string id)
+    {
+        id = string.Empty;
+        var trimmed = input.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)
+            || StartsWithHttp(trimmed)
+            || trimmed.Contains('/', StringComparison.Ordinal)
+            || trimmed.Contains('?', StringComparison.Ordinal)
+            || trimmed.Contains('=', StringComparison.Ordinal)
+            || IsBooleanLiteral(trimmed))
+        {
+            return false;
+        }
+
+        var match = TikTokBareHandleRegex.Match(trimmed);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        id = NormalizeTikTokHandle(match.Groups["id"].Value);
+        return !string.IsNullOrWhiteSpace(id);
+    }
+
+    private static bool IsTikTokLoginRedirect(string url, out string encodedRedirect)
+    {
+        encodedRedirect = string.Empty;
+        foreach (var candidate in AbsoluteUrlCandidates(url))
+        {
+            if (!TryParseAbsoluteUri(candidate, out var uri))
+            {
+                continue;
+            }
+
+            var host = NormalizeHost(uri.Host);
+            if (!host.Contains("tiktok.com", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var path = uri.AbsolutePath ?? string.Empty;
+            if (!path.Contains("/login", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (TryReadParam(candidate, "redirect_url", out var value)
+                || TryReadParam(uri.Query.TrimStart('?'), "redirect_url", out value))
+            {
+                encodedRedirect = value;
+                return !string.IsNullOrWhiteSpace(encodedRedirect);
+            }
+        }
+
+        return false;
+    }
+
+    private static string UrlDecodeRecursive(string value)
+    {
+        var current = value ?? string.Empty;
+        for (var hop = 0; hop < 8; hop++)
+        {
+            var decoded = System.Net.WebUtility.UrlDecode(current) ?? current;
+            if (string.Equals(decoded, current, StringComparison.Ordinal))
+            {
+                return decoded;
+            }
+
+            current = decoded;
+        }
+
+        return current;
     }
 
     private static bool TryMatchTikTokRegex(Regex pattern, string input, out string id)

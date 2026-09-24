@@ -669,6 +669,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreModal.razor** — auto-detect `vt.tiktok.com` / `shop.tiktok.com` como TikTok Shop.
 - [x] **PlatformLinkResolverTests** — `unique_id=amz.indica` → `amz.indica`.
 
+### Fase 19.22 — TikTok login `redirect_url` e handle direto
+
+- [x] **AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect** — `UrlDecode` recursivo (`HttpUtility`/`WebUtility`) em `tiktok.com/login?redirect_url=`.
+- [x] **UrlExpansionService** — User-Agent Chrome e `Accept-Language: pt-BR,pt;q=0.9`.
+- [x] **ConnectStoreModal.razor** — Tracking ID TikTok aceita `@amz.indica` / `amz.indica`.
+- [x] **PlatformLinkResolverTests** — `redirect_url` codificado com `unique_id=amz.indica`.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

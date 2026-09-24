@@ -43,7 +43,8 @@ public sealed class PlatformLinkResolver
         _logger.LogInformation(
             "Expandindo URL encurtada {Host} antes de resolver a plataforma.",
             TryGetHost(workingUrl));
-        return await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+        var expanded = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+        return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(expanded);
     }
 
     public static string ExtractShopeeAffiliateId(string url) =>

@@ -64,6 +64,39 @@ public class UrlExpansionServiceTests
         Assert.IsType<string>(expanded);
         Assert.False(bool.TryParse(expanded, out _));
     }
+
+    [Fact]
+    public async Task ExpandUrlAsync_ShouldUnwrapTikTokLoginRedirectUrl()
+    {
+        const string destination =
+            "https://shop.tiktok.com/view/product/1?unique_id=amz.indica";
+        var login = "https://www.tiktok.com/login?redirect_url=" + Uri.EscapeDataString(destination);
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("vt.tiktok.com"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri(login) }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var factory = new StubHttpClientFactory(handler);
+        var service = new UrlExpansionService(
+            factory,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://vt.tiktok.com/ZSabc/");
+
+        Assert.Contains("unique_id=amz.indica", expanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/login", expanded, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "amz.indica",
+            PlatformLinkResolver.ExtractAffiliateId(expanded, MarketplaceType.TikTokShop));
+    }
 }
 
 public class AffiliateLinkGenerationServiceTests

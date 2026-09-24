@@ -25,6 +25,34 @@ public class PlatformLinkResolverTests
     }
 
     [Fact]
+    public void ExtractAffiliateId_ShouldReadTikTokUniqueIdFromEncodedLoginRedirect()
+    {
+        const string destination =
+            "https://shop.tiktok.com/view/product/1?unique_id=amz.indica&user_id=7426532104848278533";
+        var encodedOnce = Uri.EscapeDataString(destination);
+        var encodedTwice = Uri.EscapeDataString(encodedOnce);
+        var loginUrl = $"https://www.tiktok.com/login?redirect_url={encodedTwice}";
+
+        var unwrapped = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(loginUrl);
+        Assert.Contains("unique_id=amz.indica", unwrapped, StringComparison.OrdinalIgnoreCase);
+
+        var id = PlatformLinkResolver.ExtractAffiliateId(loginUrl, MarketplaceType.TikTokShop);
+
+        Assert.Equal("amz.indica", id);
+    }
+
+    [Theory]
+    [InlineData("amz.indica")]
+    [InlineData("@amz.indica")]
+    public void ExtractAffiliateId_ShouldAcceptTikTokBareHandle(string input)
+    {
+        var id = PlatformLinkResolver.ExtractAffiliateId(input, MarketplaceType.TikTokShop);
+        Assert.Equal("amz.indica", id);
+        Assert.True(AffiliateTrackingIdValidator.TryNormalize(MarketplaceType.TikTokShop, input, out var normalized));
+        Assert.Equal("amz.indica", normalized);
+    }
+
+    [Fact]
     public void ExtractAffiliateId_ShouldReadTikTokUniqueIdAmzIndica()
     {
         const string url =

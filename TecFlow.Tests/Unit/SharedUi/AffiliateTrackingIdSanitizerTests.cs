@@ -1,0 +1,88 @@
+﻿using TecFlow.Core.Enums;
+using TecFlow.SharedUi.Services.Integrations;
+
+namespace TecFlow.Tests.Unit.SharedUi;
+
+public class AffiliateTrackingIdSanitizerTests
+{
+    [Fact]
+    public void Extract_ShouldKeepPlainId()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.Shopee, " 18325850271 ");
+        Assert.Equal("18325850271", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadAmazonTagFromUrl()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.Amazon,
+            "https://www.amazon.com.br/dp/B0TESTASIN?tag=sualoja-20&psc=1");
+
+        Assert.Equal("sualoja-20", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadTagQueryWithoutHost()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.Amazon, "tag=sualoja-20");
+        Assert.Equal("sualoja-20", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadSubIdFromTikTokUrl()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.TikTokShop,
+            "https://shop.tiktok.com/view/product/123?sub_id=12345");
+
+        Assert.Equal("12345", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadMattToolFromMercadoLivreUrl()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.MercadoLivre,
+            "https://www.mercadolivre.com.br/p/MLB123?matt_tool=987654321&matt_word=loja");
+
+        Assert.Equal("987654321", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadParceiroFromCasasBahiaUrl()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.CasasBahia,
+            "https://www.casasbahia.com.br/p/123?parceiro=tecflow_cb&sub_id=loja");
+
+        Assert.Equal("tecflow_cb", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldReadMagazineVoceSlugFromPath()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.MagazineLuiza,
+            "https://www.magazinevoce.com.br/magazinematos/p/123456/");
+
+        Assert.Equal("magazinematos", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldPreferPlatformKeyWhenSeveralArePresent()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.Amazon,
+            "https://example.com/?sub_id=12345&tag=minhatag-20");
+
+        Assert.Equal("minhatag-20", id);
+    }
+
+    [Fact]
+    public void Help_ShouldExposeOfficialPanelForAmazon()
+    {
+        Assert.Equal("https://associados.amazon.com.br/", AffiliateTrackingIdHelp.GetOfficialPanelUrl(MarketplaceType.Amazon));
+        Assert.Contains("-20", AffiliateTrackingIdHelp.GetFormatHint(MarketplaceType.Amazon), StringComparison.Ordinal);
+    }
+}

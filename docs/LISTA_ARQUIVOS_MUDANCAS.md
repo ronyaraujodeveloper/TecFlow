@@ -609,6 +609,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **AffiliateLinksController** / **AffiliateLinkHistoryService** / **ShortAffiliateLinkRepository** — `GET historico` ignora `LojaId`, sem inner join de loja e grupos com `IsActive`.
 - [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — fechar o modal dispara `StateHasChanged` e recarrega o escopo de lojas.
 
+### Fase 19.13 — Ajuda "Como pegar meu ID?" no cadastro de loja
+
+- [x] **ConnectStoreModal.razor** / **app.css** — link com `bi-question-circle`, dica do formato e botão para o painel oficial (`target=_blank`).
+- [x] **AffiliateTrackingIdSanitizer.cs** / **AffiliateTrackingIdHelp.cs** — extração de `tag`, `sub_id`, `matt_tool`, `parceiro` e slug Magazine Você.
+- [x] **AffiliateTrackingIdSanitizerTests.cs** — URLs, query solta e ID puro.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

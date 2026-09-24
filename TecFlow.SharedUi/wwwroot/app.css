@@ -944,6 +944,29 @@ html, body {
     pointer-events: auto;
 }
 
+.marketplace-id-help-toggle {
+    font-size: 0.75rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.marketplace-id-help-toggle:hover,
+.marketplace-id-help-toggle:focus-visible {
+    text-decoration: underline;
+}
+
+.affiliate-id-help {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    background: var(--bs-light, #f8f9fa);
+    padding: 0.55rem 0.7rem;
+}
+
+.affiliate-id-help p {
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1.35;
+}
+
 .active-store-scope {
     position: relative;
 }

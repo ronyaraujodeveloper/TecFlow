@@ -88,17 +88,44 @@
                     </div>
 
                     <div class="marketplace-connect-section marketplace-connect-section--last">
-                        <label class="form-label fw-semibold" for="tracking-id">@TrackingIdLabel</label>
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <label class="form-label fw-semibold mb-0" for="tracking-id">@TrackingIdLabel</label>
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 marketplace-id-help-toggle"
+                                    disabled="@_linking"
+                                    aria-expanded="@_showIdHelp"
+                                    aria-controls="tracking-id-help"
+                                    @onclick="ToggleIdHelp">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                Como pegar meu ID?
+                            </button>
+                        </div>
                         <input id="tracking-id"
                                type="text"
-                               class="form-control"
-                               maxlength="64"
+                               class="form-control mt-1"
+                               maxlength="2048"
                                placeholder="@TrackingIdPlaceholder"
                                inputmode="@TrackingIdInputMode"
                                autocomplete="off"
-                               @bind="_trackingId"
-                               @bind:event="oninput"
+                               value="@_trackingId"
+                               @oninput="OnTrackingIdInput"
                                disabled="@_linking" />
+                        @if (_showIdHelp)
+                        {
+                            <div id="tracking-id-help"
+                                 class="affiliate-id-help mt-2"
+                                 role="region"
+                                 aria-label="Como obter o ID de afiliado">
+                                <p class="small mb-2">@AffiliateTrackingIdHelp.GetFormatHint(_platform)</p>
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="@AffiliateTrackingIdHelp.GetOfficialPanelUrl(_platform)"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Ir para o painel oficial
+                                    <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        }
                     </div>
 
                     @if (!_platform.IsUniversalAffiliatePlatform())
@@ -198,6 +225,7 @@
     private string _shopId = string.Empty;
     private string? _formError;
     private bool _linking;
+    private bool _showIdHelp;
 
     private string? DisplayError => ErrorMessage ?? _formError;
 
@@ -213,6 +241,18 @@
     {
         _platform = platform;
         _formError = null;
+        if (!string.IsNullOrWhiteSpace(_trackingId))
+        {
+            _trackingId = AffiliateTrackingIdSanitizer.Extract(_platform, _trackingId);
+        }
+    }
+
+    private void ToggleIdHelp() => _showIdHelp = !_showIdHelp;
+
+    private void OnTrackingIdInput(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? string.Empty;
+        _trackingId = AffiliateTrackingIdSanitizer.Extract(_platform, raw);
     }
 
     private string GetPlatformOptionClass(MarketplaceType platform)
@@ -262,7 +302,9 @@
         try
         {
             var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
-            var trackingId = (await ReadInputAsync("tracking-id", _trackingId)).Trim();
+            var trackingId = AffiliateTrackingIdSanitizer.Extract(
+                _platform,
+                (await ReadInputAsync("tracking-id", _trackingId)).Trim());
             var authorizationCode = (await ReadInputAsync("auth-code", _authorizationCode)).Trim();
             var shopIdInput = (await ReadInputAsync("shop-id", _shopId)).Trim();
 
@@ -383,5 +425,6 @@
         _shopId = string.Empty;
         _formError = null;
         _linking = false;
+        _showIdHelp = false;
     }
 }

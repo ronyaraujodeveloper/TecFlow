@@ -439,6 +439,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.9. Casas Bahia:** `CasasBahiaLinkStrategy` injeta `parceiro` e `sub_id`; expande `cb.com.br` / app.link; cadastro com ID de Parceiro.
 - [x] **19.10. Modal conectar loja:** grid compacto de plataformas (3–4 colunas) sem barra de rolagem.
 - [x] **19.11. Cores institucionais:** badges/botões Shopee, TikTok, ML, Amazon, Magalu, Kabum e Casas Bahia com tokens CSS e estado ativo da marca.
+- [x] **19.12. Como pegar meu ID?:** dica do formato por plataforma, painel oficial em nova aba e extração automática do ID ao colar URL (`tag`, `sub_id`, `matt_tool`, `parceiro`).
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

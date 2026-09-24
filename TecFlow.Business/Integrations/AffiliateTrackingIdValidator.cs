@@ -1,4 +1,5 @@
-﻿using TecFlow.Core.Enums;
+﻿using System.Text.RegularExpressions;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Integrations;
 
@@ -13,18 +14,30 @@ public static class AffiliateTrackingIdValidator
     public static string DuplicateTrackingIdMessage(MarketplaceType platform) =>
         $"⚠️ Este ID de Afiliado já está cadastrado no sistema para a plataforma {platform.GetDisplayName()}. Não é permitido duplicar credenciais.";
 
+    public static string ExtractedFromShortLinkMessage(string id) =>
+        $"✅ ID de Afiliado {id} extraído com sucesso a partir do link encurtado!";
+
     private static readonly string[] KnownParams =
-        ["sub_id", "affiliate_id", "an_id", "tag", "matt_tool", "matt_word", "parceiro"];
+        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "tag", "matt_tool", "matt_word", "parceiro"];
 
     private static readonly string[] ShortenerHosts =
     [
         "br.shp.ee",
         "shp.ee",
+        "shope.ee",
         "s.shopee.com.br",
         "s.shopee.com",
         "amzn.to",
         "a.co",
         "magalu.me"
+    ];
+
+    private static readonly Regex[] ShopeeAffiliateIdPatterns =
+    [
+        new(@"mmp_pid=an_([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled),
+        new(@"utm_source=an_([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled),
+        new(@"(?:affiliate_id=|an_id=)([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled),
+        new(@"sub_id=([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)
     ];
 
     public static string ExtractAffiliateIdFromUrl(string input, string platform)
@@ -36,6 +49,13 @@ public static class AffiliateTrackingIdValidator
 
         var trimmed = input.Trim().Trim('"', '\'');
         var marketplace = ParsePlatform(platform);
+
+        if (marketplace is MarketplaceType.Shopee
+            && TryExtractShopeeAffiliateId(trimmed, out var shopeeId))
+        {
+            return Truncate(shopeeId);
+        }
+
         var keys = StartsWithHttp(trimmed)
             ? KeysFor(marketplace).Concat(KnownParams).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             : KeysFor(marketplace);
@@ -54,6 +74,8 @@ public static class AffiliateTrackingIdValidator
                 {
                     return Truncate(digits);
                 }
+
+                continue;
             }
 
             return Truncate(value);
@@ -67,6 +89,32 @@ public static class AffiliateTrackingIdValidator
         }
 
         return Truncate(trimmed);
+    }
+
+    public static bool TryExtractShopeeAffiliateId(string? input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        foreach (var pattern in ShopeeAffiliateIdPatterns)
+        {
+            var match = pattern.Match(input);
+            if (!match.Success || match.Groups.Count < 2)
+            {
+                continue;
+            }
+
+            id = match.Groups[1].Value;
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static bool TryNormalize(MarketplaceType platform, string? input, out string id)
@@ -100,14 +148,43 @@ public static class AffiliateTrackingIdValidator
 
     public static bool IsShortenerUrl(string? value)
     {
-        if (!TryParseAbsoluteUri(value ?? string.Empty, out var uri))
+        foreach (var candidate in AbsoluteUrlCandidates(value))
         {
-            return false;
+            if (!TryParseAbsoluteUri(candidate, out var uri))
+            {
+                continue;
+            }
+
+            var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
+            if (host.StartsWith("www.", StringComparison.Ordinal))
+            {
+                host = host[4..];
+            }
+
+            if (ShortenerHosts.Any(item =>
+                    host == item || host.EndsWith("." + item, StringComparison.Ordinal)))
+            {
+                return true;
+            }
         }
 
-        var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
-        return ShortenerHosts.Any(candidate =>
-            host == candidate || host.EndsWith("." + candidate, StringComparison.Ordinal));
+        return false;
+    }
+
+    public static string EnsureAbsoluteHttpUrl(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(trimmed) || StartsWithHttp(trimmed))
+        {
+            return trimmed;
+        }
+
+        if (trimmed.Contains('.', StringComparison.Ordinal) && !trimmed.Contains(' ', StringComparison.Ordinal))
+        {
+            return "https://" + trimmed.TrimStart('/');
+        }
+
+        return trimmed;
     }
 
     public static MarketplaceType ParsePlatform(string? platform)
@@ -171,7 +248,7 @@ public static class AffiliateTrackingIdValidator
     private static string[] KeysFor(MarketplaceType platform) => platform switch
     {
         MarketplaceType.Amazon => ["tag"],
-        MarketplaceType.Shopee => ["sub_id", "affiliate_id", "an_id"],
+        MarketplaceType.Shopee => ["mmp_pid", "utm_source", "sub_id", "affiliate_id", "an_id"],
         MarketplaceType.TikTokShop => ["sub_id", "affiliate_id"],
         MarketplaceType.MercadoLivre => ["matt_tool", "matt_word"],
         MarketplaceType.MagazineLuiza => ["parceiro", "sub_id"],
@@ -236,6 +313,22 @@ public static class AffiliateTrackingIdValidator
         }
 
         return start < 0 ? string.Empty : value.Substring(start, length);
+    }
+
+    private static IEnumerable<string> AbsoluteUrlCandidates(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            yield break;
+        }
+
+        yield return trimmed;
+        var ensured = EnsureAbsoluteHttpUrl(trimmed);
+        if (!string.Equals(ensured, trimmed, StringComparison.Ordinal))
+        {
+            yield return ensured;
+        }
     }
 
     private static bool TryParseAbsoluteUri(string value, out Uri uri)

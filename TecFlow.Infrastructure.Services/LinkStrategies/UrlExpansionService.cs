@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 
@@ -38,9 +39,17 @@ public sealed class UrlExpansionService : IUrlExpansionService
         for (var hop = 0; hop < MaxRedirects; hop++)
         {
             using var response = await SendWithoutAutoRedirectAsync(client, currentUrl, cancellationToken);
+            var requestUri = response.RequestMessage?.RequestUri?.ToString();
+            if (!string.IsNullOrWhiteSpace(requestUri)
+                && !string.Equals(requestUri, currentUrl, StringComparison.OrdinalIgnoreCase)
+                && Uri.TryCreate(requestUri, UriKind.Absolute, out _))
+            {
+                currentUrl = requestUri;
+            }
+
             if (!IsRedirect(response))
             {
-                return currentUrl;
+                break;
             }
 
             var nextUrl = ResolveRedirectLocation(currentUrl, response);
@@ -53,7 +62,40 @@ public sealed class UrlExpansionService : IUrlExpansionService
             currentUrl = nextUrl;
         }
 
+        if (AffiliateTrackingIdValidator.IsShortenerUrl(currentUrl))
+        {
+            currentUrl = await FollowWithAutoRedirectAsync(currentUrl, cancellationToken);
+        }
+
         return currentUrl;
+    }
+
+    private async Task<string> FollowWithAutoRedirectAsync(string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var followClient = _httpClientFactory.CreateClient(
+                TecFlow.Business.Integrations.Common.IntegrationHttpClientNames.UrlExpansionFollow);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            EnsureBrowserUserAgent(request);
+            using var response = await followClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            var finalUrl = response.RequestMessage?.RequestUri?.ToString();
+            if (!string.IsNullOrWhiteSpace(finalUrl)
+                && Uri.TryCreate(finalUrl, UriKind.Absolute, out _))
+            {
+                _logger.LogDebug("ExpandUrl auto-redirect: {From} -> {To}", url, finalUrl);
+                return finalUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao seguir redirecionamento automático de {Url}.", url);
+        }
+
+        return url;
     }
 
     private static async Task<HttpResponseMessage> SendWithoutAutoRedirectAsync(

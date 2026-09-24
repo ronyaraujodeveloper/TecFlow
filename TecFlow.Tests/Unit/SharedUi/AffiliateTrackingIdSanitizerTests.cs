@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Integrations;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Enums;
 using TecFlow.SharedUi.Services.Integrations;
 
@@ -91,6 +92,37 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldReadShopeeMmpPidAnPrefix()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
+            "https://shopee.com.br/product/123/456?mmp_pid=an_18325850271",
+            "Shopee");
+
+        Assert.Equal("18325850271", id);
+        Assert.Equal(
+            "✅ ID de Afiliado 18325850271 extraído com sucesso a partir do link encurtado!",
+            AffiliateTrackingIdSanitizer.ExtractedFromShortLinkMessage(id));
+    }
+
+    [Fact]
+    public void ExtractAffiliateIdFromUrl_ShouldReadShopeeUtmSourceAnPrefix()
+    {
+        var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
+            "https://shopee.com.br/product/123/456?utm_source=an_18325850271",
+            "Shopee");
+
+        Assert.Equal("18325850271", id);
+    }
+
+    [Fact]
+    public void PlatformLinkResolver_ShouldExtractShopeeAffiliateIdFromMmpPid()
+    {
+        var id = PlatformLinkResolver.ExtractShopeeAffiliateId(
+            "https://shopee.com.br/product/abc?sub_id=999&mmp_pid=an_18325850271");
+        Assert.Equal("18325850271", id);
+    }
+
+    [Fact]
     public void ExtractAffiliateIdFromUrl_ShouldReadMattWordWhenMattToolIsMissing()
     {
         var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
@@ -134,6 +166,9 @@ public class AffiliateTrackingIdSanitizerTests
     public void IsShortenerUrl_ShouldDetectBrShpEeAndAmznTo()
     {
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://br.shp.ee/taeej22s"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://shope.ee/abc"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://s.shopee.com.br/xyz"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("s.shopee.com.br/xyz"));
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://amzn.to/abc123"));
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://magalu.me/xyz"));
         Assert.False(AffiliateTrackingIdSanitizer.IsShortenerUrl("sualoja-20"));

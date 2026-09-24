@@ -58,7 +58,8 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         try
         {
             var workingUrl = request.OriginalUrl.Trim();
-            var (strategy, resolvedUrl) = await ResolveStrategyAsync(workingUrl, cancellationToken);
+            var expandedUrl = await _platformLinkResolver.ExpandIfShortenedAsync(workingUrl, cancellationToken);
+            var (strategy, resolvedUrl) = await ResolveStrategyAsync(expandedUrl, cancellationToken);
             var affiliateId = userId.ToString();
             var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(
                 userId,

@@ -443,6 +443,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.13. Validação de Tracking ID:** bloqueia URL residual no cadastro; expande encurtadores; saneia `MarketplaceAccounts` com `http` no TrackingId.
 - [x] **19.14. Unicidade de ID:** um Tracking ID ativo por plataforma; exemplo padronizado `6512300000`.
 - [x] **19.15. Desconectar loja:** `ConfirmarDesconexaoAsync` (`async Task`); `InativarContaAsync` grava `IsActive = false` via `SaveChangesAsync`; POST `api/marketplace-auth/lojas/{id}/desconectar`.
+- [x] **19.16. Extração Shopee:** expande `s.shopee.com.br` / `br.shp.ee` / `shope.ee` e lê `mmp_pid=an_` / `utm_source=an_`.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

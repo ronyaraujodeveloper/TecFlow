@@ -22,4 +22,13 @@ public static class AffiliateTrackingIdSanitizer
     public static bool LooksLikeUrl(string? value) => AffiliateTrackingIdValidator.LooksLikeUrl(value);
 
     public static bool IsShortenerUrl(string? value) => AffiliateTrackingIdValidator.IsShortenerUrl(value);
+
+    public static bool TryExtractShopeeAffiliateId(string? input, out string id) =>
+        AffiliateTrackingIdValidator.TryExtractShopeeAffiliateId(input, out id);
+
+    public static string EnsureAbsoluteHttpUrl(string? value) =>
+        AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(value);
+
+    public static string ExtractedFromShortLinkMessage(string id) =>
+        AffiliateTrackingIdValidator.ExtractedFromShortLinkMessage(id);
 }

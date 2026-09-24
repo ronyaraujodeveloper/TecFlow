@@ -16,12 +16,15 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
             {
                 AllowAutoRedirect = false
             })
-            .ConfigureHttpClient(client =>
+            .ConfigureHttpClient(ConfigureExpansionClient);
+
+        services.AddHttpClient(IntegrationHttpClientNames.UrlExpansionFollow)
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
-                client.Timeout = TimeSpan.FromSeconds(15);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TecFlow/1.0");
-            });
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 10
+            })
+            .ConfigureHttpClient(ConfigureExpansionClient);
 
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();
@@ -41,5 +44,12 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    private static void ConfigureExpansionClient(HttpClient client)
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TecFlow/1.0");
     }
 }

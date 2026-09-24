@@ -22,6 +22,10 @@
                 </div>
 
                 <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(_extractSuccess))
+                    {
+                        <div class="alert alert-success py-1 px-2 small mb-2" role="status">@_extractSuccess</div>
+                    }
                     @if (!string.IsNullOrWhiteSpace(DisplayError))
                     {
                         <div class="alert alert-danger py-1 px-2 small mb-2" role="alert">@DisplayError</div>
@@ -229,6 +233,7 @@
     private string _authorizationCode = string.Empty;
     private string _shopId = string.Empty;
     private string? _formError;
+    private string? _extractSuccess;
     private bool _linking;
     private bool _showIdHelp;
     private bool _expanding;
@@ -250,6 +255,7 @@
     {
         _platform = platform;
         _formError = null;
+        _extractSuccess = null;
         if (!string.IsNullOrWhiteSpace(_trackingId))
         {
             ApplyTrackingId(_trackingId);
@@ -262,22 +268,31 @@
     {
         var raw = e.Value?.ToString() ?? string.Empty;
         var generation = ++_expandGeneration;
+        var fromShortener = false;
 
-        if (AffiliateTrackingIdSanitizer.IsShortenerUrl(raw))
+        var absolute = AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(raw);
+        if (AffiliateTrackingIdSanitizer.IsShortenerUrl(absolute))
         {
+            fromShortener = true;
             _expanding = true;
             _formError = null;
+            _extractSuccess = null;
             try
             {
-                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(raw, _platform.ToString());
+                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(absolute, _platform.ToString());
                 if (generation != _expandGeneration)
                 {
                     return;
                 }
 
-                raw = string.IsNullOrWhiteSpace(expanded.ExtractedId)
-                    ? (string.IsNullOrWhiteSpace(expanded.ExpandedUrl) ? raw : expanded.ExpandedUrl)
-                    : expanded.ExtractedId;
+                if (!string.IsNullOrWhiteSpace(expanded.ExtractedId))
+                {
+                    raw = expanded.ExtractedId;
+                }
+                else if (!string.IsNullOrWhiteSpace(expanded.ExpandedUrl))
+                {
+                    raw = expanded.ExpandedUrl;
+                }
             }
             finally
             {
@@ -293,20 +308,34 @@
             return;
         }
 
-        ApplyTrackingId(raw);
+        ApplyTrackingId(raw, fromShortener);
     }
 
-    private void ApplyTrackingId(string input)
+    private void ApplyTrackingId(string input, bool fromShortener = false)
     {
         var extracted = ExtractAffiliateIdFromUrl(input, _platform.ToString());
         _trackingId = extracted;
         _trackingInvalid = !AffiliateTrackingIdSanitizer.TryNormalize(_platform, extracted, out _);
         if (_trackingInvalid)
         {
+            _extractSuccess = null;
             _formError = AffiliateTrackingIdSanitizer.InvalidMessage;
             return;
         }
 
+        if (_platform == MarketplaceType.Shopee
+            && !string.IsNullOrWhiteSpace(extracted)
+            && !AffiliateTrackingIdSanitizer.LooksLikeUrl(extracted)
+            && (fromShortener
+                || AffiliateTrackingIdSanitizer.LooksLikeUrl(input)
+                || AffiliateTrackingIdSanitizer.TryExtractShopeeAffiliateId(input, out _)))
+        {
+            _extractSuccess = AffiliateTrackingIdSanitizer.ExtractedFromShortLinkMessage(extracted);
+            _formError = null;
+            return;
+        }
+
+        _extractSuccess = null;
         if (string.Equals(_formError, AffiliateTrackingIdSanitizer.InvalidMessage, StringComparison.Ordinal))
         {
             _formError = null;
@@ -366,9 +395,11 @@
             var rawTracking = (await ReadInputAsync("tracking-id", _trackingId)).Trim();
             var trackingId = rawTracking;
 
-            if (AffiliateTrackingIdSanitizer.IsShortenerUrl(rawTracking))
+            if (AffiliateTrackingIdSanitizer.IsShortenerUrl(AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(rawTracking)))
             {
-                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(rawTracking, _platform.ToString());
+                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(
+                    AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(rawTracking),
+                    _platform.ToString());
                 trackingId = string.IsNullOrWhiteSpace(expanded.ExtractedId)
                     ? expanded.ExpandedUrl
                     : expanded.ExtractedId;
@@ -505,6 +536,7 @@
         _authorizationCode = string.Empty;
         _shopId = string.Empty;
         _formError = null;
+        _extractSuccess = null;
         _linking = false;
         _showIdHelp = false;
         _expanding = false;

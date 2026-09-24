@@ -638,6 +638,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **MinhasLojas.razor** / **MarketplaceStoreCard.razor** — `ConfirmarDesconexaoAsync(MarketplaceAccountDto)` (`async Task`), POST `lojas/{id}/desconectar`, `CarregarContasAsync` e `StateHasChanged`.
 - [x] **MarketplaceAccountService.InativarContaAsync** — `IgnoreQueryFilters`, `IsActive = false` e `SaveChangesAsync` no `AppDbContext`.
 
+### Fase 19.17 — Extração Shopee `mmp_pid=an_` / encurtadores
+
+- [x] **AffiliateTrackingIdValidator** — regex `mmp_pid=an_`, `utm_source=an_`, `affiliate_id`, `sub_id`; hosts `shope.ee` / `s.shopee.com.br`.
+- [x] **UrlExpansionService** / **PlatformLinkResolver.ExpandIfShortenedAsync** — HTTP unshorten com `AllowAutoRedirect`.
+- [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

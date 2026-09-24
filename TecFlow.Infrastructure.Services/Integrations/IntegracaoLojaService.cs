@@ -351,7 +351,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         CancellationToken cancellationToken = default)
     {
         var marketplace = AffiliateTrackingIdValidator.ParsePlatform(platform);
-        var workingUrl = url?.Trim() ?? string.Empty;
+        var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url?.Trim() ?? string.Empty);
         if (string.IsNullOrWhiteSpace(workingUrl))
         {
             return new ExpandAffiliateUrlResponseDto

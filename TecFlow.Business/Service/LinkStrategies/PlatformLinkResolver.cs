@@ -1,22 +1,53 @@
 ﻿using Microsoft.Extensions.Logging;
+using TecFlow.Business.Integrations;
+using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
 
 /// <summary>
 /// Resolve dinamicamente a estratégia de link com base no domínio da URL original.
+/// Expande encurtadores Shopee (s.shopee.com.br, br.shp.ee, shope.ee, shp.ee) antes da extração.
 /// </summary>
 public sealed class PlatformLinkResolver
 {
     private readonly IEnumerable<IPlatformLinkStrategy> _strategies;
     private readonly ILogger<PlatformLinkResolver> _logger;
+    private readonly IUrlExpansionService? _urlExpansionService;
 
     public PlatformLinkResolver(
         IEnumerable<IPlatformLinkStrategy> strategies,
-        ILogger<PlatformLinkResolver> logger)
+        ILogger<PlatformLinkResolver> logger,
+        IUrlExpansionService? urlExpansionService = null)
     {
         _strategies = strategies;
         _logger = logger;
+        _urlExpansionService = urlExpansionService;
     }
+
+    public async Task<string> ExpandIfShortenedAsync(string url, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+
+        var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url.Trim());
+        if (_urlExpansionService is null
+            || (!ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl)
+                && !AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)))
+        {
+            return workingUrl;
+        }
+
+        _logger.LogInformation(
+            "Expandindo URL encurtada {Host} antes de resolver a plataforma.",
+            TryGetHost(workingUrl));
+        return await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+    }
+
+    public static string ExtractShopeeAffiliateId(string url) =>
+        AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(url, nameof(MarketplaceType.Shopee));
 
     public IPlatformLinkStrategy Resolve(string url)
     {

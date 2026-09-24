@@ -12,7 +12,7 @@ namespace TecFlow.Tests.Unit.LinkStrategies;
 public class TikTokShopLinkStrategyTests
 {
     private static readonly Guid TestTenantId = Guid.Parse("11111111-2222-3333-4444-555555555555");
-    private const string TrackingId = "18325850271";
+    private const string TrackingId = "6512300000";
     private const string ProductId = "1729382256910270123";
     private const string CanonicalUrl = "https://shop.tiktok.com/view/product/1729382256910270123";
 

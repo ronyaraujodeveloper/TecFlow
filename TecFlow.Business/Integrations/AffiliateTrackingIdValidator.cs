@@ -10,6 +10,9 @@ public static class AffiliateTrackingIdValidator
     public const string InvalidMessage =
         "O valor informado não é um ID de afiliado válido. Informe o seu ID numérico/tag ou cole um link longo de comissão.";
 
+    public static string DuplicateTrackingIdMessage(MarketplaceType platform) =>
+        $"⚠️ Este ID de Afiliado já está cadastrado no sistema para a plataforma {platform.GetDisplayName()}. Não é permitido duplicar credenciais.";
+
     private static readonly string[] KnownParams =
         ["sub_id", "affiliate_id", "an_id", "tag", "matt_tool", "matt_word", "parceiro"];
 

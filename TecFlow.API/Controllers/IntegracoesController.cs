@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Auth;
@@ -98,6 +100,7 @@ public class IntegracoesController : ControllerBase
 
     /// <summary>Remove/desvincula uma loja marketplace específica.</summary>
     [HttpDelete("lojas/{id:int}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkAsync(
         int id,
         CancellationToken cancellationToken)
@@ -108,8 +111,20 @@ public class IntegracoesController : ControllerBase
             return Unauthorized(IntegracaoLojaFail("Usuário não autenticado."));
         }
 
-        var result = await _integracaoLojaService.UnlinkAsync(userId.Value, id, cancellationToken);
-        return result.Status ? Ok(result) : NotFound(result);
+        try
+        {
+            Console.WriteLine($"[Integracoes] DELETE lojas/{id} userId={userId.Value}");
+            var result = await _integracaoLojaService.UnlinkAsync(userId.Value, id, cancellationToken);
+            return result.Status ? Ok(result) : NotFound(result);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO] DELETE integracoes/lojas/{id}: {ex.Message} - {ex.StackTrace}");
+            _logger.LogError(ex, "Erro ao inativar MarketplaceAccount {AccountId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                IntegracaoLojaFail($"Erro do Servidor/SQL: {ex.Message}"));
+        }
     }
 
     private BadRequestObjectResult InvalidModelState()
@@ -166,7 +181,9 @@ public class IntegracoesController : ControllerBase
 
     private int? GetCurrentUserId()
     {
-        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue("sub");
         return int.TryParse(claimValue, out var userId) ? userId : null;
     }
 }

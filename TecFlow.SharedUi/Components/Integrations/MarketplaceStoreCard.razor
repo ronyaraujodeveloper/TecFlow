@@ -124,7 +124,16 @@
 
     private async Task ConfirmDeleteAsync()
     {
-        await OnUnlink.InvokeAsync(Store.Id);
-        _confirmDelete = false;
+        try
+        {
+            Console.WriteLine($"[MarketplaceStoreCard] Sim, desconectar accountId={Store.Id} shop={Store.ShopId}");
+            await OnUnlink.InvokeAsync(Store.Id);
+            _confirmDelete = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO BLAZOR] ConfirmDeleteAsync accountId={Store.Id}: {ex.Message} - {ex.StackTrace}");
+            throw;
+        }
     }
 }

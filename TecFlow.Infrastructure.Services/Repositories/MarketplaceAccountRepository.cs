@@ -119,10 +119,55 @@ namespace TecFlow.Infrastructure.Services.Repositories;
         }
     }
 
+    public Task<bool> ExistsActiveTrackingIdAsync(
+        MarketplaceType marketplaceType,
+        string trackingId,
+        int? excludeAccountId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var id = trackingId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return Task.FromResult(false);
+        }
+
+        var query = _context.MarketplaceAccounts
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(account => account.IsActive
+                && account.MarketplaceType == marketplaceType
+                && (account.TrackingId == id || account.AffiliateTrackingId == id));
+
+        if (excludeAccountId is > 0)
+        {
+            query = query.Where(account => account.Id != excludeAccountId.Value);
+        }
+
+        return query.AnyAsync(cancellationToken);
+    }
+
     public Task<MarketplaceAccount?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         _context.MarketplaceAccounts
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(account => account.Id == id, cancellationToken);
+
+    public async Task<bool> SetInactiveByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var account = await _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (account is null)
+        {
+            Console.WriteLine($"[MarketplaceAccountRepository] SetInactiveByIdAsync: conta {id} não encontrada.");
+            return false;
+        }
+
+        account.IsActive = false;
+        account.Touch();
+        await _context.SaveChangesAsync(cancellationToken);
+        Console.WriteLine($"[MarketplaceAccountRepository] Conta {id} inativada (IsActive=false).");
+        return true;
+    }
 
     public async Task UpsertAsync(MarketplaceAccount account)
     {

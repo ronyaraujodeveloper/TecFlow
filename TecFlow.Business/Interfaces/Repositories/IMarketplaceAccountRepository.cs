@@ -15,7 +15,15 @@ public interface IMarketplaceAccountRepository
 
     Task SanitizeHttpTrackingIdsAsync(string userId, CancellationToken cancellationToken = default);
 
+    Task<bool> ExistsActiveTrackingIdAsync(
+        MarketplaceType marketplaceType,
+        string trackingId,
+        int? excludeAccountId = null,
+        CancellationToken cancellationToken = default);
+
     Task<MarketplaceAccount?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<bool> SetInactiveByIdAsync(int id, CancellationToken cancellationToken = default);
 
     Task UpsertAsync(MarketplaceAccount account);
 }

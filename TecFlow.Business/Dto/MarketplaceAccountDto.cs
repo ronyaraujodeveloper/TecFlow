@@ -16,7 +16,7 @@ public class MarketplaceAccountDto
     [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string ShopId { get; set; } = string.Empty;
 
-    /// <summary>ID de afiliado / Tracking ID (ex.: 18325850271).</summary>
+    /// <summary>ID de afiliado / Tracking ID (ex.: 6512300000).</summary>
     [JsonPropertyName("trackingId")]
     [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string TrackingId { get; set; } = string.Empty;

@@ -167,6 +167,44 @@ public class MarketplaceAuthController : ControllerBase
         }
     }
 
+    /// <summary>Inativa logicamente uma loja (`IsActive = false`) no SQL Server.</summary>
+    [HttpDelete("lojas/{id:int}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkLojaAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        try
+        {
+            Console.WriteLine($"[MarketplaceAuth] DELETE lojas/{id} userId={userId.Value}");
+            var result = await _integracaoLojaService.UnlinkAsync(userId.Value, id, cancellationToken);
+            return result.Status ? Ok(result) : NotFound(result);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO] DELETE lojas/{id}: {ex.Message} - {ex.StackTrace}");
+            Log.Error(ex, "Erro ao inativar MarketplaceAccount {AccountId} no SQL Server", id);
+            _logger.LogError(ex, "Erro ao inativar MarketplaceAccount {AccountId} no SQL Server", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new IntegracaoLojaResponseDto
+                {
+                    Status = false,
+                    Descricao = $"Erro do Servidor/SQL: {ex.Message}"
+                });
+        }
+    }
+
     /// <summary>Expande encurtadores (br.shp.ee, amzn.to, magalu.me) e extrai o Tracking ID.</summary>
     [HttpPost("expand-affiliate-url")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]

@@ -254,22 +254,28 @@
         await ObterLojasAsync();
     }
 
-    private async Task UnlinkStoreAsync(int integrationId)
+    private Task CarregarContasAsync() => ObterLojasAsync();
+
+    private async Task UnlinkStoreAsync(int accountId)
     {
         _isBusy = true;
         ClearPageMessage();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
-            var response = await IntegracaoApi.UnlinkAsync(integrationId);
+            Console.WriteLine($"[MinhasLojas] Confirmar desconexão accountId={accountId}");
+            var response = await IntegracaoApi.UnlinkAsync(accountId);
             if (response.Status)
             {
-                _pageMessage = "Loja desconectada com sucesso.";
+                _pageMessage = "Loja desconectada com sucesso!";
                 _pageMessageIsError = false;
-                await ObterLojasAsync();
+                await CarregarContasAsync();
+                await InvokeAsync(StateHasChanged);
             }
             else
             {
+                Console.WriteLine($"[MinhasLojas] Falha ao desconectar accountId={accountId}: {response.Descricao}");
                 _pageMessage = string.IsNullOrWhiteSpace(response.Descricao)
                     ? "Não foi possível desconectar a loja."
                     : response.Descricao;
@@ -278,13 +284,15 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Erro ao desconectar loja {IntegrationId}.", integrationId);
+            Console.WriteLine($"[ERRO BLAZOR] desconectar loja {accountId}: {ex.Message} - {ex.StackTrace}");
+            Logger.LogError(ex, "Erro ao desconectar loja {AccountId}.", accountId);
             _pageMessage = "Erro inesperado ao desconectar loja.";
             _pageMessageIsError = true;
         }
         finally
         {
             _isBusy = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

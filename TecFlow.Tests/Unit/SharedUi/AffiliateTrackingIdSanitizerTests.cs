@@ -9,8 +9,8 @@ public class AffiliateTrackingIdSanitizerTests
     [Fact]
     public void Extract_ShouldKeepPlainId()
     {
-        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.Shopee, " 18325850271 ");
-        Assert.Equal("18325850271", id);
+        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.Shopee, " 6512300000 ");
+        Assert.Equal("6512300000", id);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class AffiliateTrackingIdSanitizerTests
     public void ExtractAffiliateIdFromUrl_ShouldReadShopeeAnIdNumericSequence()
     {
         var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
-            "https://shopee.com.br/produto?an_id=18325850271&utm_source=affiliate",
+            "https://shopee.com.br/produto?an_id=6512300000&utm_source=affiliate",
             "Shopee");
 
-        Assert.Equal("18325850271", id);
+        Assert.Equal("6512300000", id);
     }
 
     [Fact]

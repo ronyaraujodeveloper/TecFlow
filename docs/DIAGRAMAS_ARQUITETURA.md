@@ -1196,6 +1196,9 @@ sequenceDiagram
   UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
   UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita :// e /)
   UI->>API: POST expand-affiliate-url (br.shp.ee / amzn.to / magalu.me)
+  SVC->>DB: UNIQUE MarketplaceType+TrackingId (IsActive)
+  UI->>API: DELETE /api/marketplace-auth/lojas/{id}
+  API->>SVC: UnlinkAsync → InativarContaAsync (IsActive=false)
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê apelido + Affiliate ID; Shopee e TikTok Shop sem OAuth (Universal Link)
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)

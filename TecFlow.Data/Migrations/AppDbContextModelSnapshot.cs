@@ -512,6 +512,10 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("TenantId", "ShopId", "MarketplaceType")
                         .IsUnique();
 
+                    b.HasIndex("MarketplaceType", "TrackingId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1 AND [TrackingId] IS NOT NULL AND [TrackingId] <> N''");
+
                     b.ToTable("MarketplaceAccounts", (string)null);
                 });
 

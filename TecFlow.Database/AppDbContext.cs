@@ -84,6 +84,9 @@ public class AppDbContext : DbContext
             entity.Property(account => account.MarketplaceType).HasConversion<int>();
             entity.HasIndex(account => new { account.TenantId, account.ShopId, account.MarketplaceType })
                 .IsUnique();
+            entity.HasIndex(account => new { account.MarketplaceType, account.TrackingId })
+                .IsUnique()
+                .HasFilter("[IsActive] = 1 AND [TrackingId] IS NOT NULL AND [TrackingId] <> N''");
             entity.HasOne(account => account.Tenant)
                 .WithMany(tenant => tenant.MarketplaceAccounts)
                 .HasForeignKey(account => account.TenantId);

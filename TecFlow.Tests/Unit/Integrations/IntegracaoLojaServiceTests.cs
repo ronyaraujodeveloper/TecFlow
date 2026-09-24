@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Moq;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -67,7 +68,7 @@ public class IntegracaoLojaServiceTests
         var result = await service.LinkAsync(7, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.Shopee,
-            TrackingId = "18325850271",
+            TrackingId = "6512300000",
             FriendlyName = "Loja Homolog"
         });
 
@@ -75,11 +76,44 @@ public class IntegracaoLojaServiceTests
         Assert.Contains("Universal Link", result.Descricao, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(saved);
         Assert.Equal("ul-7-loja-homolog", saved!.ShopId);
-        Assert.Equal("18325850271", saved.AffiliateTrackingId);
+        Assert.Equal("6512300000", saved.AffiliateTrackingId);
         Assert.Equal("Loja Homolog", saved.FriendlyName);
         Assert.NotNull(savedAccount);
         Assert.Equal("ul-7-loja-homolog", savedAccount!.ShopId);
-        Assert.Equal("18325850271", savedAccount.AffiliateTrackingId);
+        Assert.Equal("6512300000", savedAccount.AffiliateTrackingId);
+        auth.Verify(
+            service => service.CallbackAndGenerateTokensAsync(
+                It.IsAny<MarketplaceType>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LinkAsync_ShouldFail_WhenTrackingIdAlreadyActiveOnSamePlatform()
+    {
+        var (service, _, auth, accounts) = CreateShopeeLinkMocks(userId: 7, shopKey: "ul-7-loja-homolog");
+        accounts.Setup(repository => repository.ExistsActiveTrackingIdAsync(
+                MarketplaceType.Shopee,
+                "6512300000",
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await service.LinkAsync(7, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            TrackingId = "6512300000",
+            FriendlyName = "Loja Duplicada"
+        });
+
+        Assert.False(result.Status);
+        Assert.Equal(
+            AffiliateTrackingIdValidator.DuplicateTrackingIdMessage(MarketplaceType.Shopee),
+            result.Descricao);
+        accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
         auth.Verify(
             service => service.CallbackAndGenerateTokensAsync(
                 It.IsAny<MarketplaceType>(),
@@ -167,7 +201,7 @@ public class IntegracaoLojaServiceTests
         var result = await service.LinkAsync(1, new IntegracaoLojaDto
         {
             PlatformType = MarketplaceType.TikTokShop,
-            TrackingId = "18325850271",
+            TrackingId = "6512300000",
             FriendlyName = "Loja TikTok"
         });
 
@@ -175,7 +209,7 @@ public class IntegracaoLojaServiceTests
         Assert.Contains("TikTok Shop", result.Descricao, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("ul-tt-1-loja-tiktok", saved!.ShopId);
         Assert.Equal(MarketplaceType.TikTokShop, saved.PlatformType);
-        Assert.Equal("18325850271", saved.AffiliateTrackingId);
+        Assert.Equal("6512300000", saved.AffiliateTrackingId);
         Assert.Equal(MarketplaceType.TikTokShop, savedAccount!.MarketplaceType);
         auth.Verify(
             s => s.CallbackAndGenerateTokensAsync(
@@ -690,21 +724,75 @@ public class IntegracaoLojaServiceTests
         {
             PlatformType = MarketplaceType.Shopee,
             FriendlyName = "@Achadinhos de Aaz",
-            TrackingId = "18325850271"
+            TrackingId = "6512300000"
         });
 
         Assert.True(result.Status);
         Assert.NotNull(savedAccount);
         Assert.Equal("3", savedAccount!.UserId);
         Assert.Equal("@Achadinhos de Aaz", savedAccount.FriendlyName);
-        Assert.Equal("18325850271", savedAccount.TrackingId);
-        Assert.Equal("18325850271", savedAccount.AffiliateTrackingId);
+        Assert.Equal("6512300000", savedAccount.TrackingId);
+        Assert.Equal("6512300000", savedAccount.AffiliateTrackingId);
         Assert.Equal(3, saved!.UserId);
         Assert.Equal(fallbackUser.TenantId, savedAccount.TenantId);
         Assert.NotEqual(Guid.Empty, savedAccount.TenantId);
     }
 
-    private static MarketplaceAccountService AccountPrep(Mock<IUserAccountRepository> users)
+    [Fact]
+    public async Task UnlinkAsync_ShouldInactivateAccountById_WithoutUpsert()
+    {
+        var user = new UserAccount
+        {
+            Id = 7,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdIgnoringFiltersAsync(7)).ReturnsAsync(user);
+        users.Setup(repository => repository.GetByIdAsync(7)).ReturnsAsync(user);
+
+        var account = new MarketplaceAccount
+        {
+            Id = 42,
+            UserId = "7",
+            ShopId = "ul-7-loja-homolog",
+            MarketplaceType = MarketplaceType.Shopee,
+            IsActive = true,
+            TenantId = user.TenantId
+        };
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(account);
+        accounts.Setup(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IntegracaoLoja?)null);
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users, accounts),
+            Production());
+
+        var result = await service.UnlinkAsync(7, 42);
+
+        Assert.True(result.Status);
+        Assert.Equal("Loja desconectada com sucesso!", result.Descricao);
+        accounts.Verify(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()), Times.Once);
+        accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
+    }
+
+    private static MarketplaceAccountService AccountPrep(
+        Mock<IUserAccountRepository> users,
+        Mock<IMarketplaceAccountRepository>? accounts = null)
     {
         var tenants = new Mock<ITenantProvisioningService>();
         tenants.Setup(service => service.EnsureTenantForUserAsync(It.IsAny<UserAccount>(), It.IsAny<CancellationToken>()))
@@ -730,7 +818,10 @@ public class IntegracaoLojaServiceTests
                 IsActive = true
             });
 
-        return new MarketplaceAccountService(tenants.Object, users.Object);
+        return new MarketplaceAccountService(
+            tenants.Object,
+            users.Object,
+            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object);
     }
 
     private static (
@@ -769,7 +860,7 @@ public class IntegracaoLojaServiceTests
             users.Object,
             accounts.Object,
             auth.Object,
-            AccountPrep(users),
+            AccountPrep(users, accounts),
             homolog ? Homolog() : Production());
 
         return (service, stores, auth, accounts);

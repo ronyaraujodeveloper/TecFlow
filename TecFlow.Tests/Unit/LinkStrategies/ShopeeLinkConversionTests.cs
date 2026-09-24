@@ -433,14 +433,14 @@ public class ShopeeLinkConversionTests
     {
         var store = CreateStore();
         store.ShopId = "ul-1-loja-homolog";
-        store.AffiliateTrackingId = "18325850271";
+        store.AffiliateTrackingId = "6512300000";
         var strategy = CreateShopeeStrategy(new PassthroughUrlExpansionService(), store: store);
 
         var link = await strategy.GenerateDeepLinkAsync(ProductUrl, Guid.NewGuid(), AffiliateId);
 
         Assert.Contains("/universal-link/product/123/456", link, StringComparison.Ordinal);
         Assert.True(ShopeeCommissionUrlBuilder.TryGetQueryValue(link, ShopeeCommissionUrlBuilder.SubIdQuery, out var subId));
-        Assert.Equal("18325850271", subId);
+        Assert.Equal("6512300000", subId);
     }
 
     [Fact]

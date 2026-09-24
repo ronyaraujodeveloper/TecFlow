@@ -36,7 +36,7 @@ public class IntegracaoLoja : ITenantScopedEntity
     [MaxLength(256)]
     public string? FriendlyName { get; set; }
 
-    /// <summary>ID de afiliado / Tracking ID (ex.: 18325850271).</summary>
+    /// <summary>ID de afiliado / Tracking ID (ex.: 6512300000).</summary>
     [MaxLength(64)]
     public string? AffiliateTrackingId { get; set; }
 

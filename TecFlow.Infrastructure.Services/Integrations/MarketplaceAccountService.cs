@@ -13,13 +13,38 @@ public sealed class MarketplaceAccountService
 {
     private readonly ITenantProvisioningService _tenantProvisioning;
     private readonly IUserAccountRepository _userAccountRepository;
+    private readonly IMarketplaceAccountRepository _marketplaceAccountRepository;
 
     public MarketplaceAccountService(
         ITenantProvisioningService tenantProvisioning,
-        IUserAccountRepository userAccountRepository)
+        IUserAccountRepository userAccountRepository,
+        IMarketplaceAccountRepository marketplaceAccountRepository)
     {
         _tenantProvisioning = tenantProvisioning;
         _userAccountRepository = userAccountRepository;
+        _marketplaceAccountRepository = marketplaceAccountRepository;
+    }
+
+    public async Task<bool> InativarContaAsync(int accountId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Console.WriteLine($"[MarketplaceAccountService] InativarContaAsync accountId={accountId}");
+            if (accountId <= 0)
+            {
+                Console.WriteLine("[MarketplaceAccountService] InativarContaAsync ignorado: accountId inválido.");
+                return false;
+            }
+
+            var ok = await _marketplaceAccountRepository.SetInactiveByIdAsync(accountId, cancellationToken);
+            Console.WriteLine($"[MarketplaceAccountService] InativarContaAsync resultado={ok} accountId={accountId}");
+            return ok;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO] InativarContaAsync accountId={accountId}: {ex.Message} - {ex.StackTrace}");
+            throw;
+        }
     }
 
     public MarketplaceAccountDto MapToDto(MarketplaceAccount? account, IntegracaoLoja? integration = null) =>

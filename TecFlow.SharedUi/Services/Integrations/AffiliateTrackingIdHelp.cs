@@ -10,9 +10,9 @@ public static class AffiliateTrackingIdHelp
         MarketplaceType.Amazon =>
             "Cole sua Tag de Associados. O formato termina com -20, por exemplo sualoja-20. Se colar um link com tag=..., extraímos a tag automaticamente.",
         MarketplaceType.Shopee =>
-            "Use o ID numérico do afiliado Shopee (somente dígitos, ex.: 18325850271). Pode colar um link com affiliate_id ou sub_id.",
+            "Use o ID numérico do afiliado Shopee (somente dígitos, ex.: 6512300000). Pode colar um link com affiliate_id ou sub_id.",
         MarketplaceType.TikTokShop =>
-            "Use o Tracking ID / sub_id da conta TikTok Shop (ex.: 18325850271). Cole o ID ou um link com sub_id=.",
+            "Use o Tracking ID / sub_id da conta TikTok Shop (ex.: 6512300000). Cole o ID ou um link com sub_id=.",
         MarketplaceType.MercadoLivre =>
             "Use o Matt Tool ID (número do parâmetro matt_tool, ex.: 123456789). Cole o ID ou um link de afiliado do Mercado Livre.",
         MarketplaceType.MagazineLuiza =>

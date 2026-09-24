@@ -441,10 +441,25 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.11. Cores institucionais:** badges/botões Shopee, TikTok, ML, Amazon, Magalu, Kabum e Casas Bahia com tokens CSS e estado ativo da marca.
 - [x] **19.12. Como pegar meu ID?:** dica do formato por plataforma, painel oficial em nova aba e extração automática do ID ao colar URL (`tag`, `sub_id`, `an_id`, `matt_tool`/`matt_word`, `parceiro`).
 - [x] **19.13. Validação de Tracking ID:** bloqueia URL residual no cadastro; expande encurtadores; saneia `MarketplaceAccounts` com `http` no TrackingId.
+- [x] **19.14. Unicidade de ID:** um Tracking ID ativo por plataforma; exemplo padronizado `6512300000`.
+- [x] **19.15. Desconectar loja:** `InativarContaAsync` (`IsActive = false`); DELETE `api/marketplace-auth/lojas/{id}`; recarrega Minhas Lojas.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado
 - [ ] **19.4.1. Encurtar link Shopee
+
+#### 19.5. Extração de Metadados de Produto (Nome e Preço) e Reformulação do Histórico de Links
+[ ] 19.5.1. Migração do Modelo de Dados (EF Core & SQL Server): Atualizar a entidade ShortAffiliateLink no Entity Framework Core para incluir as propriedades ProductName (nvarchar(255)), ProductPrice (decimal(18,2)) e ProductImageUrl (nvarchar(500)). Executar dotnet ef migrations add AddProductMetadataToLinks e dotnet ef database update para sincronizar o banco de dados.
+
+[ ] 19.5.2. Resolução e Expansão de Links Encurtados: Implementar a rotina de descompactação de URLs (HTTP Redirect Resolver/Unshorten) idêntica à utilizada no cadastro de lojas. Se o usuário fornecer um link encurtado (br.shp.ee, amzn.to, magalu.me, cb.com.br, kb.um, [mercadolivre.com/sec](https://mercadolivre.com/sec)), o sistema deve seguir o redirecionamento HTTP em segundo plano e resolver a URL original completa do produto antes da extração de metadados.
+
+[ ] 19.5.3. Desenvolvimento do Serviço Extrator (ProductMetadataService): Criar a rotina de busca de metadados utilizando HttpClient e parse de tags HTML/OpenGraph (og:title, og:price:amount, itemprop="price", JSON-LD) para extrair o Nome e o Preço a partir da URL completa dos marketplaces suportados (Shopee, TikTok Shop, Mercado Livre, Amazon, Magalu, Kabum! e Casas Bahia).
+
+[ ] 19.5.4. Exibição de Card/Preview no Gerador de Links: Atualizar o componente Blazor (GeradorLinks.razor) para exibir o Card do Produto (contendo o Nome do Item, Preço em R$ e badge da plataforma) no painel "Seus links de comissão" imediatamente após o usuário clicar em "Gerar Link de Comissão".
+
+[ ] 19.5.5. Reformulação Visual da Tabela "Histórico de Links": Modificar a estrutura da tabela do histórico de links no Blazor removendo as colunas brutas LINK ORIGINAL e LINK ENCURTADO, substituindo-as por PRODUTO (Nome do Produto) e PREÇO (Valor formatado em R$). Preservar as colunas PLATAFORMA, DATA, CLIQUES e as ações Visualizar e Editar.
+
+[ ] 19.5.6. Tratamento de Exceções e Resiliência (Fallback): Implementar mecanismos de tolerância a falhas para garantir que, caso a expansão do link encurtado ou o scraping do marketplace seja bloqueado, o processo principal de conversão e rastreamento de comissão do TecFlow continue funcionando normalmente (gravando o slug limpo da URL como fallback no nome do produto e null no preço).
 
 ---
 

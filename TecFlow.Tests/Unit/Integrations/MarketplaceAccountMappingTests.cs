@@ -56,7 +56,7 @@ public class MarketplaceAccountMappingTests
             Id = 43,
             UserId = "7",
             ShopId = "ul-7-loja-homolog",
-            TrackingId = "18325850271",
+            TrackingId = "6512300000",
             AffiliateTrackingId = null,
             AppKey = null,
             AppSecret = null,
@@ -69,13 +69,28 @@ public class MarketplaceAccountMappingTests
 
         var dto = CreateService().MapToDto(account);
 
-        Assert.Equal("18325850271", dto.TrackingId);
-        Assert.Equal("18325850271", dto.AffiliateTrackingId);
+        Assert.Equal("6512300000", dto.TrackingId);
+        Assert.Equal("6512300000", dto.AffiliateTrackingId);
         Assert.Equal("ul-7-loja-homolog", dto.ShopId);
+        Assert.Equal(43, dto.Id);
     }
 
-    private static MarketplaceAccountService CreateService() =>
+    [Fact]
+    public async Task InativarContaAsync_ShouldSetInactiveById()
+    {
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var ok = await CreateService(accounts).InativarContaAsync(42);
+
+        Assert.True(ok);
+        accounts.Verify(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static MarketplaceAccountService CreateService(Mock<IMarketplaceAccountRepository>? accounts = null) =>
         new(
             new Mock<ITenantProvisioningService>().Object,
-            new Mock<IUserAccountRepository>().Object);
+            new Mock<IUserAccountRepository>().Object,
+            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object);
 }

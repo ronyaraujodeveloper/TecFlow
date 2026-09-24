@@ -55,7 +55,7 @@ public class ShortLinkPersistenceTests
             NullLogger<ShortLinkService>.Instance);
 
         const string original = "https://shopee.com.br/produto-i.123.456";
-        const string affiliate = "https://shopee.com.br/universal-link/product/123/456?sub_id=18325850271";
+        const string affiliate = "https://shopee.com.br/universal-link/product/123/456?sub_id=6512300000";
 
         var (publicUrl, affiliateLinkId) = await service.CreateShortLinkAsync(
             affiliate,

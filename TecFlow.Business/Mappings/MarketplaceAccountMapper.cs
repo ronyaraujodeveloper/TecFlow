@@ -24,7 +24,7 @@ public static class MarketplaceAccountMapper
 
         return new MarketplaceAccountDto
         {
-            Id = integration?.Id ?? account.Id,
+            Id = account.Id > 0 ? account.Id : integration?.Id ?? 0,
             UserId = parsedUserId,
             TenantId = account.TenantId,
             ShopId = shopId,

@@ -34,7 +34,7 @@ public class MarketplaceAccount : BaseEntity, ITenantScopedEntity, IShopScopedEn
     [MaxLength(256)]
     public string? ShopName { get; set; }
 
-    /// <summary>ID de afiliado / Tracking ID da Shopee (ex.: 18325850271).</summary>
+    /// <summary>ID de afiliado / Tracking ID da Shopee (ex.: 6512300000).</summary>
     [MaxLength(64)]
     public string? TrackingId { get; set; }
 

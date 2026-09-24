@@ -188,6 +188,16 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             marketplaceAccount.TrackingId = marketplaceAccount.AffiliateTrackingId;
         }
 
+        var duplicateOauth = await EnsureUniqueTrackingIdAsync(
+            dto.PlatformType,
+            marketplaceAccount.TrackingId,
+            marketplaceAccount.Id,
+            cancellationToken);
+        if (duplicateOauth is not null)
+        {
+            return duplicateOauth;
+        }
+
         await _marketplaceAccountService.PrepareForPersistAsync(marketplaceAccount, user, cancellationToken);
         user.TenantId = marketplaceAccount.TenantId;
         try
@@ -259,61 +269,81 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         int integrationId,
         CancellationToken cancellationToken = default)
     {
-        var userKey = userId.ToString(CultureInfo.InvariantCulture);
-        var integration = await _integracaoLojaRepository.GetByIdAsync(integrationId, cancellationToken);
-        if (integration is not null && integration.UserId != userId)
+        try
         {
-            integration = null;
-        }
+            Console.WriteLine($"[IntegracaoLojaService] UnlinkAsync userId={userId} id={integrationId}");
+            var owner = await ResolvePersistableUserAsync(userId);
+            var persistUserId = owner?.Id ?? userId;
+            var userKey = persistUserId.ToString(CultureInfo.InvariantCulture);
 
-        var account = await _marketplaceAccountRepository.GetByIdAsync(integrationId, cancellationToken);
-        if (account is not null && !string.Equals(account.UserId, userKey, StringComparison.Ordinal))
-        {
-            account = null;
-        }
+            var integration = await _integracaoLojaRepository.GetByIdAsync(integrationId, cancellationToken);
+            if (integration is not null && integration.UserId != persistUserId)
+            {
+                integration = null;
+            }
 
-        if (integration is null && account is null)
-        {
-            return Fail("Integração não encontrada para o usuário autenticado.");
-        }
+            var account = await _marketplaceAccountRepository.GetByIdAsync(integrationId, cancellationToken);
+            if (account is not null && !AccountOwnedByUser(account, userKey))
+            {
+                account = null;
+            }
 
-        if (account is null && integration is not null)
-        {
-            account = await _marketplaceAccountRepository.GetByShopAsync(
-                integration.ShopId ?? string.Empty,
-                integration.PlatformType);
-        }
+            if (account is null && integration is not null)
+            {
+                account = await _marketplaceAccountRepository.GetByShopAsync(
+                    integration.ShopId ?? string.Empty,
+                    integration.PlatformType);
+            }
 
-        if (account is not null)
-        {
-            account.IsActive = false;
-            account.Touch();
-            await _marketplaceAccountRepository.UpsertAsync(account);
-        }
+            if (integration is null && account is null)
+            {
+                Console.WriteLine($"[IntegracaoLojaService] UnlinkAsync: conta/integração {integrationId} não encontrada para user={persistUserId}.");
+                return Fail("Integração não encontrada para o usuário autenticado.");
+            }
 
-        if (integration is null && account is not null)
-        {
-            integration = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
-                userId,
-                account.ShopId ?? string.Empty,
-                account.MarketplaceType,
-                cancellationToken);
-        }
+            if (account is not null)
+            {
+                var inactivated = await _marketplaceAccountService.InativarContaAsync(account.Id, cancellationToken);
+                if (!inactivated)
+                {
+                    Console.WriteLine($"[IntegracaoLojaService] InativarContaAsync retornou false id={account.Id}");
+                    return Fail("Não foi possível inativar a conta da loja no banco de dados.");
+                }
+            }
 
-        if (integration is not null)
-        {
-            integration.Status = MarketplaceIntegrationStatus.Inactive;
-            integration.Touch();
-            await _integracaoLojaRepository.UpdateAsync(integration, cancellationToken);
-            await _integracaoLojaRepository.DeleteAsync(integration.Id, cancellationToken);
-        }
+            if (integration is null && account is not null)
+            {
+                integration = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
+                    persistUserId,
+                    account.ShopId ?? string.Empty,
+                    account.MarketplaceType,
+                    cancellationToken);
+            }
 
-        return new IntegracaoLojaResponseDto
+            if (integration is not null)
+            {
+                integration.Status = MarketplaceIntegrationStatus.Inactive;
+                integration.Touch();
+                await _integracaoLojaRepository.UpdateAsync(integration, cancellationToken);
+                await _integracaoLojaRepository.DeleteAsync(integration.Id, cancellationToken);
+            }
+
+            return new IntegracaoLojaResponseDto
+            {
+                Status = true,
+                Descricao = "Loja desconectada com sucesso!"
+            };
+        }
+        catch (Exception ex)
         {
-            Status = true,
-            Descricao = "Loja desvinculada com sucesso."
-        };
+            Console.WriteLine($"[ERRO SQL Unlink]: {ex.Message} - {ex.StackTrace}");
+            return Fail($"Erro do Servidor/SQL: {ex.Message}");
+        }
     }
+
+    private static bool AccountOwnedByUser(MarketplaceAccount account, string userKey) =>
+        string.IsNullOrWhiteSpace(account.UserId)
+        || string.Equals(account.UserId, userKey, StringComparison.Ordinal);
 
     public async Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
         string url,
@@ -502,6 +532,16 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         marketplaceAccount.MarketplaceType = platform;
         marketplaceAccount.Touch();
 
+        var duplicate = await EnsureUniqueTrackingIdAsync(
+            platform,
+            marketplaceAccount.TrackingId,
+            marketplaceAccount.Id,
+            cancellationToken);
+        if (duplicate is not null)
+        {
+            return duplicate;
+        }
+
         await _marketplaceAccountService.PrepareForPersistAsync(marketplaceAccount, user, cancellationToken);
         user.TenantId = marketplaceAccount.TenantId;
 
@@ -653,6 +693,30 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     private bool AllowsHomologFallbacks() =>
         _hostEnvironment.IsDevelopment()
         || _hostEnvironment.IsEnvironment("Homologacao");
+
+    private async Task<IntegracaoLojaResponseDto?> EnsureUniqueTrackingIdAsync(
+        MarketplaceType platform,
+        string? trackingId,
+        int excludeAccountId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(trackingId))
+        {
+            return null;
+        }
+
+        var exists = await _marketplaceAccountRepository.ExistsActiveTrackingIdAsync(
+            platform,
+            trackingId,
+            excludeAccountId > 0 ? excludeAccountId : null,
+            cancellationToken);
+        if (!exists)
+        {
+            return null;
+        }
+
+        return Fail(AffiliateTrackingIdValidator.DuplicateTrackingIdMessage(platform));
+    }
 
     private static IntegracaoLojaResponseDto Fail(string message) =>
         new()

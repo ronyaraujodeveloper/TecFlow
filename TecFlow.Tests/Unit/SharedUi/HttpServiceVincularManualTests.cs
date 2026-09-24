@@ -67,12 +67,12 @@ public class HttpServiceVincularManualTests
     public void IntegracaoLojaDto_ShouldDeserializeAffiliateTrackingId()
     {
         const string formJson =
-            """{"platformType":1,"friendlyName":"Loja Homolog","trackingId":"18325850271"}""";
+            """{"platformType":1,"friendlyName":"Loja Homolog","trackingId":"6512300000"}""";
 
         var dto = JsonSerializer.Deserialize<IntegracaoLojaDto>(formJson, JsonOptions());
 
         Assert.NotNull(dto);
-        Assert.Equal("18325850271", dto!.TrackingId);
+        Assert.Equal("6512300000", dto!.TrackingId);
         Assert.Equal("Loja Homolog", dto.FriendlyName);
     }
 
@@ -80,13 +80,13 @@ public class HttpServiceVincularManualTests
     public void MarketplaceAccountDto_ShouldDeserializeAffiliateTrackingId()
     {
         const string json =
-            """{"id":9,"userId":1,"shopId":"ul-1-loja-homolog","affiliateTrackingId":"18325850271","friendlyName":"Loja Homolog"}""";
+            """{"id":9,"userId":1,"shopId":"ul-1-loja-homolog","affiliateTrackingId":"6512300000","friendlyName":"Loja Homolog"}""";
 
         var dto = JsonSerializer.Deserialize<MarketplaceAccountDto>(json, JsonOptions());
 
         Assert.NotNull(dto);
         Assert.Equal("ul-1-loja-homolog", dto!.ShopId);
-        Assert.Equal("18325850271", dto.AffiliateTrackingId);
+        Assert.Equal("6512300000", dto.AffiliateTrackingId);
     }
 
     [Fact]

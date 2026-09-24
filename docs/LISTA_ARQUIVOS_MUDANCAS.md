@@ -512,7 +512,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShopeeProductUrlParser.cs** — regex `i.(shopId).(itemId)` em URLs desktop, sanitização de `extraParams`/`sp_atk`/`xptdk` e HTTP 400 com alerta Blazor de formato não reconhecido.
 - [x] **UrlExpansionService** — GET sem autoredirect, segue `Location` 301/302.
 - [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop; Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id=...` sem Open API.
-- [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — Shopee: plataforma, apelido e campo `ID do Afiliado (Affiliate ID / Tracking ID)` (ex.: `18325850271`); persistido em `MarketplaceAccounts.AffiliateTrackingId`.
+- [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — Shopee: plataforma, apelido e campo `ID do Afiliado (Affiliate ID / Tracking ID)` (ex.: `6512300000`); persistido em `MarketplaceAccounts.AffiliateTrackingId`.
 - [x] **MarketplaceStoreCard.razor** — exibe `Shop ID` e `Affiliate ID` no card de Minhas Lojas.
 - [x] **TecFlow.Data/Migrations/20260922220000_AddAffiliateTrackingId.cs** — coluna `AffiliateTrackingId` (`nvarchar(64)`) em `MarketplaceAccounts` e `IntegracaoLoja`.
 
@@ -623,6 +623,19 @@ API / Orquestrador / Worker / WebUi
 - [x] **POST api/marketplace-auth/expand-affiliate-url** — HEAD/GET via `UrlExpansionService`.
 - [x] **MarketplaceAccountRepository.SanitizeHttpTrackingIdsAsync** — contas com `TrackingId` contendo `http` são limpas ou inativadas na listagem.
 - [x] **MarketplaceStoreCard** — alerta para corrigir ID inválido.
+
+### Fase 19.15 — Unicidade de Tracking ID por plataforma
+
+- [x] **IntegracaoLojaService** / **MarketplaceAccountRepository.ExistsActiveTrackingIdAsync** — bloqueia duplicata ativa na mesma plataforma.
+- [x] **AppDbContext** / **20260924010000_UniqueMarketplaceAccountTrackingIdPerPlatform** — índice único filtrado `MarketplaceType + TrackingId`.
+- [x] **ConnectStoreModal** / placeholders / testes — ID de exemplo padronizado `6512300000`.
+
+### Fase 19.16 — Desconectar loja (inativação lógica)
+
+- [x] **MarketplaceAccountService.InativarContaAsync** / **MarketplaceAccountRepository.SetInactiveByIdAsync** — `IsActive = false` e `SaveChanges` no SQL Server por Id.
+- [x] **IntegracaoLojaService.UnlinkAsync** — resolve usuário persistível, inativa a conta e não usa `Upsert` por ShopId.
+- [x] **DELETE api/marketplace-auth/lojas/{id}** — mesmo JWT (`sub` / NameIdentifier) da listagem; Minhas Lojas recarrega a grade.
+- [x] **MinhasLojas.razor** / **MarketplaceStoreCard.razor** — `Sim, desconectar` com log, `CarregarContasAsync` e toast "Loja desconectada com sucesso!".
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

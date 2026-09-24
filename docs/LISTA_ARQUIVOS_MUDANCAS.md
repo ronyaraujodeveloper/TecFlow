@@ -601,6 +601,11 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **ConnectStoreModal.razor** / **app.css** — grid `auto-fit` 3–4 colunas, badges 28px, modal sem scroll vertical.
 
+### Fase 19.11 — Cores institucionais dos marketplaces
+
+- [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.
+- [x] **ConnectStoreModal.razor** / **GeradorLinks** chips — Shopee, TikTok, ML, Amazon, Magalu, Kabum e Casas Bahia padronizados.
+
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.

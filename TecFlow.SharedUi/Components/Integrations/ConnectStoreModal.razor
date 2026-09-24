@@ -31,46 +31,46 @@
                         <label class="form-label fw-semibold">Plataforma</label>
                         <div class="marketplace-platform-picker">
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.CasasBahia)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.CasasBahia)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.CasasBahia)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--casasbahia">Casas Bahia</span>
+                                <span class="marketplace-platform-badge badge-casasbahia">Casas Bahia</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Kabum)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Kabum)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.Kabum)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--kabum">Kabum!</span>
+                                <span class="marketplace-platform-badge badge-kabum">Kabum!</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MagazineLuiza)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MagazineLuiza)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.MagazineLuiza)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--magalu">Magazine Luiza</span>
+                                <span class="marketplace-platform-badge badge-magalu">Magazine Luiza</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Amazon)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Amazon)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.Amazon)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--amazon">Amazon</span>
+                                <span class="marketplace-platform-badge badge-amazon">Amazon</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MercadoLivre)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MercadoLivre)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.MercadoLivre)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--mercadolivre">Mercado Livre</span>
+                                <span class="marketplace-platform-badge badge-mercadolivre">Mercado Livre</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.TikTokShop)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--tiktok">TikTok Shop</span>
+                                <span class="marketplace-platform-badge badge-tiktok">TikTok Shop</span>
                             </button>
                             <button type="button"
-                                    class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Shopee)"
+                                    class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Shopee)"
                                     disabled="@_linking"
                                     @onclick="() => SelectPlatform(MarketplaceType.Shopee)">
-                                <span class="marketplace-platform-badge marketplace-platform-badge--shopee">Shopee</span>
+                                <span class="marketplace-platform-badge badge-shopee">Shopee</span>
                             </button>
                         </div>
                     </div>
@@ -215,8 +215,24 @@
         _formError = null;
     }
 
-    private string GetPlatformOptionClass(MarketplaceType platform) =>
-        _platform == platform ? "marketplace-platform-option--selected" : string.Empty;
+    private string GetPlatformOptionClass(MarketplaceType platform)
+    {
+        var brand = platform switch
+        {
+            MarketplaceType.Shopee => "btn-shopee",
+            MarketplaceType.TikTokShop => "btn-tiktok",
+            MarketplaceType.MercadoLivre => "btn-mercadolivre",
+            MarketplaceType.Amazon => "btn-amazon",
+            MarketplaceType.MagazineLuiza => "btn-magalu",
+            MarketplaceType.Kabum => "btn-kabum",
+            MarketplaceType.CasasBahia => "btn-casasbahia",
+            _ => string.Empty
+        };
+
+        return _platform == platform
+            ? $"{brand} marketplace-platform-option--selected"
+            : brand;
+    }
 
     private async Task Close()
     {

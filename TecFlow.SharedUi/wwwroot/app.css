@@ -2,6 +2,17 @@
     --tecso-primary: #0d6efd;
     --tecso-bg: #f4f6fb;
     --tecso-card: #ffffff;
+    --brand-shopee: #EE4D2D;
+    --brand-tiktok: #000000;
+    --brand-tiktok-accent: #FE2C55;
+    --brand-mercadolivre: #FFE600;
+    --brand-mercadolivre-text: #2D3277;
+    --brand-mercadolivre-border: #C9A227;
+    --brand-amazon: #FF9900;
+    --brand-amazon-dark: #131921;
+    --brand-magalu: #0086FF;
+    --brand-kabum: #FF6500;
+    --brand-casasbahia: #E30613;
 }
 
 html, body {
@@ -745,41 +756,51 @@ html, body {
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    border: 1px solid transparent;
 }
 
-.marketplace-platform-badge--tiktok {
-    background: #010101;
-    color: #fff;
-}
-
+.badge-shopee,
 .marketplace-platform-badge--shopee {
-    background: #ee4d2d;
+    background: var(--brand-shopee);
     color: #fff;
 }
 
-.marketplace-platform-badge--amazon {
-    background: #ff9900;
-    color: #111111;
-}
-
-.marketplace-platform-badge--casasbahia {
-    background: #e30613;
+.badge-tiktok,
+.marketplace-platform-badge--tiktok {
+    background: var(--brand-tiktok);
     color: #fff;
+    box-shadow: inset 0 -2px 0 var(--brand-tiktok-accent);
 }
 
-.marketplace-platform-badge--kabum {
-    background: #ff5a00;
-    color: #111111;
-}
-
-.marketplace-platform-badge--magalu {
-    background: #0086ff;
-    color: #fff;
-}
-
+.badge-mercadolivre,
 .marketplace-platform-badge--mercadolivre {
-    background: #fff159;
-    color: #2d2d2d;
+    background: var(--brand-mercadolivre);
+    color: var(--brand-mercadolivre-text);
+    border-color: var(--brand-mercadolivre-border);
+}
+
+.badge-amazon,
+.marketplace-platform-badge--amazon {
+    background: var(--brand-amazon);
+    color: #fff;
+}
+
+.badge-magalu,
+.marketplace-platform-badge--magalu {
+    background: var(--brand-magalu);
+    color: #fff;
+}
+
+.badge-kabum,
+.marketplace-platform-badge--kabum {
+    background: var(--brand-kabum);
+    color: #fff;
+}
+
+.badge-casasbahia,
+.marketplace-platform-badge--casasbahia {
+    background: var(--brand-casasbahia);
+    color: #fff;
 }
 
 .marketplace-platform-picker {
@@ -796,9 +817,39 @@ html, body {
     min-height: 0;
 }
 
-.marketplace-platform-option--selected {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.18);
+.marketplace-platform-option--selected.btn-shopee {
+    border-color: var(--brand-shopee);
+    box-shadow: 0 0.3rem 0.75rem rgba(238, 77, 45, 0.28);
+}
+
+.marketplace-platform-option--selected.btn-tiktok {
+    border-color: var(--brand-tiktok-accent);
+    box-shadow: 0 0.3rem 0.75rem rgba(254, 44, 85, 0.28);
+}
+
+.marketplace-platform-option--selected.btn-mercadolivre {
+    border-color: var(--brand-mercadolivre-border);
+    box-shadow: 0 0.3rem 0.75rem rgba(201, 162, 39, 0.35);
+}
+
+.marketplace-platform-option--selected.btn-amazon {
+    border-color: var(--brand-amazon);
+    box-shadow: 0 0.3rem 0.75rem rgba(255, 153, 0, 0.32);
+}
+
+.marketplace-platform-option--selected.btn-magalu {
+    border-color: var(--brand-magalu);
+    box-shadow: 0 0.3rem 0.75rem rgba(0, 134, 255, 0.28);
+}
+
+.marketplace-platform-option--selected.btn-kabum {
+    border-color: var(--brand-kabum);
+    box-shadow: 0 0.3rem 0.75rem rgba(255, 101, 0, 0.32);
+}
+
+.marketplace-platform-option--selected.btn-casasbahia {
+    border-color: var(--brand-casasbahia);
+    box-shadow: 0 0.3rem 0.75rem rgba(227, 6, 19, 0.3);
 }
 
 .marketplace-stores-empty {
@@ -1007,43 +1058,43 @@ html, body {
 }
 
 .link-generator-input-wrap--shopee {
-    border-color: #ee4d2d;
+    border-color: var(--brand-shopee);
     box-shadow: 0 0 0 0.2rem rgba(238, 77, 45, 0.18);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--tiktok {
-    border-color: #010101;
-    box-shadow: 0 0 0 0.2rem rgba(1, 1, 1, 0.12);
+    border-color: var(--brand-tiktok-accent);
+    box-shadow: 0 0 0 0.2rem rgba(254, 44, 85, 0.18);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--amazon {
-    border-color: #ff9900;
-    box-shadow: 0 0 0 0.2rem rgba(255, 153, 0, 0.2);
+    border-color: var(--brand-amazon);
+    box-shadow: 0 0 0 0.2rem rgba(255, 153, 0, 0.22);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--mercadolivre {
-    border-color: #ffe600;
-    box-shadow: 0 0 0 0.2rem rgba(255, 230, 0, 0.35);
+    border-color: var(--brand-mercadolivre-border);
+    box-shadow: 0 0 0 0.2rem rgba(201, 162, 39, 0.28);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--magalu {
-    border-color: #0086ff;
+    border-color: var(--brand-magalu);
     box-shadow: 0 0 0 0.2rem rgba(0, 134, 255, 0.18);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--kabum {
-    border-color: #ff5a00;
-    box-shadow: 0 0 0 0.2rem rgba(255, 90, 0, 0.22);
+    border-color: var(--brand-kabum);
+    box-shadow: 0 0 0 0.2rem rgba(255, 101, 0, 0.22);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
 
 .link-generator-input-wrap--casasbahia {
-    border-color: #e30613;
+    border-color: var(--brand-casasbahia);
     box-shadow: 0 0 0 0.2rem rgba(227, 6, 19, 0.22);
     animation: link-generator-pulse 1.4s ease-in-out 1;
 }
@@ -1277,42 +1328,45 @@ html, body {
 }
 
 .marketplace-chip--shopee .marketplace-chip-icon {
-    background: linear-gradient(135deg, #ee4d2d, #ff7337);
+    background: var(--brand-shopee);
+    color: #fff;
 }
 
 .marketplace-chip--tiktok .marketplace-chip-icon {
-    background: linear-gradient(135deg, #010101, #25f4ee);
-    color: #010101;
+    background: var(--brand-tiktok);
+    color: #fff;
+    box-shadow: inset 0 -2px 0 var(--brand-tiktok-accent);
 }
 
 .marketplace-chip--amazon .marketplace-chip-icon {
-    background: linear-gradient(135deg, #ff9900, #ffb84d);
-    color: #111;
+    background: var(--brand-amazon);
+    color: #fff;
 }
 
 .marketplace-chip--mercadolivre .marketplace-chip-icon {
-    background: linear-gradient(135deg, #ffe600, #fff176);
-    color: #2d3277;
+    background: var(--brand-mercadolivre);
+    color: var(--brand-mercadolivre-text);
+    box-shadow: inset 0 0 0 1px var(--brand-mercadolivre-border);
 }
 
 .marketplace-chip--magalu .marketplace-chip-icon {
-    background: linear-gradient(135deg, #0086ff, #5eb3ff);
+    background: var(--brand-magalu);
+    color: #fff;
 }
 
 .marketplace-chip--kabum .marketplace-chip-icon {
-    background: linear-gradient(135deg, #111111, #ff5a00);
+    background: var(--brand-kabum);
     color: #fff;
 }
 
 .marketplace-chip--casasbahia .marketplace-chip-icon {
-    background: linear-gradient(135deg, #e30613, #ff4d4d);
+    background: var(--brand-casasbahia);
     color: #fff;
 }
 
 .marketplace-chip--connected {
     opacity: 1;
     filter: none;
-    border-color: rgba(25, 135, 84, 0.35);
 }
 
 .marketplace-chip--detected {
@@ -1322,39 +1376,46 @@ html, body {
     animation: marketplace-chip-detected 1.2s ease-in-out 1;
 }
 
-.marketplace-chip--shopee.marketplace-chip--detected {
-    border-color: #ee4d2d;
-    box-shadow: 0 0.5rem 1.25rem rgba(238, 77, 45, 0.22);
+.marketplace-chip--shopee.marketplace-chip--detected,
+.marketplace-chip--shopee.marketplace-chip--connected {
+    border-color: var(--brand-shopee);
+    box-shadow: 0 0.45rem 1.1rem rgba(238, 77, 45, 0.25);
 }
 
-.marketplace-chip--tiktok.marketplace-chip--detected {
-    border-color: #010101;
-    box-shadow: 0 0.5rem 1.25rem rgba(1, 1, 1, 0.18);
+.marketplace-chip--tiktok.marketplace-chip--detected,
+.marketplace-chip--tiktok.marketplace-chip--connected {
+    border-color: var(--brand-tiktok-accent);
+    box-shadow: 0 0.45rem 1.1rem rgba(254, 44, 85, 0.25);
 }
 
-.marketplace-chip--amazon.marketplace-chip--detected {
-    border-color: #ff9900;
-    box-shadow: 0 0.5rem 1.25rem rgba(255, 153, 0, 0.22);
+.marketplace-chip--amazon.marketplace-chip--detected,
+.marketplace-chip--amazon.marketplace-chip--connected {
+    border-color: var(--brand-amazon);
+    box-shadow: 0 0.45rem 1.1rem rgba(255, 153, 0, 0.28);
 }
 
-.marketplace-chip--mercadolivre.marketplace-chip--detected {
-    border-color: #ffe600;
-    box-shadow: 0 0.5rem 1.25rem rgba(255, 230, 0, 0.28);
+.marketplace-chip--mercadolivre.marketplace-chip--detected,
+.marketplace-chip--mercadolivre.marketplace-chip--connected {
+    border-color: var(--brand-mercadolivre-border);
+    box-shadow: 0 0.45rem 1.1rem rgba(201, 162, 39, 0.32);
 }
 
-.marketplace-chip--magalu.marketplace-chip--detected {
-    border-color: #0086ff;
-    box-shadow: 0 0.5rem 1.25rem rgba(0, 134, 255, 0.22);
+.marketplace-chip--magalu.marketplace-chip--detected,
+.marketplace-chip--magalu.marketplace-chip--connected {
+    border-color: var(--brand-magalu);
+    box-shadow: 0 0.45rem 1.1rem rgba(0, 134, 255, 0.25);
 }
 
-.marketplace-chip--kabum.marketplace-chip--detected {
-    border-color: #ff5a00;
-    box-shadow: 0 0.5rem 1.25rem rgba(255, 90, 0, 0.28);
+.marketplace-chip--kabum.marketplace-chip--detected,
+.marketplace-chip--kabum.marketplace-chip--connected {
+    border-color: var(--brand-kabum);
+    box-shadow: 0 0.45rem 1.1rem rgba(255, 101, 0, 0.28);
 }
 
-.marketplace-chip--casasbahia.marketplace-chip--detected {
-    border-color: #e30613;
-    box-shadow: 0 0.5rem 1.25rem rgba(227, 6, 19, 0.28);
+.marketplace-chip--casasbahia.marketplace-chip--detected,
+.marketplace-chip--casasbahia.marketplace-chip--connected {
+    border-color: var(--brand-casasbahia);
+    box-shadow: 0 0.45rem 1.1rem rgba(227, 6, 19, 0.28);
 }
 
 .marketplace-chip--coming-soon {

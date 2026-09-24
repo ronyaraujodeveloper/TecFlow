@@ -46,6 +46,7 @@ public class LinkClickLogTests
             new FixedShortLinkService(affiliateLinkId),
             telemetry,
             context,
+            new FallbackProductMetadataService(),
             NullLogger<AffiliateLinkGenerationService>.Instance);
 
         var result = await service.GenerateAsync(
@@ -261,6 +262,12 @@ public class LinkClickLogTests
             Task.FromResult(ConvertedUrl);
     }
 
+    private sealed class FallbackProductMetadataService : IProductMetadataService
+    {
+        public Task<ProductMetadataDto> ExtractAsync(string productUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ProductMetadataHtmlParser.FromUrlFallback(productUrl));
+    }
+
     private sealed class PassthroughUrlExpansionService : IUrlExpansionService
     {
         public Task<string> ExpandUrlAsync(string shortenedUrl, CancellationToken cancellationToken = default) =>
@@ -314,7 +321,8 @@ public class LinkClickLogTests
             int integracaoLojaId,
             Guid linkGroupId,
             string? customNickname,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            ProductMetadataDto? productMetadata = null) =>
             Task.FromResult(new ShortLinkCreateResult
             {
                 PublicShortUrl = "http://localhost:5001/r/abcdef1",

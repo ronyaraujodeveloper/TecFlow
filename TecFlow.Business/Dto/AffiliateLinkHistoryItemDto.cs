@@ -19,6 +19,15 @@ public class AffiliateLinkHistoryItemDto
 
     public string ShortenedUrl { get; set; } = string.Empty;
 
+    public string? ProductName { get; set; }
+
+    public decimal? ProductPrice { get; set; }
+
+    public string? ProductImageUrl { get; set; }
+
+    public string FormattedProductPrice =>
+        TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser.FormatBrl(ProductPrice);
+
     public DateTime CreatedAt { get; set; }
 
     public int ClickCount { get; set; }
@@ -47,6 +56,9 @@ public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
             OriginalUrl = item.OriginalUrl ?? string.Empty,
             AffiliateUrl = item.AffiliateUrl ?? string.Empty,
             ShortenedUrl = item.ShortenedUrl ?? string.Empty,
+            ProductName = item.ProductName,
+            ProductPrice = item.ProductPrice,
+            ProductImageUrl = item.ProductImageUrl,
             LinkGroupId = item.LinkGroupId,
             Accounts = item.Accounts ?? [],
             CreatedAt = item.CreatedAt,

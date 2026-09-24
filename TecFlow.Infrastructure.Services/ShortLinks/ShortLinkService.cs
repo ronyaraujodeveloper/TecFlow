@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Configuration;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
@@ -96,7 +97,8 @@ public sealed class ShortLinkService : IShortLinkService
         int integracaoLojaId,
         Guid linkGroupId,
         string? customNickname,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProductMetadataDto? productMetadata = null)
     {
         if (string.IsNullOrWhiteSpace(destinationUrl))
         {
@@ -129,6 +131,7 @@ public sealed class ShortLinkService : IShortLinkService
             existing.MarketplaceAccountId = marketplaceAccountId;
             existing.LinkGroupId = linkGroupId == Guid.Empty ? existing.LinkGroupId : linkGroupId;
             existing.CustomNickname = customNickname?.Trim() ?? existing.CustomNickname;
+            ApplyProductMetadata(existing, productMetadata);
             existing.IsActive = true;
             existing.Touch();
             entity = existing;
@@ -155,6 +158,7 @@ public sealed class ShortLinkService : IShortLinkService
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
+            ApplyProductMetadata(entity, productMetadata);
 
             await _context.ShortAffiliateLinks.AddAsync(entity, cancellationToken);
         }
@@ -233,6 +237,28 @@ public sealed class ShortLinkService : IShortLinkService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void ApplyProductMetadata(ShortAffiliateLink entity, ProductMetadataDto? metadata)
+    {
+        if (metadata is null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.ProductName))
+        {
+            var name = metadata.ProductName.Trim();
+            entity.ProductName = name.Length <= 255 ? name : name[..255];
+        }
+
+        entity.ProductPrice = metadata.ProductPrice;
+
+        if (!string.IsNullOrWhiteSpace(metadata.ProductImageUrl))
+        {
+            var image = metadata.ProductImageUrl.Trim();
+            entity.ProductImageUrl = image.Length <= 500 ? image : image[..500];
+        }
     }
 
     private async Task UpsertAccountAssociationAsync(

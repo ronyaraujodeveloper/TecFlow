@@ -27,7 +27,20 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
             })
             .ConfigureHttpClient(ConfigureExpansionClient);
 
+        services.AddHttpClient(IntegrationHttpClientNames.ProductMetadata)
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 10
+            })
+            .ConfigureHttpClient(client =>
+            {
+                ConfigureExpansionClient(client);
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
+
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();
+        services.AddScoped<IProductMetadataService, ProductMetadataService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();
 
         services.AddHttpClient<IShopeeAffiliateLinkClient, ShopeeAffiliateLinkClient>((sp, client) =>

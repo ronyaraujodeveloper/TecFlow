@@ -34,6 +34,15 @@ public class GerarLinkAfiliadoResponseDto
 
     public Guid LinkGroupId { get; set; }
 
+    public string? ProductName { get; set; }
+
+    public decimal? ProductPrice { get; set; }
+
+    public string? ProductImageUrl { get; set; }
+
+    public string FormattedProductPrice =>
+        TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser.FormatBrl(ProductPrice);
+
     public int? SelectedStoreId { get; set; }
 
     public List<AffiliateLinkAccountVariantDto> Accounts { get; set; } = [];
@@ -78,6 +87,9 @@ public class GerarLinkAfiliadoResponseDto
             PlatformDetected = string.IsNullOrWhiteSpace(item.PlatformName)
                 ? item.PlatformType.ToString()
                 : item.PlatformName,
+            ProductName = item.ProductName,
+            ProductPrice = item.ProductPrice,
+            ProductImageUrl = item.ProductImageUrl,
             AffiliateLinkId = item.AffiliateLinkId,
             LinkGroupId = item.LinkGroupId,
             Message = "Link carregado do histórico.",

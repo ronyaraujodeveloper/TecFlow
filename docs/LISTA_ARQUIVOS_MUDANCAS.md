@@ -676,6 +676,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreModal.razor** — Tracking ID TikTok aceita `@amz.indica` / `amz.indica`.
 - [x] **PlatformLinkResolverTests** — `redirect_url` codificado com `unique_id=amz.indica`.
 
+### Fase 19.23 — Extração de metadados do produto (19.5)
+
+- [x] **ShortAffiliateLink.cs** — `ProductName`, `ProductPrice`, `ProductImageUrl`.
+- [x] **20260924233155_AddProductMetadataToLinks** — colunas em `ShortAffiliateLinks`.
+- [x] **ProductMetadataHtmlParser.cs** / **ProductMetadataService.cs** / **IProductMetadataService** — unshorten + OpenGraph/JSON-LD + fallback de slug.
+- [x] **AffiliateLinkGenerationService** — persiste metadados sem bloquear a conversão.
+- [x] **LinkGeneratorResultPanel.razor** / **HistoricoLinks.razor** — card preview; colunas Produto e Preço (R$).
+- [x] **ProductMetadataHtmlParserTests.cs** / **ProductMetadataServiceTests.cs**.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

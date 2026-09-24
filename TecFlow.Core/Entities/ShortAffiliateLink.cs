@@ -48,6 +48,15 @@ public class ShortAffiliateLink : BaseEntity, ITenantScopedEntity
     [MaxLength(256)]
     public string? CustomNickname { get; set; }
 
+    [MaxLength(255)]
+    public string? ProductName { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? ProductPrice { get; set; }
+
+    [MaxLength(500)]
+    public string? ProductImageUrl { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     /// <summary>Alias de <see cref="ShortCode"/> para o contrato mobile/offline.</summary>

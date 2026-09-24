@@ -35,6 +35,8 @@ flowchart LR
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
+  META[ProductMetadataService] -->|unshorten + OG/JSON-LD| SHORT
+  UI -->|Gerar Link de Comissão| META
   LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL
   SHORT --> LOG
   BLD --> AFFURL[AffiliateUrl longa]

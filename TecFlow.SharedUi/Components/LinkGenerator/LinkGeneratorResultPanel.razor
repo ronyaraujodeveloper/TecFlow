@@ -24,6 +24,26 @@
                 <span class="link-generator-result-check" aria-hidden="true">✓</span>
             </div>
 
+            <article class="product-preview-card mb-4" aria-label="Prévia do produto">
+                @if (!string.IsNullOrWhiteSpace(response.ProductImageUrl))
+                {
+                    <img src="@response.ProductImageUrl"
+                         alt=""
+                         class="product-preview-thumb"
+                         loading="lazy" />
+                }
+                <div class="product-preview-body">
+                    @if (!string.IsNullOrWhiteSpace(response.PlatformDetected))
+                    {
+                        <span class="marketplace-platform-badge mb-2">@response.PlatformDetected</span>
+                    }
+                    <h3 class="product-preview-title mb-1">
+                        @(string.IsNullOrWhiteSpace(response.ProductName) ? "Produto" : response.ProductName)
+                    </h3>
+                    <p class="product-preview-price mb-0">@response.FormattedProductPrice</p>
+                </div>
+            </article>
+
             @if (response.Accounts.Count(account => account.IsActive && account.StoreId > 0) > 1)
             {
                 <div class="mb-3">

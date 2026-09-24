@@ -122,6 +122,7 @@ public class AffiliateLinkGenerationServiceTests
             new NoOpShortLinkService(),
             new NoOpLinkClickTelemetryService(),
             new AffiliateLinkGenerationContext(),
+            new NoOpProductMetadataService(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AffiliateLinkGenerationService>.Instance);
 
         var result = await service.GenerateAsync(
@@ -141,6 +142,12 @@ public class AffiliateLinkGenerationServiceTests
         var environment = new Mock<IHostEnvironment>();
         environment.SetupGet(item => item.EnvironmentName).Returns("Homologacao");
         return environment.Object;
+    }
+
+    private sealed class NoOpProductMetadataService : IProductMetadataService
+    {
+        public Task<ProductMetadataDto> ExtractAsync(string productUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ProductMetadataHtmlParser.FromUrlFallback(productUrl));
     }
 
     private sealed class NoOpUrlExpansionService : IUrlExpansionService
@@ -188,7 +195,8 @@ public class AffiliateLinkGenerationServiceTests
             int integracaoLojaId,
             Guid linkGroupId,
             string? customNickname,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            ProductMetadataDto? productMetadata = null) =>
             Task.FromResult(new ShortLinkCreateResult
             {
                 PublicShortUrl = "http://localhost:5001/r/mock123",

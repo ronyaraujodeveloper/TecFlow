@@ -16,6 +16,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
     private readonly IShortLinkService _shortLinkService;
     private readonly ILinkClickTelemetryService _telemetryService;
     private readonly IAffiliateLinkGenerationContext _generationContext;
+    private readonly IProductMetadataService _productMetadataService;
     private readonly ILogger<AffiliateLinkGenerationService> _logger;
 
     public AffiliateLinkGenerationService(
@@ -25,6 +26,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         IShortLinkService shortLinkService,
         ILinkClickTelemetryService telemetryService,
         IAffiliateLinkGenerationContext generationContext,
+        IProductMetadataService productMetadataService,
         ILogger<AffiliateLinkGenerationService> logger)
     {
         _platformLinkResolver = platformLinkResolver;
@@ -33,6 +35,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         _shortLinkService = shortLinkService;
         _telemetryService = telemetryService;
         _generationContext = generationContext;
+        _productMetadataService = productMetadataService;
         _logger = logger;
     }
 
@@ -60,6 +63,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             var workingUrl = request.OriginalUrl.Trim();
             var expandedUrl = await _platformLinkResolver.ExpandIfShortenedAsync(workingUrl, cancellationToken);
             var (strategy, resolvedUrl) = await ResolveStrategyAsync(expandedUrl, cancellationToken);
+            var productMetadata = await ExtractProductMetadataSafelyAsync(resolvedUrl, cancellationToken);
             var affiliateId = userId.ToString();
             var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(
                 userId,
@@ -95,7 +99,8 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                     store.Id,
                     linkGroupId,
                     request.CustomNickname,
-                    cancellationToken);
+                    cancellationToken,
+                    productMetadata);
 
                 await _telemetryService.RecordGenerationAsync(
                     created.AffiliateLinkId,
@@ -145,6 +150,9 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                     ShortenedUrl = created.PublicShortUrl,
                     ShortenedShopeeUrl = officialShort,
                     PlatformDetected = strategy.PlatformName,
+                    ProductName = productMetadata.ProductName,
+                    ProductPrice = productMetadata.ProductPrice,
+                    ProductImageUrl = productMetadata.ProductImageUrl,
                     AffiliateLinkId = created.AffiliateLinkId,
                     LinkGroupId = linkGroupId,
                     SelectedStoreId = store.Id
@@ -207,6 +215,24 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
 
             var expandedUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
             return (_platformLinkResolver.Resolve(expandedUrl), expandedUrl);
+        }
+    }
+
+    private async Task<ProductMetadataDto> ExtractProductMetadataSafelyAsync(
+        string productUrl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _productMetadataService.ExtractAsync(productUrl, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Extração de metadados falhou; usando slug da URL. Url={Url}",
+                productUrl);
+            return ProductMetadataHtmlParser.FromUrlFallback(productUrl);
         }
     }
 

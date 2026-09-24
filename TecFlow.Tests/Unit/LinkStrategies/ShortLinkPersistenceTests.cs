@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Configuration;
+using TecFlow.Business.Dto;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -85,6 +86,38 @@ public class ShortLinkPersistenceTests
         Assert.Equal(saved.Id, association.ShortAffiliateLinkId);
         Assert.Equal(loja.Id, association.IntegracaoLojaId);
         Assert.True(association.IsActive);
+    }
+
+    [Fact]
+    public async Task ShortLinkService_ShouldPersistProductMetadata_OnEnsureForStore()
+    {
+        await using var db = CreateDbContext();
+        var first = await SeedStoreAsync(db, "loja-meta", "Loja Meta");
+        var service = CreateService(db);
+        const string original = "https://shopee.com.br/cadeira-gamer-pro";
+
+        var groupId = await service.ResolveLinkGroupIdAsync(10, original, MarketplaceType.Shopee);
+        await service.EnsureForStoreAsync(
+            "https://shopee.com.br/a",
+            original,
+            MarketplaceType.Shopee,
+            10,
+            TestTenantId,
+            first.Loja.Id,
+            groupId,
+            null,
+            CancellationToken.None,
+            new ProductMetadataDto
+            {
+                ProductName = "Cadeira Gamer Pro",
+                ProductPrice = 1299.90m,
+                ProductImageUrl = "https://cdn.example.com/cadeira.jpg"
+            });
+
+        var saved = Assert.Single(db.ShortAffiliateLinks);
+        Assert.Equal("Cadeira Gamer Pro", saved.ProductName);
+        Assert.Equal(1299.90m, saved.ProductPrice);
+        Assert.Equal("https://cdn.example.com/cadeira.jpg", saved.ProductImageUrl);
     }
 
     [Fact]

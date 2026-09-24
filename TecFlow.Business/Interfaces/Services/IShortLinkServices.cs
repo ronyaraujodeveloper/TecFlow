@@ -31,7 +31,8 @@ public interface IShortLinkService
         int integracaoLojaId,
         Guid linkGroupId,
         string? customNickname,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProductMetadataDto? productMetadata = null);
 
     Task DeactivateUnselectedAccountsAsync(
         Guid linkGroupId,

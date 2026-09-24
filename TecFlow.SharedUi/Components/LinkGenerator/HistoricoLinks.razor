@@ -110,12 +110,8 @@
                             </time>
                         </div>
 
-                        <h3 class="h6 fw-semibold mb-2 text-break">@item.DisplayTitle</h3>
-
-                        <p class="small text-muted mb-2 text-break">
-                            <span class="fw-semibold">Encurtado:</span>
-                            @item.ShortenedUrl
-                        </p>
+                        <h3 class="h6 fw-semibold mb-1 text-break">@(string.IsNullOrWhiteSpace(item.ProductName) ? item.DisplayTitle : item.ProductName)</h3>
+                        <p class="product-history-price mb-2">@item.FormattedProductPrice</p>
 
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
                             <div class="link-history-clicks">
@@ -147,8 +143,8 @@
                     <thead>
                         <tr>
                             <th scope="col">Plataforma</th>
-                            <th scope="col">Link original</th>
-                            <th scope="col">Link encurtado</th>
+                            <th scope="col">Produto</th>
+                            <th scope="col">Preço</th>
                             <th scope="col">Data</th>
                             <th scope="col" class="text-end">Cliques</th>
                             <th scope="col" class="text-end">Ações</th>
@@ -164,10 +160,10 @@
                                     </span>
                                 </td>
                                 <td class="small text-break" title="@item.OriginalUrl">
-                                    @TruncateUrl(item.OriginalUrl, 48)
+                                    @(string.IsNullOrWhiteSpace(item.ProductName) ? item.DisplayTitle : item.ProductName)
                                 </td>
-                                <td class="small font-monospace text-break">
-                                    @item.ShortenedUrl
+                                <td class="small text-nowrap fw-semibold">
+                                    @item.FormattedProductPrice
                                 </td>
                                 <td class="small text-nowrap">
                                     @item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
@@ -303,16 +299,6 @@
         MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
         _ => string.Empty
     };
-
-    private static string TruncateUrl(string url, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(url) || url.Length <= maxLength)
-        {
-            return url;
-        }
-
-        return url[..(maxLength - 3)] + "...";
-    }
 
     private void ClearLoadError() => _loadError = null;
 

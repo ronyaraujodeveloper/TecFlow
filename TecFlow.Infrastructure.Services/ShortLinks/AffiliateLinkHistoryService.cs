@@ -5,6 +5,7 @@ using TecFlow.Business.Configuration;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.Filter;
@@ -122,10 +123,13 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             LinkGroupId = group.LinkGroupId,
             PlatformType = primary.PlatformType,
             PlatformName = GetPlatformName(primary.PlatformType),
-            DisplayTitle = BuildDisplayTitle(primary.CustomNickname, primary.OriginalUrl),
+            DisplayTitle = BuildDisplayTitle(primary.ProductName, primary.CustomNickname, primary.OriginalUrl),
             OriginalUrl = primary.OriginalUrl,
             AffiliateUrl = string.IsNullOrWhiteSpace(primary.AffiliateUrl) ? primary.DestinationUrl : primary.AffiliateUrl,
             ShortenedUrl = MapVariant(primary, storeNames).ShortenedUrl,
+            ProductName = primary.ProductName,
+            ProductPrice = primary.ProductPrice,
+            ProductImageUrl = primary.ProductImageUrl,
             CreatedAt = group.Links.Min(link => link.CreatedAt),
             ClickCount = clickCount,
             Accounts = variants
@@ -167,10 +171,13 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             LinkGroupId = link.LinkGroupId == Guid.Empty ? link.AffiliateLinkId : link.LinkGroupId,
             PlatformType = link.PlatformType,
             PlatformName = GetPlatformName(link.PlatformType),
-            DisplayTitle = BuildDisplayTitle(link.CustomNickname, link.OriginalUrl),
+            DisplayTitle = BuildDisplayTitle(link.ProductName, link.CustomNickname, link.OriginalUrl),
             OriginalUrl = link.OriginalUrl,
             AffiliateUrl = variant.AffiliateUrl,
             ShortenedUrl = variant.ShortenedUrl,
+            ProductName = link.ProductName,
+            ProductPrice = link.ProductPrice,
+            ProductImageUrl = link.ProductImageUrl,
             CreatedAt = link.CreatedAt,
             ClickCount = clickCount,
             Accounts = [variant]
@@ -214,8 +221,13 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
         _ => platformType.ToString()
     };
 
-    private static string BuildDisplayTitle(string? nickname, string originalUrl)
+    private static string BuildDisplayTitle(string? productName, string? nickname, string originalUrl)
     {
+        if (!string.IsNullOrWhiteSpace(productName))
+        {
+            return productName.Trim();
+        }
+
         if (!string.IsNullOrWhiteSpace(nickname))
         {
             return nickname.Trim();
@@ -226,8 +238,8 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             return "Link de comissão";
         }
 
-        var trimmed = originalUrl.Trim();
-        return trimmed.Length <= 56 ? trimmed : trimmed[..53] + "...";
+        var slug = ProductMetadataHtmlParser.BuildSlugFallback(originalUrl);
+        return string.IsNullOrWhiteSpace(slug) ? "Link de comissão" : slug;
     }
 
     private sealed class LinkGroup

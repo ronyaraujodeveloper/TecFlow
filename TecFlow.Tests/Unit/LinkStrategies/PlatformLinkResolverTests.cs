@@ -35,13 +35,23 @@ public class PlatformLinkResolverTests
     }
 
     [Fact]
-    public void ExtractAffiliateId_ShouldPreferTikTokTtFromOverHandle()
+    public void ExtractAffiliateId_ShouldPreferTikTokHandleOverTtFrom()
     {
         var id = PlatformLinkResolver.ExtractAffiliateId(
-            "https://www.tiktok.com/@loja/video/1?tt_from=affiliate_share&sec_uid=MS4wLjAB",
+            "https://www.tiktok.com/@achadinhos.aaz/video/1?tt_from=affiliate_share&sec_uid=MS4wLjAB",
             MarketplaceType.TikTokShop);
 
-        Assert.Equal("affiliate_share", id);
+        Assert.Equal("achadinhos.aaz", id);
+    }
+
+    [Fact]
+    public void ExtractAffiliateId_ShouldReadTikTokTtFromWhenHandleIsMissing()
+    {
+        var id = PlatformLinkResolver.ExtractAffiliateId(
+            "https://www.tiktok.com/t/abc?tt_from=creator123",
+            MarketplaceType.TikTokShop);
+
+        Assert.Equal("creator123", id);
     }
 
     [Fact]
@@ -142,5 +152,50 @@ public class PlatformLinkResolverTests
         expansion.Verify(
             service => service.ExpandUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(3));
+    }
+
+    [Theory]
+    [InlineData("https://vt.tiktok.com/ZSabcde/", MarketplaceType.TikTokShop)]
+    [InlineData("https://www.tiktok.com/@loja", MarketplaceType.TikTokShop)]
+    [InlineData("https://magazineluiza.onelink.me/abc", MarketplaceType.MagazineLuiza)]
+    [InlineData("https://magalu.me/xyz", MarketplaceType.MagazineLuiza)]
+    [InlineData("https://www.magazinevoce.com.br/minhaloja/p/1", MarketplaceType.MagazineLuiza)]
+    [InlineData("https://meli.la/abc123", MarketplaceType.MercadoLivre)]
+    [InlineData("https://www.mercadolivre.com/sec/abc", MarketplaceType.MercadoLivre)]
+    [InlineData("https://s.shopee.com.br/abc", MarketplaceType.Shopee)]
+    [InlineData("https://br.shp.ee/abc", MarketplaceType.Shopee)]
+    [InlineData("https://shopee.com.br/produto", MarketplaceType.Shopee)]
+    [InlineData("https://amzn.to/abc", MarketplaceType.Amazon)]
+    [InlineData("https://www.amazon.com.br/dp/B0TEST", MarketplaceType.Amazon)]
+    [InlineData("https://cb.com.br/p/1", MarketplaceType.CasasBahia)]
+    [InlineData("https://www.casasbahia.com.br/p/1", MarketplaceType.CasasBahia)]
+    [InlineData("https://kb.um/abc", MarketplaceType.Kabum)]
+    [InlineData("https://www.kabum.com.br/produto/1", MarketplaceType.Kabum)]
+    public void TryDetectPlatformFromUrl_ShouldMapKnownDomains(string url, MarketplaceType expected)
+    {
+        Assert.True(PlatformLinkResolver.TryDetectPlatformFromUrl(url, out var platform));
+        Assert.Equal(expected, platform);
+    }
+
+    [Fact]
+    public void ExtractAffiliateId_ShouldNotReadTrueFromMagaluOnelinkAfDp()
+    {
+        var id = PlatformLinkResolver.ExtractAffiliateId(
+            "https://magazineluiza.onelink.me/abc?pid=app&af_dp=true&parceiro=magazinevoce",
+            MarketplaceType.MagazineLuiza);
+
+        Assert.Equal("magazinevoce", id);
+        Assert.NotEqual("true", id);
+    }
+
+    [Fact]
+    public void PreferExtractedCredential_ShouldIgnoreBooleanLiteral()
+    {
+        var value = AffiliateTrackingIdValidator.PreferExtractedCredential(
+            "true",
+            "https://www.magazinevoce.com.br/minhaloja/p/1",
+            "fallback");
+
+        Assert.Equal("https://www.magazinevoce.com.br/minhaloja/p/1", value);
     }
 }

@@ -1,6 +1,7 @@
 ﻿@using System.Globalization
 @using TecFlow.Business.Dto
 @using TecFlow.Core.Enums
+@using TecFlow.SharedUi.Helpers
 @using TecFlow.SharedUi.Services.Integrations
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IJSRuntime JS
@@ -203,6 +204,12 @@
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
+
+    private MarketplaceType SelectedPlatform
+    {
+        get => _platform;
+        set => _platform = value;
+    }
     private string _platformLabel => _platform.GetDisplayName();
     private string TrackingIdLabel => _platform switch
     {
@@ -253,7 +260,7 @@
 
     private void SelectPlatform(MarketplaceType platform)
     {
-        _platform = platform;
+        SelectedPlatform = platform;
         _formError = null;
         _extractSuccess = null;
         if (!string.IsNullOrWhiteSpace(_trackingId))
@@ -267,10 +274,16 @@
     private async Task OnTrackingIdInput(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString() ?? string.Empty;
+        if (AffiliateTrackingIdSanitizer.IsBooleanLiteral(raw))
+        {
+            raw = string.Empty;
+        }
+
         var generation = ++_expandGeneration;
         var fromShortener = false;
 
         var absolute = AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(raw);
+        DetectSelectedPlatform(absolute);
         if (AffiliateTrackingIdSanitizer.IsShortenerUrl(absolute))
         {
             fromShortener = true;
@@ -279,20 +292,17 @@
             _extractSuccess = null;
             try
             {
-                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(absolute, _platform.ToString());
+                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(absolute, SelectedPlatform.ToString());
                 if (generation != _expandGeneration)
                 {
                     return;
                 }
 
-                if (!string.IsNullOrWhiteSpace(expanded.ExtractedId))
-                {
-                    raw = expanded.ExtractedId;
-                }
-                else if (!string.IsNullOrWhiteSpace(expanded.ExpandedUrl))
-                {
-                    raw = expanded.ExpandedUrl;
-                }
+                DetectSelectedPlatform(expanded.ExpandedUrl);
+                raw = AffiliateTrackingIdSanitizer.PreferExtractedCredential(
+                    expanded.ExtractedId,
+                    expanded.ExpandedUrl,
+                    absolute);
             }
             finally
             {
@@ -313,9 +323,13 @@
 
     private void ApplyTrackingId(string input, bool fromShortener = false)
     {
-        var extracted = ExtractAffiliateIdFromUrl(input, _platform.ToString());
+        var extracted = ExtractAffiliateIdFromUrl(input, SelectedPlatform.ToString());
+        if (AffiliateTrackingIdSanitizer.IsBooleanLiteral(extracted))
+        {
+            extracted = string.Empty;
+        }
         _trackingId = extracted;
-        _trackingInvalid = !AffiliateTrackingIdSanitizer.TryNormalize(_platform, extracted, out _);
+        _trackingInvalid = !AffiliateTrackingIdSanitizer.TryNormalize(SelectedPlatform, extracted, out _);
         if (_trackingInvalid)
         {
             _extractSuccess = null;
@@ -338,6 +352,20 @@
         if (string.Equals(_formError, AffiliateTrackingIdSanitizer.InvalidMessage, StringComparison.Ordinal))
         {
             _formError = null;
+        }
+    }
+
+    private void DetectSelectedPlatform(string? input)
+    {
+        if (MarketplaceUrlDetector.Detect(input)?.IntegrationType is { } fromDetector)
+        {
+            SelectedPlatform = fromDetector;
+            return;
+        }
+
+        if (AffiliateTrackingIdSanitizer.TryDetectPlatformFromUrl(input, out var detected))
+        {
+            SelectedPlatform = detected;
         }
     }
 
@@ -392,19 +420,22 @@
         {
             var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
             var rawTracking = (await ReadInputAsync("tracking-id", _trackingId)).Trim();
+            DetectSelectedPlatform(rawTracking);
             var trackingId = rawTracking;
 
             if (AffiliateTrackingIdSanitizer.IsShortenerUrl(AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(rawTracking)))
             {
                 var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(
                     AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(rawTracking),
-                    _platform.ToString());
-                trackingId = string.IsNullOrWhiteSpace(expanded.ExtractedId)
-                    ? expanded.ExpandedUrl
-                    : expanded.ExtractedId;
+                    SelectedPlatform.ToString());
+                DetectSelectedPlatform(expanded.ExpandedUrl);
+                trackingId = AffiliateTrackingIdSanitizer.PreferExtractedCredential(
+                    expanded.ExtractedId,
+                    expanded.ExpandedUrl,
+                    rawTracking);
             }
 
-            trackingId = ExtractAffiliateIdFromUrl(trackingId, _platform.ToString());
+            trackingId = ExtractAffiliateIdFromUrl(trackingId, SelectedPlatform.ToString());
 
             if (!AffiliateTrackingIdSanitizer.TryNormalize(_platform, trackingId, out var normalized)
                 || AffiliateTrackingIdSanitizer.LooksLikeUrl(normalized))

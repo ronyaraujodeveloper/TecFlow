@@ -1,4 +1,5 @@
-﻿using TecFlow.Core.Enums;
+﻿using TecFlow.Business.Integrations;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.SharedUi.Helpers;
 
@@ -56,7 +57,7 @@ public static class MarketplaceUrlDetector
             "Mercado Livre",
             "ML",
             "marketplace-chip--mercadolivre",
-            ["mercadolivre.com.br", "produto.mercadolivre.com.br", "mercadolivre.com", "mercadolibre.com", "ml.com.br"],
+            ["mercadolivre.com.br", "produto.mercadolivre.com.br", "mercadolivre.com", "mercadolibre.com", "ml.com.br", "meli.la"],
             MarketplaceType.MercadoLivre,
             true),
         new(
@@ -64,7 +65,7 @@ public static class MarketplaceUrlDetector
             "Magazine Luiza",
             "MG",
             "marketplace-chip--magalu",
-            ["magazineluiza.com.br", "magalu.com.br", "magazinevoce.com.br", "magalu.me", "mglz.ne"],
+            ["magazineluiza.com.br", "magalu.com.br", "magazinevoce.com.br", "magalu.me", "mglz.ne", "magazineluiza.onelink.me"],
             MarketplaceType.MagazineLuiza,
             true),
         new(
@@ -99,7 +100,20 @@ public static class MarketplaceUrlDetector
         }
 
         var host = uri.Host.ToLowerInvariant();
+        if (AffiliateTrackingIdValidator.TryDetectPlatformFromUrl(normalized, out var platform))
+        {
+            return All.FirstOrDefault(item => item.IntegrationType == platform)
+                ?? MatchByHost(host);
+        }
 
+        return MatchByHost(host);
+    }
+
+    public static MarketplaceDefinition? GetByKey(SupportedMarketplaceKey key) =>
+        All.FirstOrDefault(item => item.Key == key);
+
+    private static MarketplaceDefinition? MatchByHost(string host)
+    {
         foreach (var definition in All)
         {
             if (HostMatches(host, definition.HostPatterns))
@@ -110,9 +124,6 @@ public static class MarketplaceUrlDetector
 
         return null;
     }
-
-    public static MarketplaceDefinition? GetByKey(SupportedMarketplaceKey key) =>
-        All.FirstOrDefault(item => item.Key == key);
 
     private static string NormalizeUrl(string url)
     {

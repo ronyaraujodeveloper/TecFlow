@@ -33,16 +33,28 @@ public sealed class UrlExpansionService : IUrlExpansionService
             throw new AffiliateLinkGenerationException("URL informada é inválida.");
         }
 
+        var originalUrl = currentUri.ToString();
+        var currentUrl = originalUrl;
+
+        if (ShouldPreferAutoRedirect(currentUrl))
+        {
+            currentUrl = SanitizeExpandedUrl(
+                await FollowWithAutoRedirectAsync(currentUrl, cancellationToken),
+                originalUrl);
+            if (!AffiliateTrackingIdValidator.IsShortenerUrl(currentUrl)
+                && !string.Equals(currentUrl, originalUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return currentUrl;
+            }
+        }
+
         var client = _httpClientFactory.CreateClient(TecFlow.Business.Integrations.Common.IntegrationHttpClientNames.UrlExpansion);
-        var currentUrl = currentUri.ToString();
 
         for (var hop = 0; hop < MaxRedirects; hop++)
         {
             using var response = await SendWithoutAutoRedirectAsync(client, currentUrl, cancellationToken);
-            var requestUri = response.RequestMessage?.RequestUri?.ToString();
-            if (!string.IsNullOrWhiteSpace(requestUri)
-                && !string.Equals(requestUri, currentUrl, StringComparison.OrdinalIgnoreCase)
-                && Uri.TryCreate(requestUri, UriKind.Absolute, out _))
+            var requestUri = SanitizeExpandedUrl(response.RequestMessage?.RequestUri?.ToString(), currentUrl);
+            if (!string.Equals(requestUri, currentUrl, StringComparison.OrdinalIgnoreCase))
             {
                 currentUrl = requestUri;
             }
@@ -52,8 +64,8 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 break;
             }
 
-            var nextUrl = ResolveRedirectLocation(currentUrl, response);
-            if (string.IsNullOrWhiteSpace(nextUrl) || string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
+            var nextUrl = SanitizeExpandedUrl(ResolveRedirectLocation(currentUrl, response), currentUrl);
+            if (string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
             {
                 break;
             }
@@ -64,10 +76,12 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         if (AffiliateTrackingIdValidator.IsShortenerUrl(currentUrl))
         {
-            currentUrl = await FollowWithAutoRedirectAsync(currentUrl, cancellationToken);
+            currentUrl = SanitizeExpandedUrl(
+                await FollowWithAutoRedirectAsync(currentUrl, cancellationToken),
+                currentUrl);
         }
 
-        return currentUrl;
+        return SanitizeExpandedUrl(currentUrl, originalUrl);
     }
 
     private async Task<string> FollowWithAutoRedirectAsync(string url, CancellationToken cancellationToken)
@@ -82,9 +96,9 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
-            var finalUrl = response.RequestMessage?.RequestUri?.ToString();
-            if (!string.IsNullOrWhiteSpace(finalUrl)
-                && Uri.TryCreate(finalUrl, UriKind.Absolute, out _))
+            var finalUrl = SanitizeExpandedUrl(response.RequestMessage?.RequestUri?.ToString(), url);
+            if (!string.Equals(finalUrl, url, StringComparison.OrdinalIgnoreCase)
+                || Uri.TryCreate(finalUrl, UriKind.Absolute, out _))
             {
                 _logger.LogDebug("ExpandUrl auto-redirect: {From} -> {To}", url, finalUrl);
                 return finalUrl;
@@ -135,7 +149,42 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         request.Headers.TryAddWithoutValidation(
             "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TecFlow/1.0");
+            BrowserUserAgent);
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+    }
+
+    private const string BrowserUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+    private static bool ShouldPreferAutoRedirect(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        return host.Contains("onelink.me", StringComparison.Ordinal)
+            || host.Contains("meli.la", StringComparison.Ordinal)
+            || host.Contains("vt.tiktok.com", StringComparison.Ordinal)
+            || host.Contains("vm.tiktok.com", StringComparison.Ordinal)
+            || host.Contains("magalu.me", StringComparison.Ordinal);
+    }
+
+    private static string SanitizeExpandedUrl(string? candidate, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(candidate)
+            || AffiliateTrackingIdValidator.IsBooleanLiteral(candidate)
+            || !Uri.TryCreate(candidate.Trim(), UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return fallback;
+        }
+
+        return uri.ToString();
     }
 
     private static bool IsRedirect(HttpResponseMessage response) =>

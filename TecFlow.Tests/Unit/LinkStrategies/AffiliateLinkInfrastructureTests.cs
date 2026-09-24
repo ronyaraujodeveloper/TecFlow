@@ -35,6 +35,34 @@ public class UrlExpansionServiceTests
         var expanded = await service.ExpandUrlAsync("https://s.shopee.com.br/abc");
 
         Assert.Equal("https://shopee.com.br/produto-i.123.456", expanded);
+        Assert.NotEqual("true", expanded, StringComparer.OrdinalIgnoreCase);
+        Assert.False(bool.TryParse(expanded, out _));
+    }
+
+    [Fact]
+    public async Task ExpandUrlAsync_ShouldIgnoreBooleanLocationAndKeepHttpUrl()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("magazineluiza.onelink.me"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://www.magazinevoce.com.br/minhaloja/p/1") }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var factory = new StubHttpClientFactory(handler);
+        var service = new UrlExpansionService(factory, Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://magazineluiza.onelink.me/abc");
+
+        Assert.Equal("https://www.magazinevoce.com.br/minhaloja/p/1", expanded);
+        Assert.IsType<string>(expanded);
+        Assert.False(bool.TryParse(expanded, out _));
     }
 }
 

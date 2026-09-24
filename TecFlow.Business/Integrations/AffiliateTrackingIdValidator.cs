@@ -46,6 +46,45 @@ public static class AffiliateTrackingIdValidator
         ("mercadolivre.com.br", "/sec/")
     ];
 
+    private static readonly (string Host, MarketplaceType Platform)[] DetectionHosts =
+    [
+        ("vt.tiktok.com", MarketplaceType.TikTokShop),
+        ("vm.tiktok.com", MarketplaceType.TikTokShop),
+        ("l.tiktok.com", MarketplaceType.TikTokShop),
+        ("shop.tiktok.com", MarketplaceType.TikTokShop),
+        ("tiktokshop.com", MarketplaceType.TikTokShop),
+        ("tiktok.com", MarketplaceType.TikTokShop),
+        ("magazineluiza.onelink.me", MarketplaceType.MagazineLuiza),
+        ("magazinevoce.com.br", MarketplaceType.MagazineLuiza),
+        ("magazineluiza.com.br", MarketplaceType.MagazineLuiza),
+        ("magalu.com.br", MarketplaceType.MagazineLuiza),
+        ("magalu.me", MarketplaceType.MagazineLuiza),
+        ("mglz.ne", MarketplaceType.MagazineLuiza),
+        ("meli.la", MarketplaceType.MercadoLivre),
+        ("mercadolivre.com.br", MarketplaceType.MercadoLivre),
+        ("produto.mercadolivre.com.br", MarketplaceType.MercadoLivre),
+        ("mercadolivre.com", MarketplaceType.MercadoLivre),
+        ("mercadolibre.com", MarketplaceType.MercadoLivre),
+        ("ml.com.br", MarketplaceType.MercadoLivre),
+        ("s.shopee.com.br", MarketplaceType.Shopee),
+        ("s.shopee.com", MarketplaceType.Shopee),
+        ("br.shp.ee", MarketplaceType.Shopee),
+        ("shp.ee", MarketplaceType.Shopee),
+        ("shope.ee", MarketplaceType.Shopee),
+        ("shopee.com.br", MarketplaceType.Shopee),
+        ("shopee.com", MarketplaceType.Shopee),
+        ("amzn.to", MarketplaceType.Amazon),
+        ("a.co", MarketplaceType.Amazon),
+        ("amazon.com.br", MarketplaceType.Amazon),
+        ("amazon.com", MarketplaceType.Amazon),
+        ("cb.com.br", MarketplaceType.CasasBahia),
+        ("casasbahia.com.br", MarketplaceType.CasasBahia),
+        ("casasbahia.app.link", MarketplaceType.CasasBahia),
+        ("kb.um", MarketplaceType.Kabum),
+        ("kabum.me", MarketplaceType.Kabum),
+        ("kabum.com.br", MarketplaceType.Kabum)
+    ];
+
     private static readonly Regex[] ShopeeAffiliateIdPatterns =
     [
         new(@"mmp_pid=an_([0-9]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled),
@@ -64,7 +103,8 @@ public static class AffiliateTrackingIdValidator
         var trimmed = input.Trim().Trim('"', '\'');
         var marketplace = ParsePlatform(platform);
 
-        if (TryExtractPlatformAffiliateId(marketplace, trimmed, out var extractedId))
+        if (TryExtractPlatformAffiliateId(marketplace, trimmed, out var extractedId)
+            && !IsBooleanLiteral(extractedId))
         {
             return Truncate(extractedId);
         }
@@ -76,6 +116,11 @@ public static class AffiliateTrackingIdValidator
         foreach (var key in keys)
         {
             if (!TryReadParam(trimmed, key, out var value))
+            {
+                continue;
+            }
+
+            if (IsBooleanLiteral(value))
             {
                 continue;
             }
@@ -101,7 +146,68 @@ public static class AffiliateTrackingIdValidator
             return Truncate(slug);
         }
 
-        return Truncate(trimmed);
+        return IsBooleanLiteral(trimmed) ? string.Empty : Truncate(trimmed);
+    }
+
+    public static bool TryDetectPlatformFromUrl(string? input, out MarketplaceType platform)
+    {
+        platform = MarketplaceType.Shopee;
+        MarketplaceType? best = null;
+        var bestLength = -1;
+
+        foreach (var candidate in AbsoluteUrlCandidates(input))
+        {
+            if (!TryParseAbsoluteUri(candidate, out var uri))
+            {
+                continue;
+            }
+
+            var host = NormalizeHost(uri.Host);
+            foreach (var (pattern, detected) in DetectionHosts)
+            {
+                if (host != pattern && !host.EndsWith("." + pattern, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (pattern.Length <= bestLength)
+                {
+                    continue;
+                }
+
+                bestLength = pattern.Length;
+                best = detected;
+            }
+        }
+
+        if (best is null)
+        {
+            return false;
+        }
+
+        platform = best.Value;
+        return true;
+    }
+
+    public static bool IsBooleanLiteral(string? value) =>
+        string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(value?.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+
+    public static string PreferExtractedCredential(string? extractedId, string? expandedUrl, string fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(extractedId)
+            && !IsBooleanLiteral(extractedId)
+            && !LooksLikeUrl(extractedId))
+        {
+            return extractedId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(expandedUrl) && !IsBooleanLiteral(expandedUrl))
+        {
+            return expandedUrl.Trim();
+        }
+
+        return fallback ?? string.Empty;
     }
 
     public static bool TryExtractPlatformAffiliateId(MarketplaceType platform, string? input, out string id) =>
@@ -178,11 +284,7 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
-            var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
-            if (host.StartsWith("www.", StringComparison.Ordinal))
-            {
-                host = host[4..];
-            }
+            var host = NormalizeHost(uri.Host);
 
             if (ShortenerHosts.Any(item =>
                     host == item || host.EndsWith("." + item, StringComparison.Ordinal)))
@@ -292,32 +394,55 @@ public static class AffiliateTrackingIdValidator
     {
         value = string.Empty;
         var token = key + "=";
-        var index = input.IndexOf(token, StringComparison.OrdinalIgnoreCase);
-        if (index < 0)
+        var searchFrom = 0;
+        while (searchFrom < input.Length)
         {
-            return false;
-        }
-
-        var start = index + token.Length;
-        var end = start;
-        while (end < input.Length)
-        {
-            var current = input[end];
-            if (current is '&' or '#' or '"' or '\'')
+            var index = input.IndexOf(token, searchFrom, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
             {
-                break;
+                return false;
             }
 
-            end++;
+            if (index > 0)
+            {
+                var previous = input[index - 1];
+                if (previous is not ('?' or '&' or '#'))
+                {
+                    searchFrom = index + 1;
+                    continue;
+                }
+            }
+
+            var start = index + token.Length;
+            var end = start;
+            while (end < input.Length)
+            {
+                var current = input[end];
+                if (current is '&' or '#' or '"' or '\'')
+                {
+                    break;
+                }
+
+                end++;
+            }
+
+            if (end <= start)
+            {
+                searchFrom = index + 1;
+                continue;
+            }
+
+            value = Decode(input[start..end].Trim());
+            if (string.IsNullOrWhiteSpace(value) || IsBooleanLiteral(value))
+            {
+                searchFrom = index + 1;
+                continue;
+            }
+
+            return true;
         }
 
-        if (end <= start)
-        {
-            return false;
-        }
-
-        value = Decode(input[start..end].Trim());
-        return !string.IsNullOrWhiteSpace(value);
+        return false;
     }
 
     private static string ExtractNumericSequence(string value)
@@ -408,6 +533,11 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
+            if (IsBooleanLiteral(value))
+            {
+                continue;
+            }
+
             id = Truncate(value);
             return true;
         }
@@ -423,25 +553,28 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
-        if (TryReadParam(input, "tt_from", out var ttFrom))
+        var handle = Regex.Match(
+            input,
+            @"tiktok\.com/@([A-Za-z0-9._]+)|/@([A-Za-z0-9._]+)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (handle.Success)
+        {
+            id = handle.Groups[1].Success ? handle.Groups[1].Value : handle.Groups[2].Value;
+            if (!string.IsNullOrWhiteSpace(id) && !IsBooleanLiteral(id))
+            {
+                return true;
+            }
+        }
+
+        if (TryReadParam(input, "tt_from", out var ttFrom) && !IsBooleanLiteral(ttFrom))
         {
             id = ttFrom;
             return true;
         }
 
-        if (TryReadParam(input, "sec_uid", out var secUid))
+        if (TryReadParam(input, "sec_uid", out var secUid) && !IsBooleanLiteral(secUid))
         {
             id = secUid;
-            return true;
-        }
-
-        var handle = Regex.Match(
-            input,
-            @"tiktok\.com/@([A-Za-z0-9._]+)",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (handle.Success)
-        {
-            id = handle.Groups[1].Value;
             return true;
         }
 
@@ -470,6 +603,11 @@ public static class AffiliateTrackingIdValidator
                 continue;
             }
 
+            if (IsBooleanLiteral(value))
+            {
+                continue;
+            }
+
             id = value;
             return true;
         }
@@ -488,6 +626,11 @@ public static class AffiliateTrackingIdValidator
         foreach (var key in new[] { "matt_tool", "matt_word", "penn", "penn_id" })
         {
             if (!TryReadParam(input, key, out var value))
+            {
+                continue;
+            }
+
+            if (IsBooleanLiteral(value))
             {
                 continue;
             }
@@ -513,4 +656,15 @@ public static class AffiliateTrackingIdValidator
 
     private static string Truncate(string value) =>
         value.Length <= MaxLength ? value : value[..MaxLength];
+
+    private static string NormalizeHost(string host)
+    {
+        var normalized = (host ?? string.Empty).Trim().TrimStart('.').ToLowerInvariant();
+        if (normalized.StartsWith("www.", StringComparison.Ordinal))
+        {
+            normalized = normalized[4..];
+        }
+
+        return normalized;
+    }
 }

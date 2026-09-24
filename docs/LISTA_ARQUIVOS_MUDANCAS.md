@@ -650,6 +650,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **PlatformLinkResolverTests.cs** — parse e extração TikTok, Magazine Luiza e Mercado Livre.
 - [x] **ConnectStoreModal.razor** — "✅ Credencial {ID} extraída com sucesso para {Plataforma}!".
 
+### Fase 19.19 — Auto-detecção de plataforma e correção do unshorten
+
+- [x] **MarketplaceUrlDetector** / **AffiliateTrackingIdValidator.TryDetectPlatformFromUrl** — domínio colado seleciona Shopee, TikTok, Magalu, ML, Amazon, Casas Bahia e Kabum.
+- [x] **ConnectStoreModal.razor** — `SelectedPlatform` atualizado em `@oninput`/`@onchange`; ignora literal `true`.
+- [x] **UrlExpansionService** — retorna string da URL final; `AllowAutoRedirect = true` e User-Agent de Chrome.
+- [x] **AffiliateTrackingIdValidator** — `p=` só como query param; extrai `@username` / `tt_from`, Magazine Você / `parceiro`, `matt_tool` / `penn`.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

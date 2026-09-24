@@ -52,6 +52,9 @@ public sealed class PlatformLinkResolver
     public static string ExtractAffiliateId(string url, MarketplaceType platform) =>
         AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(url, platform.ToString());
 
+    public static bool TryDetectPlatformFromUrl(string? url, out MarketplaceType platform) =>
+        AffiliateTrackingIdValidator.TryDetectPlatformFromUrl(url, out platform);
+
     public IPlatformLinkStrategy Resolve(string url)
     {
         if (string.IsNullOrWhiteSpace(url))

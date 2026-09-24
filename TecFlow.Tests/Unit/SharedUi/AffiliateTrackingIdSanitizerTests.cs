@@ -1,6 +1,7 @@
 ﻿using TecFlow.Business.Integrations;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Enums;
+using TecFlow.SharedUi.Helpers;
 using TecFlow.SharedUi.Services.Integrations;
 
 namespace TecFlow.Tests.Unit.SharedUi;
@@ -175,6 +176,29 @@ public class AffiliateTrackingIdSanitizerTests
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://meli.la/abc"));
         Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://magazineluiza.onelink.me/x"));
         Assert.False(AffiliateTrackingIdSanitizer.IsShortenerUrl("sualoja-20"));
+    }
+
+    [Theory]
+    [InlineData("https://vt.tiktok.com/abc", MarketplaceType.TikTokShop)]
+    [InlineData("https://magazineluiza.onelink.me/abc", MarketplaceType.MagazineLuiza)]
+    [InlineData("https://meli.la/abc", MarketplaceType.MercadoLivre)]
+    [InlineData("https://s.shopee.com.br/abc", MarketplaceType.Shopee)]
+    [InlineData("https://amzn.to/abc", MarketplaceType.Amazon)]
+    [InlineData("https://cb.com.br/p/1", MarketplaceType.CasasBahia)]
+    [InlineData("https://kb.um/abc", MarketplaceType.Kabum)]
+    public void Detect_ShouldSelectPlatformFromPastedUrl(string url, MarketplaceType expected)
+    {
+        Assert.Equal(expected, MarketplaceUrlDetector.Detect(url)?.IntegrationType);
+        Assert.True(AffiliateTrackingIdSanitizer.TryDetectPlatformFromUrl(url, out var platform));
+        Assert.Equal(expected, platform);
+    }
+
+    [Fact]
+    public void PreferExtractedCredential_ShouldNeverKeepTrue()
+    {
+        Assert.Equal(
+            "https://www.tiktok.com/@loja",
+            AffiliateTrackingIdSanitizer.PreferExtractedCredential("true", "https://www.tiktok.com/@loja", "x"));
     }
 
     [Fact]

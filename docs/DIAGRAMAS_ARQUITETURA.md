@@ -1194,9 +1194,10 @@ sequenceDiagram
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
-  UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita :// e /)
+  UI->>UI: Detect plataforma pelo domínio (vt.tiktok / onelink / meli.la / shp.ee)
+  UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita ://, / e literal "true")
   UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / vt.tiktok.com / magazineluiza.onelink.me / meli.la)
-  SVC->>SVC: regex mmp_pid=an_ / @handle / parceiro / matt_tool
+  SVC->>SVC: UrlExpansion AllowAutoRedirect + User-Agent Chrome; regex @handle / parceiro / matt_tool
   SVC->>DB: UNIQUE MarketplaceType+TrackingId (IsActive)
   UI->>API: POST /api/marketplace-auth/lojas/{id}/desconectar
   API->>SVC: UnlinkAsync → InativarContaAsync (AppDbContext SaveChanges IsActive=false)

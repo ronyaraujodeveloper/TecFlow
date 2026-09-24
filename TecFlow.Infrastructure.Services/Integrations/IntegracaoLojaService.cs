@@ -381,14 +381,23 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             };
         }
 
+        if (AffiliateTrackingIdValidator.TryDetectPlatformFromUrl(workingUrl, out var detectedPlatform))
+        {
+            marketplace = detectedPlatform;
+        }
+
         var extracted = AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(workingUrl, marketplace.ToString());
-        var valid = AffiliateTrackingIdValidator.TryNormalize(marketplace, extracted, out var id);
+        var valid = AffiliateTrackingIdValidator.TryNormalize(marketplace, extracted, out var id)
+            && !AffiliateTrackingIdValidator.IsBooleanLiteral(id);
+        var extractedId = valid && !AffiliateTrackingIdValidator.LooksLikeUrl(id)
+            ? id
+            : string.Empty;
         return new ExpandAffiliateUrlResponseDto
         {
-            Status = valid && !AffiliateTrackingIdValidator.LooksLikeUrl(extracted),
+            Status = !string.IsNullOrWhiteSpace(extractedId),
             Descricao = valid ? "OK" : AffiliateTrackingIdValidator.InvalidMessage,
-            ExpandedUrl = workingUrl,
-            ExtractedId = valid ? id : string.Empty
+            ExpandedUrl = AffiliateTrackingIdValidator.IsBooleanLiteral(workingUrl) ? string.Empty : workingUrl,
+            ExtractedId = extractedId
         };
     }
 

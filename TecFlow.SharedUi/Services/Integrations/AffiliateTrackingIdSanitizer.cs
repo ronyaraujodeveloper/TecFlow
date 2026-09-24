@@ -29,6 +29,15 @@ public static class AffiliateTrackingIdSanitizer
     public static bool TryExtractShopeeAffiliateId(string? input, out string id) =>
         AffiliateTrackingIdValidator.TryExtractShopeeAffiliateId(input, out id);
 
+    public static bool TryDetectPlatformFromUrl(string? input, out MarketplaceType platform) =>
+        AffiliateTrackingIdValidator.TryDetectPlatformFromUrl(input, out platform);
+
+    public static bool IsBooleanLiteral(string? value) =>
+        AffiliateTrackingIdValidator.IsBooleanLiteral(value);
+
+    public static string PreferExtractedCredential(string? extractedId, string? expandedUrl, string fallback) =>
+        AffiliateTrackingIdValidator.PreferExtractedCredential(extractedId, expandedUrl, fallback);
+
     public static string EnsureAbsoluteHttpUrl(string? value) =>
         AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(value);
 

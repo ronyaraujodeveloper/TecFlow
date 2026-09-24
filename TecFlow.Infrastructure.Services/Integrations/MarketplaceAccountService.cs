@@ -1,9 +1,12 @@
 ﻿using System.Globalization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Mappings;
 using TecFlow.Core.Entities;
+using TecFlow.Database;
 using TecFlow.Database.Entity;
 
 namespace TecFlow.Infrastructure.Services.Integrations;
@@ -14,15 +17,21 @@ public sealed class MarketplaceAccountService
     private readonly ITenantProvisioningService _tenantProvisioning;
     private readonly IUserAccountRepository _userAccountRepository;
     private readonly IMarketplaceAccountRepository _marketplaceAccountRepository;
+    private readonly AppDbContext _context;
+    private readonly ILogger<MarketplaceAccountService> _logger;
 
     public MarketplaceAccountService(
         ITenantProvisioningService tenantProvisioning,
         IUserAccountRepository userAccountRepository,
-        IMarketplaceAccountRepository marketplaceAccountRepository)
+        IMarketplaceAccountRepository marketplaceAccountRepository,
+        AppDbContext context,
+        ILogger<MarketplaceAccountService> logger)
     {
         _tenantProvisioning = tenantProvisioning;
         _userAccountRepository = userAccountRepository;
         _marketplaceAccountRepository = marketplaceAccountRepository;
+        _context = context;
+        _logger = logger;
     }
 
     public async Task<bool> InativarContaAsync(int accountId, CancellationToken cancellationToken = default)
@@ -30,19 +39,40 @@ public sealed class MarketplaceAccountService
         try
         {
             Console.WriteLine($"[MarketplaceAccountService] InativarContaAsync accountId={accountId}");
+            _logger.LogInformation("InativarContaAsync accountId={AccountId}", accountId);
             if (accountId <= 0)
             {
                 Console.WriteLine("[MarketplaceAccountService] InativarContaAsync ignorado: accountId inválido.");
                 return false;
             }
 
-            var ok = await _marketplaceAccountRepository.SetInactiveByIdAsync(accountId, cancellationToken);
-            Console.WriteLine($"[MarketplaceAccountService] InativarContaAsync resultado={ok} accountId={accountId}");
-            return ok;
+            var account = await _context.MarketplaceAccounts
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(item => item.Id == accountId, cancellationToken);
+            if (account is null)
+            {
+                Console.WriteLine($"[MarketplaceAccountService] Conta {accountId} não encontrada no AppDbContext.");
+                _logger.LogWarning("InativarContaAsync: MarketplaceAccount {AccountId} não encontrada.", accountId);
+                return false;
+            }
+
+            account.IsActive = false;
+            account.Touch();
+            await _context.SaveChangesAsync(cancellationToken);
+            Console.WriteLine($"[MarketplaceAccountService] SaveChangesAsync IsActive=false accountId={accountId}");
+            _logger.LogInformation("Conta {AccountId} inativada no SQL Server.", accountId);
+            return true;
+        }
+        catch (DbUpdateException ex)
+        {
+            Console.WriteLine($"[ERRO EF] InativarContaAsync accountId={accountId}: {ex.Message} - {ex.InnerException?.Message} - {ex.StackTrace}");
+            _logger.LogError(ex, "Erro de validação/persistência ao inativar MarketplaceAccount {AccountId}.", accountId);
+            throw;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERRO] InativarContaAsync accountId={accountId}: {ex.Message} - {ex.StackTrace}");
+            _logger.LogError(ex, "Erro ao inativar MarketplaceAccount {AccountId}.", accountId);
             throw;
         }
     }

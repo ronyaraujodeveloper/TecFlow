@@ -77,7 +77,7 @@
             {
                 <MarketplaceStoreCard Store="store"
                                       IsBusy="@_isBusy"
-                                      OnUnlink="UnlinkStoreAsync" />
+                                      OnUnlink="ConfirmarDesconexaoAsync" />
             }
         </section>
     }
@@ -256,7 +256,7 @@
 
     private Task CarregarContasAsync() => ObterLojasAsync();
 
-    private async Task UnlinkStoreAsync(int accountId)
+    private async Task ConfirmarDesconexaoAsync(MarketplaceAccountDto account)
     {
         _isBusy = true;
         ClearPageMessage();
@@ -264,8 +264,8 @@
 
         try
         {
-            Console.WriteLine($"[MinhasLojas] Confirmar desconexão accountId={accountId}");
-            var response = await IntegracaoApi.UnlinkAsync(accountId);
+            Console.WriteLine($"[MinhasLojas] ConfirmarDesconexaoAsync accountId={account.Id} shop={account.ShopId}");
+            var response = await IntegracaoApi.UnlinkAsync(account.Id);
             if (response.Status)
             {
                 _pageMessage = "Loja desconectada com sucesso!";
@@ -275,7 +275,8 @@
             }
             else
             {
-                Console.WriteLine($"[MinhasLojas] Falha ao desconectar accountId={accountId}: {response.Descricao}");
+                Console.WriteLine($"[MinhasLojas] Falha ao desconectar accountId={account.Id}: {response.Descricao}");
+                Logger.LogWarning("Falha ao desconectar loja {AccountId}: {Descricao}", account.Id, response.Descricao);
                 _pageMessage = string.IsNullOrWhiteSpace(response.Descricao)
                     ? "Não foi possível desconectar a loja."
                     : response.Descricao;
@@ -284,8 +285,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERRO BLAZOR] desconectar loja {accountId}: {ex.Message} - {ex.StackTrace}");
-            Logger.LogError(ex, "Erro ao desconectar loja {AccountId}.", accountId);
+            Console.WriteLine($"[ERRO BLAZOR] ConfirmarDesconexaoAsync {account.Id}: {ex.Message} - {ex.StackTrace}");
+            Logger.LogError(ex, "Erro ao desconectar loja {AccountId}.", account.Id);
             _pageMessage = "Erro inesperado ao desconectar loja.";
             _pageMessageIsError = true;
         }

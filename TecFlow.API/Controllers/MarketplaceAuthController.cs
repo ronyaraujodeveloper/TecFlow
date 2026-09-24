@@ -170,8 +170,22 @@ public class MarketplaceAuthController : ControllerBase
     /// <summary>Inativa logicamente uma loja (`IsActive = false`) no SQL Server.</summary>
     [HttpDelete("lojas/{id:int}")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkLojaAsync(
+    public Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkLojaAsync(
         int id,
+        CancellationToken cancellationToken) =>
+        UnlinkLojaCoreAsync(id, "DELETE", cancellationToken);
+
+    /// <summary>POST equivalente ao DELETE (IIS/WebDAV costuma bloquear verbos DELETE).</summary>
+    [HttpPost("lojas/{id:int}/desconectar")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public Task<ActionResult<IntegracaoLojaResponseDto>> DesconectarLojaAsync(
+        int id,
+        CancellationToken cancellationToken) =>
+        UnlinkLojaCoreAsync(id, "POST", cancellationToken);
+
+    private async Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkLojaCoreAsync(
+        int id,
+        string httpMethod,
         CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -186,13 +200,13 @@ public class MarketplaceAuthController : ControllerBase
 
         try
         {
-            Console.WriteLine($"[MarketplaceAuth] DELETE lojas/{id} userId={userId.Value}");
+            Console.WriteLine($"[MarketplaceAuth] {httpMethod} lojas/{id} desconectar userId={userId.Value}");
             var result = await _integracaoLojaService.UnlinkAsync(userId.Value, id, cancellationToken);
             return result.Status ? Ok(result) : NotFound(result);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERRO] DELETE lojas/{id}: {ex.Message} - {ex.StackTrace}");
+            Console.WriteLine($"[ERRO] {httpMethod} lojas/{id}: {ex.Message} - {ex.StackTrace}");
             Log.Error(ex, "Erro ao inativar MarketplaceAccount {AccountId} no SQL Server", id);
             _logger.LogError(ex, "Erro ao inativar MarketplaceAccount {AccountId} no SQL Server", id);
             return StatusCode(

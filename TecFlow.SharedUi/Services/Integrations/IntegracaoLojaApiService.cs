@@ -91,7 +91,11 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
         CancellationToken cancellationToken = default)
     {
         using var _ = _loadingService.BeginScope("Desconectando loja...");
-        return SendEnvelopeAsync(HttpMethod.Delete, $"api/marketplace-auth/lojas/{integrationId}", null, cancellationToken);
+        return SendEnvelopeAsync(
+            HttpMethod.Post,
+            $"api/marketplace-auth/lojas/{integrationId}/desconectar",
+            null,
+            cancellationToken);
     }
 
     public async Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(

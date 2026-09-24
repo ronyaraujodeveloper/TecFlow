@@ -37,7 +37,10 @@
             {
                 <p class="text-danger small mb-2">Confirmar desconexão desta loja?</p>
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-danger btn-touch" disabled="@IsBusy" @onclick="ConfirmDeleteAsync">
+                    <button type="button"
+                            class="btn btn-danger btn-touch"
+                            disabled="@IsBusy"
+                            @onclick="() => ConfirmarDesconexaoAsync(Store)">
                         Sim, desconectar
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@IsBusy" @onclick="CancelDelete">
@@ -61,7 +64,7 @@
 @code {
     [Parameter, EditorRequired] public MarketplaceAccountDto Store { get; set; } = default!;
     [Parameter] public bool IsBusy { get; set; }
-    [Parameter] public EventCallback<int> OnUnlink { get; set; }
+    [Parameter] public EventCallback<MarketplaceAccountDto> OnUnlink { get; set; }
 
     private bool _confirmDelete;
 
@@ -122,17 +125,18 @@
 
     private void CancelDelete() => _confirmDelete = false;
 
-    private async Task ConfirmDeleteAsync()
+    private async Task ConfirmarDesconexaoAsync(MarketplaceAccountDto account)
     {
         try
         {
-            Console.WriteLine($"[MarketplaceStoreCard] Sim, desconectar accountId={Store.Id} shop={Store.ShopId}");
-            await OnUnlink.InvokeAsync(Store.Id);
+            Console.WriteLine($"[MarketplaceStoreCard] Sim, desconectar accountId={account.Id} shop={account.ShopId}");
+            await OnUnlink.InvokeAsync(account);
             _confirmDelete = false;
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERRO BLAZOR] ConfirmDeleteAsync accountId={Store.Id}: {ex.Message} - {ex.StackTrace}");
+            Console.WriteLine($"[ERRO BLAZOR] ConfirmarDesconexaoAsync accountId={account.Id}: {ex.Message} - {ex.StackTrace}");
             throw;
         }
     }

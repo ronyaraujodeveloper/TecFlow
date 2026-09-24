@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations;
@@ -7,10 +9,13 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
 using TecFlow.Database.Entity;
 using TecFlow.Database.Filter;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Services.Integrations;
 using TecFlow.Infrastructure.Services.Tenancy;
+using TecFlow.Util.Security;
 
 namespace TecFlow.Tests.Unit.Integrations;
 
@@ -756,22 +761,27 @@ public class IntegracaoLojaServiceTests
 
         var account = new MarketplaceAccount
         {
-            Id = 42,
             UserId = "7",
             ShopId = "ul-7-loja-homolog",
             MarketplaceType = MarketplaceType.Shopee,
             IsActive = true,
-            TenantId = user.TenantId
+            TenantId = user.TenantId,
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
+            CreatedAt = DateTime.UtcNow
         };
 
+        var db = CreateMemoryContext();
+        db.Tenants.Add(new Tenant { Id = user.TenantId, Name = "Tenant Principal", IsActive = true });
+        db.MarketplaceAccounts.Add(account);
+        await db.SaveChangesAsync();
+        var accountId = account.Id;
+
         var accounts = new Mock<IMarketplaceAccountRepository>();
-        accounts.Setup(repository => repository.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+        accounts.Setup(repository => repository.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(account);
-        accounts.Setup(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         var stores = new Mock<IIntegracaoLojaRepository>();
-        stores.Setup(repository => repository.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+        stores.Setup(repository => repository.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((IntegracaoLoja?)null);
 
         var service = new IntegracaoLojaService(
@@ -779,20 +789,21 @@ public class IntegracaoLojaServiceTests
             users.Object,
             accounts.Object,
             new Mock<IMarketplaceAuthService>().Object,
-            AccountPrep(users, accounts),
+            AccountPrep(users, accounts, db),
             Production());
 
-        var result = await service.UnlinkAsync(7, 42);
+        var result = await service.UnlinkAsync(7, accountId);
 
         Assert.True(result.Status);
         Assert.Equal("Loja desconectada com sucesso!", result.Descricao);
-        accounts.Verify(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.False((await db.MarketplaceAccounts.FindAsync(accountId))!.IsActive);
         accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
     }
 
     private static MarketplaceAccountService AccountPrep(
         Mock<IUserAccountRepository> users,
-        Mock<IMarketplaceAccountRepository>? accounts = null)
+        Mock<IMarketplaceAccountRepository>? accounts = null,
+        AppDbContext? context = null)
     {
         var tenants = new Mock<ITenantProvisioningService>();
         tenants.Setup(service => service.EnsureTenantForUserAsync(It.IsAny<UserAccount>(), It.IsAny<CancellationToken>()))
@@ -821,7 +832,20 @@ public class IntegracaoLojaServiceTests
         return new MarketplaceAccountService(
             tenants.Object,
             users.Object,
-            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object);
+            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object,
+            context ?? CreateMemoryContext(),
+            NullLogger<MarketplaceAccountService>.Instance);
+    }
+
+    private static AppDbContext CreateMemoryContext()
+    {
+        var encryption = new Mock<IEncryptionService>();
+        encryption.Setup(service => service.Encrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        encryption.Setup(service => service.Decrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new AppDbContext(options, encryption.Object, new NullCurrentTenantService());
     }
 
     private static (

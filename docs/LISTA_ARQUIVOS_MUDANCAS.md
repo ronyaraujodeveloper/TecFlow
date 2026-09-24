@@ -635,7 +635,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **MarketplaceAccountService.InativarContaAsync** / **MarketplaceAccountRepository.SetInactiveByIdAsync** — `IsActive = false` e `SaveChanges` no SQL Server por Id.
 - [x] **IntegracaoLojaService.UnlinkAsync** — resolve usuário persistível, inativa a conta e não usa `Upsert` por ShopId.
 - [x] **DELETE api/marketplace-auth/lojas/{id}** — mesmo JWT (`sub` / NameIdentifier) da listagem; Minhas Lojas recarrega a grade.
-- [x] **MinhasLojas.razor** / **MarketplaceStoreCard.razor** — `Sim, desconectar` com log, `CarregarContasAsync` e toast "Loja desconectada com sucesso!".
+- [x] **MinhasLojas.razor** / **MarketplaceStoreCard.razor** — `ConfirmarDesconexaoAsync(MarketplaceAccountDto)` (`async Task`), POST `lojas/{id}/desconectar`, `CarregarContasAsync` e `StateHasChanged`.
+- [x] **MarketplaceAccountService.InativarContaAsync** — `IgnoreQueryFilters`, `IsActive = false` e `SaveChangesAsync` no `AppDbContext`.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

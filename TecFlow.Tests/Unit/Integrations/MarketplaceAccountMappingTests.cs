@@ -1,9 +1,14 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
+using TecFlow.Database;
+using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Services.Integrations;
+using TecFlow.Util.Security;
 
 namespace TecFlow.Tests.Unit.Integrations;
 
@@ -78,19 +83,44 @@ public class MarketplaceAccountMappingTests
     [Fact]
     public async Task InativarContaAsync_ShouldSetInactiveById()
     {
-        var accounts = new Mock<IMarketplaceAccountRepository>();
-        accounts.Setup(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var db = CreateMemoryContext();
+        var account = new MarketplaceAccount
+        {
+            UserId = "7",
+            ShopId = "ul-7-loja-homolog",
+            MarketplaceType = MarketplaceType.Shopee,
+            IsActive = true,
+            TenantId = Guid.NewGuid(),
+            ExpiresAt = DateTime.UtcNow.AddDays(1),
+            CreatedAt = DateTime.UtcNow
+        };
+        db.MarketplaceAccounts.Add(account);
+        await db.SaveChangesAsync();
 
-        var ok = await CreateService(accounts).InativarContaAsync(42);
+        var ok = await CreateService(context: db).InativarContaAsync(account.Id);
 
         Assert.True(ok);
-        accounts.Verify(repository => repository.SetInactiveByIdAsync(42, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.False((await db.MarketplaceAccounts.FindAsync(account.Id))!.IsActive);
     }
 
-    private static MarketplaceAccountService CreateService(Mock<IMarketplaceAccountRepository>? accounts = null) =>
+    private static MarketplaceAccountService CreateService(
+        Mock<IMarketplaceAccountRepository>? accounts = null,
+        AppDbContext? context = null) =>
         new(
             new Mock<ITenantProvisioningService>().Object,
             new Mock<IUserAccountRepository>().Object,
-            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object);
+            (accounts ?? new Mock<IMarketplaceAccountRepository>()).Object,
+            context ?? CreateMemoryContext(),
+            NullLogger<MarketplaceAccountService>.Instance);
+
+    private static AppDbContext CreateMemoryContext()
+    {
+        var encryption = new Mock<IEncryptionService>();
+        encryption.Setup(service => service.Encrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        encryption.Setup(service => service.Decrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new AppDbContext(options, encryption.Object, new NullCurrentTenantService());
+    }
 }

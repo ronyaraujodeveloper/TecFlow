@@ -25,6 +25,41 @@ public class PlatformLinkResolverTests
     }
 
     [Fact]
+    public void ExtractAffiliateId_ShouldReadTikTokUniqueIdAmzIndica()
+    {
+        const string url =
+            "https://shop.tiktok.com/view/product/1?unique_id=amz.indica&user_id=7426532104848278533&sec_user_id=MS4wLjAB";
+
+        var id = PlatformLinkResolver.ExtractAffiliateId(url, MarketplaceType.TikTokShop);
+
+        Assert.Equal("amz.indica", id);
+        Assert.Equal(
+            "amz.indica",
+            PlatformLinkResolver.ExtractAffiliateId(
+                "https://vt.tiktok.com/ZSabc/?unique_id=@amz.indica",
+                MarketplaceType.TikTokShop));
+        Assert.True(PlatformLinkResolver.TryDetectPlatformFromUrl("https://vt.tiktok.com/ZSabc/", out var fromVt));
+        Assert.Equal(MarketplaceType.TikTokShop, fromVt);
+        Assert.True(PlatformLinkResolver.TryDetectPlatformFromUrl("https://shop.tiktok.com/view/product/1", out var fromShop));
+        Assert.Equal(MarketplaceType.TikTokShop, fromShop);
+    }
+
+    [Fact]
+    public void ExtractAffiliateId_ShouldReadTikTokUserIdWhenUniqueIdIsMissing()
+    {
+        Assert.Equal(
+            "7426532104848278533",
+            PlatformLinkResolver.ExtractAffiliateId(
+                "https://shop.tiktok.com/view/product/1?user_id=7426532104848278533&sec_user_id=MS4wLjAB",
+                MarketplaceType.TikTokShop));
+        Assert.Equal(
+            "MS4wLjABAAAAHASH",
+            PlatformLinkResolver.ExtractAffiliateId(
+                "https://shop.tiktok.com/view/product/1?sec_user_id=MS4wLjABAAAAHASH",
+                MarketplaceType.TikTokShop));
+    }
+
+    [Fact]
     public void ExtractAffiliateId_ShouldReadTikTokHandleAfterAt()
     {
         var id = PlatformLinkResolver.ExtractAffiliateId(
@@ -35,10 +70,20 @@ public class PlatformLinkResolverTests
     }
 
     [Fact]
+    public void ExtractAffiliateId_ShouldPreferTikTokUniqueIdOverHandle()
+    {
+        var id = PlatformLinkResolver.ExtractAffiliateId(
+            "https://www.tiktok.com/@achadinhos.aaz/video/1?unique_id=amz.indica&sec_uid=MS4wLjAB",
+            MarketplaceType.TikTokShop);
+
+        Assert.Equal("amz.indica", id);
+    }
+
+    [Fact]
     public void ExtractAffiliateId_ShouldPreferTikTokHandleOverTtFrom()
     {
         var id = PlatformLinkResolver.ExtractAffiliateId(
-            "https://www.tiktok.com/@achadinhos.aaz/video/1?tt_from=affiliate_share&sec_uid=MS4wLjAB",
+            "https://www.tiktok.com/@achadinhos.aaz/video/1?tt_from=affiliate_share",
             MarketplaceType.TikTokShop);
 
         Assert.Equal("achadinhos.aaz", id);

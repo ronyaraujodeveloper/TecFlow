@@ -21,7 +21,7 @@ public static class AffiliateTrackingIdValidator
         ExtractedCredentialMessage(id, MarketplaceType.Shopee);
 
     private static readonly string[] KnownParams =
-        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "utm_campaign", "promoter_id", "tag", "matt_tool", "matt_word", "parceiro", "tt_from", "sec_uid", "penn", "penn_id", "afiliado"];
+        ["sub_id", "affiliate_id", "an_id", "mmp_pid", "utm_source", "utm_campaign", "promoter_id", "tag", "matt_tool", "matt_word", "parceiro", "tt_from", "unique_id", "user_id", "sec_user_id", "sec_uid", "penn", "penn_id", "afiliado"];
 
     private static readonly string[] ShortenerHosts =
     [
@@ -389,7 +389,7 @@ public static class AffiliateTrackingIdValidator
     {
         MarketplaceType.Amazon => ["tag"],
         MarketplaceType.Shopee => ["mmp_pid", "utm_source", "sub_id", "affiliate_id", "an_id"],
-        MarketplaceType.TikTokShop => ["tt_from", "sec_uid", "sub_id", "affiliate_id"],
+        MarketplaceType.TikTokShop => ["unique_id", "user_id", "sec_user_id", "sec_uid", "tt_from", "sub_id", "affiliate_id"],
         MarketplaceType.MercadoLivre => ["matt_tool", "matt_word", "penn", "penn_id"],
         MarketplaceType.MagazineLuiza => ["promoter_id", "utm_campaign", "parceiro", "afiliado", "p", "sub_id"],
         MarketplaceType.Kabum => ["sub_id"],
@@ -567,32 +567,59 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
+        if (TryReadTikTokCreatorParam(input, "unique_id", out id))
+        {
+            return true;
+        }
+
+        if (TryReadTikTokCreatorParam(input, "user_id", out id))
+        {
+            return true;
+        }
+
+        if (TryReadTikTokCreatorParam(input, "sec_user_id", out id)
+            || TryReadTikTokCreatorParam(input, "sec_uid", out id))
+        {
+            return true;
+        }
+
         var handle = Regex.Match(
             input,
             @"tiktok\.com/@([A-Za-z0-9._]+)|/@([A-Za-z0-9._]+)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (handle.Success)
         {
-            id = handle.Groups[1].Success ? handle.Groups[1].Value : handle.Groups[2].Value;
+            id = NormalizeTikTokHandle(handle.Groups[1].Success ? handle.Groups[1].Value : handle.Groups[2].Value);
             if (!string.IsNullOrWhiteSpace(id) && !IsBooleanLiteral(id))
             {
                 return true;
             }
         }
 
-        if (TryReadParam(input, "tt_from", out var ttFrom) && !IsBooleanLiteral(ttFrom))
+        if (TryReadTikTokCreatorParam(input, "tt_from", out id))
         {
-            id = ttFrom;
-            return true;
-        }
-
-        if (TryReadParam(input, "sec_uid", out var secUid) && !IsBooleanLiteral(secUid))
-        {
-            id = secUid;
             return true;
         }
 
         return TryExtractByKeys(MarketplaceType.TikTokShop, input, out id);
+    }
+
+    private static bool TryReadTikTokCreatorParam(string input, string key, out string id)
+    {
+        id = string.Empty;
+        if (!TryReadParam(input, key, out var value) || IsBooleanLiteral(value))
+        {
+            return false;
+        }
+
+        id = NormalizeTikTokHandle(value);
+        return !string.IsNullOrWhiteSpace(id);
+    }
+
+    private static string NormalizeTikTokHandle(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        return trimmed.StartsWith('@') ? trimmed[1..] : trimmed;
     }
 
     private static bool TryExtractMagazineLuizaAffiliateId(string? input, out string id)

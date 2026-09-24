@@ -663,6 +663,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreModal.razor** — auto-detect Magalu/ML/TikTok e Tracking ID `5321952` após expandir Onelink.
 - [x] **PlatformLinkResolverTests** — `promoter_id=5321952` → `5321952`.
 
+### Fase 19.21 — TikTok `unique_id`
+
+- [x] **AffiliateTrackingIdValidator** / **PlatformLinkResolver** — prioriza `unique_id`, depois `user_id` e `sec_user_id`.
+- [x] **ConnectStoreModal.razor** — auto-detect `vt.tiktok.com` / `shop.tiktok.com` como TikTok Shop.
+- [x] **PlatformLinkResolverTests** — `unique_id=amz.indica` → `amz.indica`.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

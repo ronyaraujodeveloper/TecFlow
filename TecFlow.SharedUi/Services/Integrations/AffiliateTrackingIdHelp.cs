@@ -12,7 +12,7 @@ public static class AffiliateTrackingIdHelp
         MarketplaceType.Shopee =>
             "Use o ID numérico do afiliado Shopee (somente dígitos, ex.: 6512300000). Pode colar um link com affiliate_id ou sub_id.",
         MarketplaceType.TikTokShop =>
-            "Use o Tracking ID / sub_id da conta TikTok Shop (ex.: 6512300000). Cole o ID ou um link com sub_id=.",
+            "Use o unique_id do criador TikTok Shop (ex.: amz.indica). Cole o ID, unique_id=, user_id= ou um link vt.tiktok.com / shop.tiktok.com.",
         MarketplaceType.MercadoLivre =>
             "Use o Matt Tool ID (número do parâmetro matt_tool, ex.: 123456789). Cole o ID ou um link de afiliado do Mercado Livre.",
         MarketplaceType.MagazineLuiza =>

@@ -1197,7 +1197,7 @@ sequenceDiagram
   UI->>UI: Detect plataforma pelo domínio (vt.tiktok / onelink / meli.la / shp.ee)
   UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita ://, / e literal "true")
   UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / vt.tiktok.com / magazineluiza.onelink.me / meli.la)
-  SVC->>SVC: UrlExpansion AllowAutoRedirect + User-Agent Chrome; promoter_id Magalu / @handle / matt_tool
+  SVC->>SVC: UrlExpansion AllowAutoRedirect + User-Agent Chrome; unique_id TikTok / promoter_id Magalu / matt_tool
   SVC->>DB: UNIQUE MarketplaceType+TrackingId (IsActive)
   UI->>API: POST /api/marketplace-auth/lojas/{id}/desconectar
   API->>SVC: UnlinkAsync → InativarContaAsync (AppDbContext SaveChanges IsActive=false)

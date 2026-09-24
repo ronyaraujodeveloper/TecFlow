@@ -9,27 +9,27 @@
 @if (Visible)
 {
     <div class="modal fade show d-block marketplace-connect-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="connect-store-title">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header border-0 pb-0">
+                <div class="modal-header border-0">
                     <div>
-                        <h2 class="modal-title h5 fw-bold mb-1" id="connect-store-title">Conectar nova loja</h2>
-                        <p class="text-muted small mb-0">
-                            Shopee, TikTok Shop, Mercado Livre, Amazon, Magazine Luiza, Kabum! e Casas Bahia usam link de afiliado (Tracking ID / parceiro), sem App Key / App Secret. Informe o apelido e o ID do Afiliado.
+                        <h2 class="modal-title h5 fw-bold" id="connect-store-title">Conectar nova loja</h2>
+                        <p class="text-muted">
+                            Informe o apelido e o ID de afiliado/parceiro. Sem App Key / App Secret.
                         </p>
                     </div>
-                    <button type="button" class="btn-close btn-touch" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
+                    <button type="button" class="btn-close" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
                 </div>
 
-                <div class="modal-body pt-3">
+                <div class="modal-body">
                     @if (!string.IsNullOrWhiteSpace(DisplayError))
                     {
-                        <div class="alert alert-danger py-2 small" role="alert">@DisplayError</div>
+                        <div class="alert alert-danger py-1 px-2 small mb-2" role="alert">@DisplayError</div>
                     }
 
-                    <div class="mb-3">
+                    <div class="marketplace-connect-section">
                         <label class="form-label fw-semibold">Plataforma</label>
-                        <div class="marketplace-platform-picker d-grid gap-2">
+                        <div class="marketplace-platform-picker">
                             <button type="button"
                                     class="btn btn-touch marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.CasasBahia)"
                                     disabled="@_linking"
@@ -75,7 +75,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="marketplace-connect-section">
                         <label class="form-label fw-semibold" for="friendly-name">Apelido / nome amigável</label>
                         <input id="friendly-name"
                                type="text"
@@ -87,7 +87,7 @@
                                disabled="@_linking" />
                     </div>
 
-                    <div class="mb-3">
+                    <div class="marketplace-connect-section marketplace-connect-section--last">
                         <label class="form-label fw-semibold" for="tracking-id">@TrackingIdLabel</label>
                         <input id="tracking-id"
                                type="text"
@@ -136,18 +136,18 @@
                     }
                 </div>
 
-                <div class="modal-footer border-0 flex-column flex-sm-row gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="Close">
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" disabled="@_linking" @onclick="Close">
                         Cancelar
                     </button>
                     <button type="button"
-                            class="btn btn-primary btn-touch w-100 w-sm-auto"
+                            class="btn btn-primary"
                             @onclick="VincularManualmenteDirect">
                         @(_linking ? "Salvando..." : (_platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
                     </button>
                     @if (!_platform.IsUniversalAffiliatePlatform())
                     {
-                        <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" disabled="@_linking" @onclick="StartOAuthAsync">
+                        <button type="button" class="btn btn-outline-primary" disabled="@_linking" @onclick="StartOAuthAsync">
                             @(_linking ? "Redirecionando..." : "Conectar via OAuth")
                         </button>
                     }

@@ -597,6 +597,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **GeradorLinks.razor** — chip Casas Bahia no seletor (`IsBackendReady`).
 - [x] **CasasBahiaLinkStrategyTests.cs** — parse de URLs e injeção de rastreio.
 
+### Fase 19.10 — Modal Conectar nova loja compacta
+
+- [x] **ConnectStoreModal.razor** / **app.css** — grid `auto-fit` 3–4 colunas, badges 28px, modal sem scroll vertical.
+
 ### Fase 19.3.2 — Cópia e compartilhamento
 
 - [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.

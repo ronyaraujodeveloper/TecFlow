@@ -783,25 +783,22 @@ html, body {
 }
 
 .marketplace-platform-picker {
-    grid-template-columns: 1fr;
-}
-
-@media (min-width: 576px) {
-    .marketplace-platform-picker {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
 }
 
 .marketplace-platform-option {
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 0.85rem;
+    border-radius: 0.6rem;
     background: #fff;
-    padding: 0.75rem;
+    padding: 6px 8px;
+    min-height: 0;
 }
 
 .marketplace-platform-option--selected {
     border-color: #0d6efd;
-    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+    box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.18);
 }
 
 .marketplace-stores-empty {
@@ -813,12 +810,86 @@ html, body {
     pointer-events: auto;
 }
 
+.marketplace-connect-modal .modal-dialog {
+    max-width: 560px;
+    margin: 0.75rem auto;
+}
+
+.marketplace-connect-modal .modal-content {
+    overflow: hidden;
+}
+
+.marketplace-connect-modal .modal-header {
+    padding: 0.75rem 1rem 0.15rem;
+    align-items: flex-start;
+}
+
+.marketplace-connect-modal .modal-title {
+    font-size: 1.05rem;
+    margin-bottom: 0.15rem;
+}
+
+.marketplace-connect-modal .modal-header p {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    margin-bottom: 0;
+}
+
+.marketplace-connect-modal .modal-body {
+    padding: 0.4rem 1rem 0.25rem;
+    overflow: visible;
+}
+
+.marketplace-connect-modal .form-label {
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+}
+
+.marketplace-connect-modal .form-control {
+    padding: 0.3rem 0.6rem;
+    min-height: 2rem;
+    font-size: 0.875rem;
+}
+
+.marketplace-connect-section {
+    margin-bottom: 0.55rem;
+}
+
+.marketplace-connect-section--last {
+    margin-bottom: 0.15rem;
+}
+
+.marketplace-connect-modal .marketplace-platform-badge {
+    display: inline-flex;
+    max-height: 28px;
+    width: 100%;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.marketplace-connect-modal .btn-close {
+    padding: 0.35rem;
+    margin: 0.1rem 0.1rem 0 auto;
+}
+
 .marketplace-connect-modal + .modal-backdrop {
     z-index: 1050;
 }
 
+.marketplace-connect-modal .modal-footer {
+    padding: 0.4rem 1rem 0.75rem;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .marketplace-connect-modal .modal-footer .btn {
-    min-height: var(--touch-target-min);
+    min-height: 2.15rem;
+    padding: 0.28rem 0.85rem;
     pointer-events: auto;
 }
 

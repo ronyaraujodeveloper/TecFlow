@@ -616,6 +616,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **AffiliateTrackingIdSanitizerTests.cs** — URLs, query solta, `an_id` Shopee e ID puro.
 - [x] **ConnectStoreModal.razor** — `ExtractAffiliateIdFromUrl` em `@oninput`/`@onchange` e dica de colar link de teste.
 
+### Fase 19.14 — Validação estrita do Tracking ID e expansão de encurtadores
+
+- [x] **AffiliateTrackingIdValidator.cs** — rejeita URL residual (`://` ou `/`); extrai `tag`/`sub_id`/`affiliate_id`/`matt_tool`/`parceiro`.
+- [x] **ConnectStoreModal.razor** — bloqueia Salvar conta com alerta de ID inválido; expande `br.shp.ee` / `amzn.to` / `magalu.me`.
+- [x] **POST api/marketplace-auth/expand-affiliate-url** — HEAD/GET via `UrlExpansionService`.
+- [x] **MarketplaceAccountRepository.SanitizeHttpTrackingIdsAsync** — contas com `TrackingId` contendo `http` são limpas ou inativadas na listagem.
+- [x] **MarketplaceStoreCard** — alerta para corrigir ID inválido.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

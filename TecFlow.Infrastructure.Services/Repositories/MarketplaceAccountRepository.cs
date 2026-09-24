@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Entities;
@@ -67,9 +68,55 @@ namespace TecFlow.Infrastructure.Services.Repositories;
         return await _context.MarketplaceAccounts
             .AsNoTracking()
             .IgnoreQueryFilters()
-            .Where(account => account.IsActive && account.UserId == key)
+            .Where(account => account.UserId == key
+                && (account.IsActive
+                    || (account.TrackingId != null && account.TrackingId.Contains("http"))
+                    || (account.AffiliateTrackingId != null && account.AffiliateTrackingId.Contains("http"))))
             .OrderByDescending(account => account.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task SanitizeHttpTrackingIdsAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var key = userId?.Trim() ?? string.Empty;
+        var accounts = await _context.MarketplaceAccounts
+            .IgnoreQueryFilters()
+            .Where(account => account.UserId == key
+                && ((account.TrackingId != null && account.TrackingId.Contains("http"))
+                    || (account.AffiliateTrackingId != null && account.AffiliateTrackingId.Contains("http"))))
+            .ToListAsync(cancellationToken);
+
+        if (accounts.Count == 0)
+        {
+            return;
+        }
+
+        var changed = false;
+        foreach (var account in accounts)
+        {
+            var raw = string.IsNullOrWhiteSpace(account.TrackingId)
+                ? account.AffiliateTrackingId
+                : account.TrackingId;
+            if (AffiliateTrackingIdValidator.TryNormalize(account.MarketplaceType, raw, out var cleanId)
+                && !string.IsNullOrWhiteSpace(cleanId))
+            {
+                account.TrackingId = cleanId;
+                account.AffiliateTrackingId = cleanId;
+                account.IsActive = true;
+            }
+            else
+            {
+                account.IsActive = false;
+            }
+
+            account.Touch();
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public Task<MarketplaceAccount?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>

@@ -251,6 +251,31 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
+    public async Task ExpandAffiliateUrlAsync_ShouldReturnExtractedId()
+    {
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.ExpandAffiliateUrlAsync(
+                "https://amzn.to/abc",
+                "Amazon",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ExpandAffiliateUrlResponseDto
+            {
+                Status = true,
+                Descricao = "OK",
+                ExpandedUrl = "https://www.amazon.com.br/dp/B0TEST?tag=sualoja-20",
+                ExtractedId = "sualoja-20"
+            });
+
+        var action = await CreateController(lojas: lojas.Object).ExpandAffiliateUrlAsync(
+            new ExpandAffiliateUrlRequestDto { Url = "https://amzn.to/abc", Platform = "Amazon" },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        var body = Assert.IsType<ExpandAffiliateUrlResponseDto>(ok.Value);
+        Assert.Equal("sualoja-20", body.ExtractedId);
+    }
+
+    [Fact]
     public async Task VincularManualAsync_ShouldReturnOk_WhenLinkSucceeds()
     {
         var lojas = new Mock<IIntegracaoLojaService>();

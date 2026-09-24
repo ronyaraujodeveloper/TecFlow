@@ -173,6 +173,7 @@
                     </button>
                     <button type="button"
                             class="btn btn-primary"
+                            disabled="@(!CanSaveAccount)"
                             @onclick="VincularManualmenteDirect">
                         @(_linking ? "Salvando..." : (_platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
                     </button>
@@ -230,8 +231,12 @@
     private string? _formError;
     private bool _linking;
     private bool _showIdHelp;
+    private bool _expanding;
+    private int _expandGeneration;
+    private bool _trackingInvalid;
 
     private string? DisplayError => ErrorMessage ?? _formError;
+    private bool CanSaveAccount => !_linking && !_expanding && !_trackingInvalid;
 
     protected override void OnParametersSet()
     {
@@ -247,16 +252,65 @@
         _formError = null;
         if (!string.IsNullOrWhiteSpace(_trackingId))
         {
-            _trackingId = ExtractAffiliateIdFromUrl(_trackingId, _platform.ToString());
+            ApplyTrackingId(_trackingId);
         }
     }
 
     private void ToggleIdHelp() => _showIdHelp = !_showIdHelp;
 
-    private void OnTrackingIdInput(ChangeEventArgs e)
+    private async Task OnTrackingIdInput(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString() ?? string.Empty;
-        _trackingId = ExtractAffiliateIdFromUrl(raw, _platform.ToString());
+        var generation = ++_expandGeneration;
+
+        if (AffiliateTrackingIdSanitizer.IsShortenerUrl(raw))
+        {
+            _expanding = true;
+            _formError = null;
+            try
+            {
+                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(raw, _platform.ToString());
+                if (generation != _expandGeneration)
+                {
+                    return;
+                }
+
+                raw = string.IsNullOrWhiteSpace(expanded.ExtractedId)
+                    ? (string.IsNullOrWhiteSpace(expanded.ExpandedUrl) ? raw : expanded.ExpandedUrl)
+                    : expanded.ExtractedId;
+            }
+            finally
+            {
+                if (generation == _expandGeneration)
+                {
+                    _expanding = false;
+                }
+            }
+        }
+
+        if (generation != _expandGeneration)
+        {
+            return;
+        }
+
+        ApplyTrackingId(raw);
+    }
+
+    private void ApplyTrackingId(string input)
+    {
+        var extracted = ExtractAffiliateIdFromUrl(input, _platform.ToString());
+        _trackingId = extracted;
+        _trackingInvalid = !AffiliateTrackingIdSanitizer.TryNormalize(_platform, extracted, out _);
+        if (_trackingInvalid)
+        {
+            _formError = AffiliateTrackingIdSanitizer.InvalidMessage;
+            return;
+        }
+
+        if (string.Equals(_formError, AffiliateTrackingIdSanitizer.InvalidMessage, StringComparison.Ordinal))
+        {
+            _formError = null;
+        }
     }
 
     private static string ExtractAffiliateIdFromUrl(string input, string platform) =>
@@ -309,9 +363,29 @@
         try
         {
             var friendlyName = (await ReadInputAsync("friendly-name", _friendlyName)).Trim();
-            var trackingId = ExtractAffiliateIdFromUrl(
-                (await ReadInputAsync("tracking-id", _trackingId)).Trim(),
-                _platform.ToString());
+            var rawTracking = (await ReadInputAsync("tracking-id", _trackingId)).Trim();
+            var trackingId = rawTracking;
+
+            if (AffiliateTrackingIdSanitizer.IsShortenerUrl(rawTracking))
+            {
+                var expanded = await IntegracaoApi.ExpandAffiliateUrlAsync(rawTracking, _platform.ToString());
+                trackingId = string.IsNullOrWhiteSpace(expanded.ExtractedId)
+                    ? expanded.ExpandedUrl
+                    : expanded.ExtractedId;
+            }
+
+            trackingId = ExtractAffiliateIdFromUrl(trackingId, _platform.ToString());
+
+            if (!AffiliateTrackingIdSanitizer.TryNormalize(_platform, trackingId, out var normalized)
+                || AffiliateTrackingIdSanitizer.LooksLikeUrl(normalized))
+            {
+                _trackingId = trackingId;
+                _trackingInvalid = true;
+                _formError = AffiliateTrackingIdSanitizer.InvalidMessage;
+                return;
+            }
+
+            trackingId = normalized;
             var authorizationCode = (await ReadInputAsync("auth-code", _authorizationCode)).Trim();
             var shopIdInput = (await ReadInputAsync("shop-id", _shopId)).Trim();
 
@@ -433,5 +507,7 @@
         _formError = null;
         _linking = false;
         _showIdHelp = false;
+        _expanding = false;
+        _trackingInvalid = false;
     }
 }

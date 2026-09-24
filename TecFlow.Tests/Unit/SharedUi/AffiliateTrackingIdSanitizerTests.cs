@@ -1,4 +1,5 @@
-﻿using TecFlow.Core.Enums;
+﻿using TecFlow.Business.Integrations;
+using TecFlow.Core.Enums;
 using TecFlow.SharedUi.Services.Integrations;
 
 namespace TecFlow.Tests.Unit.SharedUi;
@@ -114,6 +115,28 @@ public class AffiliateTrackingIdSanitizerTests
     {
         var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl("sualoja-20", "Amazon");
         Assert.Equal("sualoja-20", id);
+    }
+
+    [Fact]
+    public void TryNormalize_ShouldRejectBareUrlWithoutTrackingParams()
+    {
+        var ok = AffiliateTrackingIdSanitizer.TryNormalize(
+            MarketplaceType.Amazon,
+            "https://www.amazon.com.br/dp/B0TESTASIN",
+            out var id);
+
+        Assert.False(ok);
+        Assert.Contains("://", id);
+        Assert.Equal(AffiliateTrackingIdSanitizer.InvalidMessage, AffiliateTrackingIdValidator.InvalidMessage);
+    }
+
+    [Fact]
+    public void IsShortenerUrl_ShouldDetectBrShpEeAndAmznTo()
+    {
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://br.shp.ee/taeej22s"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://amzn.to/abc123"));
+        Assert.True(AffiliateTrackingIdSanitizer.IsShortenerUrl("https://magalu.me/xyz"));
+        Assert.False(AffiliateTrackingIdSanitizer.IsShortenerUrl("sualoja-20"));
     }
 
     [Fact]

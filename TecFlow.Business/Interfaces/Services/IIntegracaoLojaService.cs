@@ -10,4 +10,9 @@ public interface IIntegracaoLojaService
     Task<IntegracaoLojaResponseDto> LinkAsync(int userId, IntegracaoLojaDto dto, CancellationToken cancellationToken = default);
 
     Task<IntegracaoLojaResponseDto> UnlinkAsync(int userId, int integrationId, CancellationToken cancellationToken = default);
+
+    Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
+        string url,
+        string platform,
+        CancellationToken cancellationToken = default);
 }

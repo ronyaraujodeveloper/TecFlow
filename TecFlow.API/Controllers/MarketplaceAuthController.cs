@@ -167,6 +167,20 @@ public class MarketplaceAuthController : ControllerBase
         }
     }
 
+    /// <summary>Expande encurtadores (br.shp.ee, amzn.to, magalu.me) e extrai o Tracking ID.</summary>
+    [HttpPost("expand-affiliate-url")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<ExpandAffiliateUrlResponseDto>> ExpandAffiliateUrlAsync(
+        [FromBody] ExpandAffiliateUrlRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _integracaoLojaService.ExpandAffiliateUrlAsync(
+            request?.Url ?? string.Empty,
+            request?.Platform ?? string.Empty,
+            cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     /// <summary>Vinculação manual (homologação). JWT opcional: sem claim usa UserId de fallback no IIS.</summary>
     [HttpPost("vincular-manual")]
     [AllowAnonymous]

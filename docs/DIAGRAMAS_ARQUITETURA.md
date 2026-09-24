@@ -1194,7 +1194,8 @@ sequenceDiagram
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
   UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
-  UI->>UI: ExtractAffiliateIdFromUrl (tag/sub_id/an_id/matt_tool/matt_word/parceiro)
+  UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita :// e /)
+  UI->>API: POST expand-affiliate-url (br.shp.ee / amzn.to / magalu.me)
   UI->>UI: VincularManualmenteDirect (type=button)
   UI->>UI: lê apelido + Affiliate ID; Shopee e TikTok Shop sem OAuth (Universal Link)
   UI->>UI: SyncSessionFromPrincipal (JWT do cookie)

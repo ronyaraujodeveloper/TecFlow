@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -35,7 +36,9 @@ public static class MarketplaceAccountMapper
             PlatformType = account.MarketplaceType,
             ExpiresAt = account.ExpiresAt,
             Status = status,
-            CreatedAt = account.CreatedAt
+            CreatedAt = account.CreatedAt,
+            RequiresTrackingIdCorrection = AffiliateTrackingIdValidator.LooksLikeUrl(trackingId)
+                || AffiliateTrackingIdValidator.ContainsHttp(trackingId)
         };
     }
 
@@ -60,7 +63,9 @@ public static class MarketplaceAccountMapper
             PlatformType = item.PlatformType,
             ExpiresAt = item.ExpiresAt,
             Status = ResolveStatus(item.ExpiresAt, item.Status),
-            CreatedAt = item.CreatedAt
+            CreatedAt = item.CreatedAt,
+            RequiresTrackingIdCorrection = AffiliateTrackingIdValidator.LooksLikeUrl(trackingId)
+                || AffiliateTrackingIdValidator.ContainsHttp(trackingId)
         };
     }
 

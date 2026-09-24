@@ -30,6 +30,11 @@ public interface IIntegracaoLojaApiService
         int integrationId,
         CancellationToken cancellationToken = default);
 
+    Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
+        string url,
+        string platform,
+        CancellationToken cancellationToken = default);
+
     Task<(bool Success, string? AuthorizationUrl, string? ErrorMessage)> GetAuthorizationUrlAsync(
         MarketplaceType platformType,
         string redirectUri,
@@ -87,6 +92,48 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
     {
         using var _ = _loadingService.BeginScope("Desconectando loja...");
         return SendEnvelopeAsync(HttpMethod.Delete, $"api/integracoes/lojas/{integrationId}", null, cancellationToken);
+    }
+
+    public async Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
+        string url,
+        string platform,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient("Orquestrador");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/marketplace-auth/expand-affiliate-url");
+            await ApplyBearerAsync(client, request, cancellationToken);
+            request.Content = JsonContent.Create(
+                new ExpandAffiliateUrlRequestDto { Url = url, Platform = platform },
+                options: JsonOptions);
+
+            using var response = await client.SendAsync(request, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var payload = TryDeserialize<ExpandAffiliateUrlResponseDto>(content);
+            if (payload is not null)
+            {
+                return payload;
+            }
+
+            return new ExpandAffiliateUrlResponseDto
+            {
+                Status = false,
+                Descricao = HttpService.FormatIisError(content),
+                ExpandedUrl = url
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ExpandAffiliateUrlResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Não foi possível expandir o link encurtado."
+                    : ex.Message,
+                ExpandedUrl = url
+            };
+        }
     }
 
     public async Task<(bool Success, string? AuthorizationUrl, string? ErrorMessage)> GetAuthorizationUrlAsync(

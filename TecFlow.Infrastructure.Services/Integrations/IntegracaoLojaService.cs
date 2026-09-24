@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Microsoft.Extensions.Hosting;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -22,6 +23,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     private readonly IMarketplaceAuthService _marketplaceAuthService;
     private readonly MarketplaceAccountService _marketplaceAccountService;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly IUrlExpansionService? _urlExpansionService;
 
     public IntegracaoLojaService(
         IIntegracaoLojaRepository integracaoLojaRepository,
@@ -29,7 +31,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         IMarketplaceAccountRepository marketplaceAccountRepository,
         IMarketplaceAuthService marketplaceAuthService,
         MarketplaceAccountService marketplaceAccountService,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        IUrlExpansionService? urlExpansionService = null)
     {
         _integracaoLojaRepository = integracaoLojaRepository;
         _userAccountRepository = userAccountRepository;
@@ -37,6 +40,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         _marketplaceAuthService = marketplaceAuthService;
         _marketplaceAccountService = marketplaceAccountService;
         _hostEnvironment = hostEnvironment;
+        _urlExpansionService = urlExpansionService;
     }
 
     public async Task<IntegracaoLojaResponseDto> ListByUserAsync(
@@ -51,6 +55,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         try
         {
+            await _marketplaceAccountRepository.SanitizeHttpTrackingIdsAsync(userKey, cancellationToken);
             var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
             var integrations = await _integracaoLojaRepository.ListByUserIdAsync(persistUserId, cancellationToken);
 
@@ -113,6 +118,13 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
 
         ApplyHomologFallbacks(dto);
+
+        if (!AffiliateTrackingIdValidator.TryNormalize(dto.PlatformType, dto.TrackingId, out var normalizedTracking))
+        {
+            return Fail(AffiliateTrackingIdValidator.InvalidMessage);
+        }
+
+        dto.TrackingId = string.IsNullOrWhiteSpace(normalizedTracking) ? null : normalizedTracking;
 
         var user = await ResolvePersistableUserAsync(userId);
         if (user is null)
@@ -300,6 +312,53 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         {
             Status = true,
             Descricao = "Loja desvinculada com sucesso."
+        };
+    }
+
+    public async Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
+        string url,
+        string platform,
+        CancellationToken cancellationToken = default)
+    {
+        var marketplace = AffiliateTrackingIdValidator.ParsePlatform(platform);
+        var workingUrl = url?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(workingUrl))
+        {
+            return new ExpandAffiliateUrlResponseDto
+            {
+                Status = false,
+                Descricao = AffiliateTrackingIdValidator.InvalidMessage
+            };
+        }
+
+        try
+        {
+            if (_urlExpansionService is not null
+                && AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl))
+            {
+                workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            return new ExpandAffiliateUrlResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Não foi possível expandir o link encurtado."
+                    : ex.Message,
+                ExpandedUrl = workingUrl
+            };
+        }
+
+        var extracted = AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(workingUrl, marketplace.ToString());
+        var valid = AffiliateTrackingIdValidator.TryNormalize(marketplace, extracted, out var id);
+        return new ExpandAffiliateUrlResponseDto
+        {
+            Status = valid && !AffiliateTrackingIdValidator.LooksLikeUrl(extracted),
+            Descricao = valid ? "OK" : AffiliateTrackingIdValidator.InvalidMessage,
+            ExpandedUrl = workingUrl,
+            ExtractedId = valid ? id : string.Empty
         };
     }
 

@@ -159,6 +159,11 @@
             if (response.Status && response.DataList is { Count: > 0 })
             {
                 _stores.AddRange(response.DataList.OrderByDescending(s => s.CreatedAt));
+                if (_stores.Exists(store => store.RequiresTrackingIdCorrection))
+                {
+                    _pageMessage = "Há lojas com ID de afiliado inválido (URL). Corrija o ID numérico/tag para reativar.";
+                    _pageMessageIsError = true;
+                }
             }
             else if (!response.Status)
             {

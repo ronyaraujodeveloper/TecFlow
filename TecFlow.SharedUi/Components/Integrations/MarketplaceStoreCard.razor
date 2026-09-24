@@ -12,6 +12,12 @@
                 <h3 class="h6 fw-semibold mb-1 text-truncate" title="@Store.FriendlyName">@Store.FriendlyName</h3>
                 <p class="text-muted small mb-0">Shop ID: <span class="font-monospace">@Store.ShopId</span></p>
                 <p class="text-muted small mb-0">Affiliate ID: <span class="font-monospace">@AffiliateIdDisplay</span></p>
+                @if (Store.RequiresTrackingIdCorrection)
+                {
+                    <p class="text-danger small mb-0 mt-2">
+                        ID inválido (URL detectada). Edite o cadastro e informe o ID numérico/tag.
+                    </p>
+                }
             </div>
         </div>
 
@@ -59,8 +65,18 @@
 
     private bool _confirmDelete;
 
-    private string AffiliateIdDisplay =>
-        string.IsNullOrWhiteSpace(Store.AffiliateTrackingId) ? "—" : Store.AffiliateTrackingId;
+    private string AffiliateIdDisplay
+    {
+        get
+        {
+            if (Store.RequiresTrackingIdCorrection)
+            {
+                return "inválido — informe o ID";
+            }
+
+            return string.IsNullOrWhiteSpace(Store.AffiliateTrackingId) ? "—" : Store.AffiliateTrackingId;
+        }
+    }
 
     private string GetPlatformLabel() => Store.PlatformType switch
     {

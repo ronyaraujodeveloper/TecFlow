@@ -40,4 +40,6 @@ public class MarketplaceAccountDto
     public MarketplaceIntegrationStatus Status { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public bool RequiresTrackingIdCorrection { get; set; }
 }

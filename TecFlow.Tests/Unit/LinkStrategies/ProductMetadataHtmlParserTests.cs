@@ -96,6 +96,19 @@ public class ProductMetadataHtmlParserTests
         Assert.Equal(
             "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
             ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(url));
+        Assert.DoesNotContain("4062152607", ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(url), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryExtractShopeeProductNameFromUrl_ShouldIgnoreTrailingNumericItemId()
+    {
+        const string url =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.25901538592";
+
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(url));
+        Assert.DoesNotContain("25901538592", ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(url), StringComparison.Ordinal);
     }
 
     [Fact]

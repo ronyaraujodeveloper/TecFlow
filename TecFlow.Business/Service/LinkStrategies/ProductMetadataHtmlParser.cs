@@ -44,6 +44,10 @@ public static class ProductMetadataHtmlParser
         @"-i\.\d+\.\d+$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex ShopeeSlugBeforeItemIdRegex = new(
+        @"shopee\.com\.br/([^/]+)-i\.\d+\.\d+",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex MarketplaceTitleSuffixRegex = new(
         @"\s*[\|\-–—]\s*(Shopee(?:\s+Brasil)?|Mercado\s*Livre|MercadoLibre|Magazine\s+Luiza|Magalu|Amazon(?:\.com\.br)?|KaBuM!?|Kabum!?|Casas\s+Bahia).*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -379,18 +383,46 @@ public static class ProductMetadataHtmlParser
 
     private static string? ExtractShopeeSlug(Uri uri)
     {
-        var segment = uri.AbsolutePath
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .LastOrDefault();
-        if (string.IsNullOrWhiteSpace(segment))
+        var source = string.IsNullOrWhiteSpace(uri.OriginalString) ? uri.ToString() : uri.OriginalString;
+        var itemMatch = ShopeeSlugBeforeItemIdRegex.Match(source);
+        if (itemMatch.Success)
         {
-            return null;
+            var captured = itemMatch.Groups[1].Value;
+            return IsPurelyNumeric(captured) ? null : captured;
         }
 
-        segment = segment.Split('?', 2)[0];
-        var suffixMatch = ShopeeItemSuffixRegex.Match(segment);
-        var slug = suffixMatch.Success ? segment[..suffixMatch.Index] : segment;
-        return string.IsNullOrWhiteSpace(slug) ? null : slug;
+        var withoutHash = source.Split('#', 2)[0];
+        var withoutQuery = withoutHash.Split('?', 2)[0];
+        var segments = withoutQuery.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var i = segments.Length - 1; i >= 0; i--)
+        {
+            var candidate = segments[i];
+            if (candidate.Contains('.', StringComparison.Ordinal)
+                && candidate.Contains("shopee", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (IsPurelyNumeric(candidate))
+            {
+                continue;
+            }
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private static bool IsPurelyNumeric(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length > 0 && trimmed.All(char.IsDigit);
     }
 
     private static string? ExtractSegmentBeforeMarker(Uri uri, string marker)
@@ -488,7 +520,7 @@ public static class ProductMetadataHtmlParser
         var decoded = HttpUtilityUrlDecode(slug);
         var name = decoded.Replace('-', ' ').Replace('_', ' ').Trim();
         name = Regex.Replace(name, @"\s+", " ");
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(name) || IsPurelyNumeric(name))
         {
             return null;
         }

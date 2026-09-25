@@ -210,6 +210,68 @@ public class ProductMetadataServiceTests
         Assert.DoesNotContain("25901538592", result.ProductName, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TryParseShopeeItemIds_ShouldReadShopAndItemFromPathAndQuery()
+    {
+        Assert.True(ProductMetadataService.TryParseShopeeItemIds(
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.4062152607",
+            out var shopFromPath,
+            out var itemFromPath));
+        Assert.Equal("308244953", shopFromPath);
+        Assert.Equal("4062152607", itemFromPath);
+
+        Assert.True(ProductMetadataService.TryParseShopeeItemIds(
+            "https://shopee.com.br/product?sp_atk=abc&shopid=308244953&itemid=4062152607",
+            out var shopFromQuery,
+            out var itemFromQuery));
+        Assert.Equal("308244953", shopFromQuery);
+        Assert.Equal("4062152607", itemFromQuery);
+        Assert.Equal(28.70m, ProductMetadataService.ConvertShopeePrice(2_870_000_000m));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_ShouldParseShopeeItemApiNameAndMicroPrice()
+    {
+        const string url =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.4062152607";
+        const string json = """
+            {"data":{"itemid":4062152607,"shopid":308244953,"name":"Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064","price":2870000000,"price_min":2870000000,"image":"br-11134207-7r98o-lovito"}}
+            """;
+        var expansion = new StubExpansionService(url);
+        string? requestedApi = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requestedApi = request.RequestUri?.ToString();
+            Assert.Contains("itemid=4062152607", requestedApi, StringComparison.Ordinal);
+            Assert.Contains("shopid=308244953", requestedApi, StringComparison.Ordinal);
+            var userAgent = request.Headers.TryGetValues("User-Agent", out var values)
+                ? string.Join(" ", values)
+                : request.Headers.UserAgent.ToString();
+            Assert.Contains("Windows NT 10.0", userAgent, StringComparison.Ordinal);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync("https://s.shopee.com.br/8plUTWtg3e");
+
+        Assert.Contains("/api/v4/item/get", requestedApi, StringComparison.Ordinal);
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            result.ProductName);
+        Assert.Equal(28.70m, result.ProductPrice);
+        Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(result.ProductPrice));
+        Assert.Equal(
+            "https://down-br.img.susercontent.com/file/br-11134207-7r98o-lovito",
+            result.ProductImageUrl);
+        Assert.DoesNotContain("Opaanlp", result.ProductName, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class StubExpansionService : IUrlExpansionService
     {
         private readonly string _expanded;

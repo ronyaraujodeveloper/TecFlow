@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Common;
@@ -7,10 +10,18 @@ using TecFlow.Business.Service.LinkStrategies;
 
 namespace TecFlow.Infrastructure.Services.LinkStrategies;
 
-/// <summary>Expande encurtadores e extrai OpenGraph/JSON-LD da página do produto.</summary>
+/// <summary>Expande encurtadores e extrai metadados via API JSON da Shopee (itemid/shopid) ou OpenGraph.</summary>
 public sealed class ProductMetadataService : IProductMetadataService
 {
     private const int MaxHtmlChars = 512_000;
+    private const decimal ShopeePriceScale = 100_000_000m;
+    private const string ShopeeItemApiUrl = "https://shopee.com.br/api/v4/item/get";
+    private const string ShopeeImageCdn = "https://down-br.img.susercontent.com/file/";
+    private const string ShopeeApiUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+    private static readonly Regex ShopeeItemPathRegex = new(
+        @"-i\.(\d+)\.(\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly string[] InvalidTitles =
     [
@@ -20,7 +31,8 @@ public sealed class ProductMetadataService : IProductMetadataService
         "shopee brasil",
         "verification",
         "captcha",
-        "just a moment"
+        "just a moment",
+        "produto"
     ];
 
     private readonly IUrlExpansionService _urlExpansionService;
@@ -69,6 +81,15 @@ public sealed class ProductMetadataService : IProductMetadataService
                 return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(workingUrl), workingUrl);
             }
 
+            if (TryParseShopeeItemIds(resolvedUrl, out var shopId, out var itemId))
+            {
+                var fromApi = await TryExtractFromShopeeItemApiAsync(shopId, itemId, cancellationToken);
+                if (fromApi is not null)
+                {
+                    return SanitizeMetadata(fromApi, resolvedUrl);
+                }
+            }
+
             var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
             using var request = new HttpRequestMessage(HttpMethod.Get, resolvedUrl);
             ApplyAntiBotBrowserHeaders(request);
@@ -99,6 +120,82 @@ public sealed class ProductMetadataService : IProductMetadataService
                 resolvedUrl);
             return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(resolvedUrl), resolvedUrl);
         }
+    }
+
+    public static bool TryParseShopeeItemIds(string? url, out string shopId, out string itemId)
+    {
+        shopId = string.Empty;
+        itemId = string.Empty;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var pathMatch = ShopeeItemPathRegex.Match(url);
+        if (pathMatch.Success)
+        {
+            shopId = pathMatch.Groups[1].Value;
+            itemId = pathMatch.Groups[2].Value;
+            return IsPositiveId(shopId) && IsPositiveId(itemId);
+        }
+
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return false;
+        }
+
+        string? queryShop = null;
+        string? queryItem = null;
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+            var key = HttpUtilityUrlDecode(parts[0]);
+            var value = HttpUtilityUrlDecode(parts[1]);
+            if (key.Equals("shopid", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("shop_id", StringComparison.OrdinalIgnoreCase))
+            {
+                queryShop = value;
+            }
+            else if (key.Equals("itemid", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("item_id", StringComparison.OrdinalIgnoreCase))
+            {
+                queryItem = value;
+            }
+        }
+
+        if (IsPositiveId(queryShop) && IsPositiveId(queryItem))
+        {
+            shopId = queryShop!;
+            itemId = queryItem!;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static decimal? ConvertShopeePrice(decimal raw)
+    {
+        if (raw <= 0)
+        {
+            return null;
+        }
+
+        var reais = raw >= 1_000_000m
+            ? raw / ShopeePriceScale
+            : raw;
+        reais = decimal.Round(reais, 2, MidpointRounding.AwayFromZero);
+        return reais > 0 ? reais : null;
     }
 
     public static string UnwrapNestedDestinationUrl(string? url)
@@ -162,8 +259,18 @@ public sealed class ProductMetadataService : IProductMetadataService
         }
 
         var normalized = trimmed.ToLowerInvariant();
+        if (normalized.Equals("produto", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
         foreach (var invalid in InvalidTitles)
         {
+            if (invalid.Equals("produto", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             if (normalized.Equals(invalid, StringComparison.Ordinal)
                 || normalized.Contains(invalid, StringComparison.Ordinal))
             {
@@ -174,16 +281,104 @@ public sealed class ProductMetadataService : IProductMetadataService
         return false;
     }
 
-    private static ProductMetadataDto SanitizeMetadata(ProductMetadataDto parsed, string resolvedUrl)
+    private async Task<ProductMetadataDto?> TryExtractFromShopeeItemApiAsync(
+        string shopId,
+        string itemId,
+        CancellationToken cancellationToken)
     {
-        ApplyExpandedUrlName(parsed, resolvedUrl);
-        if (!IsInvalidProductName(parsed.ProductName))
+        try
         {
-            return parsed;
+            var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
+            var apiUrl = $"{ShopeeItemApiUrl}?itemid={Uri.EscapeDataString(itemId)}&shopid={Uri.EscapeDataString(shopId)}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+            request.Headers.UserAgent.Clear();
+            request.Headers.Remove("User-Agent");
+            request.Headers.TryAddWithoutValidation("User-Agent", ShopeeApiUserAgent);
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
+            request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation(
+                    "API de item Shopee recusada. Status={Status} ShopId={ShopId} ItemId={ItemId}",
+                    (int)response.StatusCode,
+                    shopId,
+                    itemId);
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            return TryParseShopeeItemApiJson(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Falha ao consultar API de item Shopee. ShopId={ShopId} ItemId={ItemId}",
+                shopId,
+                itemId);
+            return null;
+        }
+    }
+
+    public static ProductMetadataDto? TryParseShopeeItemApiJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
         }
 
-        var unwrapped = UnwrapNestedDestinationUrl(resolvedUrl);
-        ApplyExpandedUrlName(parsed, unwrapped);
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("data", out var data)
+                || data.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            {
+                return null;
+            }
+
+            var name = ReadJsonString(data, "name");
+            var price = ReadShopeePrice(data, "price") ?? ReadShopeePrice(data, "price_min");
+            var imageHash = ReadJsonString(data, "image");
+            string? imageUrl = null;
+            if (!string.IsNullOrWhiteSpace(imageHash))
+            {
+                imageUrl = imageHash.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                    ? imageHash
+                    : ShopeeImageCdn + imageHash.Trim().TrimStart('/');
+            }
+
+            if (IsInvalidProductName(name) && price is null && string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return null;
+            }
+
+            return new ProductMetadataDto
+            {
+                ProductName = name,
+                ProductPrice = price,
+                ProductImageUrl = imageUrl
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static ProductMetadataDto SanitizeMetadata(ProductMetadataDto parsed, string resolvedUrl)
+    {
+        if (IsInvalidProductName(parsed.ProductName))
+        {
+            ApplyExpandedUrlName(parsed, resolvedUrl);
+        }
+
+        if (IsInvalidProductName(parsed.ProductName))
+        {
+            var unwrapped = UnwrapNestedDestinationUrl(resolvedUrl);
+            ApplyExpandedUrlName(parsed, unwrapped);
+        }
+
         if (IsInvalidProductName(parsed.ProductName))
         {
             parsed.ProductName = null;
@@ -201,13 +396,8 @@ public sealed class ProductMetadataService : IProductMetadataService
             return;
         }
 
-        if (IsInvalidProductName(parsed.ProductName)
-            || ProductMetadataHtmlParser.LooksLikeAntiBotTitle(parsed.ProductName)
-            || string.IsNullOrWhiteSpace(parsed.ProductName))
-        {
-            var fallback = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
-            parsed.ProductName = IsInvalidProductName(fallback) ? null : fallback;
-        }
+        var fallback = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
+        parsed.ProductName = IsInvalidProductName(fallback) ? null : fallback;
     }
 
     private static void ApplyAntiBotBrowserHeaders(HttpRequestMessage request)
@@ -220,6 +410,68 @@ public sealed class ProductMetadataService : IProductMetadataService
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
     }
+
+    private static decimal? ReadShopeePrice(JsonElement data, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(data, propertyName, out var priceElement))
+        {
+            return null;
+        }
+
+        if (priceElement.ValueKind == JsonValueKind.Number
+            && priceElement.TryGetDecimal(out var numeric))
+        {
+            return ConvertShopeePrice(numeric);
+        }
+
+        if (priceElement.ValueKind == JsonValueKind.String
+            && decimal.TryParse(
+                priceElement.GetString(),
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out var parsed))
+        {
+            return ConvertShopeePrice(parsed);
+        }
+
+        return null;
+    }
+
+    private static string? ReadJsonString(JsonElement data, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(data, propertyName, out var element)
+            || element.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = element.GetString();
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            value = default;
+            return false;
+        }
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool IsPositiveId(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.All(char.IsDigit) && value.TrimStart('0').Length > 0;
 
     private static string HttpUtilityUrlDecode(string value)
     {

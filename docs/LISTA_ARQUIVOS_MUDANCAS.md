@@ -699,6 +699,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser** / **ProductMetadataService** — slug da URL expandida também para Magalu (`/p/`) e Mercado Livre; preço em `product:price:amount` / query `price_min`; preview e histórico via `FormatBrl` (`R$ 28,70`).
 - [x] **ProductMetadataHtmlParser** — Regex `shopee.com.br/([^/]+)-i.\\d+.\\d+`; descarta slug só numérico (`25901538592`).
 - [x] **ProductMetadataService** — blacklist `Opaanlp`/`Nsbo`/`captcha`; HttpClient iPhone Safari 17; unwrap `target=`/`redirect=`.
+- [x] **ProductMetadataService** — API `shopee.com.br/api/v4/item/get?itemid&shopid`; preço micro-unidades `/ 100000000`; fallback slug.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

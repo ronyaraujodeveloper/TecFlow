@@ -35,7 +35,7 @@ flowchart LR
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
-  META[ProductMetadataService] -->|unshorten + slug UrlDecode + OG/preço| SHORT
+  META[ProductMetadataService] -->|API Shopee itemid/shopid + slug fallback| SHORT
   UI -->|Gerar Link de Comissão| META
   LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL
   SHORT --> LOG

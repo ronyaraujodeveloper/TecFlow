@@ -691,6 +691,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **GeradorLinks.razor** / **ActiveStoreScopeSelector.razor** — opção Todas as lojas e CTA para conectar conta inexistente.
 - [x] **IntegracaoLojaScopeResolverTests.cs**.
 
+### Fase 19.25 — Nome e preço do produto (Shopee slug/OG)
+
+- [x] **ProductMetadataHtmlParser.cs** — `UrlDecode` do slug, limpa `| Shopee Brasil` / `| Mercado Livre` e lê `"price": [0-9.]+`.
+- [x] **ProductMetadataServiceTests.cs** — Lovito Casual Sutiã e `28.70` / `R$ 28,70`.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

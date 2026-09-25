@@ -25,7 +25,19 @@ public static class ProductMetadataHtmlParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ItemPropPriceRegex = new(
-        @"itemprop\s*=\s*[""']price[""'][^>]*(?:content\s*=\s*[""'](?<content>[^""']+)[""']|>(?<text>[^<]+))",
+        @"itemprop\s*=\s*[""']price[""'][^>]*(?:content\s*=\s*[""'](?<content>[^""']+)[""']|>(?<text>[^<]+))|(?:content\s*=\s*[""'](?<content>[^""']+)[""'][^>]*itemprop\s*=\s*[""']price[""'])",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex EmbeddedPriceRegex = new(
+        @"""price""\s*:\s*""?(?<num>[0-9]+(?:\.[0-9]+)?)""?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ShopeeItemSuffixRegex = new(
+        @"-i\.\d+\.\d+$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex MarketplaceTitleSuffixRegex = new(
+        @"\s*[\|\-–—]\s*(Shopee(?:\s+Brasil)?|Mercado\s*Livre|MercadoLibre|Magazine\s+Luiza|Magalu|Amazon(?:\.com\.br)?|KaBuM!?|Kabum!?|Casas\s+Bahia).*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static ProductMetadataDto Parse(string? html, string pageUrl)
@@ -38,16 +50,18 @@ public static class ProductMetadataHtmlParser
 
         var name = FirstNonEmpty(
             ReadMeta(html, "og:title"),
+            ReadJsonLdString(html, "name", requireProductType: false),
             ReadMeta(html, "twitter:title"),
             ReadItemPropName(html),
-            ReadJsonLdString(html, "name"),
-            ReadHtmlTitle(html));
+            ReadHtmlTitle(html),
+            fallback.ProductName);
 
         var priceRaw = FirstNonEmpty(
             ReadMeta(html, "og:price:amount"),
             ReadMeta(html, "product:price:amount"),
             ReadItemPropPrice(html),
-            ReadJsonLdPrice(html));
+            ReadJsonLdPrice(html),
+            ReadEmbeddedPrice(html));
 
         var image = FirstNonEmpty(
             ReadMeta(html, "og:image"),
@@ -56,8 +70,8 @@ public static class ProductMetadataHtmlParser
 
         return new ProductMetadataDto
         {
-            ProductName = Truncate(string.IsNullOrWhiteSpace(name) ? fallback.ProductName : CleanText(name), 255),
-            ProductPrice = ParsePrice(priceRaw),
+            ProductName = Truncate(CleanProductName(name) ?? fallback.ProductName, 255),
+            ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
             ProductImageUrl = Truncate(CleanText(image), 500)
         };
     }
@@ -86,8 +100,9 @@ public static class ProductMetadataHtmlParser
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         for (var i = segments.Length - 1; i >= 0; i--)
         {
-            var decoded = WebUtility.UrlDecode(segments[i]) ?? segments[i];
+            var decoded = UrlDecodeSlug(segments[i]);
             var withoutQuery = decoded.Split('?', 2)[0];
+            withoutQuery = ShopeeItemSuffixRegex.Replace(withoutQuery, string.Empty);
             var slug = withoutQuery
                 .Replace('-', ' ')
                 .Replace('_', ' ')
@@ -97,7 +112,8 @@ public static class ProductMetadataHtmlParser
                 || slug.Equals("dp", StringComparison.OrdinalIgnoreCase)
                 || slug.Equals("product", StringComparison.OrdinalIgnoreCase)
                 || slug.Equals("produto", StringComparison.OrdinalIgnoreCase)
-                || slug.Equals("item", StringComparison.OrdinalIgnoreCase))
+                || slug.Equals("item", StringComparison.OrdinalIgnoreCase)
+                || slug.Equals("sec", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -107,7 +123,13 @@ public static class ProductMetadataHtmlParser
                 continue;
             }
 
-            return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(slug.ToLowerInvariant());
+            if (slug.Any(char.IsUpper))
+            {
+                return CleanProductName(slug) ?? slug;
+            }
+
+            return CleanProductName(CultureInfo.InvariantCulture.TextInfo.ToTitleCase(slug.ToLowerInvariant()))
+                ?? slug;
         }
 
         return string.IsNullOrWhiteSpace(uri.Host) ? "Produto" : uri.Host;
@@ -115,12 +137,12 @@ public static class ProductMetadataHtmlParser
 
     public static string FormatBrl(decimal? price)
     {
-        if (price is not decimal value)
+        if (price is not decimal value || value <= 0)
         {
             return "—";
         }
 
-        return value.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+        return "R$ " + value.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"));
     }
 
     private static string? ReadMeta(string html, string propertyName)
@@ -176,12 +198,17 @@ public static class ProductMetadataHtmlParser
         return match.Success ? match.Groups["title"].Value : null;
     }
 
-    private static string? ReadJsonLdString(string html, string propertyName)
+    private static string? ReadJsonLdString(string html, string propertyName, bool requireProductType = true)
     {
         foreach (Match script in JsonLdScriptRegex.Matches(html))
         {
             var json = script.Groups["json"].Value;
-            if (string.IsNullOrWhiteSpace(json) || !LooksLikeProductJson(json))
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                continue;
+            }
+
+            if (requireProductType && !LooksLikeProductJson(json))
             {
                 continue;
             }
@@ -211,7 +238,7 @@ public static class ProductMetadataHtmlParser
 
             var match = Regex.Match(
                 json,
-                @"""price""\s*:\s*(?:""(?<text>[^""]+)""|(?<num>-?\d+(?:[.,]\d+)?))",
+                @"""price""\s*:\s*(?:""(?<text>[^""]+)""|(?<num>[0-9]+(?:\.[0-9]+)?))",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (match.Success)
             {
@@ -220,6 +247,47 @@ public static class ProductMetadataHtmlParser
         }
 
         return null;
+    }
+
+    private static string? ReadEmbeddedPrice(string html)
+    {
+        var match = EmbeddedPriceRegex.Match(html);
+        return match.Success ? match.Groups["num"].Value : null;
+    }
+
+    private static decimal? NormalizeDisplayPrice(decimal? price) =>
+        price is > 0 ? price : null;
+
+    private static string UrlDecodeSlug(string value)
+    {
+        var current = value ?? string.Empty;
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            var decoded = Uri.UnescapeDataString(current.Replace("+", "%20"));
+            decoded = WebUtility.UrlDecode(decoded) ?? decoded;
+            if (string.Equals(decoded, current, StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            current = decoded;
+        }
+
+        return current;
+    }
+
+    private static string? CleanProductName(string? value)
+    {
+        var cleaned = CleanText(value);
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return null;
+        }
+
+        cleaned = MarketplaceTitleSuffixRegex.Replace(cleaned, string.Empty).Trim();
+        cleaned = ShopeeItemSuffixRegex.Replace(cleaned, string.Empty).Trim();
+        cleaned = Regex.Replace(cleaned, @"\s+", " ");
+        return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
     }
 
     private static bool LooksLikeProductJson(string json) =>

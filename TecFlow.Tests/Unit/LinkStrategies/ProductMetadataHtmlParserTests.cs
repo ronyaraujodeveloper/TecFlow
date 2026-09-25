@@ -61,7 +61,39 @@ public class ProductMetadataHtmlParserTests
     [Fact]
     public void FormatBrl_ShouldUseBrazilianCurrency()
     {
-        Assert.Contains("R$", ProductMetadataHtmlParser.FormatBrl(199.9m));
+        Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(28.70m));
         Assert.Equal("—", ProductMetadataHtmlParser.FormatBrl(null));
+        Assert.Equal("—", ProductMetadataHtmlParser.FormatBrl(0m));
+    }
+
+    [Fact]
+    public void Parse_ShouldStripMarketplaceSuffixAndDecodeShopeeSlug()
+    {
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="Lovito Casual Sutiã Sem Aro | Shopee Brasil" />
+            </head>
+            <body>
+            <script>window.__INITIAL_STATE__={"item":{"price": 28.70}}</script>
+            </body></html>
+            """;
+
+        var parsed = ProductMetadataHtmlParser.Parse(
+            html,
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456");
+
+        Assert.StartsWith("Lovito Casual Sutiã", parsed.ProductName);
+        Assert.DoesNotContain("Shopee", parsed.ProductName, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(28.70m, parsed.ProductPrice);
+    }
+
+    [Fact]
+    public void BuildSlugFallback_ShouldUrlDecodeAccentedShopeeSlug()
+    {
+        var name = ProductMetadataHtmlParser.BuildSlugFallback(
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456");
+
+        Assert.StartsWith("Lovito Casual Sutiã", name);
+        Assert.DoesNotContain("18325850271", name, StringComparison.Ordinal);
     }
 }

@@ -46,6 +46,61 @@ public class ProductMetadataServiceTests
         Assert.Null(result.ProductPrice);
     }
 
+    [Fact]
+    public async Task ExtractAsync_ShouldExtractShopeeLovitoNameAndPrice()
+    {
+        const string expanded =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456";
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="Lovito Casual Sutiã Sem Aro | Shopee Brasil" />
+            <meta property="product:price:amount" content="28.70" />
+            </head>
+            <body>
+            <span itemprop="price">28.70</span>
+            <script type="application/ld+json">{"@type":"Product","name":"Lovito Casual Sutiã Sem Aro","offers":{"price":28.70}}</script>
+            </body></html>
+            """;
+
+        var expansion = new StubExpansionService(expanded);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html, System.Text.Encoding.UTF8, "text/html")
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync("https://s.shopee.com.br/lovito");
+
+        Assert.StartsWith("Lovito Casual Sutiã", result.ProductName);
+        Assert.DoesNotContain("| Shopee", result.ProductName, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(28.70m, result.ProductPrice);
+        Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(result.ProductPrice));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_ShouldDecodeShopeeSlug_WhenHtmlOmitsOpenGraph()
+    {
+        const string expanded =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456";
+        var expansion = new StubExpansionService(expanded);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("<html><body>blocked</body></html>")
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync("https://s.shopee.com.br/lovito");
+
+        Assert.StartsWith("Lovito Casual Sutiã", result.ProductName);
+        Assert.Null(result.ProductPrice);
+    }
+
     private sealed class StubExpansionService : IUrlExpansionService
     {
         private readonly string _expanded;

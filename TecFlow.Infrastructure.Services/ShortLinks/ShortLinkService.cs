@@ -252,7 +252,7 @@ public sealed class ShortLinkService : IShortLinkService
             entity.ProductName = name.Length <= 255 ? name : name[..255];
         }
 
-        entity.ProductPrice = metadata.ProductPrice;
+        entity.ProductPrice = metadata.ProductPrice is > 0 ? metadata.ProductPrice : null;
 
         if (!string.IsNullOrWhiteSpace(metadata.ProductImageUrl))
         {

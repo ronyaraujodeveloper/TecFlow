@@ -98,12 +98,14 @@ public class ProductMetadataServiceTests
             new StubHttpClientFactory(handler),
             NullLogger<ProductMetadataService>.Instance);
 
-        var result = await service.ExtractAsync(url);
+        var result = await service.ExtractAsync("https://s.shopee.com.br/8plUTWtg3e");
 
+        Assert.Equal("https://s.shopee.com.br/8plUTWtg3e", expansion.LastUrl);
         Assert.Equal(
             "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
             result.ProductName);
         Assert.Equal(28.70m, result.ProductPrice);
+        Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(result.ProductPrice));
     }
 
     [Fact]

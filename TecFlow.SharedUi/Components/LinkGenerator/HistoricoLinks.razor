@@ -1,4 +1,5 @@
 ﻿@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
 @using TecFlow.Core.Enums
 @using TecFlow.Database.Filter
 @using TecFlow.SharedUi.Services.LinkGenerator
@@ -111,7 +112,7 @@
                         </div>
 
                         <h3 class="h6 fw-semibold mb-1 text-break">@(string.IsNullOrWhiteSpace(item.ProductName) ? item.DisplayTitle : item.ProductName)</h3>
-                        <p class="product-history-price mb-2">@item.FormattedProductPrice</p>
+                        <p class="product-history-price mb-2">@ProductMetadataHtmlParser.FormatBrl(item.ProductPrice)</p>
 
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
                             <div class="link-history-clicks">
@@ -163,7 +164,7 @@
                                     @(string.IsNullOrWhiteSpace(item.ProductName) ? item.DisplayTitle : item.ProductName)
                                 </td>
                                 <td class="small text-nowrap fw-semibold">
-                                    @item.FormattedProductPrice
+                                    @ProductMetadataHtmlParser.FormatBrl(item.ProductPrice)
                                 </td>
                                 <td class="small text-nowrap">
                                     @item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")

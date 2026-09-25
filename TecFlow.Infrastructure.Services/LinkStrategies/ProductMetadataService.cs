@@ -74,21 +74,7 @@ public sealed class ProductMetadataService : IProductMetadataService
             }
 
             var parsed = ProductMetadataHtmlParser.Parse(html, resolvedUrl);
-            var shopeeName = ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(resolvedUrl);
-            if (!string.IsNullOrWhiteSpace(shopeeName))
-            {
-                parsed.ProductName = shopeeName;
-            }
-            else if (ProductMetadataHtmlParser.LooksLikeAntiBotTitle(parsed.ProductName))
-            {
-                parsed.ProductName = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
-            }
-
-            if (string.IsNullOrWhiteSpace(parsed.ProductName))
-            {
-                parsed.ProductName = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
-            }
-
+            ApplyExpandedUrlName(parsed, resolvedUrl);
             return parsed;
         }
         catch (Exception ex)
@@ -98,6 +84,22 @@ public sealed class ProductMetadataService : IProductMetadataService
                 "Falha ao extrair metadados do produto. Url={Url}",
                 resolvedUrl);
             return ProductMetadataHtmlParser.FromUrlFallback(resolvedUrl);
+        }
+    }
+
+    private static void ApplyExpandedUrlName(ProductMetadataDto parsed, string resolvedUrl)
+    {
+        var slugName = ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(resolvedUrl);
+        if (!string.IsNullOrWhiteSpace(slugName))
+        {
+            parsed.ProductName = slugName;
+            return;
+        }
+
+        if (ProductMetadataHtmlParser.LooksLikeAntiBotTitle(parsed.ProductName)
+            || string.IsNullOrWhiteSpace(parsed.ProductName))
+        {
+            parsed.ProductName = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
         }
     }
 }

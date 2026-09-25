@@ -696,6 +696,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser.cs** — `UrlDecode` do slug, limpa `| Shopee Brasil` / `| Mercado Livre` e lê `"price": [0-9.]+`.
 - [x] **ProductMetadataServiceTests.cs** — Lovito Casual Sutiã e `28.70` / `R$ 28,70`.
 - [x] **ProductMetadataHtmlParser** — slug Shopee (`-i.shop.item`) como nome primário via `HttpUtility.UrlDecode`; descarta títulos anti-bot; HttpClient iPhone Safari.
+- [x] **ProductMetadataHtmlParser** / **ProductMetadataService** — slug da URL expandida também para Magalu (`/p/`) e Mercado Livre; preço em `product:price:amount` / query `price_min`; preview e histórico via `FormatBrl` (`R$ 28,70`).
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

@@ -56,7 +56,7 @@ public static class ProductMetadataHtmlParser
             return fallback;
         }
 
-        var shopeeName = TryExtractShopeeProductNameFromUrl(pageUrl);
+        var slugName = TryExtractMarketplaceProductNameFromUrl(pageUrl);
         var htmlName = FirstNonEmpty(
             ReadMeta(html, "og:title"),
             ReadJsonLdString(html, "name", requireProductType: false),
@@ -69,16 +69,17 @@ public static class ProductMetadataHtmlParser
             htmlName = null;
         }
 
-        var name = FirstNonEmpty(shopeeName, htmlName, fallback.ProductName);
+        var name = FirstNonEmpty(slugName, htmlName, fallback.ProductName);
 
         var priceRaw = FirstNonEmpty(
             ReadRegexGroup(html, PriceMinRegex, "num"),
-            ReadMeta(html, "og:price:amount"),
             ReadMeta(html, "product:price:amount"),
+            ReadMeta(html, "og:price:amount"),
             ReadItemPropPrice(html),
             ReadJsonLdPrice(html),
             ReadEmbeddedPrice(html),
-            ReadRegexGroup(html, MonetaryPriceRegex, "num"));
+            ReadRegexGroup(html, MonetaryPriceRegex, "num"),
+            TryExtractPriceRawFromUrl(pageUrl));
 
         var image = FirstNonEmpty(
             ReadMeta(html, "og:image"),
@@ -88,7 +89,7 @@ public static class ProductMetadataHtmlParser
         return new ProductMetadataDto
         {
             ProductName = Truncate(
-                !string.IsNullOrWhiteSpace(shopeeName) ? shopeeName : (CleanProductName(name) ?? fallback.ProductName),
+                !string.IsNullOrWhiteSpace(slugName) ? slugName : (CleanProductName(name) ?? fallback.ProductName),
                 255),
             ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
             ProductImageUrl = Truncate(CleanText(image), 500)
@@ -115,10 +116,10 @@ public static class ProductMetadataHtmlParser
             return Truncate(url.Trim(), 255) ?? "Produto";
         }
 
-        var shopeeName = TryExtractShopeeProductNameFromUrl(url);
-        if (!string.IsNullOrWhiteSpace(shopeeName))
+        var marketplaceName = TryExtractMarketplaceProductNameFromUrl(url);
+        if (!string.IsNullOrWhiteSpace(marketplaceName))
         {
-            return Truncate(shopeeName, 255) ?? shopeeName;
+            return Truncate(marketplaceName, 255) ?? marketplaceName;
         }
 
         var segments = uri.AbsolutePath
@@ -171,43 +172,75 @@ public static class ProductMetadataHtmlParser
     }
 
     /// <summary>
-    /// Nome do produto a partir do slug da URL expandida da Shopee (independente de HTML anti-bot).
+    /// Nome do produto a partir do slug da URL expandida (Shopee, Magalu e Mercado Livre).
+    /// Independente de HTML anti-bot. Equivale a <c>HttpUtility.UrlDecode</c> + hífens → espaços.
     /// </summary>
-    public static string? TryExtractShopeeProductNameFromUrl(string? url)
+    public static string? TryExtractMarketplaceProductNameFromUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
         {
             return null;
         }
 
-        if (!IsShopeeHost(uri.Host))
+        var host = uri.Host;
+        if (IsShopeeHost(host))
+        {
+            return DecodeSlugToProductName(ExtractShopeeSlug(uri));
+        }
+
+        if (IsMagazineLuizaHost(host))
+        {
+            return DecodeSlugToProductName(ExtractSegmentBeforeMarker(uri, "p"), titleCaseIfLower: true);
+        }
+
+        if (IsMercadoLivreHost(host))
+        {
+            return DecodeSlugToProductName(ExtractMercadoLivreSlug(uri), titleCaseIfLower: true);
+        }
+
+        return null;
+    }
+
+    public static string? TryExtractShopeeProductNameFromUrl(string? url) =>
+        TryExtractMarketplaceProductNameFromUrl(url);
+
+    public static string? TryExtractPriceRawFromUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
         {
             return null;
         }
 
-        var segment = uri.AbsolutePath
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .LastOrDefault();
-        if (string.IsNullOrWhiteSpace(segment))
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrWhiteSpace(query))
         {
             return null;
         }
 
-        segment = segment.Split('?', 2)[0];
-        var suffixMatch = ShopeeItemSuffixRegex.Match(segment);
-        var slug = suffixMatch.Success
-            ? segment[..suffixMatch.Index]
-            : segment;
-
-        if (string.IsNullOrWhiteSpace(slug))
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            return null;
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+            var key = HttpUtilityUrlDecode(parts[0]);
+            if (key.Equals("price_min", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("price", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("product:price:amount", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("og:price:amount", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("amount", StringComparison.OrdinalIgnoreCase))
+            {
+                var value = HttpUtilityUrlDecode(parts[1]);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
         }
 
-        var decoded = HttpUtilityUrlDecode(slug);
-        var name = decoded.Replace('-', ' ').Trim();
-        name = Regex.Replace(name, @"\s+", " ");
-        return string.IsNullOrWhiteSpace(name) ? null : Truncate(name, 255);
+        return null;
     }
 
     public static bool LooksLikeAntiBotTitle(string? title)
@@ -344,9 +377,147 @@ public static class ProductMetadataHtmlParser
         return match.Success ? match.Groups[groupName].Value : null;
     }
 
+    private static string? ExtractShopeeSlug(Uri uri)
+    {
+        var segment = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault();
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            return null;
+        }
+
+        segment = segment.Split('?', 2)[0];
+        var suffixMatch = ShopeeItemSuffixRegex.Match(segment);
+        var slug = suffixMatch.Success ? segment[..suffixMatch.Index] : segment;
+        return string.IsNullOrWhiteSpace(slug) ? null : slug;
+    }
+
+    private static string? ExtractSegmentBeforeMarker(Uri uri, string marker)
+    {
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var i = 0; i < segments.Length; i++)
+        {
+            if (!segments[i].Equals(marker, StringComparison.OrdinalIgnoreCase) || i == 0)
+            {
+                continue;
+            }
+
+            var candidate = segments[i - 1].Split('?', 2)[0];
+            if (!IsGenericPathSegment(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return FirstMeaningfulSegment(segments);
+    }
+
+    private static string? ExtractMercadoLivreSlug(Uri uri)
+    {
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var segment = segments[i].Split('?', 2)[0];
+            if (segment.StartsWith("MLB", StringComparison.OrdinalIgnoreCase)
+                && segment.Contains('-', StringComparison.Ordinal)
+                && segment.Length > 8)
+            {
+                var withoutId = Regex.Replace(segment, @"^MLB-?\d+-", string.Empty, RegexOptions.IgnoreCase);
+                if (!string.IsNullOrWhiteSpace(withoutId) && !IsGenericPathSegment(withoutId))
+                {
+                    return withoutId;
+                }
+            }
+        }
+
+        return FirstMeaningfulSegment(segments);
+    }
+
+    private static string? FirstMeaningfulSegment(string[] segments)
+    {
+        foreach (var raw in segments)
+        {
+            var segment = raw.Split('?', 2)[0];
+            if (!IsGenericPathSegment(segment))
+            {
+                return segment;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsGenericPathSegment(string segment)
+    {
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            return true;
+        }
+
+        if (segment.Equals("p", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("dp", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("product", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("produto", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("item", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("sec", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("up", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("social", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("magazinevoce", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (Regex.IsMatch(segment, @"^MLB-?\d+$", RegexOptions.IgnoreCase))
+        {
+            return true;
+        }
+
+        return segment.All(ch => char.IsDigit(ch) || ch is '.' or ',');
+    }
+
+    private static string? DecodeSlugToProductName(string? slug, bool titleCaseIfLower = false)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            return null;
+        }
+
+        var decoded = HttpUtilityUrlDecode(slug);
+        var name = decoded.Replace('-', ' ').Replace('_', ' ').Trim();
+        name = Regex.Replace(name, @"\s+", " ");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        if (titleCaseIfLower && !name.Any(char.IsUpper))
+        {
+            name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
+        }
+
+        return Truncate(name, 255);
+    }
+
     private static bool IsShopeeHost(string host) =>
         host.Contains("shopee.", StringComparison.OrdinalIgnoreCase)
         || host.Equals("shopee.com", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMagazineLuizaHost(string host)
+    {
+        var normalized = host.Trim().ToLowerInvariant();
+        return normalized.Contains("magazineluiza", StringComparison.Ordinal)
+            || normalized.Contains("magazinevoce", StringComparison.Ordinal);
+    }
+
+    private static bool IsMercadoLivreHost(string host)
+    {
+        var normalized = host.Trim().ToLowerInvariant();
+        return normalized.Contains("mercadolivre", StringComparison.Ordinal)
+            || normalized.Contains("mercadolibre", StringComparison.Ordinal);
+    }
 
     /// <summary>Equivalente a <c>System.Web.HttpUtility.UrlDecode</c> em UTF-8 (percent-encoding).</summary>
     private static string HttpUtilityUrlDecode(string value)

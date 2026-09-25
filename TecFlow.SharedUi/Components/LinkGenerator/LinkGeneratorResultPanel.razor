@@ -1,4 +1,5 @@
 ﻿@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
 @using TecFlow.SharedUi.Helpers
 @inject IJSRuntime Js
 
@@ -40,7 +41,7 @@
                     <h3 class="product-preview-title mb-1">
                         @(string.IsNullOrWhiteSpace(response.ProductName) ? "Produto" : response.ProductName)
                     </h3>
-                    <p class="product-preview-price mb-0">@response.FormattedProductPrice</p>
+                    <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
                 </div>
             </article>
 

@@ -99,6 +99,32 @@ public class ProductMetadataHtmlParserTests
     }
 
     [Fact]
+    public void TryExtractMarketplaceProductNameFromUrl_ShouldDecodeMagaluAndMercadoLivreSlugs()
+    {
+        Assert.Equal(
+            "Smartphone Samsung Galaxy A15",
+            ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(
+                "https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a15/p/218434100/te/smsg/"));
+
+        Assert.Equal(
+            "Fone Bluetooth Tws Com Cancelamento",
+            ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(
+                "https://www.mercadolivre.com.br/fone-bluetooth-tws-com-cancelamento/p/MLB123456789"));
+    }
+
+    [Fact]
+    public void Parse_ShouldReadPriceFromExpandedUrlQuery_WhenHtmlHasNoAmount()
+    {
+        var parsed = ProductMetadataHtmlParser.Parse(
+            "<html><title>Opaanlp Nsbo</title></html>",
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456?price_min=28.70");
+
+        Assert.Equal("Lovito Casual Sutiã Sem Aro", parsed.ProductName);
+        Assert.Equal(28.70m, parsed.ProductPrice);
+        Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(parsed.ProductPrice));
+    }
+
+    [Fact]
     public void BuildSlugFallback_ShouldUrlDecodeAccentedShopeeSlug()
     {
         var name = ProductMetadataHtmlParser.BuildSlugFallback(

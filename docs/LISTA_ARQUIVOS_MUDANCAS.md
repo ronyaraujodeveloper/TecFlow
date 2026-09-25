@@ -698,6 +698,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser** — slug Shopee (`-i.shop.item`) como nome primário via `HttpUtility.UrlDecode`; descarta títulos anti-bot; HttpClient iPhone Safari.
 - [x] **ProductMetadataHtmlParser** / **ProductMetadataService** — slug da URL expandida também para Magalu (`/p/`) e Mercado Livre; preço em `product:price:amount` / query `price_min`; preview e histórico via `FormatBrl` (`R$ 28,70`).
 - [x] **ProductMetadataHtmlParser** — Regex `shopee.com.br/([^/]+)-i.\\d+.\\d+`; descarta slug só numérico (`25901538592`).
+- [x] **ProductMetadataService** — blacklist `Opaanlp`/`Nsbo`/`captcha`; HttpClient iPhone Safari 17; unwrap `target=`/`redirect=`.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

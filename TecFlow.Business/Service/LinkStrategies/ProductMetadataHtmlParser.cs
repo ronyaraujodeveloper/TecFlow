@@ -258,6 +258,7 @@ public static class ProductMetadataHtmlParser
             || title.Contains("Nsbo", StringComparison.OrdinalIgnoreCase)
             || title.Contains("Shopee Brasil", StringComparison.OrdinalIgnoreCase)
             || title.Contains("Captcha", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Verification", StringComparison.OrdinalIgnoreCase)
             || title.Contains("Just a moment", StringComparison.OrdinalIgnoreCase)
             || title.Contains("Access Denied", StringComparison.OrdinalIgnoreCase);
     }

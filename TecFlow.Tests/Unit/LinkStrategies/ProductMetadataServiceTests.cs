@@ -155,6 +155,61 @@ public class ProductMetadataServiceTests
         Assert.DoesNotContain("25901538592", result.ProductName, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ExtractAsync_ShouldIgnoreOpaanlpAndFallbackWithoutSavingAntiBotTitle()
+    {
+        var expansion = new StubExpansionService("https://s.shopee.com.br/8plUTWtg3e");
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "<html><head><title>Opaanlp</title></head><body>Nsbo verification captcha</body></html>",
+                System.Text.Encoding.UTF8,
+                "text/html")
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync("https://s.shopee.com.br/8plUTWtg3e");
+
+        Assert.Null(result.ProductName);
+        Assert.NotEqual("Opaanlp", result.ProductName, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Opaanlp", result.ProductName ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Nsbo", result.ProductName ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ProductMetadataService.IsInvalidProductName("Opaanlp"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("Nsbo"));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_ShouldUnwrapTargetParameterAndUseShopeeSlug()
+    {
+        const string productUrl =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.25901538592";
+        var redirect =
+            "https://shopee.com.br/authenticate?target=" + Uri.EscapeDataString(productUrl);
+        var expansion = new StubExpansionService(redirect);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "<html><head><title>Opaanlp Nsbo</title></head><body>Just a moment</body></html>",
+                System.Text.Encoding.UTF8,
+                "text/html")
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync("https://s.shopee.com.br/8plUTWtg3e");
+
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            result.ProductName);
+        Assert.DoesNotContain("Opaanlp", result.ProductName, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("25901538592", result.ProductName, StringComparison.Ordinal);
+    }
+
     private sealed class StubExpansionService : IUrlExpansionService
     {
         private readonly string _expanded;

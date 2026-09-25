@@ -33,18 +33,7 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 10
             })
-            .ConfigureHttpClient(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-                client.DefaultRequestHeaders.UserAgent.Clear();
-                client.DefaultRequestHeaders.TryAddWithoutValidation(
-                    "User-Agent",
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1");
-                client.DefaultRequestHeaders.TryAddWithoutValidation(
-                    "Accept",
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9");
-            });
+            .ConfigureHttpClient(ConfigureAntiBotBrowserClient);
 
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();
         services.AddScoped<IProductMetadataService, ProductMetadataService>();
@@ -70,14 +59,25 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
     private static void ConfigureExpansionClient(HttpClient client)
     {
         client.Timeout = TimeSpan.FromSeconds(15);
+        ApplyAntiBotBrowserHeaders(client);
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+    }
+
+    private static void ConfigureAntiBotBrowserClient(HttpClient client)
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+        ApplyAntiBotBrowserHeaders(client);
+    }
+
+    private static void ApplyAntiBotBrowserHeaders(HttpClient client)
+    {
         client.DefaultRequestHeaders.UserAgent.Clear();
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "Accept",
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
     }
 }

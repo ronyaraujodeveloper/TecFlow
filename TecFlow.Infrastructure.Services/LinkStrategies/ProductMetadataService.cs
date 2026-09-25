@@ -74,6 +74,16 @@ public sealed class ProductMetadataService : IProductMetadataService
             }
 
             var parsed = ProductMetadataHtmlParser.Parse(html, resolvedUrl);
+            var shopeeName = ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(resolvedUrl);
+            if (!string.IsNullOrWhiteSpace(shopeeName))
+            {
+                parsed.ProductName = shopeeName;
+            }
+            else if (ProductMetadataHtmlParser.LooksLikeAntiBotTitle(parsed.ProductName))
+            {
+                parsed.ProductName = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
+            }
+
             if (string.IsNullOrWhiteSpace(parsed.ProductName))
             {
                 parsed.ProductName = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);

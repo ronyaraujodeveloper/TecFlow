@@ -15,7 +15,7 @@ public class ProductMetadataHtmlParserTests
             </head></html>
             """;
 
-        var parsed = ProductMetadataHtmlParser.Parse(html, "https://shopee.com.br/cadeira-gamer-i.1.2");
+        var parsed = ProductMetadataHtmlParser.Parse(html, "https://www.kabum.com.br/produto/cadeira-gamer-pro");
 
         Assert.Equal("Cadeira Gamer Pro", parsed.ProductName);
         Assert.Equal(1299.90m, parsed.ProductPrice);
@@ -82,9 +82,20 @@ public class ProductMetadataHtmlParserTests
             html,
             "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456");
 
-        Assert.StartsWith("Lovito Casual Sutiã", parsed.ProductName);
+        Assert.Equal("Lovito Casual Sutiã Sem Aro", parsed.ProductName);
         Assert.DoesNotContain("Shopee", parsed.ProductName, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(28.70m, parsed.ProductPrice);
+    }
+
+    [Fact]
+    public void TryExtractShopeeProductNameFromUrl_ShouldDecodeRealLovitoSlug()
+    {
+        const string url =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.4062152607";
+
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            ProductMetadataHtmlParser.TryExtractShopeeProductNameFromUrl(url));
     }
 
     [Fact]
@@ -93,7 +104,7 @@ public class ProductMetadataHtmlParserTests
         var name = ProductMetadataHtmlParser.BuildSlugFallback(
             "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-Sem-Aro-i.18325850271.2559123456");
 
-        Assert.StartsWith("Lovito Casual Sutiã", name);
+        Assert.Equal("Lovito Casual Sutiã Sem Aro", name);
         Assert.DoesNotContain("18325850271", name, StringComparison.Ordinal);
     }
 }

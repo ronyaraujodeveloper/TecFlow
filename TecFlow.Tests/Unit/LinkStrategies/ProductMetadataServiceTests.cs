@@ -12,7 +12,7 @@ public class ProductMetadataServiceTests
     [Fact]
     public async Task ExtractAsync_ShouldParseOpenGraphAfterUnshorten()
     {
-        var expansion = new StubExpansionService("https://shopee.com.br/cadeira-gamer-pro");
+        var expansion = new StubExpansionService("https://www.kabum.com.br/produto/cadeira-gamer-pro");
         var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
@@ -74,10 +74,36 @@ public class ProductMetadataServiceTests
 
         var result = await service.ExtractAsync("https://s.shopee.com.br/lovito");
 
-        Assert.StartsWith("Lovito Casual Sutiã", result.ProductName);
+        Assert.Equal("Lovito Casual Sutiã Sem Aro", result.ProductName);
         Assert.DoesNotContain("| Shopee", result.ProductName, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(28.70m, result.ProductPrice);
         Assert.Equal("R$ 28,70", ProductMetadataHtmlParser.FormatBrl(result.ProductPrice));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_ShouldUseExpandedShopeeSlugAsPrimaryProductName()
+    {
+        const string url =
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.4062152607";
+        var expansion = new StubExpansionService(url);
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "<html><head><title>Opaanlp Nsbo | Shopee Brasil Captcha</title></head><body>{\"price_min\":28.70,\"price\":28.70}</body></html>",
+                System.Text.Encoding.UTF8,
+                "text/html")
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractAsync(url);
+
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            result.ProductName);
+        Assert.Equal(28.70m, result.ProductPrice);
     }
 
     [Fact]
@@ -97,7 +123,7 @@ public class ProductMetadataServiceTests
 
         var result = await service.ExtractAsync("https://s.shopee.com.br/lovito");
 
-        Assert.StartsWith("Lovito Casual Sutiã", result.ProductName);
+        Assert.Equal("Lovito Casual Sutiã Sem Aro", result.ProductName);
         Assert.Null(result.ProductPrice);
     }
 

@@ -29,7 +29,15 @@ public static class ProductMetadataHtmlParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex EmbeddedPriceRegex = new(
-        @"""price""\s*:\s*""?(?<num>[0-9]+(?:\.[0-9]+)?)""?",
+        @"""price(?:_min)?""\s*:\s*""?(?<num>[0-9]+(?:\.[0-9]+)?)""?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex PriceMinRegex = new(
+        @"""price_min""\s*:\s*""?(?<num>[0-9]+(?:\.[0-9]+)?)""?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex MonetaryPriceRegex = new(
+        @"R\$\s*(?<num>\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ShopeeItemSuffixRegex = new(
@@ -48,20 +56,29 @@ public static class ProductMetadataHtmlParser
             return fallback;
         }
 
-        var name = FirstNonEmpty(
+        var shopeeName = TryExtractShopeeProductNameFromUrl(pageUrl);
+        var htmlName = FirstNonEmpty(
             ReadMeta(html, "og:title"),
             ReadJsonLdString(html, "name", requireProductType: false),
             ReadMeta(html, "twitter:title"),
             ReadItemPropName(html),
-            ReadHtmlTitle(html),
-            fallback.ProductName);
+            ReadHtmlTitle(html));
+
+        if (LooksLikeAntiBotTitle(htmlName))
+        {
+            htmlName = null;
+        }
+
+        var name = FirstNonEmpty(shopeeName, htmlName, fallback.ProductName);
 
         var priceRaw = FirstNonEmpty(
+            ReadRegexGroup(html, PriceMinRegex, "num"),
             ReadMeta(html, "og:price:amount"),
             ReadMeta(html, "product:price:amount"),
             ReadItemPropPrice(html),
             ReadJsonLdPrice(html),
-            ReadEmbeddedPrice(html));
+            ReadEmbeddedPrice(html),
+            ReadRegexGroup(html, MonetaryPriceRegex, "num"));
 
         var image = FirstNonEmpty(
             ReadMeta(html, "og:image"),
@@ -70,7 +87,9 @@ public static class ProductMetadataHtmlParser
 
         return new ProductMetadataDto
         {
-            ProductName = Truncate(CleanProductName(name) ?? fallback.ProductName, 255),
+            ProductName = Truncate(
+                !string.IsNullOrWhiteSpace(shopeeName) ? shopeeName : (CleanProductName(name) ?? fallback.ProductName),
+                255),
             ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
             ProductImageUrl = Truncate(CleanText(image), 500)
         };
@@ -94,6 +113,12 @@ public static class ProductMetadataHtmlParser
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
         {
             return Truncate(url.Trim(), 255) ?? "Produto";
+        }
+
+        var shopeeName = TryExtractShopeeProductNameFromUrl(url);
+        if (!string.IsNullOrWhiteSpace(shopeeName))
+        {
+            return Truncate(shopeeName, 255) ?? shopeeName;
         }
 
         var segments = uri.AbsolutePath
@@ -143,6 +168,61 @@ public static class ProductMetadataHtmlParser
         }
 
         return "R$ " + value.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"));
+    }
+
+    /// <summary>
+    /// Nome do produto a partir do slug da URL expandida da Shopee (independente de HTML anti-bot).
+    /// </summary>
+    public static string? TryExtractShopeeProductNameFromUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        if (!IsShopeeHost(uri.Host))
+        {
+            return null;
+        }
+
+        var segment = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault();
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            return null;
+        }
+
+        segment = segment.Split('?', 2)[0];
+        var suffixMatch = ShopeeItemSuffixRegex.Match(segment);
+        var slug = suffixMatch.Success
+            ? segment[..suffixMatch.Index]
+            : segment;
+
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            return null;
+        }
+
+        var decoded = HttpUtilityUrlDecode(slug);
+        var name = decoded.Replace('-', ' ').Trim();
+        name = Regex.Replace(name, @"\s+", " ");
+        return string.IsNullOrWhiteSpace(name) ? null : Truncate(name, 255);
+    }
+
+    public static bool LooksLikeAntiBotTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return true;
+        }
+
+        return title.Contains("Opaanlp", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Nsbo", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Shopee Brasil", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Captcha", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Just a moment", StringComparison.OrdinalIgnoreCase)
+            || title.Contains("Access Denied", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? ReadMeta(string html, string propertyName)
@@ -258,12 +338,32 @@ public static class ProductMetadataHtmlParser
     private static decimal? NormalizeDisplayPrice(decimal? price) =>
         price is > 0 ? price : null;
 
-    private static string UrlDecodeSlug(string value)
+    private static string? ReadRegexGroup(string html, Regex regex, string groupName)
+    {
+        var match = regex.Match(html);
+        return match.Success ? match.Groups[groupName].Value : null;
+    }
+
+    private static bool IsShopeeHost(string host) =>
+        host.Contains("shopee.", StringComparison.OrdinalIgnoreCase)
+        || host.Equals("shopee.com", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Equivalente a <c>System.Web.HttpUtility.UrlDecode</c> em UTF-8 (percent-encoding).</summary>
+    private static string HttpUtilityUrlDecode(string value)
     {
         var current = value ?? string.Empty;
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            var decoded = Uri.UnescapeDataString(current.Replace("+", "%20"));
+            string decoded;
+            try
+            {
+                decoded = Uri.UnescapeDataString(current.Replace("+", "%20"));
+            }
+            catch (UriFormatException)
+            {
+                decoded = current;
+            }
+
             decoded = WebUtility.UrlDecode(decoded) ?? decoded;
             if (string.Equals(decoded, current, StringComparison.Ordinal))
             {
@@ -275,6 +375,8 @@ public static class ProductMetadataHtmlParser
 
         return current;
     }
+
+    private static string UrlDecodeSlug(string value) => HttpUtilityUrlDecode(value);
 
     private static string? CleanProductName(string? value)
     {

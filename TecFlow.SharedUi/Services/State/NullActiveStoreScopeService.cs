@@ -15,6 +15,8 @@ public sealed class NullActiveStoreScopeService : IActiveStoreScopeService
 
     public bool IsLoading => false;
 
+    public bool IsAllStoresScope => true;
+
     public event Action? OnStoreChanged { add { } remove { } }
 
     public Task EnsureInitializedAsync(CancellationToken cancellationToken = default) =>
@@ -24,6 +26,9 @@ public sealed class NullActiveStoreScopeService : IActiveStoreScopeService
         Task.CompletedTask;
 
     public Task SetActiveStoreAsync(MarketplaceAccountDto store, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task SetAllStoresAsync(CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
     public Task RefreshStoresAsync(CancellationToken cancellationToken = default) =>

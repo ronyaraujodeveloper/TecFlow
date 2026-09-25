@@ -9,6 +9,7 @@ namespace TecFlow.WebUi.Services.State;
 public sealed class ActiveStoreScopeService : IActiveStoreScopeService
 {
     private const string StorageKey = "tecflow.activeStoreId";
+    private const string AllStoresStorageValue = "all";
 
     private readonly IIntegracaoLojaApiService _integracaoApi;
     private readonly IJSRuntime _jsRuntime;
@@ -37,6 +38,8 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
     public bool IsInitialized => _initialized;
 
     public bool IsLoading { get; private set; }
+
+    public bool IsAllStoresScope { get; private set; }
 
     public event Action? OnStoreChanged;
 
@@ -72,6 +75,13 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
                 "tecflowActiveStore.get",
                 cancellationToken);
 
+            if (string.Equals(storedId, AllStoresStorageValue, StringComparison.OrdinalIgnoreCase)
+                || storedId == "0")
+            {
+                await ApplyAllStoresAsync(persist: false, cancellationToken);
+                return;
+            }
+
             if (int.TryParse(storedId, out var lojaId))
             {
                 var match = _stores.FirstOrDefault(s => s.Id == lojaId);
@@ -91,7 +101,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
             _logger.LogDebug(ex, "Interop JS ainda não disponível para restaurar escopo de loja.");
         }
 
-        if (ActiveStore is null && _stores.Count > 0)
+        if (ActiveStore is null && _stores.Count > 0 && !IsAllStoresScope)
         {
             var firstActive = _stores.FirstOrDefault(s => s.Status == MarketplaceIntegrationStatus.Active)
                 ?? _stores[0];
@@ -109,6 +119,9 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
         await ApplyActiveStoreAsync(store, persist: true, cancellationToken);
     }
 
+    public Task SetAllStoresAsync(CancellationToken cancellationToken = default) =>
+        ApplyAllStoresAsync(persist: true, cancellationToken);
+
     public async Task RefreshStoresAsync(CancellationToken cancellationToken = default)
     {
         var previousId = ActiveStore?.Id;
@@ -122,6 +135,11 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
                 await ApplyActiveStoreAsync(match, persist: false, cancellationToken);
                 return;
             }
+        }
+
+        if (IsAllStoresScope)
+        {
+            return;
         }
 
         if (ActiveStore is null && _stores.Count > 0)
@@ -154,7 +172,7 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
                 ActiveStore = _stores.FirstOrDefault(s => s.Id == ActiveStore.Id);
             }
 
-            if (ActiveStore is null && _stores.Count > 0 && _browserRestored)
+            if (ActiveStore is null && _stores.Count > 0 && _browserRestored && !IsAllStoresScope)
             {
                 var firstActive = _stores.FirstOrDefault(s => s.Status == MarketplaceIntegrationStatus.Active)
                     ?? _stores[0];
@@ -184,21 +202,35 @@ public sealed class ActiveStoreScopeService : IActiveStoreScopeService
             return;
         }
 
+        IsAllStoresScope = false;
         ActiveStore = store;
 
         if (persist)
         {
-            await PersistStoreIdAsync(store.Id, cancellationToken);
+            await PersistStoreIdAsync(store.Id.ToString(), cancellationToken);
         }
 
         OnStoreChanged?.Invoke();
     }
 
-    private async Task PersistStoreIdAsync(int lojaId, CancellationToken cancellationToken)
+    private async Task ApplyAllStoresAsync(bool persist, CancellationToken cancellationToken)
+    {
+        IsAllStoresScope = true;
+        ActiveStore = null;
+
+        if (persist)
+        {
+            await PersistStoreIdAsync(AllStoresStorageValue, cancellationToken);
+        }
+
+        OnStoreChanged?.Invoke();
+    }
+
+    private async Task PersistStoreIdAsync(string lojaId, CancellationToken cancellationToken)
     {
         try
         {
-            await _jsRuntime.InvokeVoidAsync("tecflowActiveStore.set", cancellationToken, lojaId.ToString());
+            await _jsRuntime.InvokeVoidAsync("tecflowActiveStore.set", cancellationToken, lojaId);
         }
         catch (JSException ex)
         {

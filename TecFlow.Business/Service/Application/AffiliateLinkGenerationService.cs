@@ -49,12 +49,6 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             return Fail("Informe a URL do produto para gerar o link de afiliado.");
         }
 
-        var storeScopes = request.ResolveStoreScopes();
-        if (storeScopes.Count == 0)
-        {
-            return Fail("Selecione ao menos uma conta da plataforma antes de gerar o link.");
-        }
-
         _generationContext.UserId = userId;
         _generationContext.CustomNickname = request.CustomNickname;
 
@@ -63,6 +57,17 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             var workingUrl = request.OriginalUrl.Trim();
             var expandedUrl = await _platformLinkResolver.ExpandIfShortenedAsync(workingUrl, cancellationToken);
             var (strategy, resolvedUrl) = await ResolveStrategyAsync(expandedUrl, cancellationToken);
+            var storeScopes = request.ResolveStoreScopes().ToList();
+            if (storeScopes.Count == 0)
+            {
+                var fallbackStore = await _storeScopeResolver.ResolveAsync(
+                    Guid.Empty,
+                    userId,
+                    strategy.PlatformType,
+                    cancellationToken);
+                storeScopes.Add(IntegracaoLojaScopeHelper.EncodeStoreScope(fallbackStore.Id));
+            }
+
             var productMetadata = await ExtractProductMetadataSafelyAsync(resolvedUrl, cancellationToken);
             var affiliateId = userId.ToString();
             var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(

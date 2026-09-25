@@ -74,6 +74,8 @@ flowchart LR
   CBB --> CBAFF
   CBAFF --> SHORT
   UI -->|Casas Bahia cb.com.br| CB
+  UI -->|seletor Todas / outra plataforma| LOJAS
+  LOJAS -->|primeira conta IsActive da plataforma| SHORT
   UI -->|Kabum kb.um| KB
   UI -->|Magalu magalu.me| MAG
   UI -->|Amazon URLs amzn.to a.co| AMZ

@@ -43,13 +43,25 @@
                     }
                     else
                     {
-                        <span class="active-store-scope-label">Selecionar loja</span>
+                        <span class="active-store-scope-label">Todas as lojas</span>
                     }
                 </button>
 
                 @if (_menuOpen)
                 {
                     <ul class="dropdown-menu dropdown-menu-end show active-store-scope-menu">
+                        <li>
+                            <button type="button"
+                                    class="dropdown-item active-store-scope-item @(StoreScope.IsAllStoresScope ? "active" : "") btn-touch"
+                                    @onclick="SelectAllStoresAsync">
+                                <span class="active-store-scope-item-name">Todas as lojas</span>
+                                @if (StoreScope.IsAllStoresScope)
+                                {
+                                    <span class="active-store-scope-item-check" aria-hidden="true">✓</span>
+                                }
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
                         @foreach (var store in StoreScope.Stores)
                         {
                             var isActive = StoreScope.ActiveStore?.Id == store.Id;
@@ -129,6 +141,12 @@
     {
         CloseMenu();
         await StoreScope.SetActiveStoreAsync(store);
+    }
+
+    private async Task SelectAllStoresAsync()
+    {
+        CloseMenu();
+        await StoreScope.SetAllStoresAsync();
     }
 
     private static string GetPlatformShortLabel(MarketplaceType platform) => platform switch

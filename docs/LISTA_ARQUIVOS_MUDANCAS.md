@@ -685,6 +685,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **LinkGeneratorResultPanel.razor** / **HistoricoLinks.razor** — card preview; colunas Produto e Preço (R$).
 - [x] **ProductMetadataHtmlParserTests.cs** / **ProductMetadataServiceTests.cs**.
 
+### Fase 19.24 — Resolução inteligente de loja no gerador
+
+- [x] **IntegracaoLojaScopeResolver.cs** — `MarketplaceAccounts` ativas por plataforma; fallback quando o seletor é Todas ou a loja ativa é de outro marketplace.
+- [x] **GeradorLinks.razor** / **ActiveStoreScopeSelector.razor** — opção Todas as lojas e CTA para conectar conta inexistente.
+- [x] **IntegracaoLojaScopeResolverTests.cs**.
+
 ### Fase 19.11 — Cores institucionais dos marketplaces
 
 - [x] **app.css** — tokens `--brand-*`, classes `.badge-*` / `.btn-*` e sombra de seleção na cor da marca.

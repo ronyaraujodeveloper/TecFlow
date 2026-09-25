@@ -101,10 +101,23 @@
                 </button>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(_feedbackMessage) && _feedbackIsError)
+            @if (_needsConnectAccount && _detectedPlatform is not null)
+            {
+                <div class="alert alert-warning py-2 small mt-3 mb-0" role="alert">
+                    ⚠️ Você ainda não tem uma conta da @_detectedPlatform.DisplayName conectada.
+                    <a href="/minhas-lojas" class="alert-link fw-semibold">Clique aqui para conectar sua loja</a>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_feedbackMessage) && _feedbackIsError)
             {
                 <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">
                     @_feedbackMessage
+                    @if (_feedbackIsMissingAccount)
+                    {
+                        <span>
+                            <a href="/minhas-lojas" class="alert-link fw-semibold">Clique aqui para conectar sua loja</a>
+                        </span>
+                    }
                 </div>
             }
             </form>
@@ -194,6 +207,8 @@
     private string? _detectionHint;
     private string? _feedbackMessage;
     private bool _feedbackIsError;
+    private bool _feedbackIsMissingAccount;
+    private bool _needsConnectAccount;
     private bool _isLoading;
     private bool _integrationsLoaded;
     private MarketplaceDefinition? _detectedPlatform;
@@ -287,7 +302,7 @@
                     .FirstOrDefault()
                     ?? response.DataList.OrderByDescending(store => store.CreatedAt).First();
 
-                if (StoreScope.ActiveStoreId is null or <= 0)
+                if (!StoreScope.IsAllStoresScope && StoreScope.ActiveStoreId is null or <= 0)
                 {
                     await StoreScope.SetActiveStoreAsync(firstActive);
                 }
@@ -322,33 +337,32 @@
         if (string.IsNullOrWhiteSpace(url))
         {
             _detectionHint = null;
+            _needsConnectAccount = false;
             return;
         }
 
         if (_detectedPlatform is null)
         {
+            _needsConnectAccount = false;
             _detectionHint = "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre, Magalu, Kabum! ou Casas Bahia.";
             return;
         }
 
         if (!_detectedPlatform.IsBackendReady)
         {
+            _needsConnectAccount = false;
             _detectionHint = $"{_detectedPlatform.DisplayName} identificado. Integração em breve no TecFlow.";
             return;
         }
 
-        if (!IsPlatformConnected(_detectedPlatform))
+        if (!IsPlatformConnected(_detectedPlatform) || AccountsForDetectedPlatform.Count == 0)
         {
-            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Conecte sua conta em Minhas Lojas para gerar o link.";
+            _needsConnectAccount = true;
+            _detectionHint = null;
             return;
         }
 
-        if (AccountsForDetectedPlatform.Count == 0)
-        {
-            _detectionHint = $"{_detectedPlatform.DisplayName} detectado. Conecte uma conta ativa em Minhas Lojas.";
-            return;
-        }
-
+        _needsConnectAccount = false;
         _detectionHint = $"{_detectedPlatform.DisplayName} identificado com sucesso. Pronto para gerar comissão.";
         EnsureDetectedAccountsSelected();
     }
@@ -375,13 +389,12 @@
                 return;
             }
 
-            var selectedStores = AccountsForDetectedPlatform
-                .Where(store => _selectedStoreIds.Contains(store.Id))
-                .ToList();
+            var selectedStores = ResolveStoresForGeneration();
 
             if (selectedStores.Count == 0)
             {
-                ShowError("Selecione ao menos uma conta da plataforma para gerar o link.");
+                _needsConnectAccount = true;
+                ShowError(BuildMissingAccountMessage(_detectedPlatform.DisplayName));
                 return;
             }
 
@@ -436,6 +449,35 @@
         }
     }
 
+    private IReadOnlyList<MarketplaceAccountDto> ResolveStoresForGeneration()
+    {
+        var platformStores = AccountsForDetectedPlatform;
+        if (platformStores.Count == 0)
+        {
+            return [];
+        }
+
+        var selected = platformStores.Where(store => _selectedStoreIds.Contains(store.Id)).ToList();
+        if (selected.Count > 0)
+        {
+            return selected;
+        }
+
+        if (StoreScope.IsAllStoresScope
+            || StoreScope.ActiveStore is null
+            || StoreScope.ActiveStore.PlatformType != _detectedPlatform?.IntegrationType)
+        {
+            EnsureDetectedAccountsSelected();
+            return platformStores.Where(store => _selectedStoreIds.Contains(store.Id)).DefaultIfEmpty(platformStores[0]).ToList();
+        }
+
+        var scoped = platformStores.FirstOrDefault(store => store.Id == StoreScope.ActiveStoreId);
+        return scoped is null ? [platformStores[0]] : [scoped];
+    }
+
+    private static string BuildMissingAccountMessage(string platformName) =>
+        $"⚠️ Você ainda não tem uma conta da {platformName} conectada.";
+
     private bool IsPlatformConnected(MarketplaceDefinition platform) =>
         platform.IntegrationType is { } integrationType && _connectedPlatforms.Contains(integrationType);
 
@@ -466,6 +508,8 @@
     {
         _feedbackMessage = null;
         _feedbackIsError = false;
+        _feedbackIsMissingAccount = false;
+        _needsConnectAccount = false;
     }
 
     private void ClearGeneratedResult() => _generatedResponse = null;
@@ -707,6 +751,8 @@
     {
         _feedbackMessage = message;
         _feedbackIsError = true;
+        _feedbackIsMissingAccount = message.Contains("ainda não tem uma conta", StringComparison.OrdinalIgnoreCase);
+        _needsConnectAccount = _feedbackIsMissingAccount;
     }
 
     private string ResolveConversionError(string? apiMessage, string? dtoMessage)

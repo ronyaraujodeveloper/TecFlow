@@ -449,6 +449,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.19. Magalu promoter_id:** prioriza `promoter_id=` (ex.: `5321952`) e ignora `utm_source=divulgador`/`magalu`.
 - [x] **19.20. TikTok unique_id:** prioriza `unique_id=` (ex.: `amz.indica`), depois `user_id` e `sec_user_id` em `vt.tiktok.com` / `shop.tiktok.com`.
 - [x] **19.21. TikTok login redirect:** decodifica `redirect_url` recursivamente; aceita `@username` / `amz.indica` no Tracking ID.
+- [x] **19.22. Resolução de loja no gerador:** com o seletor em Todas (ou loja de outra plataforma), usa a primeira `MarketplaceAccounts` ativa da plataforma do link; só pede conexão se não houver nenhuma conta daquela plataforma.
 - [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado

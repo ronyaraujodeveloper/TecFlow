@@ -25,5 +25,9 @@ public interface IActiveStoreScopeService
 
     Task SetActiveStoreAsync(MarketplaceAccountDto store, CancellationToken cancellationToken = default);
 
+    Task SetAllStoresAsync(CancellationToken cancellationToken = default);
+
     Task RefreshStoresAsync(CancellationToken cancellationToken = default);
+
+    bool IsAllStoresScope { get; }
 }

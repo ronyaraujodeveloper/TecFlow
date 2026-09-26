@@ -700,6 +700,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser** — Regex `shopee.com.br/([^/]+)-i.\\d+.\\d+`; descarta slug só numérico (`25901538592`).
 - [x] **ProductMetadataService** — blacklist `Opaanlp`/`Nsbo`/`captcha`; HttpClient iPhone Safari 17; unwrap `target=`/`redirect=`.
 - [x] **ProductMetadataService** — API `shopee.com.br/api/v4/item/get?itemid&shopid`; preço micro-unidades `/ 100000000`; fallback slug.
+- [x] **ProductMetadataService** — pipeline `ExtractMetadataAsync` por plataforma (`ExtractShopeeMetadata` inclui `/product/{shop}/{item}`).
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

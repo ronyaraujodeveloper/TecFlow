@@ -27,10 +27,13 @@ public interface IUrlExpansionService
     Task<string> ExpandUrlAsync(string shortenedUrl, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Extrai nome e preço do produto após expandir encurtadores (OpenGraph / JSON-LD).</summary>
+/// <summary>Extrai nome e preço do produto após expandir encurtadores (pipeline por plataforma).</summary>
 public interface IProductMetadataService
 {
     Task<ProductMetadataDto> ExtractAsync(string productUrl, CancellationToken cancellationToken = default);
+
+    Task<ProductMetadataDto> ExtractMetadataAsync(string inputUrl, CancellationToken cancellationToken = default) =>
+        ExtractAsync(inputUrl, cancellationToken);
 }
 
 /// <summary>Resolve IntegracaoLoja a partir do escopo global e do usuário autenticado.</summary>

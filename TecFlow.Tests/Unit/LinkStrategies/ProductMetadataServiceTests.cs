@@ -226,7 +226,133 @@ public class ProductMetadataServiceTests
             out var itemFromQuery));
         Assert.Equal("308244953", shopFromQuery);
         Assert.Equal("4062152607", itemFromQuery);
+        Assert.True(ProductMetadataService.TryParseShopeeItemIds(
+            "https://shopee.com.br/product/1890496775/23499652945",
+            out var shopFromProduct,
+            out var itemFromProduct));
+        Assert.Equal("1890496775", shopFromProduct);
+        Assert.Equal("23499652945", itemFromProduct);
         Assert.Equal(28.70m, ProductMetadataService.ConvertShopeePrice(2_870_000_000m));
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldRouteShopeeProductPathToItemApi()
+    {
+        const string json = """
+            {"data":{"itemid":23499652945,"shopid":1890496775,"name":"Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064","price":2870000000,"image":"lovito-img"}}
+            """;
+        var requested = new List<string>();
+        var expansion = new StubExpansionService("https://shopee.com.br/product/1890496775/23499652945");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractMetadataAsync("https://s.shopee.com.br/8plUTWtg3e");
+
+        Assert.Equal("Shopee", service.LastResolvedPlatform);
+        Assert.Contains(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal)
+            && url.Contains("shopid=1890496775", StringComparison.Ordinal)
+            && url.Contains("itemid=23499652945", StringComparison.Ordinal));
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            result.ProductName);
+        Assert.Equal(28.70m, result.ProductPrice);
+        Assert.True(ProductMetadataService.IsInvalidProductName("Opaanlp"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("Nsbo"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("Shopee Brasil"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("Produto"));
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldUseMagaluHandler_WithoutShopeeApi()
+    {
+        var requested = new List<string>();
+        var expansion = new StubExpansionService(
+            "https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a15/p/218434100/te/smsg/");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """<html><head><meta property="og:title" content="Smartphone Samsung Galaxy A15" /><meta property="og:price:amount" content="899.90" /></head></html>""",
+                    System.Text.Encoding.UTF8,
+                    "text/html")
+            };
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractMetadataAsync("https://magalu.me/abc");
+
+        Assert.Equal("MagazineLuiza", service.LastResolvedPlatform);
+        Assert.DoesNotContain(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal));
+        Assert.Equal("Smartphone Samsung Galaxy A15", result.ProductName);
+        Assert.Equal(899.90m, result.ProductPrice);
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldUseMercadoLivreHandler_WithoutShopeeApi()
+    {
+        var requested = new List<string>();
+        var expansion = new StubExpansionService(
+            "https://www.mercadolivre.com.br/fone-bluetooth-tws-com-cancelamento/p/MLB123456789");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.Forbidden);
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractMetadataAsync("https://mercadolivre.com/sec/abc");
+
+        Assert.Equal("MercadoLivre", service.LastResolvedPlatform);
+        Assert.DoesNotContain(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal));
+        Assert.Equal("Fone Bluetooth Tws Com Cancelamento", result.ProductName);
+        Assert.Null(result.ProductPrice);
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldUseTikTokHandler_WithoutShopeeApi()
+    {
+        var requested = new List<string>();
+        var expansion = new StubExpansionService("https://shop.tiktok.com/view/product/1729382258339663534");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """<html><head><meta property="og:title" content="Base Líquida Matte 30ml" /><meta property="og:price:amount" content="49.90" /></head></html>""",
+                    System.Text.Encoding.UTF8,
+                    "text/html")
+            };
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractMetadataAsync("https://vt.tiktok.com/ZSabc/");
+
+        Assert.Equal("TikTokShop", service.LastResolvedPlatform);
+        Assert.DoesNotContain(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal));
+        Assert.Equal("Base Líquida Matte 30ml", result.ProductName);
+        Assert.Equal(49.90m, result.ProductPrice);
     }
 
     [Fact]

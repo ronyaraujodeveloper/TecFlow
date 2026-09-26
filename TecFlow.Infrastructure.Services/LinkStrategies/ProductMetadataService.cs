@@ -23,6 +23,10 @@ public sealed class ProductMetadataService : IProductMetadataService
         @"-i\.(\d+)\.(\d+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex ShopeeProductPathRegex = new(
+        @"/product/(\d+)/(\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly string[] InvalidTitles =
     [
         "opaanlp",
@@ -49,11 +53,18 @@ public sealed class ProductMetadataService : IProductMetadataService
         _logger = logger;
     }
 
-    public async Task<ProductMetadataDto> ExtractAsync(
+    public string? LastResolvedPlatform { get; private set; }
+
+    public Task<ProductMetadataDto> ExtractAsync(
         string productUrl,
+        CancellationToken cancellationToken = default) =>
+        ExtractMetadataAsync(productUrl, cancellationToken);
+
+    public async Task<ProductMetadataDto> ExtractMetadataAsync(
+        string inputUrl,
         CancellationToken cancellationToken = default)
     {
-        var workingUrl = string.IsNullOrWhiteSpace(productUrl) ? string.Empty : productUrl.Trim();
+        var workingUrl = string.IsNullOrWhiteSpace(inputUrl) ? string.Empty : inputUrl.Trim();
         var resolvedUrl = workingUrl;
 
         try
@@ -73,6 +84,7 @@ public sealed class ProductMetadataService : IProductMetadataService
         }
 
         resolvedUrl = UnwrapNestedDestinationUrl(resolvedUrl);
+        LastResolvedPlatform = ResolvePlatform(resolvedUrl);
 
         try
         {
@@ -81,36 +93,14 @@ public sealed class ProductMetadataService : IProductMetadataService
                 return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(workingUrl), workingUrl);
             }
 
-            if (TryParseShopeeItemIds(resolvedUrl, out var shopId, out var itemId))
+            return LastResolvedPlatform switch
             {
-                var fromApi = await TryExtractFromShopeeItemApiAsync(shopId, itemId, cancellationToken);
-                if (fromApi is not null)
-                {
-                    return SanitizeMetadata(fromApi, resolvedUrl);
-                }
-            }
-
-            var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
-            using var request = new HttpRequestMessage(HttpMethod.Get, resolvedUrl);
-            ApplyAntiBotBrowserHeaders(request);
-            using var response = await client.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation(
-                    "Scraping de metadados recusado. Status={Status} Url={Url}",
-                    (int)response.StatusCode,
-                    resolvedUrl);
-                return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(resolvedUrl), resolvedUrl);
-            }
-
-            var html = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (html.Length > MaxHtmlChars)
-            {
-                html = html[..MaxHtmlChars];
-            }
-
-            var parsed = ProductMetadataHtmlParser.Parse(html, resolvedUrl);
-            return SanitizeMetadata(parsed, resolvedUrl);
+                "Shopee" => await ExtractShopeeMetadata(resolvedUrl, cancellationToken),
+                "MagazineLuiza" => await ExtractMagaluMetadata(resolvedUrl, cancellationToken),
+                "MercadoLivre" => await ExtractMercadoLivreMetadata(resolvedUrl, cancellationToken),
+                "TikTokShop" => await ExtractTikTokMetadata(resolvedUrl, cancellationToken),
+                _ => await ExtractGenericMetadata(resolvedUrl, cancellationToken)
+            };
         }
         catch (Exception ex)
         {
@@ -120,6 +110,42 @@ public sealed class ProductMetadataService : IProductMetadataService
                 resolvedUrl);
             return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(resolvedUrl), resolvedUrl);
         }
+    }
+
+    public static string ResolvePlatform(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        {
+            return "Generic";
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        if (host.Contains("shopee", StringComparison.Ordinal)
+            || host.Contains("shp.ee", StringComparison.Ordinal))
+        {
+            return "Shopee";
+        }
+
+        if (host.Contains("magazineluiza", StringComparison.Ordinal)
+            || host.Contains("magazinevoce", StringComparison.Ordinal)
+            || host.Contains("magalu", StringComparison.Ordinal))
+        {
+            return "MagazineLuiza";
+        }
+
+        if (host.Contains("mercadolivre", StringComparison.Ordinal)
+            || host.Contains("mercadolibre", StringComparison.Ordinal)
+            || host.Contains("meli.la", StringComparison.Ordinal))
+        {
+            return "MercadoLivre";
+        }
+
+        if (host.Contains("tiktok", StringComparison.Ordinal))
+        {
+            return "TikTokShop";
+        }
+
+        return "Generic";
     }
 
     public static bool TryParseShopeeItemIds(string? url, out string shopId, out string itemId)
@@ -136,6 +162,14 @@ public sealed class ProductMetadataService : IProductMetadataService
         {
             shopId = pathMatch.Groups[1].Value;
             itemId = pathMatch.Groups[2].Value;
+            return IsPositiveId(shopId) && IsPositiveId(itemId);
+        }
+
+        var productMatch = ShopeeProductPathRegex.Match(url);
+        if (productMatch.Success)
+        {
+            shopId = productMatch.Groups[1].Value;
+            itemId = productMatch.Groups[2].Value;
             return IsPositiveId(shopId) && IsPositiveId(itemId);
         }
 
@@ -279,6 +313,70 @@ public sealed class ProductMetadataService : IProductMetadataService
         }
 
         return false;
+    }
+
+    private async Task<ProductMetadataDto> ExtractShopeeMetadata(
+        string expandedUrl,
+        CancellationToken cancellationToken)
+    {
+        if (TryParseShopeeItemIds(expandedUrl, out var shopId, out var itemId))
+        {
+            var fromApi = await TryExtractFromShopeeItemApiAsync(shopId, itemId, cancellationToken);
+            if (fromApi is not null)
+            {
+                return SanitizeMetadata(fromApi, expandedUrl);
+            }
+        }
+
+        return await ExtractGenericMetadata(expandedUrl, cancellationToken);
+    }
+
+    private Task<ProductMetadataDto> ExtractMagaluMetadata(
+        string expandedUrl,
+        CancellationToken cancellationToken) =>
+        ExtractGenericMetadata(expandedUrl, cancellationToken);
+
+    private Task<ProductMetadataDto> ExtractMercadoLivreMetadata(
+        string expandedUrl,
+        CancellationToken cancellationToken) =>
+        ExtractGenericMetadata(expandedUrl, cancellationToken);
+
+    private Task<ProductMetadataDto> ExtractTikTokMetadata(
+        string expandedUrl,
+        CancellationToken cancellationToken) =>
+        ExtractGenericMetadata(expandedUrl, cancellationToken);
+
+    private async Task<ProductMetadataDto> ExtractGenericMetadata(
+        string expandedUrl,
+        CancellationToken cancellationToken)
+    {
+        var html = await TryFetchHtmlAsync(expandedUrl, cancellationToken);
+        if (html is null)
+        {
+            return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(expandedUrl), expandedUrl);
+        }
+
+        var parsed = ProductMetadataHtmlParser.Parse(html, expandedUrl);
+        return SanitizeMetadata(parsed, expandedUrl);
+    }
+
+    private async Task<string?> TryFetchHtmlAsync(string pageUrl, CancellationToken cancellationToken)
+    {
+        var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
+        using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
+        ApplyAntiBotBrowserHeaders(request);
+        using var response = await client.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogInformation(
+                "Scraping de metadados recusado. Status={Status} Url={Url}",
+                (int)response.StatusCode,
+                pageUrl);
+            return null;
+        }
+
+        var html = await response.Content.ReadAsStringAsync(cancellationToken);
+        return html.Length > MaxHtmlChars ? html[..MaxHtmlChars] : html;
     }
 
     private async Task<ProductMetadataDto?> TryExtractFromShopeeItemApiAsync(

@@ -16,8 +16,10 @@ public sealed class ProductMetadataService : IProductMetadataService
     private const int MaxHtmlChars = 512_000;
     private const decimal ShopeePriceScale = 100_000_000m;
     private const string ShopeeItemApiUrl = "https://shopee.com.br/api/v4/item/get";
+    private const string ShopeeWarmUpUrl = "https://shopee.com.br/";
     private const string ShopeeImageCdn = "https://down-br.img.susercontent.com/file/";
-    private const string ShopeeApiUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+    private const string ShopeeBrowserUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
     private static readonly Regex ShopeeItemPathRegex = new(
         @"-i\.(\d+)\.(\d+)",
@@ -146,6 +148,21 @@ public sealed class ProductMetadataService : IProductMetadataService
         }
 
         return "Generic";
+    }
+
+    public static HttpClientHandler CreateShopeeCookieHandler()
+    {
+        var cookieContainer = new CookieContainer();
+        return new HttpClientHandler
+        {
+            UseCookies = true,
+            CookieContainer = cookieContainer,
+            AutomaticDecompression = DecompressionMethods.GZip
+                | DecompressionMethods.Deflate
+                | DecompressionMethods.Brotli,
+            AllowAutoRedirect = true,
+            MaxAutomaticRedirections = 10
+        };
     }
 
     public static bool TryParseShopeeItemIds(string? url, out string shopId, out string itemId)
@@ -319,16 +336,26 @@ public sealed class ProductMetadataService : IProductMetadataService
         string expandedUrl,
         CancellationToken cancellationToken)
     {
+        var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
+        await WarmUpShopeeSessionAsync(client, cancellationToken);
+
         if (TryParseShopeeItemIds(expandedUrl, out var shopId, out var itemId))
         {
-            var fromApi = await TryExtractFromShopeeItemApiAsync(shopId, itemId, cancellationToken);
+            var fromApi = await TryExtractFromShopeeItemApiAsync(client, shopId, itemId, cancellationToken);
             if (fromApi is not null)
             {
                 return SanitizeMetadata(fromApi, expandedUrl);
             }
         }
 
-        return await ExtractGenericMetadata(expandedUrl, cancellationToken);
+        var html = await TryFetchHtmlAsync(client, expandedUrl, cancellationToken, useShopeeBrowserHeaders: true);
+        if (html is null)
+        {
+            return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(expandedUrl), expandedUrl);
+        }
+
+        var parsed = ProductMetadataHtmlParser.Parse(html, expandedUrl);
+        return SanitizeMetadata(parsed, expandedUrl);
     }
 
     private Task<ProductMetadataDto> ExtractMagaluMetadata(
@@ -363,8 +390,25 @@ public sealed class ProductMetadataService : IProductMetadataService
     private async Task<string?> TryFetchHtmlAsync(string pageUrl, CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
+        return await TryFetchHtmlAsync(client, pageUrl, cancellationToken, useShopeeBrowserHeaders: false);
+    }
+
+    private async Task<string?> TryFetchHtmlAsync(
+        HttpClient client,
+        string pageUrl,
+        CancellationToken cancellationToken,
+        bool useShopeeBrowserHeaders)
+    {
         using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
-        ApplyAntiBotBrowserHeaders(request);
+        if (useShopeeBrowserHeaders)
+        {
+            ApplyShopeeBrowserHeaders(request);
+        }
+        else
+        {
+            ApplyAntiBotBrowserHeaders(request);
+        }
+
         using var response = await client.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
@@ -379,21 +423,37 @@ public sealed class ProductMetadataService : IProductMetadataService
         return html.Length > MaxHtmlChars ? html[..MaxHtmlChars] : html;
     }
 
+    private async Task WarmUpShopeeSessionAsync(HttpClient client, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ShopeeWarmUpUrl);
+            ApplyShopeeBrowserHeaders(request);
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            _logger.LogDebug(
+                "Warm-up Shopee concluído. Status={Status}",
+                (int)response.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(ex, "Warm-up de cookies da Shopee falhou; seguindo com a extração.");
+        }
+    }
+
     private async Task<ProductMetadataDto?> TryExtractFromShopeeItemApiAsync(
+        HttpClient client,
         string shopId,
         string itemId,
         CancellationToken cancellationToken)
     {
         try
         {
-            var client = _httpClientFactory.CreateClient(IntegrationHttpClientNames.ProductMetadata);
             var apiUrl = $"{ShopeeItemApiUrl}?itemid={Uri.EscapeDataString(itemId)}&shopid={Uri.EscapeDataString(shopId)}";
             using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-            request.Headers.UserAgent.Clear();
-            request.Headers.Remove("User-Agent");
-            request.Headers.TryAddWithoutValidation("User-Agent", ShopeeApiUserAgent);
-            request.Headers.TryAddWithoutValidation("Accept", "application/json");
-            request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+            ApplyShopeeBrowserHeaders(request);
             using var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
@@ -496,6 +556,29 @@ public sealed class ProductMetadataService : IProductMetadataService
 
         var fallback = ProductMetadataHtmlParser.BuildSlugFallback(resolvedUrl);
         parsed.ProductName = IsInvalidProductName(fallback) ? null : fallback;
+    }
+
+    private static void ApplyShopeeBrowserHeaders(HttpRequestMessage request)
+    {
+        request.Headers.Remove("User-Agent");
+        request.Headers.TryAddWithoutValidation("User-Agent", ShopeeBrowserUserAgent);
+        request.Headers.Remove("Accept");
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+        request.Headers.Remove("Accept-Language");
+        request.Headers.TryAddWithoutValidation(
+            "Accept-Language",
+            "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
+        request.Headers.TryAddWithoutValidation(
+            "Sec-Ch-Ua",
+            "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Mobile", "?0");
+        request.Headers.TryAddWithoutValidation("Sec-Ch-Ua-Platform", "\"Windows\"");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "none");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-User", "?1");
     }
 
     private static void ApplyAntiBotBrowserHeaders(HttpRequestMessage request)

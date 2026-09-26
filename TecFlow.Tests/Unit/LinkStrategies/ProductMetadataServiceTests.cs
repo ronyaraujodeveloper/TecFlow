@@ -368,12 +368,16 @@ public class ProductMetadataServiceTests
         var handler = new StubHttpMessageHandler(request =>
         {
             requestedApi = request.RequestUri?.ToString();
-            Assert.Contains("itemid=4062152607", requestedApi, StringComparison.Ordinal);
-            Assert.Contains("shopid=308244953", requestedApi, StringComparison.Ordinal);
-            var userAgent = request.Headers.TryGetValues("User-Agent", out var values)
-                ? string.Join(" ", values)
-                : request.Headers.UserAgent.ToString();
-            Assert.Contains("Windows NT 10.0", userAgent, StringComparison.Ordinal);
+            if (requestedApi?.Contains("/api/v4/item/get", StringComparison.Ordinal) == true)
+            {
+                Assert.Contains("itemid=4062152607", requestedApi, StringComparison.Ordinal);
+                Assert.Contains("shopid=308244953", requestedApi, StringComparison.Ordinal);
+                var userAgent = request.Headers.TryGetValues("User-Agent", out var values)
+                    ? string.Join(" ", values)
+                    : request.Headers.UserAgent.ToString();
+                Assert.Contains("Chrome/122.0.0.0", userAgent, StringComparison.Ordinal);
+            }
+
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
@@ -396,6 +400,50 @@ public class ProductMetadataServiceTests
             "https://down-br.img.susercontent.com/file/br-11134207-7r98o-lovito",
             result.ProductImageUrl);
         Assert.DoesNotContain("Opaanlp", result.ProductName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldWarmUpShopeeHomepageBeforeItemApi()
+    {
+        const string json = """
+            {"data":{"itemid":4062152607,"shopid":308244953,"name":"Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064","price":2870000000}}
+            """;
+        var requested = new List<string>();
+        var expansion = new StubExpansionService(
+            "https://shopee.com.br/Lovito-Casual-Suti%C3%A3-B%C3%A1sico-E-Respir%C3%A1vel-Para-Todas-As-Esta%C3%A7%C3%B5es-Para-Mulheres-LNE37064-i.308244953.4062152607");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance);
+
+        var result = await service.ExtractMetadataAsync("https://s.shopee.com.br/8plUTWtg3e");
+
+        Assert.Contains(requested, url => url.TrimEnd('/').Equals("https://shopee.com.br", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal));
+        Assert.True(requested.FindIndex(url => url.TrimEnd('/').Equals("https://shopee.com.br", StringComparison.OrdinalIgnoreCase))
+            < requested.FindIndex(url => url.Contains("/api/v4/item/get", StringComparison.Ordinal)));
+        Assert.Equal(
+            "Lovito Casual Sutiã Básico E Respirável Para Todas As Estações Para Mulheres LNE37064",
+            result.ProductName);
+        Assert.Equal(28.70m, result.ProductPrice);
+        Assert.DoesNotContain("Opaanlp", result.ProductName, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Nsbo", result.ProductName, StringComparison.OrdinalIgnoreCase);
+
+        using var cookieHandler = ProductMetadataService.CreateShopeeCookieHandler();
+        Assert.True(cookieHandler.UseCookies);
+        Assert.NotNull(cookieHandler.CookieContainer);
+        Assert.True(cookieHandler.AllowAutoRedirect);
+        Assert.Equal(
+            DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+            cookieHandler.AutomaticDecompression);
     }
 
     private sealed class StubExpansionService : IUrlExpansionService

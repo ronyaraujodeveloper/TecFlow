@@ -701,6 +701,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataService** — blacklist `Opaanlp`/`Nsbo`/`captcha`; HttpClient iPhone Safari 17; unwrap `target=`/`redirect=`.
 - [x] **ProductMetadataService** — API `shopee.com.br/api/v4/item/get?itemid&shopid`; preço micro-unidades `/ 100000000`; fallback slug.
 - [x] **ProductMetadataService** — pipeline `ExtractMetadataAsync` por plataforma (`ExtractShopeeMetadata` inclui `/product/{shop}/{item}`).
+- [x] **ProductMetadataService** — `CookieContainer` + warm-up `GET https://shopee.com.br/` e headers Chrome 122 antes da API de item.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

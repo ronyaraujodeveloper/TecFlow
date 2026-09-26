@@ -28,11 +28,7 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
             .ConfigureHttpClient(ConfigureExpansionClient);
 
         services.AddHttpClient(IntegrationHttpClientNames.ProductMetadata)
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                AllowAutoRedirect = true,
-                MaxAutomaticRedirections = 10
-            })
+            .ConfigurePrimaryHttpMessageHandler(ProductMetadataService.CreateShopeeCookieHandler)
             .ConfigureHttpClient(ConfigureAntiBotBrowserClient);
 
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();

@@ -111,39 +111,50 @@
                             </time>
                         </div>
 
-                        <h3 class="h6 fw-semibold mb-1 text-break">
-                            @if (string.IsNullOrWhiteSpace(item.ProductName))
+                        @if (item is not null)
+                        {
+                            @if (!string.IsNullOrWhiteSpace(item.ProductName))
                             {
-                                <InputText class="form-control form-control-sm"
-                                           placeholder="Digite o nome do produto"
-                                           value="@GetNameDraft(item)"
-                                           @oninput="e => SetNameDraft(item, e.Value?.ToString())"
-                                           @onblur="() => SaveMetadataAsync(item)" />
+                                <h3 class="h6 fw-semibold mb-1 text-break">@item.ProductName</h3>
                             }
                             else
                             {
-                                @item.ProductName
+                                <input type="text"
+                                       class="form-control form-control-sm mb-1"
+                                       placeholder="Digite o nome do produto..."
+                                       value="@GetNameDraft(item)"
+                                       @oninput="e => SetNameDraft(item, e.Value?.ToString())" />
                             }
-                        </h3>
-                        @if (item.ProductPrice is not > 0)
-                        {
-                            <div class="input-group input-group-sm mb-2" style="max-width: 160px;">
-                                <span class="input-group-text">R$</span>
-                                <InputText class="form-control"
+                            @if (item.ProductPrice.HasValue)
+                            {
+                                <p class="product-history-price mb-2">@ProductMetadataHtmlParser.FormatBrl(item.ProductPrice)</p>
+                            }
+                            else
+                            {
+                                <div class="input-group input-group-sm mb-2" style="max-width: 160px;">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number"
+                                           class="form-control"
                                            placeholder="0,00"
+                                           min="0"
+                                           step="0.01"
                                            value="@GetPriceDraft(item)"
-                                           @oninput="e => SetPriceDraft(item, e.Value?.ToString())"
-                                           @onblur="() => SaveMetadataAsync(item)" />
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="product-history-price mb-2">@ProductMetadataHtmlParser.FormatBrl(item.ProductPrice)</p>
+                                           @oninput="e => SetPriceDraft(item, e.Value?.ToString())" />
+                                </div>
+                            }
+                            @if (string.IsNullOrWhiteSpace(item.ProductName) || !item.ProductPrice.HasValue)
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm btn-touch mb-2"
+                                        @onclick="() => SaveLinkMetadataAsync(item)">
+                                    Salvar
+                                </button>
+                            }
                         }
 
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
                             <div class="link-history-clicks">
-                                <span class="link-history-clicks-value">@item.ClickCount</span>
+                                <span class="link-history-clicks-value">@(item?.ClickCount ?? 0)</span>
                                 <span class="link-history-clicks-label">cliques</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
@@ -187,45 +198,55 @@
                                         @item.PlatformName
                                     </span>
                                 </td>
-                                <td class="small text-break" title="@item.OriginalUrl">
-                                    @if (string.IsNullOrWhiteSpace(item.ProductName))
-                                    {
-                                        <InputText class="form-control form-control-sm"
-                                                   placeholder="Digite o nome do produto"
-                                                   value="@GetNameDraft(item)"
-                                                   @oninput="e => SetNameDraft(item, e.Value?.ToString())"
-                                                   @onblur="() => SaveMetadataAsync(item)" />
-                                    }
-                                    else
+                                <td class="small text-break" title="@item?.OriginalUrl">
+                                    @if (item is not null && !string.IsNullOrWhiteSpace(item.ProductName))
                                     {
                                         @item.ProductName
                                     }
+                                    else if (item is not null)
+                                    {
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               placeholder="Digite o nome do produto..."
+                                               value="@GetNameDraft(item)"
+                                               @oninput="e => SetNameDraft(item, e.Value?.ToString())" />
+                                    }
                                 </td>
                                 <td class="small text-nowrap fw-semibold">
-                                    @if (item.ProductPrice is not > 0)
-                                    {
-                                        <div class="input-group input-group-sm" style="max-width: 140px;">
-                                            <span class="input-group-text">R$</span>
-                                            <InputText class="form-control"
-                                                       placeholder="0,00"
-                                                       value="@GetPriceDraft(item)"
-                                                       @oninput="e => SetPriceDraft(item, e.Value?.ToString())"
-                                                       @onblur="() => SaveMetadataAsync(item)" />
-                                        </div>
-                                    }
-                                    else
+                                    @if (item is not null && item.ProductPrice.HasValue)
                                     {
                                         @ProductMetadataHtmlParser.FormatBrl(item.ProductPrice)
                                     }
+                                    else if (item is not null)
+                                    {
+                                        <div class="input-group input-group-sm" style="max-width: 140px;">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number"
+                                                   class="form-control"
+                                                   placeholder="0,00"
+                                                   min="0"
+                                                   step="0.01"
+                                                   value="@GetPriceDraft(item)"
+                                                   @oninput="e => SetPriceDraft(item, e.Value?.ToString())" />
+                                        </div>
+                                    }
                                 </td>
                                 <td class="small text-nowrap">
-                                    @item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    @(item?.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))
                                 </td>
                                 <td class="text-end">
-                                    <span class="link-history-clicks-inline">@item.ClickCount</span>
+                                    <span class="link-history-clicks-inline">@(item?.ClickCount ?? 0)</span>
                                 </td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-2">
+                                        @if (item is not null && (string.IsNullOrWhiteSpace(item.ProductName) || !item.ProductPrice.HasValue))
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm btn-touch"
+                                                    @onclick="() => SaveLinkMetadataAsync(item)">
+                                                Salvar
+                                            </button>
+                                        }
                                         <button type="button"
                                                 class="btn btn-outline-primary btn-sm btn-touch link-history-view-btn"
                                                 @onclick="() => VisualizarAsync(item)">
@@ -325,8 +346,8 @@
                 foreach (var item in _items)
                 {
                     _nameDrafts[item.AffiliateLinkId] = item.ProductName ?? string.Empty;
-                    _priceDrafts[item.AffiliateLinkId] = item.ProductPrice is > 0
-                        ? item.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
+                    _priceDrafts[item.AffiliateLinkId] = item.ProductPrice.HasValue
+                        ? item.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                         : string.Empty;
                 }
             }
@@ -366,64 +387,97 @@
 
     private void ClearLoadError() => _loadError = null;
 
-    private string GetNameDraft(AffiliateLinkHistoryItemDto item) =>
-        _nameDrafts.TryGetValue(item.AffiliateLinkId, out var value) ? value : string.Empty;
-
-    private string GetPriceDraft(AffiliateLinkHistoryItemDto item) =>
-        _priceDrafts.TryGetValue(item.AffiliateLinkId, out var value) ? value : string.Empty;
-
-    private void SetNameDraft(AffiliateLinkHistoryItemDto item, string? value) =>
-        _nameDrafts[item.AffiliateLinkId] = value ?? string.Empty;
-
-    private void SetPriceDraft(AffiliateLinkHistoryItemDto item, string? value) =>
-        _priceDrafts[item.AffiliateLinkId] = value ?? string.Empty;
-
-    private async Task SaveMetadataAsync(AffiliateLinkHistoryItemDto item)
+    private string GetNameDraft(AffiliateLinkHistoryItemDto? item)
     {
-        if (item.AffiliateLinkId == Guid.Empty)
+        if (item is null)
+        {
+            return string.Empty;
+        }
+
+        return _nameDrafts.TryGetValue(item.AffiliateLinkId, out var value) ? value : string.Empty;
+    }
+
+    private string GetPriceDraft(AffiliateLinkHistoryItemDto? item)
+    {
+        if (item is null)
+        {
+            return string.Empty;
+        }
+
+        return _priceDrafts.TryGetValue(item.AffiliateLinkId, out var value) ? value : string.Empty;
+    }
+
+    private void SetNameDraft(AffiliateLinkHistoryItemDto? item, string? value)
+    {
+        if (item is null)
         {
             return;
         }
 
-        decimal? price = item.ProductPrice;
-        if (item.ProductPrice is not > 0)
+        _nameDrafts[item.AffiliateLinkId] = value ?? string.Empty;
+    }
+
+    private void SetPriceDraft(AffiliateLinkHistoryItemDto? item, string? value)
+    {
+        if (item is null)
         {
-            price = null;
-            if (decimal.TryParse(
-                GetPriceDraft(item).Replace(".", string.Empty).Replace(',', '.'),
-                System.Globalization.NumberStyles.Number,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out var parsed)
+            return;
+        }
+
+        _priceDrafts[item.AffiliateLinkId] = value ?? string.Empty;
+    }
+
+    private async Task SaveLinkMetadataAsync(AffiliateLinkHistoryItemDto? link)
+    {
+        if (link is null || link.AffiliateLinkId == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            decimal? price = link.ProductPrice.HasValue ? link.ProductPrice : null;
+            if (!price.HasValue
+                && decimal.TryParse(
+                    GetPriceDraft(link),
+                    System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var parsed)
                 && parsed > 0)
             {
                 price = decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
             }
-        }
 
-        var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
-            item.AffiliateLinkId,
-            new UpdateAffiliateProductMetadataDto
+            var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
+                link.AffiliateLinkId,
+                new UpdateAffiliateProductMetadataDto
+                {
+                    ProductName = string.IsNullOrWhiteSpace(link.ProductName) ? GetNameDraft(link) : link.ProductName,
+                    ProductPrice = price
+                });
+
+            if (result.Success && result.Data is not null)
             {
-                ProductName = string.IsNullOrWhiteSpace(item.ProductName) ? GetNameDraft(item) : item.ProductName,
-                ProductPrice = price
-            });
+                link.ProductName = result.Data.ProductName;
+                link.ProductPrice = result.Data.ProductPrice;
+                _nameDrafts[link.AffiliateLinkId] = result.Data.ProductName ?? string.Empty;
+                _priceDrafts[link.AffiliateLinkId] = result.Data.ProductPrice.HasValue
+                    ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    : string.Empty;
+                _loadError = null;
+                return;
+            }
 
-        if (result.Success && result.Data is not null)
-        {
-            item.ProductName = result.Data.ProductName;
-            item.ProductPrice = result.Data.ProductPrice;
-            _nameDrafts[item.AffiliateLinkId] = result.Data.ProductName ?? string.Empty;
-            _priceDrafts[item.AffiliateLinkId] = result.Data.ProductPrice is > 0
-                ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
-                : string.Empty;
-        }
-        else
-        {
             _loadError = result.ErrorMessage ?? "Não foi possível salvar o nome do produto.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar metadados do histórico. AffiliateLinkId={AffiliateLinkId}", link.AffiliateLinkId);
+            _loadError = "Não foi possível salvar o nome do produto.";
         }
     }
 
-    private async Task VisualizarAsync(AffiliateLinkHistoryItemDto item)
+    private async Task VisualizarAsync(AffiliateLinkHistoryItemDto? item)
     {
         if (item is null)
         {
@@ -433,7 +487,7 @@
         await OnVisualizar.InvokeAsync(ShortAffiliateLinkDto.FromHistory(item));
     }
 
-    private async Task EditarAsync(AffiliateLinkHistoryItemDto item)
+    private async Task EditarAsync(AffiliateLinkHistoryItemDto? item)
     {
         if (item is null)
         {

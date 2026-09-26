@@ -124,9 +124,27 @@
         </div>
     </section>
 
-    <LinkGeneratorResultPanel Response="@_generatedResponse" />
+    <ErrorBoundary @ref="_resultBoundary">
+        <ChildContent>
+            <LinkGeneratorResultPanel Response="@_generatedResponse" />
+        </ChildContent>
+        <ErrorContent>
+            <div class="alert alert-warning mt-4" role="alert">
+                Não foi possível exibir a prévia do produto. Recarregue a página ou gere o link novamente.
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
 
-    <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" OnEditar="AbrirEdicaoAsync" />
+    <ErrorBoundary @ref="_historyBoundary">
+        <ChildContent>
+            <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" OnEditar="AbrirEdicaoAsync" />
+        </ChildContent>
+        <ErrorContent>
+            <div class="alert alert-warning mt-4" role="alert">
+                Não foi possível exibir o histórico de links. Use Atualizar lista ou recarregue a página.
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
 
     @if (_editItem is not null)
     {
@@ -214,6 +232,8 @@
     private MarketplaceDefinition? _detectedPlatform;
     private GerarLinkAfiliadoResponseDto? _generatedResponse;
     private int _historyRefreshToken;
+    private ErrorBoundary? _resultBoundary;
+    private ErrorBoundary? _historyBoundary;
     private readonly HashSet<MarketplaceType> _connectedPlatforms = [];
     private readonly List<MarketplaceAccountDto> _stores = [];
     private readonly HashSet<int> _selectedStoreIds = [];
@@ -416,6 +436,7 @@
 
             if (result.Success && result.Data is { HasConvertedLink: true })
             {
+                RecoverErrorBoundaries();
                 _generatedResponse = result.Data;
                 _feedbackMessage = null;
                 _feedbackIsError = false;
@@ -514,6 +535,12 @@
 
     private void ClearGeneratedResult() => _generatedResponse = null;
 
+    private void RecoverErrorBoundaries()
+    {
+        _resultBoundary?.Recover();
+        _historyBoundary?.Recover();
+    }
+
     private async Task VisualizarLink(ShortAffiliateLinkDto item)
     {
         if (item is null)
@@ -525,6 +552,7 @@
         AnalyzeUrl(_productUrl);
         ClearFeedback();
 
+        RecoverErrorBoundaries();
         _generatedResponse = GerarLinkAfiliadoResponseDto.FromHistory(item);
         SyncSelectedStoresFromResponse(_generatedResponse);
 
@@ -598,6 +626,7 @@
 
             if (result.Success && result.Data is { HasConvertedLink: true })
             {
+                RecoverErrorBoundaries();
                 _generatedResponse = result.Data;
                 _productUrl = result.Data.OriginalUrl;
                 AnalyzeUrl(_productUrl);

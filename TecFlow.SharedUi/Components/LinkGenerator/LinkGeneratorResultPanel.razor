@@ -4,6 +4,7 @@
 @using TecFlow.SharedUi.Services.LinkGenerator
 @inject IJSRuntime Js
 @inject IAffiliateLinkApiService AffiliateLinkApi
+@inject ILogger<LinkGeneratorResultPanel> Logger
 
 @if (Response is { HasConvertedLink: true } response)
 {
@@ -40,37 +41,48 @@
                     {
                         <span class="marketplace-platform-badge mb-2">@response.PlatformDetected</span>
                     }
-                    @if (string.IsNullOrWhiteSpace(response.ProductName))
-                    {
-                        <InputText class="form-control form-control-sm product-preview-title mb-1"
-                                   placeholder="Digite o nome do produto"
-                                   @bind="NameDraft"
-                                   @bind:event="oninput"
-                                   @onblur="SaveNameAsync" />
-                    }
-                    else
+                    @if (!string.IsNullOrWhiteSpace(response.ProductName))
                     {
                         <h3 class="product-preview-title mb-1">@response.ProductName</h3>
                     }
-                    @if (response.ProductPrice is not > 0)
+                    else
                     {
-                        <div class="input-group input-group-sm mt-1" style="max-width: 180px;">
-                            <span class="input-group-text">R$</span>
-                            <InputText class="form-control"
-                                       placeholder="0,00"
-                                       @bind="PriceDraft"
-                                       @bind:event="oninput"
-                                       @onblur="SavePriceAsync" />
-                        </div>
+                        <input type="text"
+                               class="form-control form-control-sm product-preview-title mb-1"
+                               placeholder="Digite o nome do produto..."
+                               value="@NameDraft"
+                               @oninput="OnNameDraftChanged" />
+                    }
+                    @if (response.ProductPrice.HasValue)
+                    {
+                        <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
                     }
                     else
                     {
-                        <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
+                        <div class="input-group input-group-sm mt-1" style="max-width: 180px;">
+                            <span class="input-group-text">R$</span>
+                            <input type="number"
+                                   class="form-control"
+                                   placeholder="0,00"
+                                   min="0"
+                                   step="0.01"
+                                   value="@PriceDraft"
+                                   @oninput="OnPriceDraftChanged" />
+                        </div>
+                    }
+                    @if (string.IsNullOrWhiteSpace(response.ProductName) || !response.ProductPrice.HasValue)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm btn-touch mt-2"
+                                disabled="@_isSavingMetadata"
+                                @onclick="SaveLinkMetadataAsync">
+                            @(_isSavingMetadata ? "Salvando..." : "Salvar")
+                        </button>
                     }
                 </div>
             </article>
 
-            @if (response.Accounts.Count(account => account.IsActive && account.StoreId > 0) > 1)
+            @if ((response.Accounts ?? []).Count(account => account is not null && account.IsActive && account.StoreId > 0) > 1)
             {
                 <div class="mb-3">
                     <label class="form-label fw-semibold" for="selected-commission-account">Conta selecionada:</label>
@@ -78,7 +90,7 @@
                             class="form-select"
                             value="@_selectedStoreId"
                             @onchange="HandleAccountChanged">
-                        @foreach (var account in response.Accounts.Where(item => item.IsActive))
+                        @foreach (var account in (response.Accounts ?? []).Where(item => item is { IsActive: true }))
                         {
                             <option value="@account.StoreId">@account.StoreName</option>
                         }
@@ -220,16 +232,17 @@
     private int _selectedStoreId;
     private string NameDraft { get; set; } = string.Empty;
     private string PriceDraft { get; set; } = string.Empty;
+    private bool _isSavingMetadata;
 
     protected override void OnParametersSet()
     {
-        var key = $"{Response?.LinkGroupId}|{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}|{Response?.Accounts.Count}";
+        var key = $"{Response?.LinkGroupId}|{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}|{Response?.Accounts?.Count}";
         if (!string.Equals(key, _lastResponseKey, StringComparison.Ordinal))
         {
             _lastResponseKey = key;
             ResetActionState();
             _selectedStoreId = Response?.SelectedStoreId
-                ?? Response?.Accounts.FirstOrDefault(account => account.IsActive)?.StoreId
+                ?? Response?.Accounts?.FirstOrDefault(account => account is { IsActive: true })?.StoreId
                 ?? 0;
             if (_selectedStoreId > 0)
             {
@@ -237,74 +250,74 @@
             }
 
             NameDraft = Response?.ProductName ?? string.Empty;
-            PriceDraft = Response?.ProductPrice is > 0
-                ? Response.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
+            PriceDraft = Response?.ProductPrice.HasValue == true
+                ? Response.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                 : string.Empty;
         }
     }
 
-    private async Task SaveNameAsync()
+    private void OnNameDraftChanged(ChangeEventArgs e) =>
+        NameDraft = e.Value?.ToString() ?? string.Empty;
+
+    private void OnPriceDraftChanged(ChangeEventArgs e) =>
+        PriceDraft = e.Value?.ToString() ?? string.Empty;
+
+    private async Task SaveLinkMetadataAsync()
     {
         if (Response is null || Response.AffiliateLinkId == Guid.Empty)
         {
             return;
         }
 
-        await PersistMetadataAsync();
-    }
-
-    private async Task SavePriceAsync()
-    {
-        if (Response is null || Response.AffiliateLinkId == Guid.Empty)
+        _isSavingMetadata = true;
+        _actionMessage = null;
+        try
         {
-            return;
-        }
-
-        await PersistMetadataAsync();
-    }
-
-    private async Task PersistMetadataAsync()
-    {
-        if (Response is null)
-        {
-            return;
-        }
-
-        decimal? price = Response.ProductPrice is > 0 ? Response.ProductPrice : null;
-        if (price is not > 0
-            && decimal.TryParse(
-                PriceDraft?.Replace(".", string.Empty).Replace(',', '.'),
-                System.Globalization.NumberStyles.Number,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out var parsed)
-            && parsed > 0)
-        {
-            price = decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
-        }
-
-        var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
-            Response.AffiliateLinkId,
-            new UpdateAffiliateProductMetadataDto
+            decimal? price = Response.ProductPrice.HasValue ? Response.ProductPrice : null;
+            if (!price.HasValue
+                && decimal.TryParse(
+                    PriceDraft,
+                    System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var parsed)
+                && parsed > 0)
             {
-                ProductName = string.IsNullOrWhiteSpace(Response.ProductName) ? NameDraft : Response.ProductName,
-                ProductPrice = price
-            });
+                price = decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
+            }
 
-        if (result.Success && result.Data is not null)
-        {
-            Response.ProductName = result.Data.ProductName;
-            Response.ProductPrice = result.Data.ProductPrice;
-            NameDraft = result.Data.ProductName ?? string.Empty;
-            PriceDraft = result.Data.ProductPrice is > 0
-                ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
-                : string.Empty;
-            _actionIsError = false;
-            _actionMessage = "Nome e preço atualizados.";
-        }
-        else
-        {
+            var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
+                Response.AffiliateLinkId,
+                new UpdateAffiliateProductMetadataDto
+                {
+                    ProductName = string.IsNullOrWhiteSpace(Response.ProductName) ? NameDraft : Response.ProductName,
+                    ProductPrice = price
+                });
+
+            if (result.Success && result.Data is not null)
+            {
+                Response.ProductName = result.Data.ProductName;
+                Response.ProductPrice = result.Data.ProductPrice;
+                NameDraft = result.Data.ProductName ?? string.Empty;
+                PriceDraft = result.Data.ProductPrice.HasValue
+                    ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    : string.Empty;
+                _actionIsError = false;
+                _actionMessage = "Nome e preço atualizados.";
+                return;
+            }
+
             _actionIsError = true;
             _actionMessage = result.ErrorMessage ?? "Não foi possível salvar o nome do produto.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar metadados do preview. AffiliateLinkId={AffiliateLinkId}", Response.AffiliateLinkId);
+            _actionIsError = true;
+            _actionMessage = "Não foi possível salvar o nome do produto.";
+        }
+        finally
+        {
+            _isSavingMetadata = false;
         }
     }
 
@@ -457,6 +470,7 @@
         _copiedShopeeShort = false;
         _isCopying = false;
         _isSharing = false;
+        _isSavingMetadata = false;
         _actionMessage = null;
         _actionIsError = false;
     }

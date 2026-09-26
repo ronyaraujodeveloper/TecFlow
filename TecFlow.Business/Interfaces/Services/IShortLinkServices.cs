@@ -38,6 +38,13 @@ public interface IShortLinkService
         Guid linkGroupId,
         IReadOnlyCollection<int> selectedIntegracaoLojaIds,
         CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateProductMetadataAsync(
+        Guid affiliateLinkId,
+        int userId,
+        string? productName,
+        decimal? productPrice,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILinkClickTelemetryService

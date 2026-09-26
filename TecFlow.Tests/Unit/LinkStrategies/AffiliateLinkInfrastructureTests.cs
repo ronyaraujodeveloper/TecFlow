@@ -209,6 +209,14 @@ public class AffiliateLinkGenerationServiceTests
             IReadOnlyCollection<int> selectedIntegracaoLojaIds,
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<bool> UpdateProductMetadataAsync(
+            Guid affiliateLinkId,
+            int userId,
+            string? productName,
+            decimal? productPrice,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(false);
     }
 
     private sealed class NoOpLinkClickTelemetryService : ILinkClickTelemetryService

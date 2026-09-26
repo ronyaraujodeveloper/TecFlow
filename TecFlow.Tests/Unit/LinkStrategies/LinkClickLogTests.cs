@@ -335,5 +335,13 @@ public class LinkClickLogTests
             IReadOnlyCollection<int> selectedIntegracaoLojaIds,
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<bool> UpdateProductMetadataAsync(
+            Guid affiliateLinkId,
+            int userId,
+            string? productName,
+            decimal? productPrice,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 }

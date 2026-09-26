@@ -4,6 +4,7 @@ using TecFlow.Business.Integrations.Common;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Infrastructure.Services.Service.ExternalServices;
 
 namespace TecFlow.Infrastructure.Services.LinkStrategies;
 
@@ -33,6 +34,7 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
 
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();
         services.AddScoped<IProductMetadataService, ProductMetadataService>();
+        services.AddScoped<IShopeeService, ShopeeService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();
 
         services.AddHttpClient<IShopeeAffiliateLinkClient, ShopeeAffiliateLinkClient>((sp, client) =>

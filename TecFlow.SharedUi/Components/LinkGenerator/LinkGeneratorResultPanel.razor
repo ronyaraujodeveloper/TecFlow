@@ -1,7 +1,9 @@
 ﻿@using TecFlow.Business.Dto
 @using TecFlow.Business.Service.LinkStrategies
 @using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.LinkGenerator
 @inject IJSRuntime Js
+@inject IAffiliateLinkApiService AffiliateLinkApi
 
 @if (Response is { HasConvertedLink: true } response)
 {
@@ -38,10 +40,33 @@
                     {
                         <span class="marketplace-platform-badge mb-2">@response.PlatformDetected</span>
                     }
-                    <h3 class="product-preview-title mb-1">
-                        @(string.IsNullOrWhiteSpace(response.ProductName) ? "Produto" : response.ProductName)
-                    </h3>
-                    <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
+                    @if (string.IsNullOrWhiteSpace(response.ProductName))
+                    {
+                        <InputText class="form-control form-control-sm product-preview-title mb-1"
+                                   placeholder="Digite o nome do produto"
+                                   @bind="NameDraft"
+                                   @bind:event="oninput"
+                                   @onblur="SaveNameAsync" />
+                    }
+                    else
+                    {
+                        <h3 class="product-preview-title mb-1">@response.ProductName</h3>
+                    }
+                    @if (response.ProductPrice is not > 0)
+                    {
+                        <div class="input-group input-group-sm mt-1" style="max-width: 180px;">
+                            <span class="input-group-text">R$</span>
+                            <InputText class="form-control"
+                                       placeholder="0,00"
+                                       @bind="PriceDraft"
+                                       @bind:event="oninput"
+                                       @onblur="SavePriceAsync" />
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
+                    }
                 </div>
             </article>
 
@@ -193,6 +218,8 @@
     private bool _actionIsError;
     private string? _lastResponseKey;
     private int _selectedStoreId;
+    private string NameDraft { get; set; } = string.Empty;
+    private string PriceDraft { get; set; } = string.Empty;
 
     protected override void OnParametersSet()
     {
@@ -208,6 +235,76 @@
             {
                 Response?.ApplySelectedAccount(_selectedStoreId);
             }
+
+            NameDraft = Response?.ProductName ?? string.Empty;
+            PriceDraft = Response?.ProductPrice is > 0
+                ? Response.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
+                : string.Empty;
+        }
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (Response is null || Response.AffiliateLinkId == Guid.Empty)
+        {
+            return;
+        }
+
+        await PersistMetadataAsync();
+    }
+
+    private async Task SavePriceAsync()
+    {
+        if (Response is null || Response.AffiliateLinkId == Guid.Empty)
+        {
+            return;
+        }
+
+        await PersistMetadataAsync();
+    }
+
+    private async Task PersistMetadataAsync()
+    {
+        if (Response is null)
+        {
+            return;
+        }
+
+        decimal? price = Response.ProductPrice is > 0 ? Response.ProductPrice : null;
+        if (price is not > 0
+            && decimal.TryParse(
+                PriceDraft?.Replace(".", string.Empty).Replace(',', '.'),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var parsed)
+            && parsed > 0)
+        {
+            price = decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
+        }
+
+        var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
+            Response.AffiliateLinkId,
+            new UpdateAffiliateProductMetadataDto
+            {
+                ProductName = string.IsNullOrWhiteSpace(Response.ProductName) ? NameDraft : Response.ProductName,
+                ProductPrice = price
+            });
+
+        if (result.Success && result.Data is not null)
+        {
+            Response.ProductName = result.Data.ProductName;
+            Response.ProductPrice = result.Data.ProductPrice;
+            NameDraft = result.Data.ProductName ?? string.Empty;
+            PriceDraft = result.Data.ProductPrice is > 0
+                ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
+                : string.Empty;
+            _actionIsError = false;
+            _actionMessage = "Nome e preço atualizados.";
+        }
+        else
+        {
+            _actionIsError = true;
+            _actionMessage = result.ErrorMessage ?? "Não foi possível salvar o nome do produto.";
         }
     }
 

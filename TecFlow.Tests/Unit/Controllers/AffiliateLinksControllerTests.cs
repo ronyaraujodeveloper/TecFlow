@@ -163,15 +163,49 @@ public class AffiliateLinksControllerTests
         Assert.IsType<UnauthorizedObjectResult>(action.Result);
     }
 
+    [Fact]
+    public async Task UpdateMetadataAsync_ShouldPersistManualName_AndRejectMissingUser()
+    {
+        var shortLink = new Mock<IShortLinkService>();
+        shortLink
+            .Setup(service => service.UpdateProductMetadataAsync(
+                It.IsAny<Guid>(),
+                7,
+                "Cadeira gamer azul",
+                199.90m,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var controller = CreateController(shortLink: shortLink.Object);
+        var id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var action = await controller.UpdateMetadataAsync(
+            id,
+            new UpdateAffiliateProductMetadataDto { ProductName = "Cadeira gamer azul", ProductPrice = 199.90m },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        var body = Assert.IsType<UpdateAffiliateProductMetadataDto>(ok.Value);
+        Assert.Equal("Cadeira gamer azul", body.ProductName);
+        Assert.Equal(199.90m, body.ProductPrice);
+
+        var unauthorized = await CreateController(userId: null).UpdateMetadataAsync(
+            id,
+            new UpdateAffiliateProductMetadataDto(),
+            CancellationToken.None);
+        Assert.IsType<UnauthorizedResult>(unauthorized.Result);
+    }
+
     private static AffiliateLinksController CreateController(
         IAffiliateLinkGenerationService? generation = null,
         IAffiliateLinkHistoryService? history = null,
+        IShortLinkService? shortLink = null,
         string? userId = "7")
     {
         var controller = new AffiliateLinksController(
             generation ?? new Mock<IAffiliateLinkGenerationService>().Object,
             history ?? new Mock<IAffiliateLinkHistoryService>().Object,
             new Mock<IAffiliateLinkGenerationContext>().Object,
+            shortLink ?? new Mock<IShortLinkService>().Object,
             NullLogger<AffiliateLinksController>.Instance);
 
         var claims = userId is null

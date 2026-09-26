@@ -29,18 +29,6 @@ public sealed class ProductMetadataService : IProductMetadataService
         @"/product/(\d+)/(\d+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private static readonly string[] InvalidTitles =
-    [
-        "opaanlp",
-        "nsbo",
-        "shopee",
-        "shopee brasil",
-        "verification",
-        "captcha",
-        "just a moment",
-        "produto"
-    ];
-
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ProductMetadataService> _logger;
@@ -289,48 +277,11 @@ public sealed class ProductMetadataService : IProductMetadataService
         return uri.ToString();
     }
 
-    public static bool IsInvalidProductName(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return true;
-        }
+    public static bool IsInvalidProductName(string? name) =>
+        ProductMetadataHtmlParser.IsInvalidProductName(name);
 
-        var trimmed = name.Trim();
-        if (trimmed.All(char.IsDigit))
-        {
-            return true;
-        }
-
-        if (!trimmed.Contains(' ', StringComparison.Ordinal)
-            && trimmed.Length <= 24
-            && trimmed.All(char.IsLetterOrDigit))
-        {
-            return true;
-        }
-
-        var normalized = trimmed.ToLowerInvariant();
-        if (normalized.Equals("produto", StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        foreach (var invalid in InvalidTitles)
-        {
-            if (invalid.Equals("produto", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (normalized.Equals(invalid, StringComparison.Ordinal)
-                || normalized.Contains(invalid, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    public static string? NormalizePersistedProductName(string? name) =>
+        ProductMetadataHtmlParser.NormalizePersistedProductName(name);
 
     private async Task<ProductMetadataDto> ExtractShopeeMetadata(
         string expandedUrl,
@@ -513,7 +464,7 @@ public sealed class ProductMetadataService : IProductMetadataService
 
             return new ProductMetadataDto
             {
-                ProductName = name,
+                ProductName = NormalizePersistedProductName(name),
                 ProductPrice = price,
                 ProductImageUrl = imageUrl
             };

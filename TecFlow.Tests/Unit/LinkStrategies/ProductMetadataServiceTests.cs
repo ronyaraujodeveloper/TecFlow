@@ -270,6 +270,22 @@ public class ProductMetadataServiceTests
         Assert.True(ProductMetadataService.IsInvalidProductName("Nsbo"));
         Assert.True(ProductMetadataService.IsInvalidProductName("Shopee Brasil"));
         Assert.True(ProductMetadataService.IsInvalidProductName("Produto"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("Shopee"));
+        Assert.True(ProductMetadataService.IsInvalidProductName("ab"));
+        Assert.Null(ProductMetadataService.NormalizePersistedProductName("Produto"));
+        Assert.Null(ProductMetadataService.NormalizePersistedProductName("Shopee"));
+        Assert.Null(ProductMetadataService.NormalizePersistedProductName("xy"));
+        Assert.Equal(
+            "Cadeira gamer azul",
+            ProductMetadataService.NormalizePersistedProductName("Cadeira gamer azul"));
+    }
+
+    [Fact]
+    public void NormalizePersistedProductName_ShouldNeverKeepGenericTitles()
+    {
+        Assert.Null(ProductMetadataHtmlParser.NormalizePersistedProductName("Produto"));
+        Assert.Null(ProductMetadataHtmlParser.FromUrlFallback(null).ProductName);
+        Assert.Null(ProductMetadataHtmlParser.FromUrlFallback("https://shopee.com.br/produto").ProductName);
     }
 
     [Fact]

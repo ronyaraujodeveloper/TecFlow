@@ -17,6 +17,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
     private readonly ILinkClickTelemetryService _telemetryService;
     private readonly IAffiliateLinkGenerationContext _generationContext;
     private readonly IProductMetadataService _productMetadataService;
+    private readonly IShopeeService? _shopeeService;
     private readonly ILogger<AffiliateLinkGenerationService> _logger;
 
     public AffiliateLinkGenerationService(
@@ -27,7 +28,8 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         ILinkClickTelemetryService telemetryService,
         IAffiliateLinkGenerationContext generationContext,
         IProductMetadataService productMetadataService,
-        ILogger<AffiliateLinkGenerationService> logger)
+        ILogger<AffiliateLinkGenerationService> logger,
+        IShopeeService? shopeeService = null)
     {
         _platformLinkResolver = platformLinkResolver;
         _urlExpansionService = urlExpansionService;
@@ -37,6 +39,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         _generationContext = generationContext;
         _productMetadataService = productMetadataService;
         _logger = logger;
+        _shopeeService = shopeeService;
     }
 
     public async Task<GerarLinkAfiliadoResponseDto> GenerateAsync(
@@ -69,6 +72,13 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             }
 
             var productMetadata = await ExtractProductMetadataSafelyAsync(resolvedUrl, cancellationToken);
+            productMetadata = await EnrichShopeeOfficialCatalogAsync(
+                productMetadata,
+                resolvedUrl,
+                strategy.PlatformType,
+                storeScopes[0],
+                userId,
+                cancellationToken);
             var affiliateId = userId.ToString();
             var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(
                 userId,
@@ -229,7 +239,9 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
     {
         try
         {
-            return await _productMetadataService.ExtractAsync(productUrl, cancellationToken);
+            var metadata = await _productMetadataService.ExtractAsync(productUrl, cancellationToken);
+            metadata.ProductName = ProductMetadataHtmlParser.NormalizePersistedProductName(metadata.ProductName);
+            return metadata;
         }
         catch (Exception ex)
         {
@@ -237,8 +249,73 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 ex,
                 "Extração de metadados falhou; usando slug da URL. Url={Url}",
                 productUrl);
-            return ProductMetadataHtmlParser.FromUrlFallback(productUrl);
+            var fallback = ProductMetadataHtmlParser.FromUrlFallback(productUrl);
+            fallback.ProductName = ProductMetadataHtmlParser.NormalizePersistedProductName(fallback.ProductName);
+            return fallback;
         }
+    }
+
+    private async Task<ProductMetadataDto> EnrichShopeeOfficialCatalogAsync(
+        ProductMetadataDto metadata,
+        string productUrl,
+        MarketplaceType platformType,
+        Guid storeScope,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        if (_shopeeService is null || platformType != MarketplaceType.Shopee)
+        {
+            return metadata;
+        }
+
+        var needsName = ProductMetadataHtmlParser.IsInvalidProductName(metadata.ProductName);
+        var needsPrice = metadata.ProductPrice is not > 0;
+        if (!needsName && !needsPrice)
+        {
+            return metadata;
+        }
+
+        try
+        {
+            var store = await _storeScopeResolver.ResolveAsync(
+                storeScope,
+                userId,
+                platformType,
+                cancellationToken);
+            var official = await _shopeeService.TryGetAffiliateItemDetailsAsync(
+                productUrl,
+                store,
+                cancellationToken);
+            if (official is null)
+            {
+                return metadata;
+            }
+
+            if (needsName && !ProductMetadataHtmlParser.IsInvalidProductName(official.ProductName))
+            {
+                metadata.ProductName = official.ProductName;
+            }
+
+            if (needsPrice && official.ProductPrice is > 0)
+            {
+                metadata.ProductPrice = official.ProductPrice;
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.ProductImageUrl)
+                && !string.IsNullOrWhiteSpace(official.ProductImageUrl))
+            {
+                metadata.ProductImageUrl = official.ProductImageUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(
+                ex,
+                "Fallback Shopee Open API indisponível. Url={Url}",
+                productUrl);
+        }
+
+        return metadata;
     }
 
     private static GerarLinkAfiliadoResponseDto Fail(string message) =>

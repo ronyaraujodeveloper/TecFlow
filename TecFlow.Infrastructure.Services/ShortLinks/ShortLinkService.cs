@@ -239,6 +239,31 @@ public sealed class ShortLinkService : IShortLinkService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> UpdateProductMetadataAsync(
+        Guid affiliateLinkId,
+        int userId,
+        string? productName,
+        decimal? productPrice,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.ShortAffiliateLinks
+            .FirstOrDefaultAsync(
+                link => link.AffiliateLinkId == affiliateLinkId && link.UserId == userId,
+                cancellationToken);
+        if (entity is null)
+        {
+            return false;
+        }
+
+        entity.ProductName = ProductMetadataHtmlParser.NormalizePersistedProductName(productName);
+        entity.ProductPrice = productPrice is > 0
+            ? decimal.Round(productPrice.Value, 2, MidpointRounding.AwayFromZero)
+            : null;
+        entity.Touch();
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private static void ApplyProductMetadata(ShortAffiliateLink entity, ProductMetadataDto? metadata)
     {
         if (metadata is null)
@@ -248,8 +273,14 @@ public sealed class ShortLinkService : IShortLinkService
 
         if (!string.IsNullOrWhiteSpace(metadata.ProductName))
         {
-            var name = metadata.ProductName.Trim();
-            entity.ProductName = name.Length <= 255 ? name : name[..255];
+            var name = ProductMetadataHtmlParser.NormalizePersistedProductName(metadata.ProductName);
+            entity.ProductName = name is null
+                ? null
+                : (name.Length <= 255 ? name : name[..255]);
+        }
+        else
+        {
+            entity.ProductName = null;
         }
 
         entity.ProductPrice = metadata.ProductPrice is > 0 ? metadata.ProductPrice : null;

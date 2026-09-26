@@ -18,17 +18,20 @@ public class AffiliateLinksController : ControllerBase
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly IAffiliateLinkHistoryService _historyService;
     private readonly IAffiliateLinkGenerationContext _generationContext;
+    private readonly IShortLinkService _shortLinkService;
     private readonly ILogger<AffiliateLinksController> _logger;
 
     public AffiliateLinksController(
         IAffiliateLinkGenerationService generationService,
         IAffiliateLinkHistoryService historyService,
         IAffiliateLinkGenerationContext generationContext,
+        IShortLinkService shortLinkService,
         ILogger<AffiliateLinksController> logger)
     {
         _generationService = generationService;
         _historyService = historyService;
         _generationContext = generationContext;
+        _shortLinkService = shortLinkService;
         _logger = logger;
     }
 
@@ -127,6 +130,39 @@ public class AffiliateLinksController : ControllerBase
                 Message = "Erro inesperado ao gerar link de comissão."
             });
         }
+    }
+
+    [HttpPut("{affiliateLinkId:guid}/metadata")]
+    [HttpPatch("{affiliateLinkId:guid}/metadata")]
+    public async Task<ActionResult<UpdateAffiliateProductMetadataDto>> UpdateMetadataAsync(
+        Guid affiliateLinkId,
+        [FromBody] UpdateAffiliateProductMetadataDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        request ??= new UpdateAffiliateProductMetadataDto();
+        var updated = await _shortLinkService.UpdateProductMetadataAsync(
+            affiliateLinkId,
+            userId,
+            request.ProductName,
+            request.ProductPrice,
+            cancellationToken);
+        if (!updated)
+        {
+            return NotFound();
+        }
+
+        return Ok(new UpdateAffiliateProductMetadataDto
+        {
+            ProductName = TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser.NormalizePersistedProductName(request.ProductName),
+            ProductPrice = request.ProductPrice is > 0
+                ? decimal.Round(request.ProductPrice.Value, 2, MidpointRounding.AwayFromZero)
+                : null
+        });
     }
 
     private bool TryGetUserId(out int userId)

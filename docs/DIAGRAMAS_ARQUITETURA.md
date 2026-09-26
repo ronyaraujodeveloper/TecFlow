@@ -36,6 +36,7 @@ flowchart LR
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
   META[ProductMetadataService] -->|pipeline Shopee/Magalu/ML/TikTok| SHORT
+  OPEN[ShopeeService Open API get_item_base_info] -->|AppKey/AppSecret MarketplaceAccounts| META
   UI -->|Gerar Link de Comissão| META
   LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL
   SHORT --> LOG

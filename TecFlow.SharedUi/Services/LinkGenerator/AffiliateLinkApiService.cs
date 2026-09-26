@@ -53,4 +53,16 @@ public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
             Descricao = result.ErrorMessage ?? "Não foi possível carregar o histórico de links."
         };
     }
+
+    public Task<ApiResult<UpdateAffiliateProductMetadataDto>> UpdateProductMetadataAsync(
+        Guid affiliateLinkId,
+        UpdateAffiliateProductMetadataDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Salvando nome do produto...");
+        return _httpService.PutAsync<UpdateAffiliateProductMetadataDto, UpdateAffiliateProductMetadataDto>(
+            $"api/afiliados/links/{affiliateLinkId}/metadata",
+            request,
+            cancellationToken);
+    }
 }

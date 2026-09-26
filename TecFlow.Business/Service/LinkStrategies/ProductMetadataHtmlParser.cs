@@ -52,6 +52,18 @@ public static class ProductMetadataHtmlParser
         @"\s*[\|\-–—]\s*(Shopee(?:\s+Brasil)?|Mercado\s*Livre|MercadoLibre|Magazine\s+Luiza|Magalu|Amazon(?:\.com\.br)?|KaBuM!?|Kabum!?|Casas\s+Bahia).*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly string[] InvalidGenericTitles =
+    [
+        "opaanlp",
+        "nsbo",
+        "shopee",
+        "shopee brasil",
+        "verification",
+        "captcha",
+        "just a moment",
+        "produto"
+    ];
+
     public static ProductMetadataDto Parse(string? html, string pageUrl)
     {
         var fallback = FromUrlFallback(pageUrl);
@@ -92,9 +104,9 @@ public static class ProductMetadataHtmlParser
 
         return new ProductMetadataDto
         {
-            ProductName = Truncate(
+            ProductName = NormalizePersistedProductName(Truncate(
                 !string.IsNullOrWhiteSpace(slugName) ? slugName : (CleanProductName(name) ?? fallback.ProductName),
-                255),
+                255)),
             ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
             ProductImageUrl = Truncate(CleanText(image), 500)
         };
@@ -103,7 +115,7 @@ public static class ProductMetadataHtmlParser
     public static ProductMetadataDto FromUrlFallback(string? url) =>
         new()
         {
-            ProductName = Truncate(BuildSlugFallback(url), 255),
+            ProductName = NormalizePersistedProductName(Truncate(BuildSlugFallback(url), 255)),
             ProductPrice = null,
             ProductImageUrl = null
         };
@@ -112,12 +124,12 @@ public static class ProductMetadataHtmlParser
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            return "Produto";
+            return string.Empty;
         }
 
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
         {
-            return Truncate(url.Trim(), 255) ?? "Produto";
+            return Truncate(url.Trim(), 255) ?? string.Empty;
         }
 
         var marketplaceName = TryExtractMarketplaceProductNameFromUrl(url);
@@ -162,8 +174,62 @@ public static class ProductMetadataHtmlParser
                 ?? slug;
         }
 
-        return string.IsNullOrWhiteSpace(uri.Host) ? "Produto" : uri.Host;
+        return string.IsNullOrWhiteSpace(uri.Host) ? string.Empty : uri.Host;
     }
+
+    public static bool IsInvalidProductName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return true;
+        }
+
+        var trimmed = name.Trim();
+        var validCharacters = trimmed.Count(char.IsLetterOrDigit);
+        if (validCharacters < 3)
+        {
+            return true;
+        }
+
+        if (trimmed.All(char.IsDigit))
+        {
+            return true;
+        }
+
+        if (!trimmed.Contains(' ', StringComparison.Ordinal)
+            && trimmed.Length <= 24
+            && trimmed.All(char.IsLetterOrDigit))
+        {
+            return true;
+        }
+
+        var normalized = trimmed.ToLowerInvariant();
+        if (normalized.Equals("produto", StringComparison.Ordinal)
+            || normalized.Equals("shopee", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        foreach (var invalid in InvalidGenericTitles)
+        {
+            if (invalid.Equals("produto", StringComparison.Ordinal)
+                || invalid.Equals("shopee", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (normalized.Equals(invalid, StringComparison.Ordinal)
+                || normalized.Contains(invalid, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static string? NormalizePersistedProductName(string? name) =>
+        IsInvalidProductName(name) ? null : name!.Trim();
 
     public static string FormatBrl(decimal? price)
     {

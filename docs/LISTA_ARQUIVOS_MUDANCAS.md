@@ -702,6 +702,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataService** — API `shopee.com.br/api/v4/item/get?itemid&shopid`; preço micro-unidades `/ 100000000`; fallback slug.
 - [x] **ProductMetadataService** — pipeline `ExtractMetadataAsync` por plataforma (`ExtractShopeeMetadata` inclui `/product/{shop}/{item}`).
 - [x] **ProductMetadataService** — `CookieContainer` + warm-up `GET https://shopee.com.br/` e headers Chrome 122 antes da API de item.
+- [x] **ProductMetadataHtmlParser** / **ProductMetadataService** — bloqueio rígido de títulos genéricos (`Produto`, `Shopee`, < 3 caracteres); persistência `NULL` em `ShortAffiliateLinks.ProductName`.
+- [x] **ShopeeService.cs** / **IShopeeService** — fallback `product/get_item_base_info` com AppKey/AppSecret de `MarketplaceAccounts`.
+- [x] **UpdateAffiliateProductMetadataDto.cs** — payload de edição manual de nome/preço.
+- [x] **LinkGeneratorResultPanel.razor** / **HistoricoLinks.razor** / **GeradorLinks.razor** — InputText de nome/preço quando metadados vierem nulos.
+- [x] **AffiliateLinksController** — `PUT/PATCH api/afiliados/links/{id}/metadata`.
+- [x] **ShopeeServiceTests.cs** / **ProductMetadataServiceTests** — rejeição de `Produto` e Open API sem credenciais.
 
 ### Fase 19.11 — Cores institucionais dos marketplaces
 

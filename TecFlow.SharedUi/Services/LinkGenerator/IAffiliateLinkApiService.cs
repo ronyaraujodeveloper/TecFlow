@@ -13,4 +13,9 @@ public interface IAffiliateLinkApiService
     Task<AffiliateLinkHistoryResponseDto> ListHistoryAsync(
         AffiliateLinkFilter filter,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResult<UpdateAffiliateProductMetadataDto>> UpdateProductMetadataAsync(
+        Guid affiliateLinkId,
+        UpdateAffiliateProductMetadataDto request,
+        CancellationToken cancellationToken = default);
 }

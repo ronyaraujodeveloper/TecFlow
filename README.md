@@ -464,6 +464,27 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] 19.5.5. Reformulação Visual da Tabela "Histórico de Links": Modificar a estrutura da tabela do histórico de links no Blazor removendo as colunas brutas LINK ORIGINAL e LINK ENCURTADO, substituindo-as por PRODUTO (Nome do Produto) e PREÇO (Valor formatado em R$). Preservar as colunas PLATAFORMA, DATA, CLIQUES e as ações Visualizar e Editar.
 - [x] 19.5.6. Tratamento de Exceções e Resiliência (Fallback): scraping bloqueado não interrompe a conversão; títulos genéricos (`Produto`/`Shopee`) gravam `NULL`; o afiliado informa nome/preço no preview e no histórico; fallback Shopee Open API (`get_item_base_info`) usa AppKey/AppSecret de `MarketplaceAccounts`.
 
+### 🛡️ 20. Estratégia de Resiliência, Defesa Anti-Bot e Formatação na Interface (TecFlow)
+
+- [x] 20.1. **Proteção Contra Captchas e Bloqueios WAF (Cloudflare/Shopee/Marketplaces):**
+   - O pipeline de extração descarta nomes genéricos e hashes de anti-bot (ex: `Opaanlp`, `Nsbo`, `Produto`, `Shopee Brasil`, `Captcha`).
+   - Títulos suspeitos ou puramente numéricos são higienizados e convertidos para `NULL` no backend para evitar corrupção de dados na base SQL Server.
+
+- [x] 20.2. **Fallback Manual Resiliente no Blazor (GeradorLinks.razor):**
+   - Quando o scraping do marketplace for retido por mecanismos antirobô, o sistema não bloqueia a geração do link de comissão.
+   - O painel exibe campos de edição direta (Nome do Produto e Preço em R$) para preenchimento opcional pelo afiliado, gravando as informações no banco sem travar a interface.
+
+- [x] 20.3. **Layout Compacto e Ações Rápidas por Ícones:**
+   - Visualização do Card Preview em linha única flexível (`d-flex align-items-center gap-2`).
+   - Substituição de botões textuais por ícones nativos do Bootstrap Icons:
+     * **Salvar:** Ícone de Disquete (`bi bi-floppy`).
+     * **Visualizar:** Ícone de Olho (`bi bi-eye`).
+     * **Editar:** Ícone de Lápis (`bi bi-pencil`).
+   - Disposição horizontal ultra-compacta para os cartões de compartilhamento (Copiar, WhatsApp e Telegram).
+
+- [x] 20.4. **Resolvedor Universal de Links (Multi-hop Unshorten):**
+   - Acompanhamento recursivo em cadeia de redirecionamentos HTTP (`301`/`302`/Meta Refresh) para processar links de agregadores e concorrentes (ex: `ofertou.ai`, `promoby.me`, `amzn.to`, `t.me`).
+   - Remoção automática de parâmetros de rastreio de terceiros (`tag=`, `partner_id=`, `promoter_id=`, `utm_source=`) e re-injeção transparente das credenciais de comissão do usuário logado.
 ---
 
 ## Arquitetura Mobile & Sincronização SQLite/SQL Server

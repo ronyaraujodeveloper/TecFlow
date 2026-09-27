@@ -11,7 +11,6 @@ namespace TecFlow.Business.Service.Application;
 public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationService
 {
     private readonly PlatformLinkResolver _platformLinkResolver;
-    private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeScopeResolver;
     private readonly IShortLinkService _shortLinkService;
     private readonly ILinkClickTelemetryService _telemetryService;
@@ -32,7 +31,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         IShopeeService? shopeeService = null)
     {
         _platformLinkResolver = platformLinkResolver;
-        _urlExpansionService = urlExpansionService;
+        _ = urlExpansionService;
         _storeScopeResolver = storeScopeResolver;
         _shortLinkService = shortLinkService;
         _telemetryService = telemetryService;
@@ -58,14 +57,9 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         try
         {
             var workingUrl = request.OriginalUrl.Trim();
-            var expandedUrl = await _platformLinkResolver.ExpandIfShortenedAsync(workingUrl, cancellationToken);
-            if (!ShortAffiliateLinkService.IsSupportedDestination(expandedUrl)
-                && !UniversalLinkResolverEngine.TryMapDomainToPlatform(expandedUrl, out _))
-            {
-                return Fail(ShortAffiliateLinkService.UnrecognizedDestinationMessage);
-            }
-
-            var (strategy, resolvedUrl) = await ResolveStrategyAsync(expandedUrl, cancellationToken);
+            var (strategy, resolvedUrl) = await _platformLinkResolver.ResolveFromInputAsync(
+                workingUrl,
+                cancellationToken);
             var storeScopes = request.ResolveStoreScopes().ToList();
             if (storeScopes.Count == 0)
             {
@@ -218,24 +212,6 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                 ex.GetType().FullName,
                 ex.ToString());
             return Fail("Não foi possível gerar o link de afiliado no momento. Tente novamente em instantes.");
-        }
-    }
-
-    private async Task<(IPlatformLinkStrategy Strategy, string ResolvedUrl)> ResolveStrategyAsync(
-        string workingUrl,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return (_platformLinkResolver.Resolve(workingUrl), workingUrl);
-        }
-        catch (AffiliateLinkGenerationException)
-        {
-            _logger.LogInformation(
-                "URL não reconhecida; tentando expandir redirecionamentos antes de resolver a plataforma.");
-
-            var expandedUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
-            return (_platformLinkResolver.Resolve(expandedUrl), expandedUrl);
         }
     }
 

@@ -1,5 +1,4 @@
-﻿using TecFlow.Business.Integrations;
-using TecFlow.Business.Service.LinkStrategies;
+﻿using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -17,13 +16,19 @@ public static class ShortAffiliateLinkService
     public const string UnrecognizedDestinationMessage =
         "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre, Magalu, Kabum! ou Casas Bahia.";
 
-    public static bool IsSupportedDestination(string? url) =>
-        UniversalLinkResolverEngine.TryMapDomainToPlatform(url, out _)
-        && !UniversalLinkResolverEngine.IsAggregatorUrl(url)
-        && !AffiliateTrackingIdValidator.IsShortenerUrl(url);
+    /// <summary>
+    /// Valida o domínio da URL JÁ descompactada. Não usar na URL colada (agregadores).
+    /// </summary>
+    public static bool IsSupportedDomain(string? destinationUrl)
+    {
+        if (string.IsNullOrWhiteSpace(destinationUrl)
+            || UniversalLinkResolverEngine.IsAggregatorUrl(destinationUrl))
+        {
+            return false;
+        }
 
-    public static bool RequiresExpansion(string? url) =>
-        !string.IsNullOrWhiteSpace(url) && !IsSupportedDestination(url);
+        return UniversalLinkResolverEngine.TryMapDomainToPlatform(destinationUrl, out _);
+    }
 
     public static bool IsSamePlatform(MarketplaceType left, MarketplaceType right) =>
         left.AreSamePlatform(right);

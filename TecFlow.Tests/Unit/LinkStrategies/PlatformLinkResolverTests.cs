@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Integrations;
+using TecFlow.Business.Integrations.Amazon;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
@@ -445,7 +446,7 @@ public class PlatformLinkResolverTests
                 .Contains("promoby.me", StringComparison.OrdinalIgnoreCase))
             {
                 return Html(
-                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=promobit-d-20"></head></html>""");
+                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B0C4BW38R4?tag=promobit-d-20"></head></html>""");
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);
@@ -460,15 +461,34 @@ public class PlatformLinkResolverTests
             NullLogger<PlatformLinkResolver>.Instance,
             expansion);
 
-        var expanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
+        Exception? thrown = null;
+        IPlatformLinkStrategy? strategy = null;
+        var destination = string.Empty;
+        try
+        {
+            (strategy, destination) = await resolver.ResolveFromInputAsync("https://promoby.me/6nf9k3d5");
+        }
+        catch (Exception ex)
+        {
+            thrown = ex;
+        }
 
-        Assert.Contains("amazon.com.br", expanded, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", expanded);
-        Assert.True(UrlUnshortenerService.TryDetectMarketplace(expanded, out var platform));
-        Assert.Equal(MarketplaceType.Amazon, platform);
-        Assert.Equal(MarketplaceType.Amazon, resolver.Resolve(expanded).PlatformType);
-        Assert.True(ShortAffiliateLinkService.IsSupportedDestination(expanded));
-        Assert.False(ShortAffiliateLinkService.IsSupportedDestination("https://promoby.me/6nf9k3d5"));
+        Assert.True(thrown is null, thrown?.Message);
+        Assert.DoesNotContain(
+            ShortAffiliateLinkService.UnrecognizedDestinationMessage,
+            thrown?.Message ?? string.Empty,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("amazon.com.br", destination, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("B0C4BW38R4", destination, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("promobit-d-20", destination, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ShortAffiliateLinkService.IsSupportedDomain(destination));
+        Assert.Equal(MarketplaceType.Amazon, strategy!.PlatformType);
+        Assert.True(AmazonProductUrlParser.TryParse(destination, out var asin));
+        Assert.Equal("B0C4BW38R4", asin);
+        Assert.Equal("B0C4BW38R4", ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(destination));
+        Assert.Equal(
+            "https://www.amazon.com.br/dp/B0C4BW38R4?tag=sualoja-20",
+            await strategy.GenerateDeepLinkAsync(destination, Guid.NewGuid(), "10"));
     }
 
     private static HttpResponseMessage Html(string body) =>

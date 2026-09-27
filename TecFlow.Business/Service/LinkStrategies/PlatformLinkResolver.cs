@@ -57,6 +57,19 @@ public sealed class PlatformLinkResolver
         return canonical;
     }
 
+    public async Task<(IPlatformLinkStrategy Strategy, string DestinationUrl)> ResolveFromInputAsync(
+        string inputUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var destinationUrl = await ExpandIfShortenedAsync(inputUrl, cancellationToken);
+        if (!ShortAffiliateLinkService.IsSupportedDomain(destinationUrl))
+        {
+            throw new AffiliateLinkGenerationException(ShortAffiliateLinkService.UnrecognizedDestinationMessage);
+        }
+
+        return (Resolve(destinationUrl), destinationUrl);
+    }
+
     public static string ExtractShopeeAffiliateId(string url) =>
         ExtractAffiliateId(url, MarketplaceType.Shopee);
 

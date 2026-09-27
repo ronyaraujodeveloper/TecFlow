@@ -654,7 +654,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Tests/Unit/LinkStrategies/UniversalResolverTests.cs** — ofertou Magalu `5321952`, promoby Amazon sem `promobit-d-20`, ofertou Kabum.
 - [x] **PlatformLinkResolver.cs** / **ShortAffiliateLinkService.cs** — unshorten primeiro; valida domínio só na URL final; agregadores (`promoby.me`, `ofertou.ai`, `bit.ly`, `t.me`) não são rejeitados na cola.
 - [x] **GeradorLinks.razor** — "Não reconhecemos este domínio" apenas se o destino final não for marketplace.
-- [x] **PlatformLinkResolverTests.cs** — `https://promoby.me/6nf9k3d5` expande para `amazon.com.br` e associa Amazon.
+- [x] **PlatformLinkResolverTests.cs** — `ResolveFromInputAsync("https://promoby.me/6nf9k3d5")` chega em `amazon.com.br/dp/B0C4BW38R4` sem "Não reconhecemos este domínio"; remove `tag=promobit-d-20` e injeta a tag da conta.
 - [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
 
 ### Fase 19.18 — Encurtadores TikTok, Magalu e Mercado Livre

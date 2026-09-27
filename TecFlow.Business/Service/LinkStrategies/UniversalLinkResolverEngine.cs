@@ -7,7 +7,6 @@ using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Services;
-using TecFlow.Business.Service.Application;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
@@ -117,11 +116,7 @@ public sealed class UniversalLinkResolverEngine
     }
 
     public static bool ShouldExpand(string? url) =>
-        !string.IsNullOrWhiteSpace(url)
-        && (IsAggregatorUrl(url)
-            || AffiliateTrackingIdValidator.IsShortenerUrl(url)
-            || ShopeeLinkHostMatcher.IsShortenerUrl(url)
-            || !ShortAffiliateLinkService.IsSupportedDestination(url));
+        !string.IsNullOrWhiteSpace(url);
 
     public static bool IsAggregatorUrl(string? url)
     {

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Amazon;
 
 namespace TecFlow.Business.Service.LinkStrategies;
 
@@ -261,6 +262,11 @@ public static class ProductMetadataHtmlParser
         if (IsMagazineLuizaHost(host))
         {
             return DecodeSlugToProductName(ExtractSegmentBeforeMarker(uri, "p"), magaluTokens: true);
+        }
+
+        if (IsAmazonHost(host))
+        {
+            return ExtractAmazonProductName(uri, url);
         }
 
         if (IsMercadoLivreHost(host))
@@ -638,6 +644,56 @@ public static class ProductMetadataHtmlParser
     private static bool IsShopeeHost(string host) =>
         host.Contains("shopee.", StringComparison.OrdinalIgnoreCase)
         || host.Equals("shopee.com", StringComparison.OrdinalIgnoreCase);
+
+    private static string? ExtractAmazonProductName(Uri uri, string originalUrl)
+    {
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var i = 0; i < segments.Length; i++)
+        {
+            if (!segments[i].Equals("dp", StringComparison.OrdinalIgnoreCase)
+                && !segments[i].Equals("gp", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (i > 0)
+            {
+                var before = segments[i - 1].Split('?', 2)[0];
+                if (!IsGenericPathSegment(before) && !AmazonProductUrlParser.IsValidAsin(before, out _))
+                {
+                    var fromSlug = DecodeSlugToProductName(before, titleCaseIfLower: true);
+                    if (!string.IsNullOrWhiteSpace(fromSlug))
+                    {
+                        return fromSlug;
+                    }
+                }
+            }
+
+            if (i + 2 < segments.Length)
+            {
+                var afterAsin = segments[i + 2].Split('?', 2)[0];
+                if (!IsGenericPathSegment(afterAsin) && !AmazonProductUrlParser.IsValidAsin(afterAsin, out _))
+                {
+                    var fromTail = DecodeSlugToProductName(afterAsin, titleCaseIfLower: true);
+                    if (!string.IsNullOrWhiteSpace(fromTail))
+                    {
+                        return fromTail;
+                    }
+                }
+            }
+        }
+
+        return AmazonProductUrlParser.TryParse(originalUrl, out var asin) ? asin : null;
+    }
+
+    private static bool IsAmazonHost(string host)
+    {
+        var normalized = host.Trim().ToLowerInvariant();
+        return normalized.Contains("amazon.", StringComparison.Ordinal)
+            || normalized.Contains("amzn.", StringComparison.Ordinal)
+            || normalized.Equals("a.co", StringComparison.Ordinal);
+    }
 
     private static bool IsMagazineLuizaHost(string host)
     {

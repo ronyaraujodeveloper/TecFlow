@@ -28,57 +28,61 @@
                 <span class="link-generator-result-check" aria-hidden="true">✓</span>
             </div>
 
-            <article class="product-preview-card mb-4" aria-label="Prévia do produto">
+            <article class="product-preview-card product-preview-card--compact mb-3" aria-label="Prévia do produto">
                 @if (!string.IsNullOrWhiteSpace(response.ProductImageUrl))
                 {
                     <img src="@response.ProductImageUrl"
                          alt=""
-                         class="product-preview-thumb"
+                         class="product-preview-thumb product-preview-thumb--sm"
                          loading="lazy" />
                 }
-                <div class="product-preview-body">
+                <div class="product-preview-body flex-grow-1 min-w-0">
                     @if (!string.IsNullOrWhiteSpace(response.PlatformDetected))
                     {
-                        <span class="marketplace-platform-badge mb-2">@response.PlatformDetected</span>
+                        <span class="marketplace-platform-badge">@response.PlatformDetected</span>
                     }
-                    @if (!string.IsNullOrWhiteSpace(response.ProductName))
-                    {
-                        <h3 class="product-preview-title mb-1">@response.ProductName</h3>
-                    }
-                    else
-                    {
-                        <input type="text"
-                               class="form-control form-control-sm product-preview-title mb-1"
-                               placeholder="Digite o nome do produto..."
-                               value="@NameDraft"
-                               @oninput="OnNameDraftChanged" />
-                    }
-                    @if (response.ProductPrice.HasValue)
-                    {
-                        <p class="product-preview-price mb-0">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</p>
-                    }
-                    else
-                    {
-                        <div class="input-group input-group-sm mt-1" style="max-width: 180px;">
-                            <span class="input-group-text">R$</span>
-                            <input type="number"
-                                   class="form-control"
-                                   placeholder="0,00"
-                                   min="0"
-                                   step="0.01"
-                                   value="@PriceDraft"
-                                   @oninput="OnPriceDraftChanged" />
-                        </div>
-                    }
-                    @if (string.IsNullOrWhiteSpace(response.ProductName) || !response.ProductPrice.HasValue)
-                    {
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm btn-touch mt-2"
-                                disabled="@_isSavingMetadata"
-                                @onclick="SaveLinkMetadataAsync">
-                            @(_isSavingMetadata ? "Salvando..." : "Salvar")
-                        </button>
-                    }
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        @if (!string.IsNullOrWhiteSpace(response.ProductName))
+                        {
+                            <h3 class="product-preview-title mb-0 text-truncate">@response.ProductName</h3>
+                        }
+                        else
+                        {
+                            <input type="text"
+                                   class="form-control form-control-sm product-preview-title"
+                                   placeholder="Digite o nome do produto..."
+                                   value="@NameDraft"
+                                   @oninput="OnNameDraftChanged" />
+                        }
+                        @if (response.ProductPrice.HasValue)
+                        {
+                            <span class="product-preview-price text-nowrap">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</span>
+                        }
+                        else
+                        {
+                            <div class="input-group input-group-sm product-preview-price-input">
+                                <span class="input-group-text">R$</span>
+                                <input type="number"
+                                       class="form-control"
+                                       placeholder="0,00"
+                                       min="0"
+                                       step="0.01"
+                                       value="@PriceDraft"
+                                       @oninput="OnPriceDraftChanged" />
+                            </div>
+                        }
+                        @if (string.IsNullOrWhiteSpace(response.ProductName) || !response.ProductPrice.HasValue)
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm btn-icon"
+                                    title="Salvar"
+                                    aria-label="Salvar"
+                                    disabled="@_isSavingMetadata"
+                                    @onclick="SaveLinkMetadataAsync">
+                                <i class="bi bi-floppy" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </div>
                 </div>
             </article>
 
@@ -98,114 +102,129 @@
                 </div>
             }
 
-            <div class="row g-3">
+            <div class="link-row-stack" role="list">
                 @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
                 {
-                    <div class="col-12">
-                        <article class="link-choice-card">
-                            <header class="link-choice-card-header">
-                                <span class="link-choice-icon" aria-hidden="true">🔗</span>
-                                <div>
-                                    <h3 class="link-choice-title">Link de Afiliado Direto (@(string.IsNullOrWhiteSpace(response.PlatformDetected) ? "Marketplace" : response.PlatformDetected))</h3>
-                                    <p class="link-choice-hint mb-0">URL longa com tags da loja vinculada.</p>
-                                </div>
-                            </header>
+                    <article class="link-row" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link direto (@(string.IsNullOrWhiteSpace(response.PlatformDetected) ? "Marketplace" : response.PlatformDetected))</span>
                             <output id="generated-affiliate-url"
-                                    class="link-generator-result-url font-monospace"
-                                    for="product-url">
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.AffiliateUrl">
                                 @response.AffiliateUrl
                             </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do link direto">
                             <button type="button"
-                                    class="btn btn-touch w-100 mt-3 @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
+                                    class="btn btn-sm btn-icon @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
+                                    title="Copiar"
+                                    aria-label="Copiar link direto"
                                     disabled="@_isCopying"
                                     @onclick="() => CopyLinkAsync(response.AffiliateUrl, CopyTarget.Affiliate)">
-                                @(_copiedAffiliate ? "Copiado!" : "Copiar link longo")
+                                <i class="bi @(_copiedAffiliate ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
                             </button>
-                        </article>
-                    </div>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.AffiliateUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar link direto no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.AffiliateUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar link direto no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(response.ShortenedShopeeUrl))
                 {
-                    <div class="col-12 col-lg-6">
-                        <article class="link-choice-card link-choice-card--shopee">
-                            <header class="link-choice-card-header">
-                                <span class="link-choice-icon" aria-hidden="true">🛒</span>
-                                <div>
-                                    <h3 class="link-choice-title">Link Encurtado Shopee (br.shp.ee)</h3>
-                                    <p class="link-choice-hint mb-0">Encurtador oficial da Shopee.</p>
-                                </div>
-                            </header>
+                    <article class="link-row link-row--shopee" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link encurtado oficial</span>
                             <output id="generated-shopee-short-url"
-                                    class="link-generator-result-url font-monospace"
-                                    for="product-url">
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.ShortenedShopeeUrl">
                                 @response.ShortenedShopeeUrl
                             </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do link oficial">
                             <button type="button"
-                                    class="btn btn-touch w-100 mt-3 @(_copiedShopeeShort ? "btn-success" : "btn-outline-orange")"
+                                    class="btn btn-sm btn-icon @(_copiedShopeeShort ? "btn-success" : "btn-outline-orange")"
+                                    title="Copiar"
+                                    aria-label="Copiar link oficial"
                                     disabled="@_isCopying"
                                     @onclick="() => CopyLinkAsync(response.ShortenedShopeeUrl, CopyTarget.ShopeeShort)">
-                                @(_copiedShopeeShort ? "Copiado!" : "Copiar br.shp.ee")
+                                <i class="bi @(_copiedShopeeShort ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
                             </button>
-                        </article>
-                    </div>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ShortenedShopeeUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar link oficial no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ShortenedShopeeUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar link oficial no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
                 {
-                    <div class="col-12 col-lg-6">
-                        <article class="link-choice-card link-choice-card--tecflow">
-                            <header class="link-choice-card-header">
-                                <span class="link-choice-icon" aria-hidden="true">📡</span>
-                                <div>
-                                    <h3 class="link-choice-title">Link Encurtado com Rastreio TecFlow</h3>
-                                    <p class="link-choice-hint mb-0">Contagem de cliques no painel TecFlow.</p>
-                                </div>
-                            </header>
+                    <article class="link-row link-row--tecflow" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link de rastreio TecFlow</span>
                             <output id="generated-short-url"
-                                    class="link-generator-result-url font-monospace"
-                                    for="product-url">
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.ResolvedShortUrl">
                                 @response.ResolvedShortUrl
                             </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do rastreio TecFlow">
                             <button type="button"
-                                    class="btn btn-touch w-100 mt-3 @(_copiedShort ? "btn-success" : "btn-outline-primary")"
+                                    class="btn btn-sm btn-icon @(_copiedShort ? "btn-success" : "btn-outline-primary")"
+                                    title="Copiar"
+                                    aria-label="Copiar rastreio TecFlow"
                                     disabled="@_isCopying"
                                     @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
-                                @(_copiedShort ? "Copiado!" : "Copiar rastreio TecFlow")
+                                <i class="bi @(_copiedShort ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
                             </button>
-                        </article>
-                    </div>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar rastreio TecFlow no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar rastreio TecFlow no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
                 }
-            </div>
-
-            <div class="link-generator-result-actions d-grid d-sm-flex gap-2 mt-4">
-                <button type="button"
-                        class="btn btn-primary btn-lg btn-touch flex-fill link-generator-share-btn"
-                        disabled="@_isSharing"
-                        @onclick="ShareLinkAsync">
-                    <svg class="link-generator-share-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
-                    </svg>
-                    <span>@(_isSharing ? "Abrindo..." : "Compartilhar")</span>
-                </button>
-            </div>
-
-            <div class="link-generator-fallback-share mt-3" aria-label="Compartilhar em aplicativos">
-                <p class="small text-muted mb-2">Ou envie direto o link com rastreio:</p>
-                <div class="d-grid d-sm-flex gap-2">
-                    <a class="btn btn-success btn-touch flex-fill"
-                       href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(ShareUrl(response), response.PlatformDetected)"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                        WhatsApp
-                    </a>
-                    <a class="btn btn-info text-white btn-touch flex-fill"
-                       href="@AffiliateShareLinkBuilder.BuildTelegramUri(ShareUrl(response), response.PlatformDetected)"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                        Telegram
-                    </a>
-                </div>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -225,7 +244,6 @@
     private bool _copiedShort;
     private bool _copiedShopeeShort;
     private bool _isCopying;
-    private bool _isSharing;
     private string? _actionMessage;
     private bool _actionIsError;
     private string? _lastResponseKey;
@@ -333,9 +351,6 @@
         ResetActionState();
     }
 
-    private static string ShareUrl(GerarLinkAfiliadoResponseDto response) =>
-        FirstNonEmpty(response.ResolvedShortUrl, response.ShortenedShopeeUrl, response.AffiliateUrl);
-
     private async Task CopyLinkAsync(string? url, CopyTarget target)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -398,94 +413,15 @@
         }
     }
 
-    private async Task ShareLinkAsync()
-    {
-        if (Response is null)
-        {
-            return;
-        }
-
-        var url = ShareUrl(Response);
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return;
-        }
-
-        _isSharing = true;
-        _actionMessage = null;
-
-        try
-        {
-            var shareText = AffiliateShareLinkBuilder.BuildShareIntro(Response.PlatformDetected);
-            var result = await Js.InvokeAsync<ShareLinkResult>(
-                "tecFlowAppInterop.shareLink",
-                "TecFlow — Link de Comissão",
-                shareText,
-                url);
-
-            if (result.Cancelled)
-            {
-                return;
-            }
-
-            if (result.Success)
-            {
-                _actionIsError = false;
-                _actionMessage = result.Method switch
-                {
-                    "native" => "Compartilhamento iniciado no dispositivo.",
-                    "whatsapp" => "Abrimos o WhatsApp com a mensagem pronta para envio.",
-                    "telegram" => "Abrimos o Telegram com o link pronto para envio.",
-                    _ => "Compartilhamento iniciado no dispositivo."
-                };
-                return;
-            }
-
-            if (string.Equals(result.Method, "fallback", StringComparison.OrdinalIgnoreCase))
-            {
-                _actionIsError = false;
-                _actionMessage = "Use WhatsApp ou Telegram abaixo para enviar o link.";
-                return;
-            }
-
-            _actionIsError = true;
-            _actionMessage = "Não foi possível abrir o compartilhamento.";
-        }
-        catch (Exception)
-        {
-            _actionIsError = true;
-            _actionMessage = "Erro ao compartilhar o link. Use WhatsApp ou Telegram abaixo.";
-        }
-        finally
-        {
-            _isSharing = false;
-            StateHasChanged();
-        }
-    }
-
     private void ResetActionState()
     {
         _copiedAffiliate = false;
         _copiedShort = false;
         _copiedShopeeShort = false;
         _isCopying = false;
-        _isSharing = false;
         _isSavingMetadata = false;
         _actionMessage = null;
         _actionIsError = false;
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value.Trim();
-            }
-        }
-
-        return string.Empty;
     }
 
     private enum CopyTarget
@@ -493,12 +429,5 @@
         Affiliate,
         Short,
         ShopeeShort
-    }
-
-    private sealed class ShareLinkResult
-    {
-        public bool Success { get; set; }
-        public bool Cancelled { get; set; }
-        public string? Method { get; set; }
     }
 }

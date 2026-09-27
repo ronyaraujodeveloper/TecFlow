@@ -41,7 +41,9 @@ public static class AffiliateTrackingIdValidator
         "ofertou.ai",
         "promoby.me",
         "bit.ly",
-        "tinyurl.com"
+        "tinyurl.com",
+        "t.me",
+        "telegram.me"
     ];
 
     private static readonly (string Host, string PathPrefix)[] ShortenerPathPrefixes =

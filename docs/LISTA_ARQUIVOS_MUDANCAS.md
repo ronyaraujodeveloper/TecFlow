@@ -652,6 +652,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Business/Service/LinkStrategies/UniversalLinkResolverEngine.cs** — unshortener universal (10 saltos, JS/meta-refresh), mapa domínio→plataforma e injeção de comissão.
 - [x] **ProductMetadataService.cs** / **PlatformLinkResolver.cs** — `ResolveFinalDestinationUrlAsync` no pipeline de metadados e de geração.
 - [x] **TecFlow.Tests/Unit/LinkStrategies/UniversalResolverTests.cs** — ofertou Magalu `5321952`, promoby Amazon sem `promobit-d-20`, ofertou Kabum.
+- [x] **PlatformLinkResolver.cs** / **ShortAffiliateLinkService.cs** — unshorten primeiro; valida domínio só na URL final; agregadores (`promoby.me`, `ofertou.ai`, `bit.ly`, `t.me`) não são rejeitados na cola.
+- [x] **GeradorLinks.razor** — "Não reconhecemos este domínio" apenas se o destino final não for marketplace.
+- [x] **PlatformLinkResolverTests.cs** — `https://promoby.me/6nf9k3d5` expande para `amazon.com.br` e associa Amazon.
 - [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
 
 ### Fase 19.18 — Encurtadores TikTok, Magalu e Mercado Livre

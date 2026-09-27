@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -424,6 +425,7 @@ public class PlatformLinkResolverTests
             UrlUnshortenerService.ApplyTenantCredentials(magaluExpanded, "5321952"));
 
         var amazonExpanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
+        Assert.Contains("amazon.com.br", amazonExpanded, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", amazonExpanded);
         Assert.DoesNotContain("tag=", amazonExpanded, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("promobit-d-20", amazonExpanded, StringComparison.OrdinalIgnoreCase);
@@ -432,6 +434,41 @@ public class PlatformLinkResolverTests
         Assert.Equal(
             "https://www.amazon.com.br/dp/B08N5WRWNW?tag=sualoja-20",
             await resolver.Resolve(amazonExpanded).GenerateDeepLinkAsync(amazonExpanded, Guid.NewGuid(), "10"));
+    }
+
+    [Fact]
+    public async Task ExpandIfShortenedAsync_ShouldExpandPromobyMeToAmazonComBr()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if ((request.RequestUri?.Host ?? string.Empty)
+                .Contains("promoby.me", StringComparison.OrdinalIgnoreCase))
+            {
+                return Html(
+                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=promobit-d-20"></head></html>""");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var expansion = new UrlExpansionService(
+            new StubHttpClientFactory(handler),
+            NullLogger<UrlExpansionService>.Instance);
+        var amazonStore = CreateTenantStore(MarketplaceType.Amazon, "sualoja-20");
+        var resolver = new PlatformLinkResolver(
+            [CreateAmazonStrategy(expansion, amazonStore)],
+            NullLogger<PlatformLinkResolver>.Instance,
+            expansion);
+
+        var expanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
+
+        Assert.Contains("amazon.com.br", expanded, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", expanded);
+        Assert.True(UrlUnshortenerService.TryDetectMarketplace(expanded, out var platform));
+        Assert.Equal(MarketplaceType.Amazon, platform);
+        Assert.Equal(MarketplaceType.Amazon, resolver.Resolve(expanded).PlatformType);
+        Assert.True(ShortAffiliateLinkService.IsSupportedDestination(expanded));
+        Assert.False(ShortAffiliateLinkService.IsSupportedDestination("https://promoby.me/6nf9k3d5"));
     }
 
     private static HttpResponseMessage Html(string body) =>

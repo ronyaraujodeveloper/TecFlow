@@ -59,6 +59,12 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
         {
             var workingUrl = request.OriginalUrl.Trim();
             var expandedUrl = await _platformLinkResolver.ExpandIfShortenedAsync(workingUrl, cancellationToken);
+            if (!ShortAffiliateLinkService.IsSupportedDestination(expandedUrl)
+                && !UniversalLinkResolverEngine.TryMapDomainToPlatform(expandedUrl, out _))
+            {
+                return Fail(ShortAffiliateLinkService.UnrecognizedDestinationMessage);
+            }
+
             var (strategy, resolvedUrl) = await ResolveStrategyAsync(expandedUrl, cancellationToken);
             var storeScopes = request.ResolveStoreScopes().ToList();
             if (storeScopes.Count == 0)

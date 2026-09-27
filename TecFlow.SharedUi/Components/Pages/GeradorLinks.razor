@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
+@using TecFlow.Business.Service.Application
 @using TecFlow.Business.Service.LinkStrategies
 @using TecFlow.Core.Enums
 @using TecFlow.SharedUi.Components.LinkGenerator
@@ -254,14 +255,17 @@
             ? []
             : _stores.Where(store => store.PlatformType.AreSamePlatform(_editItem.PlatformType)).ToList();
 
+    private bool HasAnyActiveStore =>
+        _stores.Any(store => store.Status == MarketplaceIntegrationStatus.Active);
+
     private bool CanGenerate =>
         !_isLoading
         && _integrationsLoaded
-        && _detectedPlatform is { IsBackendReady: true }
-        && IsPlatformConnected(_detectedPlatform)
-        && StoreScope.ActiveStoreId is > 0
-        && ActiveStoreMatchesDetectedPlatform()
-        && !string.IsNullOrWhiteSpace(_productUrl);
+        && HasAnyActiveStore
+        && !string.IsNullOrWhiteSpace(_productUrl)
+        && (_detectedPlatform is null
+            || (_detectedPlatform.IsBackendReady
+                && IsPlatformConnected(_detectedPlatform)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -366,7 +370,7 @@
         if (_detectedPlatform is null)
         {
             _needsConnectAccount = false;
-            _detectionHint = "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre, Magalu, Kabum! ou Casas Bahia.";
+            _detectionHint = "Vamos seguir os redirecionamentos deste link para identificar a loja.";
             return;
         }
 
@@ -405,28 +409,30 @@
                 return;
             }
 
-            if (_detectedPlatform is null)
-            {
-                ShowError("Não foi possível converter este link. Verifique se uma loja está selecionada.");
-                return;
-            }
-
             var selectedStores = ResolveStoresForGeneration();
 
-            if (selectedStores.Count == 0)
+            if (_detectedPlatform is { IsBackendReady: true }
+                && selectedStores.Count == 0
+                && !HasAnyActiveStore)
             {
                 _needsConnectAccount = true;
                 ShowError(BuildMissingAccountMessage(_detectedPlatform.DisplayName));
                 return;
             }
 
+            var fallbackStore = selectedStores.FirstOrDefault()
+                ?? _stores.FirstOrDefault(store => store.Status == MarketplaceIntegrationStatus.Active);
             var request = new GerarLinkAfiliadoDto
             {
                 OriginalUrl = _productUrl.Trim(),
-                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(selectedStores[0].Id),
+                StoreId = fallbackStore is null
+                    ? Guid.Empty
+                    : IntegracaoLojaScopeHelper.EncodeStoreScope(fallbackStore.Id),
                 StoreIds = selectedStores.Select(store => IntegracaoLojaScopeHelper.EncodeStoreScope(store.Id)).ToList(),
-                TenantId = selectedStores[0].TenantId != Guid.Empty ? selectedStores[0].TenantId : null,
-                ShopId = string.IsNullOrWhiteSpace(selectedStores[0].ShopId) ? null : selectedStores[0].ShopId
+                TenantId = fallbackStore is not null && fallbackStore.TenantId != Guid.Empty
+                    ? fallbackStore.TenantId
+                    : null,
+                ShopId = string.IsNullOrWhiteSpace(fallbackStore?.ShopId) ? null : fallbackStore.ShopId
             };
 
             var result = await AffiliateLinkApi.GenerateAsync(request);

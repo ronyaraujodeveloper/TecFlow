@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Application;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
@@ -36,7 +37,7 @@ public sealed class PlatformLinkResolver
         }
 
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url.Trim());
-        if (_urlExpansionService is null || !UniversalLinkResolverEngine.ShouldExpand(workingUrl))
+        if (_urlExpansionService is null)
         {
             return workingUrl;
         }
@@ -74,7 +75,9 @@ public sealed class PlatformLinkResolver
 
         foreach (var strategy in _strategies)
         {
-            if (strategy.CanProcess(url))
+            if (strategy.CanProcess(url)
+                || (UniversalLinkResolverEngine.TryMapDomainToPlatform(url, out var mapped)
+                    && strategy.PlatformType.AreSamePlatform(mapped)))
             {
                 _logger.LogDebug(
                     "Estratégia {Platform} selecionada para a URL {Host}.",
@@ -86,11 +89,10 @@ public sealed class PlatformLinkResolver
         }
 
         _logger.LogWarning(
-            "Nenhuma estratégia de link encontrada para a URL informada: {Url}",
+            "Nenhuma estratégia de link encontrada para a URL de destino: {Url}",
             url);
 
-        throw new AffiliateLinkGenerationException(
-            "Plataforma não suportada para a URL informada. Marketplaces disponíveis: Shopee, TikTok Shop, Mercado Livre, Amazon, Magazine Luiza, Kabum! e Casas Bahia.");
+        throw new AffiliateLinkGenerationException(ShortAffiliateLinkService.UnrecognizedDestinationMessage);
     }
 
     private static string TryGetHost(string url) =>

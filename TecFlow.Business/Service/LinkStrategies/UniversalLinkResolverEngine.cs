@@ -7,6 +7,7 @@ using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Application;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
@@ -26,6 +27,8 @@ public sealed class UniversalLinkResolverEngine
         "bit.ly",
         "tinyurl.com",
         "t.co",
+        "t.me",
+        "telegram.me",
         "cutt.ly",
         "is.gd",
         "ow.ly",
@@ -103,7 +106,7 @@ public sealed class UniversalLinkResolverEngine
         }
 
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(inputUrl.Trim());
-        if (_urlExpansionService is null || !ShouldExpand(workingUrl))
+        if (_urlExpansionService is null)
         {
             return StripCommissionAndTracking(workingUrl);
         }
@@ -114,9 +117,11 @@ public sealed class UniversalLinkResolverEngine
     }
 
     public static bool ShouldExpand(string? url) =>
-        IsAggregatorUrl(url)
-        || AffiliateTrackingIdValidator.IsShortenerUrl(url)
-        || ShopeeLinkHostMatcher.IsShortenerUrl(url);
+        !string.IsNullOrWhiteSpace(url)
+        && (IsAggregatorUrl(url)
+            || AffiliateTrackingIdValidator.IsShortenerUrl(url)
+            || ShopeeLinkHostMatcher.IsShortenerUrl(url)
+            || !ShortAffiliateLinkService.IsSupportedDestination(url));
 
     public static bool IsAggregatorUrl(string? url)
     {

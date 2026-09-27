@@ -134,7 +134,7 @@ public class AffiliateLinkGenerationServiceTests
             userId: 10);
 
         Assert.False(result.Success);
-        Assert.Contains("suportada", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Não reconhecemos este domínio", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IHostEnvironment CreateHostEnvironment()

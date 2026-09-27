@@ -36,7 +36,7 @@ flowchart LR
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
   EXP[UrlExpansionService] -->|ate 10 saltos HTTP/JS/meta| UNI[UniversalLinkResolverEngine]
-  UNI -->|ofertou.ai / promoby.me / bit.ly| META
+  UNI -->|cola qualquer agregador depois valida destino| META
   UNI -->|dominio para MarketplaceAccounts| PLAT[Amazon Magalu Kabum Shopee ML CB TikTok]
   UN -->|strip partner_id/promoter_id| MAG[MagazineLuizaCommissionUrlBuilder promoter_id]
   ACC[MarketplaceAccounts] -->|AreSamePlatform Magalu| SCOPE[IntegracaoLojaScopeResolver]

@@ -1,4 +1,6 @@
-﻿using TecFlow.Core.Entities;
+﻿using TecFlow.Business.Integrations;
+using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
 
@@ -11,6 +13,17 @@ namespace TecFlow.Business.Service.Application;
 public static class ShortAffiliateLinkService
 {
     public const string MagaluPromoterQuery = "promoter_id";
+
+    public const string UnrecognizedDestinationMessage =
+        "Não reconhecemos este domínio. Use links de Shopee, TikTok Shop, Amazon, Mercado Livre, Magalu, Kabum! ou Casas Bahia.";
+
+    public static bool IsSupportedDestination(string? url) =>
+        UniversalLinkResolverEngine.TryMapDomainToPlatform(url, out _)
+        && !UniversalLinkResolverEngine.IsAggregatorUrl(url)
+        && !AffiliateTrackingIdValidator.IsShortenerUrl(url);
+
+    public static bool RequiresExpansion(string? url) =>
+        !string.IsNullOrWhiteSpace(url) && !IsSupportedDestination(url);
 
     public static bool IsSamePlatform(MarketplaceType left, MarketplaceType right) =>
         left.AreSamePlatform(right);

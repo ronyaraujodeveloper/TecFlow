@@ -147,7 +147,7 @@ public class ShopeeLinkConversionTests
         }
 
         var ex = Assert.Throws<AffiliateLinkGenerationException>(() => resolver.Resolve(url));
-        Assert.Contains("não suportada", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Não reconhecemos este domínio", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -360,7 +360,7 @@ public class PlatformLinkResolverTests
                     Headers =
                     {
                         Location = new Uri(
-                            "https://www.magazineluiza.com.br/geladeira/p/218434100/ed/refg/?partner_id=3440&utm_source=ofertou")
+                            "https://www.magazineluiza.com.br/smart-tv-50-tcl-4k-uhd-qled-50p7k-google-tv-aipq-google-assistente-3-hdmi/p/218434100/te/tvlc/?partner_id=3440&promoter_id=3223826&utm_campaign=3223826")
                     }
                 };
             }
@@ -379,7 +379,7 @@ public class PlatformLinkResolverTests
             NullLogger<UrlExpansionService>.Instance);
 
         var kabumStore = CreateTenantStore(MarketplaceType.Kabum, "tecflow_kabum");
-        var magaluStore = CreateTenantStore(MarketplaceType.MagazineLuiza, "magazinematos");
+        var magaluStore = CreateTenantStore(MarketplaceType.MagazineLuiza, "5321952");
         var amazonStore = CreateTenantStore(MarketplaceType.Amazon, "sualoja-20");
 
         var resolver = new PlatformLinkResolver(
@@ -406,13 +406,21 @@ public class PlatformLinkResolverTests
             UrlUnshortenerService.ApplyTenantCredentials(kabumExpanded, "tecflow_kabum"));
 
         var magaluExpanded = await resolver.ExpandIfShortenedAsync("https://ofertou.ai/drXB-Magalu");
-        Assert.StartsWith("https://www.magazineluiza.com.br/", magaluExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("https://www.magazineluiza.com.br/smart-tv-50-tcl", magaluExpanded, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("partner_id", magaluExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("promoter_id=3223826", magaluExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("utm_campaign=3223826", magaluExpanded, StringComparison.OrdinalIgnoreCase);
         Assert.True(UrlUnshortenerService.TryDetectMarketplace(magaluExpanded, out var magaluPlatform));
         Assert.Equal(MarketplaceType.MagazineLuiza, magaluPlatform);
         Assert.Equal(
-            "https://www.magazinevoce.com.br/magazinematos/p/218434100/",
+            "Smart TV 50 TCL 4K UHD QLED 50P7K Google TV AIPQ Google Assistente 3 HDMI",
+            ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(magaluExpanded));
+        Assert.Equal(
+            "https://www.magazineluiza.com.br/p/218434100/?promoter_id=5321952",
             await resolver.Resolve(magaluExpanded).GenerateDeepLinkAsync(magaluExpanded, Guid.NewGuid(), "10"));
+        Assert.Equal(
+            "https://www.magazineluiza.com.br/p/218434100/?promoter_id=5321952",
+            UrlUnshortenerService.ApplyTenantCredentials(magaluExpanded, "5321952"));
 
         var amazonExpanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
         Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", amazonExpanded);

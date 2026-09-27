@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
@@ -38,7 +39,7 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
         var decodedId = IntegracaoLojaScopeHelper.TryDecodeStoreScope(storeScopeId);
         var store = await TryResolveExplicitAsync(decodedId, userId, expectedPlatform, cancellationToken);
 
-        if (store is null || store.PlatformType != expectedPlatform)
+        if (store is null || !store.PlatformType.AreSamePlatform(expectedPlatform))
         {
             store = await TryResolveFirstActiveForPlatformAsync(userId, expectedPlatform, cancellationToken);
         }
@@ -101,13 +102,13 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
         }
 
         var store = await _integracaoLojaRepository.GetByIdAsync(id, cancellationToken);
-        if (store is not null && store.PlatformType == expectedPlatform && UserOwnsStore(store, userId))
+        if (store is not null && store.PlatformType.AreSamePlatform(expectedPlatform) && UserOwnsStore(store, userId))
         {
             return store;
         }
 
         var account = await _marketplaceAccountRepository.GetByIdAsync(id, cancellationToken);
-        if (account is null || account.MarketplaceType != expectedPlatform || !UserOwnsAccount(account, userId))
+        if (account is null || !ShortAffiliateLinkService.MatchesPlatform(account, expectedPlatform) || !UserOwnsAccount(account, userId))
         {
             return null;
         }
@@ -122,10 +123,7 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
     {
         var userKey = userId.ToString(CultureInfo.InvariantCulture);
         var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
-        var account = accounts
-            .Where(item => item.IsActive && item.MarketplaceType == expectedPlatform)
-            .OrderByDescending(item => item.CreatedAt)
-            .FirstOrDefault();
+        var account = ShortAffiliateLinkService.FindActiveAccount(accounts, expectedPlatform);
 
         if (account is not null)
         {
@@ -133,10 +131,7 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
         }
 
         var lojas = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
-        return lojas
-            .Where(item => item.PlatformType == expectedPlatform && item.Status != MarketplaceIntegrationStatus.Inactive)
-            .OrderByDescending(item => item.CreatedAt)
-            .FirstOrDefault();
+        return ShortAffiliateLinkService.FindActiveStore(lojas, expectedPlatform);
     }
 
     private async Task<IntegracaoLoja> ResolveStoreForAccountAsync(
@@ -158,7 +153,7 @@ public sealed class IntegracaoLojaScopeResolver : IIntegracaoLojaScopeResolver
         {
             var lojas = await _integracaoLojaRepository.ListByUserIdAsync(userId, cancellationToken);
             store = lojas.FirstOrDefault(item =>
-                item.PlatformType == account.MarketplaceType
+                item.PlatformType.AreSamePlatform(account.MarketplaceType)
                 && string.Equals(item.ShopId, account.ShopId, StringComparison.OrdinalIgnoreCase));
         }
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.MagazineLuiza;
 using TecFlow.Business.Interfaces.Services;
@@ -9,7 +10,7 @@ namespace TecFlow.Business.Service.LinkStrategies;
 
 /// <summary>
 /// Estratégia Magazine Luiza: reconhece Magalu / Magazine Você / magalu.me,
-/// extrai productId em /p/ e monta link de afiliado (loja parceira ou ?parceiro=).
+/// extrai productId em /p/ e monta link de afiliado (loja parceira ou ?promoter_id=).
 /// </summary>
 public sealed class MagazineLuizaLinkStrategy : IPlatformLinkStrategy
 {
@@ -55,9 +56,15 @@ public sealed class MagazineLuizaLinkStrategy : IPlatformLinkStrategy
         }
 
         var host = uri.Host.ToLowerInvariant();
-        return SupportedHosts.Any(supported =>
+        if (SupportedHosts.Any(supported =>
             host.Equals(supported, StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith("." + supported, StringComparison.OrdinalIgnoreCase));
+            || host.EndsWith("." + supported, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return AffiliateTrackingIdValidator.TryDetectPlatformFromUrl(url, out var detected)
+            && detected.AreSamePlatform(MarketplaceType.MagazineLuiza);
     }
 
     public async Task<string> GenerateDeepLinkAsync(

@@ -244,13 +244,15 @@
 
     private IReadOnlyList<MarketplaceAccountDto> AccountsForDetectedPlatform =>
         _detectedPlatform?.IntegrationType is { } platform
-            ? _stores.Where(store => store.PlatformType == platform && store.Status == MarketplaceIntegrationStatus.Active).ToList()
+            ? _stores.Where(store =>
+                    store.PlatformType.AreSamePlatform(platform)
+                    && store.Status == MarketplaceIntegrationStatus.Active).ToList()
             : [];
 
     private IReadOnlyList<MarketplaceAccountDto> AccountsForEdit =>
         _editItem is null
             ? []
-            : _stores.Where(store => store.PlatformType == _editItem.PlatformType).ToList();
+            : _stores.Where(store => store.PlatformType.AreSamePlatform(_editItem.PlatformType)).ToList();
 
     private bool CanGenerate =>
         !_isLoading
@@ -500,7 +502,8 @@
         $"⚠️ Você ainda não tem uma conta da {platformName} conectada.";
 
     private bool IsPlatformConnected(MarketplaceDefinition platform) =>
-        platform.IntegrationType is { } integrationType && _connectedPlatforms.Contains(integrationType);
+        platform.IntegrationType is { } integrationType
+        && _connectedPlatforms.Any(item => item.AreSamePlatform(integrationType));
 
     private bool IsPlatformDetected(MarketplaceDefinition platform) =>
         _detectedPlatform?.Key == platform.Key;
@@ -512,7 +515,7 @@
             return false;
         }
 
-        return StoreScope.ActiveStore?.PlatformType == expectedType;
+        return StoreScope.ActiveStore?.PlatformType.AreSamePlatform(expectedType) == true;
     }
 
     private string GetInputWrapClass()

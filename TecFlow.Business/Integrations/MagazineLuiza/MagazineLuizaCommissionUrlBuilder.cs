@@ -9,6 +9,7 @@ public static class MagazineLuizaCommissionUrlBuilder
     public const string MagazineVoceBase = "https://www.magazinevoce.com.br/";
     public const string CatalogProductBase = "https://www.magazineluiza.com.br/p/";
     public const string ParceiroQuery = "parceiro";
+    public const string PromoterQuery = "promoter_id";
     public const string HomologPartnerSlug = "magazinematos";
 
     public static string BuildProductAffiliateUrl(string productId, string partnerKey)
@@ -22,7 +23,7 @@ public static class MagazineLuizaCommissionUrlBuilder
         var id = productId.Trim();
         if (IsNumericPartner(partner))
         {
-            return $"{CatalogProductBase}{id}/?{ParceiroQuery}={Uri.EscapeDataString(partner)}";
+            return $"{CatalogProductBase}{id}/?{PromoterQuery}={Uri.EscapeDataString(partner)}";
         }
 
         return $"{MagazineVoceBase}{SanitizePartnerSlug(partner)}/p/{id}/";

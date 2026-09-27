@@ -207,6 +207,12 @@ public static class AffiliateTrackingIdValidator
                 bestLength = pattern.Length;
                 best = detected;
             }
+
+            if (best is null && TryDetectAggregatorPlatformHint(uri, host, out var hinted))
+            {
+                best = hinted;
+                bestLength = host.Length;
+            }
         }
 
         if (best is null)
@@ -216,6 +222,57 @@ public static class AffiliateTrackingIdValidator
 
         platform = best.Value;
         return true;
+    }
+
+    private static bool TryDetectAggregatorPlatformHint(Uri uri, string host, out MarketplaceType platform)
+    {
+        platform = default;
+        var isAggregator = host == "ofertou.ai"
+            || host.EndsWith(".ofertou.ai", StringComparison.Ordinal)
+            || host == "promoby.me"
+            || host.EndsWith(".promoby.me", StringComparison.Ordinal);
+        if (!isAggregator)
+        {
+            return false;
+        }
+
+        var haystack = $"{uri.AbsolutePath} {uri.Query} {uri.Fragment}";
+        if (haystack.Contains("magalu", StringComparison.OrdinalIgnoreCase)
+            || haystack.Contains("magazine", StringComparison.OrdinalIgnoreCase))
+        {
+            platform = MarketplaceType.MagazineLuiza;
+            return true;
+        }
+
+        if (haystack.Contains("kabum", StringComparison.OrdinalIgnoreCase))
+        {
+            platform = MarketplaceType.Kabum;
+            return true;
+        }
+
+        if (haystack.Contains("amazon", StringComparison.OrdinalIgnoreCase)
+            || haystack.Contains("amzn", StringComparison.OrdinalIgnoreCase))
+        {
+            platform = MarketplaceType.Amazon;
+            return true;
+        }
+
+        if (haystack.Contains("shopee", StringComparison.OrdinalIgnoreCase)
+            || haystack.Contains("shp.ee", StringComparison.OrdinalIgnoreCase))
+        {
+            platform = MarketplaceType.Shopee;
+            return true;
+        }
+
+        if (haystack.Contains("mercadolivre", StringComparison.OrdinalIgnoreCase)
+            || haystack.Contains("mercadolibre", StringComparison.OrdinalIgnoreCase)
+            || haystack.Contains("meli", StringComparison.OrdinalIgnoreCase))
+        {
+            platform = MarketplaceType.MercadoLivre;
+            return true;
+        }
+
+        return false;
     }
 
     public static bool IsBooleanLiteral(string? value) =>
@@ -384,9 +441,20 @@ public static class AffiliateTrackingIdValidator
             return MarketplaceType.Shopee;
         }
 
+        var compact = MarketplaceTypeExtensions.CompactKey(platform);
+        if (Enum.TryParse<MarketplaceType>(compact, ignoreCase: true, out var parsedFromCompact))
+        {
+            return parsedFromCompact;
+        }
+
         if (Enum.TryParse<MarketplaceType>(platform.Replace(" ", string.Empty), ignoreCase: true, out var parsed))
         {
             return parsed;
+        }
+
+        if (MarketplaceTypeExtensions.AreSamePlatform(MarketplaceType.MagazineLuiza, platform))
+        {
+            return MarketplaceType.MagazineLuiza;
         }
 
         var normalized = platform.Trim();

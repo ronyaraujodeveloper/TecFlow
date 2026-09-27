@@ -22,6 +22,7 @@ public class MagazineLuizaLinkStrategyTests
     [InlineData("https://www.magazinevoce.com.br/magazinematos/p/218434100/", true)]
     [InlineData("https://magalu.me/abc123", true)]
     [InlineData("https://mglz.ne/xyz", true)]
+    [InlineData("https://ofertou.ai/drXB-Magalu", true)]
     [InlineData("https://shopee.com.br/produto-i.1.2", false)]
     [InlineData("https://example.com/p/218434100", false)]
     public void CanProcess_ShouldRecognizeMagaluHosts(string url, bool expected)
@@ -57,7 +58,22 @@ public class MagazineLuizaLinkStrategyTests
 
         var link = await strategy.GenerateDeepLinkAsync(CanonicalUrl, Guid.NewGuid(), "aff-10");
 
-        Assert.Equal($"https://www.magazineluiza.com.br/p/{ProductId}/?parceiro={PartnerNumeric}", link);
+        Assert.Equal($"https://www.magazineluiza.com.br/p/{ProductId}/?promoter_id={PartnerNumeric}", link);
+    }
+
+    [Fact]
+    public async Task GenerateDeepLinkAsync_ShouldInjectPromoterId5321952()
+    {
+        var strategy = CreateStrategy(store: CreateStore("5321952"));
+
+        var link = await strategy.GenerateDeepLinkAsync(
+            "https://www.magazineluiza.com.br/smart-tv-50-tcl-4k-uhd-qled-50p7k-google-tv-aipq-google-assistente-3-hdmi/p/218434100/?partner_id=3440&promoter_id=3223826&utm_campaign=3223826",
+            Guid.NewGuid(),
+            "aff-10");
+
+        Assert.Equal("https://www.magazineluiza.com.br/p/218434100/?promoter_id=5321952", link);
+        Assert.DoesNotContain("3440", link, StringComparison.Ordinal);
+        Assert.DoesNotContain("3223826", link, StringComparison.Ordinal);
     }
 
     [Fact]

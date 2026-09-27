@@ -37,6 +37,10 @@ flowchart LR
   SHORT -->|SaveChangesAsync| SQL
   EXP[UrlExpansionService] -->|ate 5 saltos HTTP/HTML| UN[UrlUnshortenerService]
   UN -->|ofertou.ai / promoby.me| META
+  UN -->|strip partner_id/promoter_id| MAG[MagazineLuizaCommissionUrlBuilder promoter_id]
+  ACC[MarketplaceAccounts] -->|AreSamePlatform Magalu| SCOPE[IntegracaoLojaScopeResolver]
+  SHORTSVC[ShortAffiliateLinkService] --> SCOPE
+  MAG --> AFFURL
   OPEN[ShopeeService Open API get_item_base_info] -->|AppKey/AppSecret MarketplaceAccounts| META
   UI -->|Gerar Link de Comissão| META
   LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
@@ -49,6 +50,36 @@ public class IntegracaoLojaScopeResolverTests
 
         Assert.Equal(9, resolved.Id);
         Assert.Equal(MarketplaceType.Shopee, resolved.PlatformType);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ShouldFindMagaluAccountByAliasAndTracking5321952()
+    {
+        var magalu = CreateAccount(id: 3, shopId: "magalu-shop", platform: MarketplaceType.MagazineLuiza);
+        magalu.TrackingId = "5321952";
+        magalu.AffiliateTrackingId = "5321952";
+        magalu.FriendlyName = "Magalu";
+        var olderMagalu = CreateAccount(id: 2, shopId: "magalu-old", platform: MarketplaceType.MagazineLuiza);
+        olderMagalu.CreatedAt = DateTime.UtcNow.AddDays(-2);
+        var loja = CreateLoja(id: 11, shopId: "magalu-shop", platform: MarketplaceType.MagazineLuiza);
+        loja.AffiliateTrackingId = "5321952";
+        var resolver = CreateResolver(
+            lojaById: null,
+            accountById: magalu,
+            accounts: [olderMagalu, magalu],
+            lojas: [loja],
+            lojaByShop: loja);
+
+        var resolved = await resolver.ResolveAsync(Guid.Empty, userId: 10, MarketplaceType.MagazineLuiza);
+
+        Assert.Equal(11, resolved.Id);
+        Assert.Equal("5321952", resolved.AffiliateTrackingId);
+        Assert.True(MarketplaceTypeExtensions.AreSamePlatform(MarketplaceType.MagazineLuiza, "Magalu"));
+        Assert.True(MarketplaceTypeExtensions.AreSamePlatform(MarketplaceType.MagazineLuiza, "Magazine Luiza"));
+        Assert.True(MarketplaceTypeExtensions.AreSamePlatform(MarketplaceType.MagazineLuiza, "MagazineLuiza"));
+        Assert.True(MarketplaceTypeExtensions.AreSamePlatform(MarketplaceType.MagazineLuiza, "Magazine_Luiza"));
+        Assert.Equal(MarketplaceType.MagazineLuiza, AffiliateTrackingIdValidator.ParsePlatform("Magalu"));
+        Assert.Equal(MarketplaceType.MagazineLuiza, AffiliateTrackingIdValidator.ParsePlatform("Magazine_Luiza"));
     }
 
     [Fact]

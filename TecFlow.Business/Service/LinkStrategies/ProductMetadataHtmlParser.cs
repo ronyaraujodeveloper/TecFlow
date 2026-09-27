@@ -260,7 +260,7 @@ public static class ProductMetadataHtmlParser
 
         if (IsMagazineLuizaHost(host))
         {
-            return DecodeSlugToProductName(ExtractSegmentBeforeMarker(uri, "p"), titleCaseIfLower: true);
+            return DecodeSlugToProductName(ExtractSegmentBeforeMarker(uri, "p"), magaluTokens: true);
         }
 
         if (IsMercadoLivreHost(host))
@@ -577,7 +577,7 @@ public static class ProductMetadataHtmlParser
         return segment.All(ch => char.IsDigit(ch) || ch is '.' or ',');
     }
 
-    private static string? DecodeSlugToProductName(string? slug, bool titleCaseIfLower = false)
+    private static string? DecodeSlugToProductName(string? slug, bool titleCaseIfLower = false, bool magaluTokens = false)
     {
         if (string.IsNullOrWhiteSpace(slug))
         {
@@ -592,12 +592,47 @@ public static class ProductMetadataHtmlParser
             return null;
         }
 
-        if (titleCaseIfLower && !name.Any(char.IsUpper))
+        if (magaluTokens)
+        {
+            name = FormatMagaluProductName(name);
+        }
+        else if (titleCaseIfLower && !name.Any(char.IsUpper))
         {
             name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
         }
 
         return Truncate(name, 255);
+    }
+
+    private static readonly HashSet<string> MagaluAcronyms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "tv", "tcl", "4k", "8k", "uhd", "qled", "oled", "aipq", "hdmi", "usb", "led", "fhd",
+        "wifi", "gps", "hdr", "nfc", "ssd", "hdd", "cpu", "gpu", "rgb", "hd"
+    };
+
+    private static string FormatMagaluProductName(string name)
+    {
+        var tokens = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            var token = tokens[i];
+            if (MagaluAcronyms.Contains(token))
+            {
+                tokens[i] = token.ToUpperInvariant();
+                continue;
+            }
+
+            if (token.Any(char.IsDigit) && token.Any(char.IsLetter))
+            {
+                tokens[i] = string.Concat(token.Select(ch =>
+                    char.IsLetter(ch) ? char.ToUpperInvariant(ch) : ch));
+                continue;
+            }
+
+            tokens[i] = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(token.ToLowerInvariant());
+        }
+
+        return string.Join(' ', tokens);
     }
 
     private static bool IsShopeeHost(string host) =>

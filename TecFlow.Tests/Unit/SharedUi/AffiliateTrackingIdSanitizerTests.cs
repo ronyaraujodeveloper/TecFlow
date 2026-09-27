@@ -185,6 +185,7 @@ public class AffiliateTrackingIdSanitizerTests
     [InlineData("https://s.shopee.com.br/abc", MarketplaceType.Shopee)]
     [InlineData("https://amzn.to/abc", MarketplaceType.Amazon)]
     [InlineData("https://cb.com.br/p/1", MarketplaceType.CasasBahia)]
+    [InlineData("https://ofertou.ai/drXB-Magalu", MarketplaceType.MagazineLuiza)]
     [InlineData("https://kb.um/abc", MarketplaceType.Kabum)]
     public void Detect_ShouldSelectPlatformFromPastedUrl(string url, MarketplaceType expected)
     {

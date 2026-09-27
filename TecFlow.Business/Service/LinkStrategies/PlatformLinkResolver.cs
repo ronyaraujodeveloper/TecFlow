@@ -45,7 +45,16 @@ public sealed class PlatformLinkResolver
             "Expandindo URL encurtada {Host} antes de resolver a plataforma.",
             TryGetHost(workingUrl));
         var expanded = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
-        return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(expanded);
+        var canonical = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(expanded);
+        if (UrlUnshortenerService.TryDetectMarketplace(canonical, out var platform))
+        {
+            _logger.LogInformation(
+                "URL canônica isolada após descompactação. Host={Host} Platform={Platform}",
+                TryGetHost(canonical),
+                platform.GetDisplayName());
+        }
+
+        return canonical;
     }
 
     public static string ExtractShopeeAffiliateId(string url) =>

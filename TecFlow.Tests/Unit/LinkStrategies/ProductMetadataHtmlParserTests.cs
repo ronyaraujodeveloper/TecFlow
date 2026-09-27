@@ -120,6 +120,11 @@ public class ProductMetadataHtmlParserTests
                 "https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a15/p/218434100/te/smsg/"));
 
         Assert.Equal(
+            "Smart TV 50 TCL 4K UHD QLED 50P7K Google TV AIPQ Google Assistente 3 HDMI",
+            ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(
+                "https://www.magazineluiza.com.br/smart-tv-50-tcl-4k-uhd-qled-50p7k-google-tv-aipq-google-assistente-3-hdmi/p/kd9k9c0hdk/te/tvlc/"));
+
+        Assert.Equal(
             "Fone Bluetooth Tws Com Cancelamento",
             ProductMetadataHtmlParser.TryExtractMarketplaceProductNameFromUrl(
                 "https://www.mercadolivre.com.br/fone-bluetooth-tws-com-cancelamento/p/MLB123456789"));

@@ -35,8 +35,9 @@ flowchart LR
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
-  EXP[UrlExpansionService] -->|ate 10 saltos HTTP/JS/meta| UNI[UniversalLinkResolverEngine]
-  UNI -->|cola qualquer agregador depois valida destino| META
+  EXP[UrlExpansionService] -->|Location meta-refresh window.location| LOOP[UrlUnshortenerService while 5]
+  LOOP -->|marketplace Amazon Shopee Magalu ML Kabum TikTok CB| ENG[UniversalLinkResolverEngine]
+  ENG -->|valida dominio so apos o loop| META
   UNI -->|dominio para MarketplaceAccounts| PLAT[Amazon Magalu Kabum Shopee ML CB TikTok]
   UN -->|strip partner_id/promoter_id| MAG[MagazineLuizaCommissionUrlBuilder promoter_id]
   ACC[MarketplaceAccounts] -->|AreSamePlatform Magalu| SCOPE[IntegracaoLojaScopeResolver]

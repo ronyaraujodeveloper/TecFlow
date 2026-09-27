@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
 using TecFlow.Business.Integrations;
+using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.LinkStrategies;
@@ -11,6 +12,8 @@ namespace TecFlow.Business.Service.LinkStrategies;
 public static class UrlUnshortenerService
 {
     public const int MaxHops = UniversalLinkResolverEngine.MaxHops;
+
+    public const int MaxResolutionLoops = 5;
 
     private static readonly Regex MetaRefreshRegex = new(
         @"<meta\s+[^>]*http-equiv\s*=\s*[""']refresh[""'][^>]*content\s*=\s*[""'][^""']*url\s*=\s*([^""';\s]+)[""']",
@@ -86,6 +89,68 @@ public static class UrlUnshortenerService
         return null;
     }
 
+    /// <summary>
+    /// Percorre até 5 saltos até um marketplace suportado (Amazon, Shopee, Magalu, ML, Kabum, TikTok, Casas Bahia).
+    /// Cada iteração só faz HTTP se a URL atual ainda não for destino de loja.
+    /// </summary>
+    public static async Task<string> ResolveToFinalSupportedMarketplaceAsync(
+        string inputUrl,
+        IUrlExpansionService expansionService,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expansionService);
+        return await ResolveToFinalSupportedMarketplaceAsync(
+            inputUrl,
+            async (url, token) =>
+            {
+                var next = await expansionService.ExpandUrlAsync(url, token);
+                if (string.IsNullOrWhiteSpace(next)
+                    || string.Equals(next, url, StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                return next;
+            },
+            cancellationToken);
+    }
+
+    public static async Task<string> ResolveToFinalSupportedMarketplaceAsync(
+        string inputUrl,
+        Func<string, CancellationToken, Task<string?>> followNextHopAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(followNextHopAsync);
+        if (string.IsNullOrWhiteSpace(inputUrl))
+        {
+            return inputUrl;
+        }
+
+        var currentUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(inputUrl.Trim());
+        var iteration = 0;
+        while (iteration < MaxResolutionLoops)
+        {
+            if (IsSupportedMarketplaceUrl(currentUrl))
+            {
+                return FinalizeMarketplaceUrl(currentUrl);
+            }
+
+            var nextUrl = await followNextHopAsync(currentUrl, cancellationToken);
+            if (string.IsNullOrWhiteSpace(nextUrl)
+                || string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+
+            currentUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(nextUrl.Trim());
+            iteration++;
+        }
+
+        return IsSupportedMarketplaceUrl(currentUrl)
+            ? FinalizeMarketplaceUrl(currentUrl)
+            : currentUrl;
+    }
+
     public static string StripForeignTracking(string? url) =>
         UniversalLinkResolverEngine.StripCommissionAndTracking(url);
 
@@ -104,5 +169,11 @@ public static class UrlUnshortenerService
         }
 
         return null;
+    }
+
+    private static string FinalizeMarketplaceUrl(string url)
+    {
+        var unwrapped = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(url);
+        return StripForeignTracking(unwrapped);
     }
 }

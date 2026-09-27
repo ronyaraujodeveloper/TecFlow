@@ -107,12 +107,15 @@ public sealed class UniversalLinkResolverEngine
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(inputUrl.Trim());
         if (_urlExpansionService is null)
         {
-            return StripCommissionAndTracking(workingUrl);
+            return UrlUnshortenerService.IsSupportedMarketplaceUrl(workingUrl)
+                ? StripCommissionAndTracking(workingUrl)
+                : workingUrl;
         }
 
-        var expanded = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
-        var canonical = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(expanded);
-        return StripCommissionAndTracking(canonical);
+        return await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+            workingUrl,
+            _urlExpansionService,
+            cancellationToken);
     }
 
     public static bool ShouldExpand(string? url) =>

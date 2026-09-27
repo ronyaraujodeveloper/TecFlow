@@ -466,15 +466,15 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 ### 🛡️ 20. Estratégia de Resiliência, Defesa Anti-Bot e Formatação na Interface (TecFlow)
 
-- [x] 20.1. **Proteção Contra Captchas e Bloqueios WAF (Cloudflare/Shopee/Marketplaces):**
+- [ ] 20.1. **Proteção Contra Captchas e Bloqueios WAF (Cloudflare/Shopee/Marketplaces):**
    - O pipeline de extração descarta nomes genéricos e hashes de anti-bot (ex: `Opaanlp`, `Nsbo`, `Produto`, `Shopee Brasil`, `Captcha`).
    - Títulos suspeitos ou puramente numéricos são higienizados e convertidos para `NULL` no backend para evitar corrupção de dados na base SQL Server.
 
-- [x] 20.2. **Fallback Manual Resiliente no Blazor (GeradorLinks.razor):**
+- [ ] 20.2. **Fallback Manual Resiliente no Blazor (GeradorLinks.razor):**
    - Quando o scraping do marketplace for retido por mecanismos antirobô, o sistema não bloqueia a geração do link de comissão.
    - O painel exibe campos de edição direta (Nome do Produto e Preço em R$) para preenchimento opcional pelo afiliado, gravando as informações no banco sem travar a interface.
 
-- [x] 20.3. **Layout Compacto e Ações Rápidas por Ícones:**
+- [ ] 20.3. **Layout Compacto e Ações Rápidas por Ícones:**
    - Visualização do Card Preview em linha única flexível (`d-flex align-items-center gap-2`).
    - Substituição de botões textuais por ícones nativos do Bootstrap Icons:
      * **Salvar:** Ícone de Disquete (`bi bi-floppy`).
@@ -483,8 +483,8 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
    - Disposição horizontal ultra-compacta para os cartões de compartilhamento (Copiar, WhatsApp e Telegram).
 
 - [x] 20.4. **Resolvedor Universal de Links (Multi-hop Unshorten):**
-   - Acompanhamento recursivo em cadeia de redirecionamentos HTTP (`301`/`302`/Meta Refresh) para processar links de agregadores e concorrentes (ex: `ofertou.ai`, `promoby.me`, `amzn.to`, `t.me`).
-   - Remoção automática de parâmetros de rastreio de terceiros (`tag=`, `partner_id=`, `promoter_id=`, `utm_source=`) e re-injeção transparente das credenciais de comissão do usuário logado.
+   - Loop de até 5 iterações em `UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync` (`301`/`302`/meta-refresh/`window.location`) para agregadores (`ofertou.ai`, `promoby.me`, `amzn.to`, `t.me`).
+   - "Não reconhecemos este domínio" só após o loop se o destino final não for marketplace. Strip de `tag=`/`partner_id=`/`promoter_id=`/`utm_*` e re-injeção das credenciais do tenant.
 ---
 
 ## Arquitetura Mobile & Sincronização SQLite/SQL Server

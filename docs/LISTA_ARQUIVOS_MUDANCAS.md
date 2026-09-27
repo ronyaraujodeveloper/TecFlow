@@ -642,7 +642,8 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **AffiliateTrackingIdValidator** — regex `mmp_pid=an_`, `utm_source=an_`, `affiliate_id`, `sub_id`; hosts `shope.ee` / `s.shopee.com.br`.
 - [x] **UrlExpansionService** / **PlatformLinkResolver.ExpandIfShortenedAsync** — HTTP unshorten com `AllowAutoRedirect`.
-- [x] **UrlUnshortenerService.cs** — agregadores `ofertou.ai`/`promoby.me`: até 5 saltos (Location, meta-refresh, `window.location`), strip de `utm_*`/`aff_id`/`tag`/`partner_id`/`promoter_id`.
+- [x] **UrlUnshortenerService.cs** — `ResolveToFinalSupportedMarketplaceAsync`: loop `while` de até 5 iterações; para em Amazon/Shopee/Magalu/ML/Kabum/TikTok/Casas Bahia; senão hop via Location, meta-refresh ou `window.location`.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/UrlUnshortenerServiceTests.cs** — `promoby.me/6nf9k3d5` → `amazon.com.br`; `ofertou.ai/drXB-Magalu` → `magazineluiza.com.br`.
 - [x] **TecFlow.Business/Service/Application/ShortAffiliateLinkService.cs** — contas Magalu com alias flexível e Tracking ID.
 - [x] **IntegracaoLojaScopeResolver.cs** — `AreSamePlatform` ao resolver a loja Magalu (ex.: Affiliate ID `5321952`).
 - [x] **MagazineLuizaCommissionUrlBuilder** — ID numérico injeta `promoter_id` (remove tags do concorrente).

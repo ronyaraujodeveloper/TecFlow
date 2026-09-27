@@ -37,19 +37,22 @@ public sealed class PlatformLinkResolver
         }
 
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url.Trim());
-        if (_urlExpansionService is null)
-        {
-            return workingUrl;
-        }
-
         _logger.LogInformation(
             "Expandindo URL encurtada {Host} antes de resolver a plataforma.",
             TryGetHost(workingUrl));
-        var canonical = await _universalResolver.ResolveFinalDestinationUrlAsync(workingUrl, cancellationToken);
-        if (UniversalLinkResolverEngine.TryMapDomainToPlatform(canonical, out var platform))
+        var canonical = _urlExpansionService is null
+            ? await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+                workingUrl,
+                static (_, _) => Task.FromResult<string?>(null),
+                cancellationToken)
+            : await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+                workingUrl,
+                _urlExpansionService,
+                cancellationToken);
+        if (UrlUnshortenerService.TryDetectMarketplace(canonical, out var platform))
         {
             _logger.LogInformation(
-                "URL canônica isolada após descompactação. Host={Host} Platform={Platform}",
+                "URL canônica isolada após o loop de resolução. Host={Host} Platform={Platform}",
                 TryGetHost(canonical),
                 platform.GetDisplayName());
         }

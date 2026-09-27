@@ -248,7 +248,8 @@ public class PlatformLinkResolverTests
     {
         var expansion = new Mock<IUrlExpansionService>();
         expansion.Setup(service => service.ExpandUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string url, CancellationToken _) => url + "-expanded");
+            .ReturnsAsync((string url, CancellationToken _) =>
+                url.EndsWith("-expanded", StringComparison.Ordinal) ? url : url + "-expanded");
 
         var resolver = new PlatformLinkResolver(
             Array.Empty<IPlatformLinkStrategy>(),
@@ -266,7 +267,7 @@ public class PlatformLinkResolverTests
             await resolver.ExpandIfShortenedAsync("https://meli.la/xyz"));
         expansion.Verify(
             service => service.ExpandUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(3));
+            Times.Exactly(6));
     }
 
     [Theory]

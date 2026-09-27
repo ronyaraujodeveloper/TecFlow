@@ -27,6 +27,7 @@ public class PlatformLinkResolverTests
     [InlineData("https://ofertou.ai/UjGXJ", true)]
     [InlineData("https://ofertou.ai/drXB-Magalu", true)]
     [InlineData("https://promoby.me/6nf9k3d5", true)]
+    [InlineData("https://bit.ly/abc", true)]
     [InlineData("sualoja-20", false)]
     public void IsShortenerUrl_ShouldRecognizeTikTokMagaluAndMercadoLivre(string url, bool expected)
     {
@@ -368,7 +369,7 @@ public class PlatformLinkResolverTests
             if (host.Contains("promoby.me", StringComparison.OrdinalIgnoreCase))
             {
                 return Html(
-                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=other-20&utm_campaign=promo"></head></html>""");
+                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=promobit-d-20&utm_campaign=promo"></head></html>""");
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);
@@ -425,6 +426,7 @@ public class PlatformLinkResolverTests
         var amazonExpanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
         Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", amazonExpanded);
         Assert.DoesNotContain("tag=", amazonExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("promobit-d-20", amazonExpanded, StringComparison.OrdinalIgnoreCase);
         Assert.True(UrlUnshortenerService.TryDetectMarketplace(amazonExpanded, out var amazonPlatform));
         Assert.Equal(MarketplaceType.Amazon, amazonPlatform);
         Assert.Equal(

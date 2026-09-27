@@ -14,15 +14,18 @@ public sealed class PlatformLinkResolver
     private readonly IEnumerable<IPlatformLinkStrategy> _strategies;
     private readonly ILogger<PlatformLinkResolver> _logger;
     private readonly IUrlExpansionService? _urlExpansionService;
+    private readonly UniversalLinkResolverEngine _universalResolver;
 
     public PlatformLinkResolver(
         IEnumerable<IPlatformLinkStrategy> strategies,
         ILogger<PlatformLinkResolver> logger,
-        IUrlExpansionService? urlExpansionService = null)
+        IUrlExpansionService? urlExpansionService = null,
+        UniversalLinkResolverEngine? universalResolver = null)
     {
         _strategies = strategies;
         _logger = logger;
         _urlExpansionService = urlExpansionService;
+        _universalResolver = universalResolver ?? new UniversalLinkResolverEngine(urlExpansionService);
     }
 
     public async Task<string> ExpandIfShortenedAsync(string url, CancellationToken cancellationToken = default)
@@ -33,10 +36,7 @@ public sealed class PlatformLinkResolver
         }
 
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url.Trim());
-        if (_urlExpansionService is null
-            || (!ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl)
-                && !AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)
-                && !UrlUnshortenerService.IsAggregatorUrl(workingUrl)))
+        if (_urlExpansionService is null || !UniversalLinkResolverEngine.ShouldExpand(workingUrl))
         {
             return workingUrl;
         }
@@ -44,9 +44,8 @@ public sealed class PlatformLinkResolver
         _logger.LogInformation(
             "Expandindo URL encurtada {Host} antes de resolver a plataforma.",
             TryGetHost(workingUrl));
-        var expanded = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
-        var canonical = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(expanded);
-        if (UrlUnshortenerService.TryDetectMarketplace(canonical, out var platform))
+        var canonical = await _universalResolver.ResolveFinalDestinationUrlAsync(workingUrl, cancellationToken);
+        if (UniversalLinkResolverEngine.TryMapDomainToPlatform(canonical, out var platform))
         {
             _logger.LogInformation(
                 "URL canônica isolada após descompactação. Host={Host} Platform={Platform}",

@@ -8,8 +8,6 @@ namespace TecFlow.Infrastructure.Services.LinkStrategies;
 /// <summary>Expansão cíclica de URLs encurtadas via cabeçalho Location (301/302).</summary>
 public sealed class UrlExpansionService : IUrlExpansionService
 {
-    private const int MaxRedirects = 10;
-
     private static readonly int[] RedirectStatusCodes = [301, 302, 303, 307, 308];
 
     private readonly IHttpClientFactory _httpClientFactory;
@@ -35,9 +33,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         var originalUrl = currentUri.ToString();
         var currentUrl = originalUrl;
-        var maxHops = UrlUnshortenerService.IsAggregatorUrl(originalUrl)
-            ? UrlUnshortenerService.MaxHops
-            : MaxRedirects;
+        var maxHops = UniversalLinkResolverEngine.MaxHops;
 
         if (ShouldPreferAutoRedirect(currentUrl))
         {
@@ -211,7 +207,8 @@ public sealed class UrlExpansionService : IUrlExpansionService
             || host.Contains("meli.la", StringComparison.Ordinal)
             || host.Contains("vt.tiktok.com", StringComparison.Ordinal)
             || host.Contains("vm.tiktok.com", StringComparison.Ordinal)
-            || host.Contains("magalu.me", StringComparison.Ordinal);
+            || host.Contains("magalu.me", StringComparison.Ordinal)
+            || host.Contains("bit.ly", StringComparison.Ordinal);
     }
 
     private static string SanitizeExpandedUrl(string? candidate, string fallback)

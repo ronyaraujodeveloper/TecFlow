@@ -649,6 +649,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser** — slug Magalu (`.../smart-tv-50-tcl.../p/{id}`) vira ProductName com `UrlDecode` + TitleCase/acrônimos.
 - [x] **GeradorLinks.razor** — detecta `ofertou.ai/drXB-Magalu` e lista contas Magalu com comparação flexível.
 - [x] **PlatformLinkResolverTests.cs** — `ofertou.ai/UjGXJ` (Kabum), `ofertou.ai/drXB-Magalu` (TV Magalu + `promoter_id=5321952`) e `promoby.me/6nf9k3d5` (Amazon).
+- [x] **TecFlow.Business/Service/LinkStrategies/UniversalLinkResolverEngine.cs** — unshortener universal (10 saltos, JS/meta-refresh), mapa domínio→plataforma e injeção de comissão.
+- [x] **ProductMetadataService.cs** / **PlatformLinkResolver.cs** — `ResolveFinalDestinationUrlAsync` no pipeline de metadados e de geração.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/UniversalResolverTests.cs** — ofertou Magalu `5321952`, promoby Amazon sem `promobit-d-20`, ofertou Kabum.
 - [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
 
 ### Fase 19.18 — Encurtadores TikTok, Magalu e Mercado Livre

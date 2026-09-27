@@ -14,6 +14,7 @@ public static class LinkStrategyServiceCollectionExtensions
         services.AddScoped<IPlatformLinkStrategy, MagazineLuizaLinkStrategy>();
         services.AddScoped<IPlatformLinkStrategy, KabumLinkStrategy>();
         services.AddScoped<IPlatformLinkStrategy, CasasBahiaLinkStrategy>();
+        services.AddScoped<UniversalLinkResolverEngine>();
         services.AddScoped<PlatformLinkResolver>();
         services.AddScoped<IAffiliateLinkGenerationContext, AffiliateLinkGenerationContext>();
         services.AddScoped<IAffiliateLinkGenerationService, AffiliateLinkGenerationService>();

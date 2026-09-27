@@ -29,18 +29,19 @@ public sealed class ProductMetadataService : IProductMetadataService
         @"/product/(\d+)/(\d+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private readonly IUrlExpansionService _urlExpansionService;
+    private readonly UniversalLinkResolverEngine _universalResolver;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ProductMetadataService> _logger;
 
     public ProductMetadataService(
         IUrlExpansionService urlExpansionService,
         IHttpClientFactory httpClientFactory,
-        ILogger<ProductMetadataService> logger)
+        ILogger<ProductMetadataService> logger,
+        UniversalLinkResolverEngine? universalResolver = null)
     {
-        _urlExpansionService = urlExpansionService;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _universalResolver = universalResolver ?? new UniversalLinkResolverEngine(urlExpansionService);
     }
 
     public string? LastResolvedPlatform { get; private set; }
@@ -61,7 +62,7 @@ public sealed class ProductMetadataService : IProductMetadataService
         {
             if (!string.IsNullOrWhiteSpace(workingUrl))
             {
-                resolvedUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+                resolvedUrl = await _universalResolver.ResolveFinalDestinationUrlAsync(workingUrl, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -104,35 +105,9 @@ public sealed class ProductMetadataService : IProductMetadataService
 
     public static string ResolvePlatform(string? url)
     {
-        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        if (UniversalLinkResolverEngine.TryMapDomainToPlatform(url, out var platform))
         {
-            return "Generic";
-        }
-
-        var host = uri.Host.ToLowerInvariant();
-        if (host.Contains("shopee", StringComparison.Ordinal)
-            || host.Contains("shp.ee", StringComparison.Ordinal))
-        {
-            return "Shopee";
-        }
-
-        if (host.Contains("magazineluiza", StringComparison.Ordinal)
-            || host.Contains("magazinevoce", StringComparison.Ordinal)
-            || host.Contains("magalu", StringComparison.Ordinal))
-        {
-            return "MagazineLuiza";
-        }
-
-        if (host.Contains("mercadolivre", StringComparison.Ordinal)
-            || host.Contains("mercadolibre", StringComparison.Ordinal)
-            || host.Contains("meli.la", StringComparison.Ordinal))
-        {
-            return "MercadoLivre";
-        }
-
-        if (host.Contains("tiktok", StringComparison.Ordinal))
-        {
-            return "TikTokShop";
+            return platform.ToString();
         }
 
         return "Generic";

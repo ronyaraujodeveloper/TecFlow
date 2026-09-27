@@ -642,6 +642,8 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **AffiliateTrackingIdValidator** — regex `mmp_pid=an_`, `utm_source=an_`, `affiliate_id`, `sub_id`; hosts `shope.ee` / `s.shopee.com.br`.
 - [x] **UrlExpansionService** / **PlatformLinkResolver.ExpandIfShortenedAsync** — HTTP unshorten com `AllowAutoRedirect`.
+- [x] **UrlUnshortenerService.cs** — agregadores `ofertou.ai`/`promoby.me`: até 5 saltos (Location, meta-refresh, `window.location`), strip de `utm_*`/`aff_id`/`tag`/`partner_id`.
+- [x] **PlatformLinkResolverTests.cs** — `ofertou.ai/UjGXJ` (Kabum), `ofertou.ai/drXB-Magalu` e `promoby.me/6nf9k3d5` (Amazon) com credenciais do tenant.
 - [x] **ConnectStoreModal.razor** — preenche Tracking ID e alerta verde de extração.
 
 ### Fase 19.18 — Encurtadores TikTok, Magalu e Mercado Livre

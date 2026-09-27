@@ -37,7 +37,9 @@ public static class AffiliateTrackingIdValidator
         "magazinevoce.com.br",
         "vt.tiktok.com",
         "vm.tiktok.com",
-        "meli.la"
+        "meli.la",
+        "ofertou.ai",
+        "promoby.me"
     ];
 
     private static readonly (string Host, string PathPrefix)[] ShortenerPathPrefixes =

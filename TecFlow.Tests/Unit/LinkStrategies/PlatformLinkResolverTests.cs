@@ -1,9 +1,15 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+﻿using System.Net;
+using System.Text;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Entity;
+using TecFlow.Infrastructure.Services.LinkStrategies;
+using TecFlow.Tests.Helpers;
 
 namespace TecFlow.Tests.Unit.LinkStrategies;
 
@@ -18,6 +24,9 @@ public class PlatformLinkResolverTests
     [InlineData("https://meli.la/abc123", true)]
     [InlineData("https://www.mercadolivre.com/sec/abc", true)]
     [InlineData("https://www.mercadolivre.com.br/sec/xyz", true)]
+    [InlineData("https://ofertou.ai/UjGXJ", true)]
+    [InlineData("https://ofertou.ai/drXB-Magalu", true)]
+    [InlineData("https://promoby.me/6nf9k3d5", true)]
     [InlineData("sualoja-20", false)]
     public void IsShortenerUrl_ShouldRecognizeTikTokMagaluAndMercadoLivre(string url, bool expected)
     {
@@ -300,5 +309,182 @@ public class PlatformLinkResolverTests
             "fallback");
 
         Assert.Equal("https://www.magazinevoce.com.br/minhaloja/p/1", value);
+    }
+
+    [Fact]
+    public void UrlUnshortener_ShouldParseHtmlAndStripForeignTracking()
+    {
+        var fromJs = UrlUnshortenerService.TryExtractRedirectFromHtml(
+            "<script>window.location.href = 'https://www.kabum.com.br/produto/123456?aff_id=999&utm_source=ofertou';</script>",
+            "https://ofertou.ai/UjGXJ");
+        Assert.Equal(
+            "https://www.kabum.com.br/produto/123456?aff_id=999&utm_source=ofertou",
+            fromJs);
+        Assert.Equal(
+            "https://www.kabum.com.br/produto/123456",
+            UrlUnshortenerService.StripForeignTracking(fromJs));
+
+        var fromMeta = UrlUnshortenerService.TryExtractRedirectFromHtml(
+            """<meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=other-20">""",
+            "https://promoby.me/6nf9k3d5");
+        Assert.Contains("B08N5WRWNW", fromMeta, StringComparison.Ordinal);
+        Assert.Equal(
+            "https://www.amazon.com.br/dp/B08N5WRWNW",
+            UrlUnshortenerService.StripForeignTracking(fromMeta));
+        Assert.True(UrlUnshortenerService.TryDetectMarketplace(
+            "https://www.kabum.com.br/produto/123456",
+            out var kabum));
+        Assert.Equal(MarketplaceType.Kabum, kabum);
+    }
+
+    [Fact]
+    public async Task ExpandIfShortenedAsync_ShouldResolveOfertouAndPromobyAggregatorsToTenantLinks()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            var host = request.RequestUri?.Host ?? string.Empty;
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+
+            if (host.Contains("ofertou.ai", StringComparison.OrdinalIgnoreCase)
+                && path.Contains("UjGXJ", StringComparison.OrdinalIgnoreCase))
+            {
+                return Html(
+                    "<html><script>window.location.href = \"https://www.kabum.com.br/produto/123456?aff_id=999&utm_source=ofertou&utm_medium=cpc\";</script></html>");
+            }
+
+            if (host.Contains("ofertou.ai", StringComparison.OrdinalIgnoreCase)
+                && path.Contains("drXB-Magalu", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers =
+                    {
+                        Location = new Uri(
+                            "https://www.magazineluiza.com.br/geladeira/p/218434100/ed/refg/?partner_id=3440&utm_source=ofertou")
+                    }
+                };
+            }
+
+            if (host.Contains("promoby.me", StringComparison.OrdinalIgnoreCase))
+            {
+                return Html(
+                    """<html><head><meta http-equiv="refresh" content="0;url=https://www.amazon.com.br/dp/B08N5WRWNW?tag=other-20&utm_campaign=promo"></head></html>""");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var expansion = new UrlExpansionService(
+            new StubHttpClientFactory(handler),
+            NullLogger<UrlExpansionService>.Instance);
+
+        var kabumStore = CreateTenantStore(MarketplaceType.Kabum, "tecflow_kabum");
+        var magaluStore = CreateTenantStore(MarketplaceType.MagazineLuiza, "magazinematos");
+        var amazonStore = CreateTenantStore(MarketplaceType.Amazon, "sualoja-20");
+
+        var resolver = new PlatformLinkResolver(
+            [
+                CreateKabumStrategy(expansion, kabumStore),
+                CreateMagaluStrategy(expansion, magaluStore),
+                CreateAmazonStrategy(expansion, amazonStore)
+            ],
+            NullLogger<PlatformLinkResolver>.Instance,
+            expansion);
+
+        var kabumExpanded = await resolver.ExpandIfShortenedAsync("https://ofertou.ai/UjGXJ");
+        Assert.Equal("https://www.kabum.com.br/produto/123456", kabumExpanded);
+        Assert.DoesNotContain("aff_id", kabumExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("utm_source", kabumExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.True(UrlUnshortenerService.TryDetectMarketplace(kabumExpanded, out var kabumPlatform));
+        Assert.Equal(MarketplaceType.Kabum, kabumPlatform);
+        Assert.Equal(MarketplaceType.Kabum, resolver.Resolve(kabumExpanded).PlatformType);
+        Assert.Equal(
+            "https://www.kabum.com.br/produto/123456?sub_id=tecflow_kabum&utm_source=afiliado",
+            await resolver.Resolve(kabumExpanded).GenerateDeepLinkAsync(kabumExpanded, Guid.NewGuid(), "10"));
+        Assert.Equal(
+            "https://www.kabum.com.br/produto/123456?sub_id=tecflow_kabum&utm_source=afiliado",
+            UrlUnshortenerService.ApplyTenantCredentials(kabumExpanded, "tecflow_kabum"));
+
+        var magaluExpanded = await resolver.ExpandIfShortenedAsync("https://ofertou.ai/drXB-Magalu");
+        Assert.StartsWith("https://www.magazineluiza.com.br/", magaluExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("partner_id", magaluExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.True(UrlUnshortenerService.TryDetectMarketplace(magaluExpanded, out var magaluPlatform));
+        Assert.Equal(MarketplaceType.MagazineLuiza, magaluPlatform);
+        Assert.Equal(
+            "https://www.magazinevoce.com.br/magazinematos/p/218434100/",
+            await resolver.Resolve(magaluExpanded).GenerateDeepLinkAsync(magaluExpanded, Guid.NewGuid(), "10"));
+
+        var amazonExpanded = await resolver.ExpandIfShortenedAsync("https://promoby.me/6nf9k3d5");
+        Assert.Equal("https://www.amazon.com.br/dp/B08N5WRWNW", amazonExpanded);
+        Assert.DoesNotContain("tag=", amazonExpanded, StringComparison.OrdinalIgnoreCase);
+        Assert.True(UrlUnshortenerService.TryDetectMarketplace(amazonExpanded, out var amazonPlatform));
+        Assert.Equal(MarketplaceType.Amazon, amazonPlatform);
+        Assert.Equal(
+            "https://www.amazon.com.br/dp/B08N5WRWNW?tag=sualoja-20",
+            await resolver.Resolve(amazonExpanded).GenerateDeepLinkAsync(amazonExpanded, Guid.NewGuid(), "10"));
+    }
+
+    private static HttpResponseMessage Html(string body) =>
+        new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/html")
+        };
+
+    private static IntegracaoLoja CreateTenantStore(MarketplaceType platform, string trackingId) =>
+        new()
+        {
+            Id = (int)platform + 10,
+            UserId = 10,
+            TenantId = Guid.Parse("11111111-2222-3333-4444-555555555555"),
+            ShopId = $"shop-{platform}",
+            FriendlyName = platform.GetDisplayName(),
+            AffiliateTrackingId = trackingId,
+            AccessToken = "token",
+            PlatformType = platform
+        };
+
+    private static IPlatformLinkStrategy CreateKabumStrategy(IUrlExpansionService expansion, IntegracaoLoja store) =>
+        new KabumLinkStrategy(
+            expansion,
+            new FixedTenantStoreResolver(store),
+            new AffiliateLinkGenerationContext { UserId = 10 },
+            CreateHostEnvironment(),
+            NullLogger<KabumLinkStrategy>.Instance);
+
+    private static IPlatformLinkStrategy CreateMagaluStrategy(IUrlExpansionService expansion, IntegracaoLoja store) =>
+        new MagazineLuizaLinkStrategy(
+            expansion,
+            new FixedTenantStoreResolver(store),
+            new AffiliateLinkGenerationContext { UserId = 10 },
+            CreateHostEnvironment(),
+            NullLogger<MagazineLuizaLinkStrategy>.Instance);
+
+    private static IPlatformLinkStrategy CreateAmazonStrategy(IUrlExpansionService expansion, IntegracaoLoja store) =>
+        new AmazonLinkStrategy(
+            expansion,
+            new FixedTenantStoreResolver(store),
+            new AffiliateLinkGenerationContext { UserId = 10 },
+            CreateHostEnvironment(),
+            NullLogger<AmazonLinkStrategy>.Instance);
+
+    private static IHostEnvironment CreateHostEnvironment()
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns("Homologacao");
+        return environment.Object;
+    }
+
+    private sealed class FixedTenantStoreResolver : IIntegracaoLojaScopeResolver
+    {
+        private readonly IntegracaoLoja _store;
+
+        public FixedTenantStoreResolver(IntegracaoLoja store) => _store = store;
+
+        public Task<IntegracaoLoja> ResolveAsync(
+            Guid storeScopeId,
+            int userId,
+            MarketplaceType expectedPlatform,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(_store);
     }
 }

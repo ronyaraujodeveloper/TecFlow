@@ -35,6 +35,9 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         var originalUrl = currentUri.ToString();
         var currentUrl = originalUrl;
+        var maxHops = UrlUnshortenerService.IsAggregatorUrl(originalUrl)
+            ? UrlUnshortenerService.MaxHops
+            : MaxRedirects;
 
         if (ShouldPreferAutoRedirect(currentUrl))
         {
@@ -50,7 +53,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         var client = _httpClientFactory.CreateClient(TecFlow.Business.Integrations.Common.IntegrationHttpClientNames.UrlExpansion);
 
-        for (var hop = 0; hop < MaxRedirects; hop++)
+        for (var hop = 0; hop < maxHops; hop++)
         {
             using var response = await SendWithoutAutoRedirectAsync(client, currentUrl, cancellationToken);
             var requestUri = SanitizeExpandedUrl(response.RequestMessage?.RequestUri?.ToString(), currentUrl);
@@ -59,13 +62,23 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 currentUrl = requestUri;
             }
 
-            if (!IsRedirect(response))
+            string? nextUrl = null;
+            if (IsRedirect(response))
             {
-                break;
+                nextUrl = SanitizeExpandedUrl(ResolveRedirectLocation(currentUrl, response), currentUrl);
+            }
+            else
+            {
+                var html = await TryReadHtmlAsync(response, cancellationToken);
+                nextUrl = UrlUnshortenerService.TryExtractRedirectFromHtml(html, currentUrl);
+                if (!string.IsNullOrWhiteSpace(nextUrl))
+                {
+                    nextUrl = SanitizeExpandedUrl(nextUrl, currentUrl);
+                }
             }
 
-            var nextUrl = SanitizeExpandedUrl(ResolveRedirectLocation(currentUrl, response), currentUrl);
-            if (string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(nextUrl)
+                || string.Equals(nextUrl, currentUrl, StringComparison.OrdinalIgnoreCase))
             {
                 break;
             }
@@ -81,8 +94,34 @@ public sealed class UrlExpansionService : IUrlExpansionService
                 currentUrl);
         }
 
-        return AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(
+        return FinalizeExpandedUrl(currentUrl, originalUrl);
+    }
+
+    private static string FinalizeExpandedUrl(string currentUrl, string originalUrl)
+    {
+        var sanitized = AffiliateTrackingIdValidator.UnwrapTikTokLoginRedirect(
             SanitizeExpandedUrl(currentUrl, originalUrl));
+        return UrlUnshortenerService.IsSupportedMarketplaceUrl(sanitized)
+            ? UrlUnshortenerService.StripForeignTracking(sanitized)
+            : sanitized;
+    }
+
+    private static async Task<string?> TryReadHtmlAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.Content is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            return html.Length <= 131_072 ? html : html[..131_072];
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async Task<string> FollowWithAutoRedirectAsync(string url, CancellationToken cancellationToken)

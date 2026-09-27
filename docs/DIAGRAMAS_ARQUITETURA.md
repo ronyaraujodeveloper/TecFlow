@@ -35,7 +35,8 @@ flowchart LR
   STR -->|deep_link nativo| BLD
   BLD --> SHORT
   SHORT -->|SaveChangesAsync| SQL
-  META[ProductMetadataService] -->|pipeline Shopee/Magalu/ML/TikTok| SHORT
+  EXP[UrlExpansionService] -->|ate 5 saltos HTTP/HTML| UN[UrlUnshortenerService]
+  UN -->|ofertou.ai / promoby.me| META
   OPEN[ShopeeService Open API get_item_base_info] -->|AppKey/AppSecret MarketplaceAccounts| META
   UI -->|Gerar Link de Comissão| META
   LOJAS[MarketplaceAccounts] -->|SaveChangesAsync| SQL

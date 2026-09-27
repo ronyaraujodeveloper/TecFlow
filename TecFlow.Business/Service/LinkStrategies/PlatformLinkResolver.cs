@@ -7,7 +7,7 @@ namespace TecFlow.Business.Service.LinkStrategies;
 
 /// <summary>
 /// Resolve dinamicamente a estratégia de link com base no domínio da URL original.
-/// Expande encurtadores (Shopee, TikTok, Magalu, Mercado Livre) antes da extração.
+/// Expande encurtadores e agregadores de ofertas (ofertou.ai, promoby.me) antes da extração.
 /// </summary>
 public sealed class PlatformLinkResolver
 {
@@ -35,7 +35,8 @@ public sealed class PlatformLinkResolver
         var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url.Trim());
         if (_urlExpansionService is null
             || (!ShopeeLinkHostMatcher.IsShortenerUrl(workingUrl)
-                && !AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)))
+                && !AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)
+                && !UrlUnshortenerService.IsAggregatorUrl(workingUrl)))
         {
             return workingUrl;
         }

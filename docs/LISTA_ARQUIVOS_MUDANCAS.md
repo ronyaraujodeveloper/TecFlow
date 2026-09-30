@@ -772,6 +772,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.
 - [x] **AuthControllerSecurityTests / AffiliateLinksControllerTests / DashboardControllerTests** — 401/500 e JSON de formulário.
 
+### Fase 19.26 — Página pública de conversão (slug versionado)
+
+- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`).
+- [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)`; conversão com `FirstOrDefault` da conta ativa.
+- [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.
+- [x] **ShortAffiliateLinks.Source** — conversão pública grava `PublicPage` no `UserId` do afiliado e aparece no Histórico de Links.
+- [x] **PublicConverterRulesTests.cs** — slug inativo e deduplicação de plataformas.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
         services.AddScoped<IMarketplaceOAuthConnectService, MarketplaceOAuthConnectService>();
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();
+        services.AddScoped<IPublicConverterApiService, PublicConverterApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

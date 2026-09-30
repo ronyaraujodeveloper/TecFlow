@@ -7,6 +7,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Business.Service.PublicPages;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -98,7 +99,8 @@ public sealed class ShortLinkService : IShortLinkService
         Guid linkGroupId,
         string? customNickname,
         CancellationToken cancellationToken = default,
-        ProductMetadataDto? productMetadata = null)
+        ProductMetadataDto? productMetadata = null,
+        string? source = null)
     {
         if (string.IsNullOrWhiteSpace(destinationUrl))
         {
@@ -132,6 +134,10 @@ public sealed class ShortLinkService : IShortLinkService
             existing.LinkGroupId = linkGroupId == Guid.Empty ? existing.LinkGroupId : linkGroupId;
             existing.CustomNickname = customNickname?.Trim() ?? existing.CustomNickname;
             ApplyProductMetadata(existing, productMetadata);
+            if (!string.IsNullOrWhiteSpace(source))
+            {
+                existing.Source = source;
+            }
             existing.IsActive = true;
             existing.Touch();
             entity = existing;
@@ -155,6 +161,7 @@ public sealed class ShortLinkService : IShortLinkService
                 MarketplaceAccountId = marketplaceAccountId,
                 TenantId = tenantId,
                 CustomNickname = customNickname?.Trim(),
+                Source = string.IsNullOrWhiteSpace(source) ? PublicConverterRules.GeradorSource : source,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };

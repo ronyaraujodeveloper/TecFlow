@@ -40,6 +40,8 @@ public class GerarLinkAfiliadoResponseDto
 
     public string? ProductImageUrl { get; set; }
 
+    public bool IsFromPublicPage { get; set; }
+
     public string FormattedProductPrice =>
         TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser.FormatBrl(ProductPrice);
 
@@ -92,6 +94,7 @@ public class GerarLinkAfiliadoResponseDto
             ProductImageUrl = item.ProductImageUrl,
             AffiliateLinkId = item.AffiliateLinkId,
             LinkGroupId = item.LinkGroupId,
+            IsFromPublicPage = item.IsFromPublicPage,
             Message = "Link carregado do histórico.",
             Descricao = "Link carregado do histórico.",
             Accounts = (item.Accounts ?? [])

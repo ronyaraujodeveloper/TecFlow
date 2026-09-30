@@ -6,6 +6,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Business.Service.PublicPages;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.Filter;
@@ -130,6 +131,8 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             ProductName = primary.ProductName,
             ProductPrice = primary.ProductPrice,
             ProductImageUrl = primary.ProductImageUrl,
+            Source = primary.Source,
+            IsFromPublicPage = PublicConverterRules.IsPublicPageSource(primary.Source),
             CreatedAt = group.Links.Min(link => link.CreatedAt),
             ClickCount = clickCount,
             Accounts = variants
@@ -178,6 +181,8 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             ProductName = link.ProductName,
             ProductPrice = link.ProductPrice,
             ProductImageUrl = link.ProductImageUrl,
+            Source = link.Source,
+            IsFromPublicPage = PublicConverterRules.IsPublicPageSource(link.Source),
             CreatedAt = link.CreatedAt,
             ClickCount = clickCount,
             Accounts = [variant]

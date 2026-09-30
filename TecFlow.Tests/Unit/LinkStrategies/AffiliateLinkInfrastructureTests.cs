@@ -196,7 +196,8 @@ public class AffiliateLinkGenerationServiceTests
             Guid linkGroupId,
             string? customNickname,
             CancellationToken cancellationToken = default,
-            ProductMetadataDto? productMetadata = null) =>
+            ProductMetadataDto? productMetadata = null,
+            string? source = null) =>
             Task.FromResult(new ShortLinkCreateResult
             {
                 PublicShortUrl = "http://localhost:5001/r/mock123",

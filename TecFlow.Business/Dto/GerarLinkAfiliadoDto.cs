@@ -36,4 +36,7 @@ public class GerarLinkAfiliadoDto
 
     /// <summary>ShopId da loja ativa no seletor global do painel (Blazor).</summary>
     public string? ShopId { get; set; }
+
+    /// <summary>Origem da conversão: Gerador (painel) ou PublicPage.</summary>
+    public string? Source { get; set; }
 }

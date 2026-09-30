@@ -57,6 +57,10 @@ public class ShortAffiliateLink : BaseEntity, ITenantScopedEntity
     [MaxLength(500)]
     public string? ProductImageUrl { get; set; }
 
+    /// <summary>Gerador (painel) ou PublicPage (conversão pública).</summary>
+    [MaxLength(32)]
+    public string? Source { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     /// <summary>Alias de <see cref="ShortCode"/> para o contrato mobile/offline.</summary>

@@ -34,6 +34,10 @@ public class AffiliateLinkHistoryItemDto
 
     public Guid LinkGroupId { get; set; }
 
+    public string? Source { get; set; }
+
+    public bool IsFromPublicPage { get; set; }
+
     public List<AffiliateLinkAccountVariantDto> Accounts { get; set; } = [];
 }
 
@@ -60,6 +64,8 @@ public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
             ProductPrice = item.ProductPrice,
             ProductImageUrl = item.ProductImageUrl,
             LinkGroupId = item.LinkGroupId,
+            Source = item.Source,
+            IsFromPublicPage = item.IsFromPublicPage,
             Accounts = item.Accounts ?? [],
             CreatedAt = item.CreatedAt,
             ClickCount = item.ClickCount

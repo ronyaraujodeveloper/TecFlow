@@ -1,0 +1,141 @@
+﻿@page "/p/{Slug}"
+@layout Layout.PublicLayout
+@attribute [AllowAnonymous]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.LinkGenerator
+@inject IPublicConverterApiService PublicPages
+@inject ILogger<PublicConverter> Logger
+
+<PageTitle>Converter link — TecFlow</PageTitle>
+
+@if (_notFound)
+{
+    <div class="alert alert-warning" role="alert">
+        Página pública não encontrada.
+    </div>
+}
+else if (_page is null)
+{
+    <p class="text-muted">Carregando página do afiliado...</p>
+}
+else
+{
+    <section class="card border-0 shadow-sm mx-auto" style="max-width: 640px;">
+        <div class="card-body p-4">
+            <h1 class="h4 fw-bold mb-2">@(_page.DisplayName ?? "Converter link de produto")</h1>
+            <p class="text-muted small mb-3">
+                Cole o link do produto. A comissão vai para o afiliado desta página.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 mb-4" aria-label="Lojas conectadas">
+                @foreach (var platform in DistinctPlatforms)
+                {
+                    var definition = MarketplaceUrlDetector.All.FirstOrDefault(item => item.IntegrationType == platform);
+                    if (definition is not null)
+                    {
+                        <MarketplacePlatformChip Definition="definition" IsConnected="true" />
+                    }
+                    else
+                    {
+                        <span class="marketplace-platform-badge">@platform.GetDisplayName()</span>
+                    }
+                }
+            </div>
+
+            <label class="form-label fw-semibold" for="public-product-url">Link do produto</label>
+            <input id="public-product-url"
+                   class="form-control form-control-lg mb-3"
+                   placeholder="Cole aqui o link da Shopee, Amazon, Magalu..."
+                   value="@_productUrl"
+                   disabled="@_isConverting"
+                   @oninput="e => _productUrl = e.Value?.ToString() ?? string.Empty" />
+
+            <button type="button"
+                    class="btn btn-primary btn-lg w-100"
+                    disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
+                    @onclick="ConvertAsync">
+                @(_isConverting ? "Convertendo..." : "Converter link")
+            </button>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">@_error</div>
+            }
+
+            @if (_result is { HasConvertedLink: true })
+            {
+                <div class="alert alert-success mt-3 mb-0" role="status">
+                    <p class="fw-semibold mb-1">Link de comissão gerado</p>
+                    <p class="font-monospace small text-break mb-0">@(_result.AffiliateUrl)</p>
+                    @if (!string.IsNullOrWhiteSpace(_result.ResolvedShortUrl))
+                    {
+                        <p class="font-monospace small text-break mb-0 mt-2">@_result.ResolvedShortUrl</p>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = string.Empty;
+
+    private PublicConverterPageDto? _page;
+    private bool _notFound;
+    private bool _isConverting;
+    private string _productUrl = string.Empty;
+    private string? _error;
+    private GerarLinkAfiliadoResponseDto? _result;
+
+    private IReadOnlyList<MarketplaceType> DistinctPlatforms =>
+        (_page?.ConnectedPlatforms ?? [])
+            .Distinct()
+            .ToList();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _notFound = false;
+        _result = null;
+        var response = await PublicPages.GetBySlugAsync(Slug);
+        if (!response.Success || response.Data?.Data is null)
+        {
+            _notFound = true;
+            _page = null;
+            return;
+        }
+
+        _page = response.Data.Data;
+    }
+
+    private async Task ConvertAsync()
+    {
+        _error = null;
+        _result = null;
+        _isConverting = true;
+        try
+        {
+            var response = await PublicPages.ConvertAsync(Slug, _productUrl);
+            if (!response.Success || response.Data is null || !response.Data.Success)
+            {
+                _error = response.Data?.Message
+                    ?? response.ErrorMessage
+                    ?? "Não foi possível converter o link.";
+                return;
+            }
+
+            _result = response.Data;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha na conversão pública. Slug={Slug}", Slug);
+            _error = "Não foi possível converter o link.";
+        }
+        finally
+        {
+            _isConverting = false;
+        }
+    }
+}

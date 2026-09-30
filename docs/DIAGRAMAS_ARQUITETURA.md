@@ -91,7 +91,12 @@ flowchart LR
   HIST[HistoricoLinks] -->|GET historico TenantId + IsActive (abas PlatformType)| API
   HIST -->|lapis abre modal contas + nome/preco| UI
   UI -->|floppy PUT metadata ProductPrice ProductName| API
-  HIST -->|Visualizar ShortAffiliateLinkDto| UI
+  PUB[PublicConverter.razor /p/slug] -->|GET slug ativo ou inativo| PC[PublicConverterController]
+  PUB -->|DistinctBy PlatformType um badge| ACC
+  PUB -->|POST convert FirstOrDefault conta ativa| GEN[AffiliateLinkGenerationService]
+  GEN -->|ShortAffiliateLinks Source=PublicPage UserId afiliado| SQL
+  MINE[MinhasPaginasPublicas] -->|historico slug badge Inativo| PC
+  HIST -->|badge Pagina publica| SQL
   UI -->|checkboxes StoreIds| API
   ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL
   API --> STR

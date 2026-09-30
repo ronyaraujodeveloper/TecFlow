@@ -507,5 +507,10 @@ Fluxo previsto:
 
 Contrato mínimo do registro de link (espelhado em `ShortAffiliateLink`): `OriginalUrl`, `AffiliateUrl`, `Code`/`ShortCode`, `CreatedAt`, `Platform`/`PlatformType`, `MarketplaceAccountId`.
 
+### 🌐 21. Página pública de conversão
+- [x] 21.1. Versionamento de slugs em `PublicConverterPages` (inativo + novo ativo com o mesmo `PublicCode`).
+- [x] 21.2. Deduplicação visual `DistinctBy(PlatformType)` e `FirstOrDefault` da conta ativa na conversão.
+- [x] 21.3. Conversões públicas no Histórico de Links (`Source=PublicPage`, badge Página pública).
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

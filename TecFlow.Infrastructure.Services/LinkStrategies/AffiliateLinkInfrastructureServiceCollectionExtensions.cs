@@ -36,6 +36,7 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
         services.AddScoped<IProductMetadataService, ProductMetadataService>();
         services.AddScoped<IShopeeService, ShopeeService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();
+        services.AddScoped<IPublicConverterPageService, TecFlow.Infrastructure.Services.PublicPages.PublicConverterPageService>();
 
         services.AddHttpClient<IShopeeAffiliateLinkClient, ShopeeAffiliateLinkClient>((sp, client) =>
         {

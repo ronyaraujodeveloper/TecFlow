@@ -49,6 +49,7 @@ public class AppDbContext : DbContext
     public DbSet<ShortAffiliateLink> ShortAffiliateLinks { get; set; } = null!;
     public DbSet<ShortAffiliateLinkAccount> ShortAffiliateLinkAccounts { get; set; } = null!;
     public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
+    public DbSet<PublicConverterPage> PublicConverterPages { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -295,6 +296,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(link => new { link.UserId, link.CreatedAt });
             entity.HasIndex(link => link.LinkGroupId);
             entity.Property(link => link.AffiliateUrl).HasMaxLength(2048);
+            entity.Property(link => link.Source).HasMaxLength(32);
             entity.HasOne<MarketplaceAccount>()
                 .WithMany()
                 .HasForeignKey(link => link.MarketplaceAccountId)
@@ -311,6 +313,17 @@ public class AppDbContext : DbContext
             entity.Property(account => account.IsActive).HasDefaultValue(true);
             entity.HasIndex(account => account.LinkGroupId);
             entity.HasIndex(account => new { account.LinkGroupId, account.IntegracaoLojaId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PublicConverterPage>(entity =>
+        {
+            entity.ToTable("PublicConverterPages");
+            entity.Property(page => page.Slug).HasMaxLength(64).IsRequired();
+            entity.Property(page => page.DisplayName).HasMaxLength(128);
+            entity.Property(page => page.IsActive).HasDefaultValue(true);
+            entity.HasIndex(page => page.Slug).IsUnique();
+            entity.HasIndex(page => page.PublicCode);
+            entity.HasIndex(page => new { page.UserId, page.IsActive });
         });
 
         modelBuilder.Entity<LinkClickLog>(entity =>

@@ -1,0 +1,141 @@
+﻿@page "/minhas-paginas-publicas"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.LinkGenerator
+@inject IPublicConverterApiService PublicPages
+@inject NavigationManager Navigation
+@inject ILogger<MinhasPaginasPublicas> Logger
+
+<PageTitle>Minhas Páginas Públicas — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Minhas Páginas Públicas</h1>
+            <p class="text-muted small mb-0">
+                O slug ativo é o endereço atual. Slugs antigos continuam convertendo com o badge Inativo.
+            </p>
+        </div>
+        <a href="/gerador-links" class="btn btn-outline-secondary btn-touch">Histórico de links</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">@_message</div>
+    }
+
+    <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <label class="form-label fw-semibold" for="public-slug">Novo slug</label>
+            <div class="input-group">
+                <span class="input-group-text">/p/</span>
+                <input id="public-slug"
+                       class="form-control"
+                       value="@_draftSlug"
+                       @oninput="e => _draftSlug = e.Value?.ToString() ?? string.Empty" />
+                <button type="button" class="btn btn-primary" disabled="@_isSaving" @onclick="SaveSlugAsync">
+                    @(_isSaving ? "Salvando..." : "Salvar slug")
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_activeUrl))
+            {
+                <p class="small text-muted mt-2 mb-0">Endereço ativo: <a href="@_activeUrl" target="_blank" rel="noopener">@_activeUrl</a></p>
+            }
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Slug</th>
+                        <th>Status</th>
+                        <th>Criado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _pages)
+                    {
+                        <tr>
+                            <td class="font-monospace">/p/@item.Slug</td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge text-bg-success">Ativo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">Inativo</span>
+                                }
+                            </td>
+                            <td class="small">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@code {
+    private readonly List<PublicConverterPageDto> _pages = [];
+    private string _draftSlug = string.Empty;
+    private string? _activeUrl;
+    private string? _message;
+    private bool _messageIsError;
+    private bool _isSaving;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var result = await PublicPages.ListMineAsync();
+        _pages.Clear();
+        if (result.Success && result.Data?.DataList is { Count: > 0 })
+        {
+            _pages.AddRange(result.Data.DataList);
+            var active = result.Data.Data ?? _pages.FirstOrDefault(item => item.IsActive);
+            _draftSlug = active?.Slug ?? string.Empty;
+            _activeUrl = string.IsNullOrWhiteSpace(_draftSlug)
+                ? null
+                : Navigation.ToAbsoluteUri($"p/{_draftSlug}").ToString();
+        }
+        else if (!result.Success)
+        {
+            _messageIsError = true;
+            _message = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar as páginas.";
+        }
+    }
+
+    private async Task SaveSlugAsync()
+    {
+        _isSaving = true;
+        _message = null;
+        try
+        {
+            var result = await PublicPages.ChangeSlugAsync(_draftSlug);
+            if (!result.Success || result.Data is { Status: false })
+            {
+                _messageIsError = true;
+                _message = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível salvar o slug.";
+                return;
+            }
+
+            _messageIsError = false;
+            _message = result.Data?.Descricao ?? "Slug atualizado.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar slug da página pública.");
+            _messageIsError = true;
+            _message = "Não foi possível salvar o slug.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

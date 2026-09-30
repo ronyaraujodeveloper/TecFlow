@@ -470,16 +470,17 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
    - O pipeline de extração descarta nomes genéricos e hashes de anti-bot (ex: `Opaanlp`, `Nsbo`, `Produto`, `Shopee Brasil`, `Captcha`).
    - Títulos suspeitos ou puramente numéricos são higienizados e convertidos para `NULL` no backend para evitar corrupção de dados na base SQL Server.
 
-- [ ] 20.2. **Fallback Manual Resiliente no Blazor (GeradorLinks.razor):**
+- [x] 20.2. **Fallback Manual Resiliente no Blazor (GeradorLinks.razor):**
    - Quando o scraping do marketplace for retido por mecanismos antirobô, o sistema não bloqueia a geração do link de comissão.
    - O painel exibe campos de edição direta (Nome do Produto e Preço em R$) para preenchimento opcional pelo afiliado, gravando as informações no banco sem travar a interface.
+   - No histórico, o lápis pré-preenche nome e preço atuais; o disquete persiste via `SaveLinkMetadataAsync`.
 
-- [ ] 20.3. **Layout Compacto e Ações Rápidas por Ícones:**
+- [x] 20.3. **Layout Compacto e Ações Rápidas por Ícones:**
    - Visualização do Card Preview em linha única flexível (`d-flex align-items-center gap-2`).
    - Substituição de botões textuais por ícones nativos do Bootstrap Icons:
      * **Salvar:** Ícone de Disquete (`bi bi-floppy`).
      * **Visualizar:** Ícone de Olho (`bi bi-eye`).
-     * **Editar:** Ícone de Lápis (`bi bi-pencil`).
+     * **Editar:** Ícone de Lápis (`bi bi-pencil`) — abre inputs com `ProductName` e `ProductPrice` atuais.
    - Disposição horizontal ultra-compacta para os cartões de compartilhamento (Copiar, WhatsApp e Telegram).
 
 - [x] 20.4. **Resolvedor Universal de Links (Multi-hop Unshorten):**

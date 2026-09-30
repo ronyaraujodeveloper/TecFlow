@@ -719,7 +719,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductMetadataHtmlParser** / **ProductMetadataService** — bloqueio rígido de títulos genéricos (`Produto`, `Shopee`, < 3 caracteres); persistência `NULL` em `ShortAffiliateLinks.ProductName`.
 - [x] **ShopeeService.cs** / **IShopeeService** — fallback `product/get_item_base_info` com AppKey/AppSecret de `MarketplaceAccounts`.
 - [x] **UpdateAffiliateProductMetadataDto.cs** — payload de edição manual de nome/preço.
-- [x] **LinkGeneratorResultPanel.razor** / **HistoricoLinks.razor** / **GeradorLinks.razor** — layout compacto em linha única: ícones Copiar/WhatsApp/Telegram e ações do histórico (`bi-floppy`, `bi-eye`, `bi-pencil`).
+- [x] **HistoricoLinks.razor** / **GeradorLinks.razor** — lápis (`bi-pencil`) inicializa `editingModel.ProductName`/`ProductPrice` nos inputs; disquete (`bi-floppy`) chama `SaveLinkMetadataAsync` e `StateHasChanged`.
 - [x] **AffiliateLinksController** — `PUT/PATCH api/afiliados/links/{id}/metadata`.
 - [x] **ShopeeServiceTests.cs** / **ProductMetadataServiceTests** — rejeição de `Produto` e Open API sem credenciais.
 

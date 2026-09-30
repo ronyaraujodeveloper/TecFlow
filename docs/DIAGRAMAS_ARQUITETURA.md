@@ -92,8 +92,10 @@ flowchart LR
   HIST -->|lapis abre modal contas + nome/preco| UI
   UI -->|floppy PUT metadata ProductPrice ProductName| API
   PUB[PublicConverter.razor /p/slug] -->|GET slug ativo ou inativo| PC[PublicConverterController]
-  PUB -->|DistinctBy PlatformType um badge| ACC
+  PUB -->|DistinctBy PlatformType um badge compacto| ACC
   PUB -->|POST convert FirstOrDefault conta ativa| GEN[AffiliateLinkGenerationService]
+  PUB -->|Limpar zera input e oculta resultados| PUB
+  PUB -->|Copiar JS clipboard + Abrir _blank| CLIP
   GEN -->|ShortAffiliateLinks Source=PublicPage UserId afiliado| SQL
   MINE[MinhasPaginasPublicas] -->|historico slug badge Inativo| PC
   HIST -->|badge Pagina publica| SQL

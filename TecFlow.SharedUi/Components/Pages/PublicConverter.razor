@@ -7,6 +7,7 @@
 @using TecFlow.SharedUi.Helpers
 @using TecFlow.SharedUi.Services.LinkGenerator
 @inject IPublicConverterApiService PublicPages
+@inject IJSRuntime Js
 @inject ILogger<PublicConverter> Logger
 
 <PageTitle>Converter link — TecFlow</PageTitle>
@@ -23,14 +24,14 @@ else if (_page is null)
 }
 else
 {
-    <section class="card border-0 shadow-sm mx-auto" style="max-width: 640px;">
+    <section class="card border-0 shadow-sm mx-auto public-converter-card" style="max-width: 640px;">
         <div class="card-body p-4">
             <h1 class="h4 fw-bold mb-2">@(_page.DisplayName ?? "Converter link de produto")</h1>
             <p class="text-muted small mb-3">
                 Cole o link do produto. A comissão vai para o afiliado desta página.
             </p>
 
-            <div class="d-flex flex-wrap gap-2 mb-4" aria-label="Lojas conectadas">
+            <div class="d-flex flex-wrap gap-2 mb-3 public-converter-platforms" aria-label="Lojas conectadas">
                 @foreach (var platform in DistinctPlatforms)
                 {
                     var definition = MarketplaceUrlDetector.All.FirstOrDefault(item => item.IntegrationType == platform);
@@ -47,18 +48,30 @@ else
 
             <label class="form-label fw-semibold" for="public-product-url">Link do produto</label>
             <input id="public-product-url"
-                   class="form-control form-control-lg mb-3"
+                   class="form-control mb-3"
                    placeholder="Cole aqui o link da Shopee, Amazon, Magalu..."
                    value="@_productUrl"
                    disabled="@_isConverting"
                    @oninput="e => _productUrl = e.Value?.ToString() ?? string.Empty" />
 
-            <button type="button"
-                    class="btn btn-primary btn-lg w-100"
-                    disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
-                    @onclick="ConvertAsync">
-                @(_isConverting ? "Convertendo..." : "Converter link")
-            </button>
+            <div class="row g-2">
+                <div class="col-6">
+                    <button type="button"
+                            class="btn btn-primary w-100"
+                            disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
+                            @onclick="ConvertAsync">
+                        @(_isConverting ? "Convertendo..." : "Converter link")
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button type="button"
+                            class="btn btn-outline-secondary w-100"
+                            disabled="@_isConverting"
+                            @onclick="ClearForm">
+                        Limpar
+                    </button>
+                </div>
+            </div>
 
             @if (!string.IsNullOrWhiteSpace(_error))
             {
@@ -67,13 +80,58 @@ else
 
             @if (_result is { HasConvertedLink: true })
             {
-                <div class="alert alert-success mt-3 mb-0" role="status">
-                    <p class="fw-semibold mb-1">Link de comissão gerado</p>
-                    <p class="font-monospace small text-break mb-0">@(_result.AffiliateUrl)</p>
-                    @if (!string.IsNullOrWhiteSpace(_result.ResolvedShortUrl))
-                    {
-                        <p class="font-monospace small text-break mb-0 mt-2">@_result.ResolvedShortUrl</p>
-                    }
+                <hr class="my-3 border-secondary-subtle" />
+
+                <div class="public-converter-results" role="region" aria-label="Links gerados">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="public-direct-url">
+                            Link de comissão gerado (Direto)
+                        </label>
+                        <div class="input-group">
+                            <input id="public-direct-url"
+                                   class="form-control font-monospace small"
+                                   readonly
+                                   value="@DirectCommissionUrl" />
+                            <button type="button"
+                                    class="btn @(_copiedDirect ? "btn-success" : "btn-outline-primary")"
+                                    disabled="@(_isCopying || string.IsNullOrWhiteSpace(DirectCommissionUrl))"
+                                    @onclick="() => CopyAsync(DirectCommissionUrl, isDirect: true)">
+                                Copiar
+                            </button>
+                            <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(DirectCommissionUrl) ? "disabled" : null)"
+                               href="@DirectCommissionUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Ir para o produto">
+                                Abrir
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold" for="public-tecflow-url">
+                            Link de rastreio TecFlow
+                        </label>
+                        <div class="input-group">
+                            <input id="public-tecflow-url"
+                                   class="form-control font-monospace small"
+                                   readonly
+                                   value="@TecFlowTrackingUrl" />
+                            <button type="button"
+                                    class="btn @(_copiedTrack ? "btn-success" : "btn-outline-primary")"
+                                    disabled="@(_isCopying || string.IsNullOrWhiteSpace(TecFlowTrackingUrl))"
+                                    @onclick="() => CopyAsync(TecFlowTrackingUrl, isDirect: false)">
+                                Copiar
+                            </button>
+                            <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(TecFlowTrackingUrl) ? "disabled" : null)"
+                               href="@TecFlowTrackingUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Abrir rastreio TecFlow">
+                                Abrir
+                            </a>
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -86,6 +144,9 @@ else
     private PublicConverterPageDto? _page;
     private bool _notFound;
     private bool _isConverting;
+    private bool _isCopying;
+    private bool _copiedDirect;
+    private bool _copiedTrack;
     private string _productUrl = string.Empty;
     private string? _error;
     private GerarLinkAfiliadoResponseDto? _result;
@@ -95,10 +156,14 @@ else
             .Distinct()
             .ToList();
 
+    private string DirectCommissionUrl => _result?.AffiliateUrl?.Trim() ?? string.Empty;
+
+    private string TecFlowTrackingUrl => _result?.ResolvedShortUrl?.Trim() ?? string.Empty;
+
     protected override async Task OnParametersSetAsync()
     {
         _notFound = false;
-        _result = null;
+        ClearResults();
         var response = await PublicPages.GetBySlugAsync(Slug);
         if (!response.Success || response.Data?.Data is null)
         {
@@ -110,10 +175,26 @@ else
         _page = response.Data.Data;
     }
 
+    private void ClearForm()
+    {
+        _productUrl = string.Empty;
+        ClearResults();
+    }
+
+    private void ClearResults()
+    {
+        _error = null;
+        _result = null;
+        _copiedDirect = false;
+        _copiedTrack = false;
+    }
+
     private async Task ConvertAsync()
     {
         _error = null;
         _result = null;
+        _copiedDirect = false;
+        _copiedTrack = false;
         _isConverting = true;
         try
         {
@@ -136,6 +217,43 @@ else
         finally
         {
             _isConverting = false;
+        }
+    }
+
+    private async Task CopyAsync(string url, bool isDirect)
+    {
+        if (string.IsNullOrWhiteSpace(url) || _isCopying)
+        {
+            return;
+        }
+
+        _isCopying = true;
+        try
+        {
+            var copied = await Js.InvokeAsync<bool>("tecFlowAppInterop.copyToClipboard", url);
+            if (!copied)
+            {
+                return;
+            }
+
+            if (isDirect)
+            {
+                _copiedDirect = true;
+                _copiedTrack = false;
+            }
+            else
+            {
+                _copiedTrack = true;
+                _copiedDirect = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao copiar URL pública.");
+        }
+        finally
+        {
+            _isCopying = false;
         }
     }
 }

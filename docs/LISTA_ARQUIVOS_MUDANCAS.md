@@ -775,7 +775,8 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.26 — Página pública de conversão (slug versionado)
 
 - [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`).
-- [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)`; conversão com `FirstOrDefault` da conta ativa.
+- [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio TecFlow) com Copiar/Abrir.
+- [x] **app.css** — `.public-converter-platforms` (padding `0.4rem 0.6rem`, min/max-width e ícones menores).
 - [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.
 - [x] **ShortAffiliateLinks.Source** — conversão pública grava `PublicPage` no `UserId` do afiliado e aparece no Histórico de Links.
 - [x] **PublicConverterRulesTests.cs** — slug inativo e deduplicação de plataformas.

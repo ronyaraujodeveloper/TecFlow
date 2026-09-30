@@ -89,7 +89,9 @@ flowchart LR
   UI -->|Amazon URLs amzn.to a.co| AMZ
   UI -->|Mercado Livre URLs| ML
   HIST[HistoricoLinks] -->|GET historico TenantId + IsActive (abas PlatformType)| API
-  HIST -->|Visualizar / Editar ShortAffiliateLinkDto| UI
+  HIST -->|lapis abre modal contas + nome/preco| UI
+  UI -->|floppy PUT metadata ProductPrice ProductName| API
+  HIST -->|Visualizar ShortAffiliateLinkDto| UI
   UI -->|checkboxes StoreIds| API
   ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL
   API --> STR

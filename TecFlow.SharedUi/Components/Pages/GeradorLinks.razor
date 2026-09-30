@@ -138,7 +138,7 @@
 
     <ErrorBoundary @ref="_historyBoundary">
         <ChildContent>
-            <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" OnEditar="AbrirEdicaoAsync" />
+            <HistoricoLinks RefreshToken="@_historyRefreshToken" OnVisualizar="VisualizarLink" OnEditar="OnEditClick" />
         </ChildContent>
         <ErrorContent>
             <div class="alert alert-warning mt-4" role="alert">
@@ -161,6 +161,38 @@
                     </div>
                     <div class="modal-body pt-3">
                         <p class="small text-break mb-3">@_editItem.OriginalUrl</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="edit-link-product-name">Nome do produto</label>
+                            <input id="edit-link-product-name"
+                                   type="text"
+                                   class="form-control"
+                                   placeholder="Digite o nome do produto..."
+                                   value="@_editingModel.ProductName"
+                                   disabled="@_isSavingMetadata"
+                                   @oninput="OnEditProductNameChanged" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="edit-link-product-price">Preço</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input id="edit-link-product-price"
+                                       type="text"
+                                       class="form-control"
+                                       placeholder="0,00"
+                                       inputmode="decimal"
+                                       value="@_editingModel.ProductPriceText"
+                                       disabled="@_isSavingMetadata"
+                                       @oninput="OnEditProductPriceChanged" />
+                                <button type="button"
+                                        class="btn btn-outline-primary"
+                                        title="Salvar"
+                                        aria-label="Salvar nome e preço"
+                                        disabled="@_isSavingMetadata"
+                                        @onclick="SaveLinkMetadataAsync">
+                                    <i class="bi bi-floppy" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                             <span class="fw-semibold small">Contas</span>
                             <button type="button" class="btn btn-link btn-sm p-0" @onclick="ToggleSelectAllEditAccounts">
@@ -240,8 +272,10 @@
     private readonly HashSet<int> _selectedStoreIds = [];
     private readonly HashSet<int> _editSelectedStoreIds = [];
     private ShortAffiliateLinkDto? _editItem;
+    private readonly LinkMetadataEditModel _editingModel = new();
     private string? _editError;
     private bool _isSavingEdit;
+    private bool _isSavingMetadata;
 
     private IReadOnlyList<MarketplaceAccountDto> AccountsForDetectedPlatform =>
         _detectedPlatform?.IntegrationType is { } platform
@@ -569,10 +603,17 @@
         await ScrollToFormAsync();
     }
 
+    private Task OnEditClick(ShortAffiliateLinkDto link) => AbrirEdicaoAsync(link);
+
     private Task AbrirEdicaoAsync(ShortAffiliateLinkDto item)
     {
         _editItem = item;
         _editError = null;
+        _editingModel.ProductName = item.ProductName;
+        _editingModel.ProductPrice = item.ProductPrice;
+        _editingModel.ProductPriceText = item.ProductPrice.HasValue
+            ? item.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+            : string.Empty;
         _editSelectedStoreIds.Clear();
         foreach (var account in item.Accounts.Where(account => account.IsActive && account.StoreId > 0))
         {
@@ -595,7 +636,109 @@
         _editItem = null;
         _editError = null;
         _isSavingEdit = false;
+        _isSavingMetadata = false;
+        _editingModel.ProductName = null;
+        _editingModel.ProductPrice = null;
+        _editingModel.ProductPriceText = string.Empty;
         _editSelectedStoreIds.Clear();
+    }
+
+    private void OnEditProductNameChanged(ChangeEventArgs e)
+    {
+        _editingModel.ProductName = e.Value?.ToString();
+    }
+
+    private void OnEditProductPriceChanged(ChangeEventArgs e)
+    {
+        _editingModel.ProductPriceText = e.Value?.ToString() ?? string.Empty;
+        _editingModel.ProductPrice = TryParseEditPrice(_editingModel.ProductPriceText);
+    }
+
+    private async Task SaveLinkMetadataAsync()
+    {
+        if (_editItem is null || _editItem.AffiliateLinkId == Guid.Empty)
+        {
+            return;
+        }
+
+        _isSavingMetadata = true;
+        _editError = null;
+        StateHasChanged();
+
+        try
+        {
+            var price = _editingModel.ProductPrice ?? TryParseEditPrice(_editingModel.ProductPriceText);
+            var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
+                _editItem.AffiliateLinkId,
+                new UpdateAffiliateProductMetadataDto
+                {
+                    ProductName = _editingModel.ProductName,
+                    ProductPrice = price
+                });
+
+            if (result.Success && result.Data is not null)
+            {
+                _editItem.ProductName = result.Data.ProductName;
+                _editItem.ProductPrice = result.Data.ProductPrice;
+                _editingModel.ProductName = result.Data.ProductName;
+                _editingModel.ProductPrice = result.Data.ProductPrice;
+                _editingModel.ProductPriceText = result.Data.ProductPrice.HasValue
+                    ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    : string.Empty;
+
+                if (_generatedResponse?.AffiliateLinkId == _editItem.AffiliateLinkId)
+                {
+                    _generatedResponse.ProductName = result.Data.ProductName;
+                    _generatedResponse.ProductPrice = result.Data.ProductPrice;
+                }
+
+                _historyRefreshToken++;
+                StateHasChanged();
+                return;
+            }
+
+            _editError = result.ErrorMessage ?? "Não foi possível salvar o nome e o preço do produto.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar metadados do link. AffiliateLinkId={AffiliateLinkId}", _editItem.AffiliateLinkId);
+            _editError = "Não foi possível salvar o nome e o preço do produto.";
+        }
+        finally
+        {
+            _isSavingMetadata = false;
+            StateHasChanged();
+        }
+    }
+
+    private static decimal? TryParseEditPrice(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(
+                value,
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var parsed)
+            && parsed > 0)
+        {
+            return decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
+        }
+
+        if (decimal.TryParse(
+                value,
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.GetCultureInfo("pt-BR"),
+                out parsed)
+            && parsed > 0)
+        {
+            return decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
+        }
+
+        return null;
     }
 
     private async Task SalvarEdicaoAsync()
@@ -836,5 +979,14 @@
         }
 
         return string.Empty;
+    }
+
+    private sealed class LinkMetadataEditModel
+    {
+        public string? ProductName { get; set; }
+
+        public decimal? ProductPrice { get; set; }
+
+        public string ProductPriceText { get; set; } = string.Empty;
     }
 }

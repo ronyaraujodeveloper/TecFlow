@@ -89,10 +89,20 @@ git add .
 ```
 
 3.2. Realizar Commit Automatizado
-# 🤖 INSTRUÇÃO PARA O CURSOR AGENT: Antes de executar a linha abaixo, analise o 'git diff' ou o status dos arquivos modificados neste ciclo, crie um texto breve, técnico e conciso resumindo as alterações usando o padrão Conventional Commits (ex: 'feat(homolog): descrição') e substitua o texto explicativo abaixo pelo seu resumo gerado automaticamente.
+# 🤖 INSTRUÇÃO PARA O CURSOR AGENT:
+1. Analise o 'git diff' ou 'git status' das alterações deste ciclo.
+2. Crie um texto breve, técnico e conciso no padrão Conventional Commits (ex: 'feat(links): adiciona suporte a unshorten do promoby.me').
+3. Antes do commit, registre essa versão no arquivo '\docs\GIT_VERSAO.md' executando:
+Add-Content -Path ".\docs\GIT_VERSAO.md" -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [COMMIT_MENSAGEM]"
+4. Substitua '[CURSOR: INSIRA AQUI O SEU RESUMO TÉCNICO]' pela mensagem gerada e execute o commit.
 
 ```powershell
-git commit -m "[CURSOR: INSIRA AQUI O SEU RESUMO TÉCNICO GERADO COM BASE NAS ALTERAÇÕES DETECTADAS]"
+$CommitMessage = "[CURSOR: INSIRA AQUI O SEU RESUMO TÉCNICO GERADO COM BASE NAS ALTERAÇÕES DETECTADAS]"
+if (-not (Test-Path ".\docs")) { New-Item -ItemType Directory -Path ".\docs" }
+Add-Content -Path ".\docs\GIT_VERSAO.md" -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]$CommitMessage"
+git add .\docs\GIT_VERSAO.md
+git commit -m "$CommitMessage"
+
 ```
 
 3.3. Subir para o Repositório Remoto

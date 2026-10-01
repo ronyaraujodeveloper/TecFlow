@@ -544,6 +544,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Menu **Mensageria & Bots**: Conexões, Bot de Conversão (`/integracoes/bot-conversor`) e Agendador de Grupos (`/integracoes/agendador`), sem remover WhatsApp/Telegram originais.
   - NavMenu: Dashboard (`/`), Gerador de Links, Minhas Lojas / Integrações (`/marketplace-accounts`) visível, Minhas Páginas Públicas com loading/erro (sem tela em branco).
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
+  - `EvolutionApiService` trata HTTP 40x/50x com log do body, ignora instância já criada e busca o QR; a UI exibe alerta amigável em vez de 500 genérico.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).
 - [x] 23.2. Bot de Conversão Automática (Escuta e Resposta):**

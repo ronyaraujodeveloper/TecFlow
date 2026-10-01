@@ -846,6 +846,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **Conexoes.razor** — rota `/integracoes/conexoes` mantida.
 - [x] **MinhasPaginasPublicas.razor** — `_isLoading` + try/catch em `OnInitializedAsync` para não ficar em branco sem registros.
 
+### Resiliência Evolution API
+
+- [x] **appsettings.json / Homologacao** — seção `EvolutionApi` (`BaseUrl`, `ApiKey`).
+- [x] **EvolutionApiService** — try/catch em create/QR/state; log do body HTTP 40x/50x; instância já existente segue para `FetchQrCodeAsync`.
+- [x] **WhatsAppSessionService** / **WhatsAppIntegrationController** — falha de conexão retorna mensagem amigável (sem 500 genérico).
+- [x] **Conexoes.razor** / **WhatsAppConexao.razor** — alerta amigável quando a Evolution API está indisponível.
+- [x] **WhatsAppSessionRules.ResolveConnectUiMessage** — mapeia 500 genérico para texto de UI.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

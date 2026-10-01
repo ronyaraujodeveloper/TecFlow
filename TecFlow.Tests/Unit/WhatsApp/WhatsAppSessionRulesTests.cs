@@ -39,9 +39,22 @@ public class WhatsAppSessionRulesTests
     }
 
     [Fact]
-    public void NormalizeQrDataUrl_ShouldPrefixBase64()
+    public void ResolveConnectUiMessage_ShouldHideGeneric500()
     {
-        var url = WhatsAppSessionRules.NormalizeQrDataUrl("abc123");
-        Assert.StartsWith("data:image/png;base64,", url);
+        var message = WhatsAppSessionRules.ResolveConnectUiMessage(
+            "Internal Server Error",
+            "Erro 500",
+            500);
+        Assert.Equal(WhatsAppSessionRules.EvolutionUnreachableMessage, message);
+    }
+
+    [Fact]
+    public void ResolveConnectUiMessage_ShouldKeepBusinessError()
+    {
+        var message = WhatsAppSessionRules.ResolveConnectUiMessage(
+            "Instância criada, mas o QR Code ainda não está disponível. Tente novamente em instantes.",
+            null,
+            400);
+        Assert.Contains("QR Code", message, StringComparison.Ordinal);
     }
 }

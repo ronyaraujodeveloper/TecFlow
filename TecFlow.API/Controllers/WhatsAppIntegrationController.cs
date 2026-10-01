@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.WhatsApp;
 
 namespace TecFlow.API.Controllers;
 
@@ -12,10 +13,14 @@ namespace TecFlow.API.Controllers;
 public sealed class WhatsAppIntegrationController : ControllerBase
 {
     private readonly IWhatsAppSessionService _sessions;
+    private readonly ILogger<WhatsAppIntegrationController> _logger;
 
-    public WhatsAppIntegrationController(IWhatsAppSessionService sessions)
+    public WhatsAppIntegrationController(
+        IWhatsAppSessionService sessions,
+        ILogger<WhatsAppIntegrationController> logger)
     {
         _sessions = sessions;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -38,8 +43,16 @@ public sealed class WhatsAppIntegrationController : ControllerBase
             return Unauthorized(Fail("Usuário não autenticado."));
         }
 
-        var result = await _sessions.ConnectAsync(userId, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        try
+        {
+            var result = await _sessions.ConnectAsync(userId, cancellationToken);
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro interno ao conectar WhatsApp. UserId={UserId}", userId);
+            return BadRequest(Fail(WhatsAppSessionRules.EvolutionUnreachableMessage));
+        }
     }
 
     [HttpGet("status")]

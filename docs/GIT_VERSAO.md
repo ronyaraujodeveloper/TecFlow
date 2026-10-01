@@ -9,3 +9,4 @@
 [2026-09-30 22:38:52]feat(ui): unifica conexoes WhatsApp e Telegram em abas com QR modal
 [2026-09-30 22:57:34]feat(ui): unifica menu de mensageria sem perder rotas
 [2026-09-30 23:20:51]fix(ui): restaura lojas no menu e evita tela em branco nas paginas publicas
+[2026-09-30 23:42:24]fix(whatsapp): trata falhas da Evolution API sem 500 generico

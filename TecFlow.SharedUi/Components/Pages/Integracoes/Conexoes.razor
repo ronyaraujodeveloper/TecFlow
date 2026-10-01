@@ -5,6 +5,7 @@
 @using TecFlow.Business.Security
 @using TecFlow.Business.Service.Security
 @using TecFlow.Business.Service.Telegram
+@using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Services.Integrations
 @implements IAsyncDisposable
@@ -310,11 +311,22 @@
         try
         {
             var response = await WhatsAppApi.ConnectAsync();
-            ApplyWhatsApp(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+            ApplyWhatsApp(
+                response.Data?.Data,
+                WhatsAppSessionRules.ResolveConnectUiMessage(
+                    response.Data?.Descricao,
+                    response.ErrorMessage,
+                    response.StatusCode),
+                response.Success);
             if (!string.IsNullOrWhiteSpace(_qrCode) && _whatsApp?.IsConnected != true)
             {
                 StartPolling();
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao gerar QR WhatsApp na tela de conexões.");
+            _error = WhatsAppSessionRules.EvolutionUnreachableMessage;
         }
         finally
         {

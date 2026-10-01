@@ -34,24 +34,36 @@ public sealed class EvolutionApiService : IEvolutionApiService
             return false;
         }
 
-        var payload = JsonSerializer.Serialize(BuildCreateInstanceBody(instanceName));
-
-        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-        using var response = await _httpClient.PostAsync("instance/create", content, cancellationToken);
-        if (response.IsSuccessStatusCode
-            || response.StatusCode == HttpStatusCode.Conflict
-            || response.StatusCode == HttpStatusCode.Forbidden)
+        try
         {
-            return true;
-        }
+            var payload = JsonSerializer.Serialize(BuildCreateInstanceBody(instanceName));
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var response = await _httpClient.PostAsync("instance/create", content, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        _logger.LogWarning(
-            "Evolution create instance falhou. Status={Status} Instance={Instance} Body={Body}",
-            (int)response.StatusCode,
-            instanceName,
-            body);
-        return false;
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            LogEvolutionHttpError("CreateInstanceAsync", instanceName, response.StatusCode, body);
+
+            if (IndicatesInstanceAlreadyExists(response.StatusCode, body))
+            {
+                _logger.LogInformation(
+                    "Instância Evolution já existia; buscando QR. Instance={Instance}",
+                    instanceName);
+                await FetchQrCodeAsync(instanceName, cancellationToken);
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogEvolutionException("CreateInstanceAsync", instanceName, ex);
+            return false;
+        }
     }
 
     public async Task<string?> FetchQrCodeAsync(string instanceName, CancellationToken cancellationToken = default)
@@ -61,20 +73,24 @@ public sealed class EvolutionApiService : IEvolutionApiService
             return null;
         }
 
-        using var response = await _httpClient.GetAsync(
-            $"instance/connect/{Uri.EscapeDataString(instanceName)}",
-            cancellationToken);
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            _logger.LogWarning(
-                "Evolution QR falhou. Status={Status} Instance={Instance}",
-                (int)response.StatusCode,
-                instanceName);
+            using var response = await _httpClient.GetAsync(
+                $"instance/connect/{Uri.EscapeDataString(instanceName)}",
+                cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                LogEvolutionHttpError("FetchQrCodeAsync", instanceName, response.StatusCode, json);
+            }
+
             return ExtractQr(json);
         }
-
-        return ExtractQr(json);
+        catch (Exception ex)
+        {
+            LogEvolutionException("FetchQrCodeAsync", instanceName, ex);
+            return null;
+        }
     }
 
     public async Task<EvolutionConnectionStateDto> GetConnectionStateAsync(
@@ -87,25 +103,43 @@ public sealed class EvolutionApiService : IEvolutionApiService
             return result;
         }
 
-        using var stateResponse = await _httpClient.GetAsync(
-            $"instance/connectionState/{Uri.EscapeDataString(instanceName)}",
-            cancellationToken);
-        var stateJson = await stateResponse.Content.ReadAsStringAsync(cancellationToken);
-        result.State = ExtractFirst(stateJson, "state", "status", "connectionStatus") ?? "close";
+        try
+        {
+            using var stateResponse = await _httpClient.GetAsync(
+                $"instance/connectionState/{Uri.EscapeDataString(instanceName)}",
+                cancellationToken);
+            var stateJson = await stateResponse.Content.ReadAsStringAsync(cancellationToken);
+            if (!stateResponse.IsSuccessStatusCode)
+            {
+                LogEvolutionHttpError("GetConnectionStateAsync", instanceName, stateResponse.StatusCode, stateJson);
+            }
 
-        using var infoResponse = await _httpClient.GetAsync(
-            $"instance/fetchInstances?instanceName={Uri.EscapeDataString(instanceName)}",
-            cancellationToken);
-        var infoJson = await infoResponse.Content.ReadAsStringAsync(cancellationToken);
-        result.PhoneNumber = ExtractFirst(infoJson, "owner", "wuid", "wid", "phone", "number");
-        result.ProfileName = ExtractFirst(infoJson, "profileName", "pushName", "name");
-        result.ProfilePictureUrl = ExtractFirst(
-            infoJson,
-            "profilePictureUrl",
-            "profilePicUrl",
-            "profilePicture",
-            "picture");
-        return result;
+            result.State = ExtractFirst(stateJson, "state", "status", "connectionStatus") ?? "close";
+
+            using var infoResponse = await _httpClient.GetAsync(
+                $"instance/fetchInstances?instanceName={Uri.EscapeDataString(instanceName)}",
+                cancellationToken);
+            var infoJson = await infoResponse.Content.ReadAsStringAsync(cancellationToken);
+            if (!infoResponse.IsSuccessStatusCode)
+            {
+                LogEvolutionHttpError("FetchInstances", instanceName, infoResponse.StatusCode, infoJson);
+            }
+
+            result.PhoneNumber = ExtractFirst(infoJson, "owner", "wuid", "wid", "phone", "number");
+            result.ProfileName = ExtractFirst(infoJson, "profileName", "pushName", "name");
+            result.ProfilePictureUrl = ExtractFirst(
+                infoJson,
+                "profilePictureUrl",
+                "profilePicUrl",
+                "profilePicture",
+                "picture");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            LogEvolutionException("GetConnectionStateAsync", instanceName, ex);
+            return result;
+        }
     }
 
     public async Task<bool> SendTextMessageAsync(
@@ -426,6 +460,49 @@ public sealed class EvolutionApiService : IEvolutionApiService
 
         _logger.LogWarning("Evolution API não configurada (EvolutionApi:BaseUrl).");
         return false;
+    }
+
+    private void LogEvolutionHttpError(
+        string operation,
+        string instanceName,
+        HttpStatusCode statusCode,
+        string? body)
+    {
+        var payload = body ?? string.Empty;
+        _logger.LogError(
+            "Evolution API {Operation} retornou erro HTTP. Status={Status} Instance={Instance} Body={Body}",
+            operation,
+            (int)statusCode,
+            instanceName,
+            payload);
+        Console.WriteLine(
+            $"Evolution API {operation} Status={(int)statusCode} Instance={instanceName} Body={payload}");
+    }
+
+    private void LogEvolutionException(string operation, string instanceName, Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Evolution API {Operation} lançou exceção. Instance={Instance} BaseUrl={BaseUrl}",
+            operation,
+            instanceName,
+            _options.BaseUrl);
+        Console.WriteLine(ex.ToString());
+    }
+
+    internal static bool IndicatesInstanceAlreadyExists(HttpStatusCode statusCode, string? body)
+    {
+        if (statusCode is HttpStatusCode.Conflict
+            or HttpStatusCode.BadRequest
+            or HttpStatusCode.Forbidden)
+        {
+            return true;
+        }
+
+        var text = body ?? string.Empty;
+        return text.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("instance already created", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("already created", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? ExtractQr(string json)

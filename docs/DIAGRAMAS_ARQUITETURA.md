@@ -118,7 +118,8 @@ flowchart LR
   WAUI -->|POST conectar + GET status polling| WAPI[WhatsAppIntegrationController]
   WAPI --> WAS[WhatsAppSessionService]
   WAS --> EVO[EvolutionApiService]
-  EVO -->|instance create/connect/connectionState| EVAPI[Evolution API]
+  EVO -->|try/catch + log Body HTTP 40x/50x| EVAPI[Evolution API]
+  EVO -->|already exists 400/409| EVOQR[FetchQrCodeAsync]
   WAS -->|WhatsAppIntegrations UserId InstanceName| SQL
   EVOWH[WhatsAppWebhookController] -->|X-Webhook-Secret + MESSAGES_UPSERT| WPROC[WhatsAppMessageProcessor]
   WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN

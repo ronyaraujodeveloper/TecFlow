@@ -42,30 +42,41 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
         int userId,
         CancellationToken cancellationToken = default)
     {
-        var row = await EnsureRowAsync(userId, cancellationToken);
-        var created = await _evolution.CreateInstanceAsync(row.InstanceName, cancellationToken);
-        if (!created)
+        try
         {
-            return Fail("Não foi possível registrar a instância na Evolution API. Verifique EvolutionApi:BaseUrl e ApiKey.");
+            var row = await EnsureRowAsync(userId, cancellationToken);
+            var created = await _evolution.CreateInstanceAsync(row.InstanceName, cancellationToken);
+            if (!created)
+            {
+                return Fail(
+                    _evolutionOptions.IsConfigured
+                        ? WhatsAppSessionRules.EvolutionUnreachableMessage
+                        : "Não foi possível registrar a instância na Evolution API. Verifique EvolutionApi:BaseUrl e ApiKey.");
+            }
+
+            var qr = await _evolution.FetchQrCodeAsync(row.InstanceName, cancellationToken);
+            row.ConnectionStatus = WhatsAppConnectionStatuses.AwaitingQr;
+            row.IsActive = true;
+            row.ApiKey = string.IsNullOrWhiteSpace(_evolutionOptions.ApiKey) ? row.ApiKey : _evolutionOptions.ApiKey;
+            row.Token = row.InstanceName;
+            PersistSessionSnapshot(row);
+            row.Touch();
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var dto = Map(row);
+            dto.QrCodeDataUrl = WhatsAppSessionRules.NormalizeQrDataUrl(qr);
+            if (string.IsNullOrWhiteSpace(dto.QrCodeDataUrl))
+            {
+                return Fail("Instância criada, mas o QR Code ainda não está disponível. Tente novamente em instantes.");
+            }
+
+            return Ok(dto, "Leia o QR Code no WhatsApp do celular.");
         }
-
-        var qr = await _evolution.FetchQrCodeAsync(row.InstanceName, cancellationToken);
-        row.ConnectionStatus = WhatsAppConnectionStatuses.AwaitingQr;
-        row.IsActive = true;
-        row.ApiKey = string.IsNullOrWhiteSpace(_evolutionOptions.ApiKey) ? row.ApiKey : _evolutionOptions.ApiKey;
-        row.Token = row.InstanceName;
-        PersistSessionSnapshot(row);
-        row.Touch();
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var dto = Map(row);
-        dto.QrCodeDataUrl = WhatsAppSessionRules.NormalizeQrDataUrl(qr);
-        if (string.IsNullOrWhiteSpace(dto.QrCodeDataUrl))
+        catch (Exception ex)
         {
-            return Fail("Instância criada, mas o QR Code ainda não está disponível. Tente novamente em instantes.");
+            _logger.LogError(ex, "Falha ao gerar conexão WhatsApp. UserId={UserId}", userId);
+            return Fail(WhatsAppSessionRules.EvolutionUnreachableMessage);
         }
-
-        return Ok(dto, "Leia o QR Code no WhatsApp do celular.");
     }
 
     public async Task<WhatsAppIntegrationResponseDto> RefreshStatusAsync(

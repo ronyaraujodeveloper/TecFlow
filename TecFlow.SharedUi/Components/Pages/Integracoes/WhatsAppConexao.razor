@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
+@using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Services.Integrations
 @implements IAsyncDisposable
@@ -147,11 +148,22 @@
         try
         {
             var response = await WhatsAppApi.ConnectAsync();
-            Apply(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+            Apply(
+                response.Data?.Data,
+                WhatsAppSessionRules.ResolveConnectUiMessage(
+                    response.Data?.Descricao,
+                    response.ErrorMessage,
+                    response.StatusCode),
+                response.Success);
             if (!string.IsNullOrWhiteSpace(_qrCode) && _session?.IsConnected != true)
             {
                 StartPolling();
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao gerar conexão WhatsApp.");
+            _error = WhatsAppSessionRules.EvolutionUnreachableMessage;
         }
         finally
         {

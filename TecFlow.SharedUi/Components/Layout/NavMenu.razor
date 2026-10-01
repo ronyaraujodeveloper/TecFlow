@@ -3,7 +3,7 @@
 <nav class="portal-sidebar-nav">
     <AuthorizeView>
         <Authorized>
-            <a href="/dashboard" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
+            <a href="/" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
                 Dashboard
             </a>
             <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="NotifyNavigate">
@@ -28,10 +28,13 @@
                 Minha conta / Segurança
             </a>
             <a href="/gerador-links" class="portal-nav-link @GetActiveClass("/gerador-links")" @onclick="NotifyNavigate">
-                Gerador de links
+                Gerador de Links
+            </a>
+            <a href="/marketplace-accounts" class="portal-nav-link @GetActiveClass("/marketplace-accounts")" @onclick="NotifyNavigate">
+                Minhas Lojas / Integrações
             </a>
             <a href="/minhas-paginas-publicas" class="portal-nav-link @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
-                Minhas páginas públicas
+                Minhas Páginas Públicas
             </a>
 
             <div class="portal-nav-group">
@@ -43,7 +46,7 @@
                 </button>
                 @if (_integracoesOpen)
                 {
-                    <a href="/minhas-lojas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-lojas")" @onclick="NotifyNavigate">
+                    <a href="/marketplace-accounts" class="portal-nav-link portal-nav-sublink @GetActiveClass("/marketplace-accounts")" @onclick="NotifyNavigate">
                         Minhas Lojas / Integrações
                     </a>
                 }
@@ -99,8 +102,8 @@
 @code {
     [Parameter] public EventCallback OnNavigate { get; set; }
 
-    private bool _integracoesOpen;
-    private bool _mensageriaOpen;
+    private bool _integracoesOpen = true;
+    private bool _mensageriaOpen = true;
 
     protected override void OnParametersSet()
     {
@@ -158,8 +161,9 @@
             return current.Equals("/dashboard", StringComparison.OrdinalIgnoreCase) ? "active" : "";
         }
 
-        if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
-            && (current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
+        if (path.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase)
+            && (current.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
+                || current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
                 || current.Equals("/integracoes/lojas", StringComparison.OrdinalIgnoreCase)
                 || current.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase)))
         {

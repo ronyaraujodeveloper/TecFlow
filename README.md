@@ -542,6 +542,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.1. Arquitetura de Sessão (Evolution API / Baileys):**
   - Painel unificado `/integracoes/conexoes` (abas WhatsApp / Telegram), QR em modal e status com foto, nome e número.
   - Menu **Mensageria & Bots**: Conexões, Bot de Conversão (`/integracoes/bot-conversor`) e Agendador de Grupos (`/integracoes/agendador`), sem remover WhatsApp/Telegram originais.
+  - NavMenu: Dashboard (`/`), Gerador de Links, Minhas Lojas / Integrações (`/marketplace-accounts`) visível, Minhas Páginas Públicas com loading/erro (sem tela em branco).
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).

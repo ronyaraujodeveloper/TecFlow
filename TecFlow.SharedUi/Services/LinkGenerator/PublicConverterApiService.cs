@@ -38,19 +38,19 @@ public sealed class PublicConverterApiService : IPublicConverterApiService
             cancellationToken);
     }
 
-    public Task<ApiResult<PublicConverterPageResponseDto>> ListMineAsync(
+    public async Task<ApiResult<PublicConverterPageResponseDto>> ListMineAsync(
         CancellationToken cancellationToken = default)
     {
         using var _ = _loadingService.BeginScope("Carregando páginas públicas...");
-        return _httpService.GetAsync<PublicConverterPageResponseDto>(MinePath, cancellationToken: cancellationToken);
+        return await _httpService.GetAsync<PublicConverterPageResponseDto>(MinePath, cancellationToken: cancellationToken);
     }
 
-    public Task<ApiResult<PublicConverterPageResponseDto>> ChangeSlugAsync(
+    public async Task<ApiResult<PublicConverterPageResponseDto>> ChangeSlugAsync(
         string slug,
         CancellationToken cancellationToken = default)
     {
         using var _ = _loadingService.BeginScope("Atualizando slug...");
-        return _httpService.PutAsync<ChangePublicConverterSlugDto, PublicConverterPageResponseDto>(
+        return await _httpService.PutAsync<ChangePublicConverterSlugDto, PublicConverterPageResponseDto>(
             $"{MinePath}/slug",
             new ChangePublicConverterSlugDto { Slug = slug },
             cancellationToken);

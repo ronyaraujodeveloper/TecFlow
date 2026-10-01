@@ -8,3 +8,4 @@
 [2026-09-30 22:26:46]feat(telegram): conecta bot, converte links no privado e agenda disparos
 [2026-09-30 22:38:52]feat(ui): unifica conexoes WhatsApp e Telegram em abas com QR modal
 [2026-09-30 22:57:34]feat(ui): unifica menu de mensageria sem perder rotas
+[2026-09-30 23:20:51]fix(ui): restaura lojas no menu e evita tela em branco nas paginas publicas

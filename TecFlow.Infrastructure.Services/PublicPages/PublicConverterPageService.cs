@@ -53,21 +53,29 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         int userId,
         CancellationToken cancellationToken = default)
     {
-        await EnsureActivePageAsync(userId, cancellationToken);
-        var pages = await _context.PublicConverterPages
-            .IgnoreQueryFilters()
-            .Where(page => page.UserId == userId)
-            .OrderByDescending(page => page.IsActive)
-            .ThenByDescending(page => page.CreatedAt)
-            .ToListAsync(cancellationToken);
-
-        return new PublicConverterPageResponseDto
+        try
         {
-            Status = true,
-            Descricao = "OK",
-            DataList = pages.Select(page => Map(page)).ToList(),
-            Data = pages.FirstOrDefault(page => page.IsActive) is { } active ? Map(active) : pages.Select(page => Map(page)).FirstOrDefault()
-        };
+            await EnsureActivePageAsync(userId, cancellationToken);
+            var pages = await _context.PublicConverterPages
+                .IgnoreQueryFilters()
+                .Where(page => page.UserId == userId)
+                .OrderByDescending(page => page.IsActive)
+                .ThenByDescending(page => page.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+            return new PublicConverterPageResponseDto
+            {
+                Status = true,
+                Descricao = "OK",
+                DataList = pages.Select(page => Map(page)).ToList(),
+                Data = pages.FirstOrDefault(page => page.IsActive) is { } active ? Map(active) : pages.Select(page => Map(page)).FirstOrDefault()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao listar páginas públicas. UserId={UserId}", userId);
+            return Fail("Não foi possível carregar as páginas públicas. Nenhuma página cadastrada ou o banco ainda está vazio.");
+        }
     }
 
     public async Task<PublicConverterPageResponseDto> ChangeSlugAsync(

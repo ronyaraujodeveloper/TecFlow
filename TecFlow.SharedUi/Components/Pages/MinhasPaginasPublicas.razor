@@ -1,6 +1,6 @@
 ﻿@page "/minhas-paginas-publicas"
 @attribute [Authorize]
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @using TecFlow.Business.Dto
 @using TecFlow.SharedUi.Services.LinkGenerator
 @inject IPublicConverterApiService PublicPages
@@ -25,58 +25,81 @@
         <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">@_message</div>
     }
 
-    <section class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <label class="form-label fw-semibold" for="public-slug">Novo slug</label>
-            <div class="input-group">
-                <span class="input-group-text">/p/</span>
-                <input id="public-slug"
-                       class="form-control"
-                       value="@_draftSlug"
-                       @oninput="e => _draftSlug = e.Value?.ToString() ?? string.Empty" />
-                <button type="button" class="btn btn-primary" disabled="@_isSaving" @onclick="SaveSlugAsync">
-                    @(_isSaving ? "Salvando..." : "Salvar slug")
-                </button>
+    @if (_isLoading)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3 py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando páginas públicas...</span>
+                </div>
+                <p class="mb-0 text-muted">Carregando páginas públicas...</p>
             </div>
-            @if (!string.IsNullOrWhiteSpace(_activeUrl))
-            {
-                <p class="small text-muted mt-2 mb-0">Endereço ativo: <a href="@_activeUrl" target="_blank" rel="noopener">@_activeUrl</a></p>
-            }
         </div>
-    </section>
+    }
+    else
+    {
+        <section class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <label class="form-label fw-semibold" for="public-slug">Novo slug</label>
+                <div class="input-group">
+                    <span class="input-group-text">/p/</span>
+                    <input id="public-slug"
+                           class="form-control"
+                           value="@_draftSlug"
+                           @oninput="e => _draftSlug = e.Value?.ToString() ?? string.Empty" />
+                    <button type="button" class="btn btn-primary" disabled="@_isSaving" @onclick="SaveSlugAsync">
+                        @(_isSaving ? "Salvando..." : "Salvar slug")
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_activeUrl))
+                {
+                    <p class="small text-muted mt-2 mb-0">Endereço ativo: <a href="@_activeUrl" target="_blank" rel="noopener">@_activeUrl</a></p>
+                }
+            </div>
+        </section>
 
-    <section class="card border-0 shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Slug</th>
-                        <th>Status</th>
-                        <th>Criado em</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in _pages)
-                    {
-                        <tr>
-                            <td class="font-monospace">/p/@item.Slug</td>
-                            <td>
-                                @if (item.IsActive)
-                                {
-                                    <span class="badge text-bg-success">Ativo</span>
-                                }
-                                else
-                                {
-                                    <span class="badge text-bg-secondary">Inativo</span>
-                                }
-                            </td>
-                            <td class="small">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
+        <section class="card border-0 shadow-sm">
+            @if (_pages.Count == 0)
+            {
+                <div class="card-body text-muted">
+                    Nenhuma página pública cadastrada ainda. Informe um slug acima e salve para criar a primeira.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Slug</th>
+                                <th>Status</th>
+                                <th>Criado em</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _pages)
+                            {
+                                <tr>
+                                    <td class="font-monospace">/p/@item.Slug</td>
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge text-bg-success">Ativo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-secondary">Inativo</span>
+                                        }
+                                    </td>
+                                    <td class="small">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
 </div>
 
 @code {
@@ -86,26 +109,50 @@
     private string? _message;
     private bool _messageIsError;
     private bool _isSaving;
+    private bool _isLoading = true;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
-        var result = await PublicPages.ListMineAsync();
-        _pages.Clear();
-        if (result.Success && result.Data?.DataList is { Count: > 0 })
+        _isLoading = true;
+        try
         {
-            _pages.AddRange(result.Data.DataList);
-            var active = result.Data.Data ?? _pages.FirstOrDefault(item => item.IsActive);
-            _draftSlug = active?.Slug ?? string.Empty;
-            _activeUrl = string.IsNullOrWhiteSpace(_draftSlug)
-                ? null
-                : Navigation.ToAbsoluteUri($"p/{_draftSlug}").ToString();
+            var result = await PublicPages.ListMineAsync();
+            _pages.Clear();
+            if (result.Success && result.Data?.DataList is { Count: > 0 })
+            {
+                _pages.AddRange(result.Data.DataList);
+                var active = result.Data.Data ?? _pages.FirstOrDefault(item => item.IsActive);
+                _draftSlug = active?.Slug ?? string.Empty;
+                _activeUrl = string.IsNullOrWhiteSpace(_draftSlug)
+                    ? null
+                    : Navigation.ToAbsoluteUri($"p/{_draftSlug}").ToString();
+            }
+            else if (!result.Success)
+            {
+                _messageIsError = true;
+                _message = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar as páginas.";
+            }
+            else
+            {
+                _draftSlug = result.Data?.Data?.Slug ?? string.Empty;
+                _activeUrl = null;
+            }
         }
-        else if (!result.Success)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Falha ao carregar páginas públicas.");
             _messageIsError = true;
-            _message = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar as páginas.";
+            _message = "Não foi possível carregar as páginas públicas. Tente novamente em instantes.";
+            _pages.Clear();
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 

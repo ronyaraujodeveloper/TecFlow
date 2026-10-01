@@ -840,10 +840,11 @@ API / Orquestrador / Worker / WebUi
 
 ### Navegação unificada
 
-- [x] **NavMenu.razor** — Dashboard, Gerador de links, Minhas Lojas / Integrações, Minhas páginas públicas; grupo **Mensageria & Bots** (Conexões, Bot de Conversão, Agendador) sem remover rotas antigas de WhatsApp/Telegram.
+- [x] **NavMenu.razor** — Dashboard (`/`), Gerador de Links, **Minhas Lojas / Integrações** visível em `/marketplace-accounts`, Minhas Páginas Públicas; grupo **Mensageria & Bots** (Conexões, Bot de Conversão, Agendador) sem remover rotas antigas de WhatsApp/Telegram.
 - [x] **BotConversor.razor** (`/integracoes/bot-conversor`) e **Agendador.razor** (`/integracoes/agendador`).
 - [x] **MinhasLojas.razor** — aliases `/integracoes/lojas` e `/marketplace-accounts`.
 - [x] **Conexoes.razor** — rota `/integracoes/conexoes` mantida.
+- [x] **MinhasPaginasPublicas.razor** — `_isLoading` + try/catch em `OnInitializedAsync` para não ficar em branco sem registros.
 
 ---
 

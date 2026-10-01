@@ -40,6 +40,8 @@ public class AffiliateLinkHistoryItemDto
 
     public bool IsFromWhatsAppBot { get; set; }
 
+    public bool IsFromTelegramBot { get; set; }
+
     public List<AffiliateLinkAccountVariantDto> Accounts { get; set; } = [];
 }
 
@@ -69,6 +71,7 @@ public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
             Source = item.Source,
             IsFromPublicPage = item.IsFromPublicPage,
             IsFromWhatsAppBot = item.IsFromWhatsAppBot,
+            IsFromTelegramBot = item.IsFromTelegramBot,
             Accounts = item.Accounts ?? [],
             CreatedAt = item.CreatedAt,
             ClickCount = item.ClickCount

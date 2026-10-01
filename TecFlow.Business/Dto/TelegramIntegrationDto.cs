@@ -23,6 +23,10 @@ public class TelegramIntegrationDto
     public bool HasSessionData { get; set; }
 
     public string SessionDataMasked { get; set; } = string.Empty;
+
+    public bool IsConnected { get; set; }
+
+    public string UiStatusLabel { get; set; } = "Desconectado";
 }
 
 public class SaveTelegramIntegrationDto

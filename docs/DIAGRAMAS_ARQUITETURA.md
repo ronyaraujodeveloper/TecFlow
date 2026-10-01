@@ -117,7 +117,17 @@ flowchart LR
   WPROC -->|ShortAffiliateLinks Source=WhatsAppBot| SQL
   WPROC -->|EnsureOwner UserId vs tecflow-u{id}| WPROC
   WPROC -->|sendText 3s| EVO
-  TGWH[TelegramWebhookController] -->|X-Webhook-Secret| TGI[TelegramIntegrations AES]
+  TGWH[TelegramWebhookController] -->|X-Webhook-Secret ou X-Telegram-Bot-Api-Secret-Token| TPROC[TelegramMessageProcessor]
+  TPROC -->|regex URL + PlatformLinkResolver + loja ativa UserId| GEN
+  TPROC -->|ShortAffiliateLinks Source=TelegramBot| SQL
+  TPROC -->|SendTextMessageAsync 2s| TGAPI[TelegramApiService GetMeAsync SetWebhookAsync]
+  TGUI[TelegramConexao.razor] -->|POST conectar BotToken ChatId| TGIC[TelegramIntegrationController]
+  TGIC --> TGIS[TelegramIntegrationService]
+  TGIS --> TGAPI
+  TGAGEN[TelegramAgendador.razor] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
+  TGBC --> TGBS[TelegramBroadcastService]
+  TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
+  TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   WAAGEN[WhatsAppAgendador.razor] -->|sync grupos + agenda campanha| WABC[WhatsAppBroadcastController]
   WABC --> WABS[WhatsAppBroadcastService]

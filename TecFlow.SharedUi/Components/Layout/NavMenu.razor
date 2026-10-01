@@ -55,6 +55,9 @@
                     <a href="/integracoes/telegram" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram")" @onclick="NotifyNavigate">
                         Telegram
                     </a>
+                    <a href="/integracoes/telegram/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram/agendador")" @onclick="NotifyNavigate">
+                        Agendador Telegram
+                    </a>
                 }
             </div>
         </Authorized>
@@ -123,6 +126,12 @@
 
         if (path.Equals("/integracoes/whatsapp", StringComparison.OrdinalIgnoreCase)
             && current.StartsWith("/integracoes/whatsapp/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
+        }
+
+        if (path.Equals("/integracoes/telegram", StringComparison.OrdinalIgnoreCase)
+            && current.StartsWith("/integracoes/telegram/", StringComparison.OrdinalIgnoreCase))
         {
             return "";
         }

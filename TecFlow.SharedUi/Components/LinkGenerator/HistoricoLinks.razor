@@ -115,6 +115,10 @@
                                 {
                                     <span class="badge text-bg-success">WhatsApp</span>
                                 }
+                                @if (item.IsFromTelegramBot)
+                                {
+                                    <span class="badge text-bg-info">Telegram</span>
+                                }
                             </div>
                             <time class="text-muted small" datetime="@item.CreatedAt.ToString("o")">
                                 @item.CreatedAt.ToLocalTime().ToString("dd/MM/yy HH:mm")
@@ -220,6 +224,10 @@
                                         @if (item.IsFromWhatsAppBot)
                                         {
                                             <span class="badge text-bg-success">WhatsApp</span>
+                                        }
+                                        @if (item.IsFromTelegramBot)
+                                        {
+                                            <span class="badge text-bg-info">Telegram</span>
                                         }
                                     </div>
                                 </td>

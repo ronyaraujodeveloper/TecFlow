@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using TecFlow.Business.Integrations.Telegram;
 using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Infrastructure.Services;
@@ -15,10 +16,21 @@ public static class WhatsAppEvolutionRegistrationExtensions
         IConfiguration configuration)
     {
         services.Configure<EvolutionApiOptions>(configuration.GetSection(EvolutionApiOptions.SectionName));
+        services.Configure<TelegramBotOptions>(configuration.GetSection(TelegramBotOptions.SectionName));
+        services.PostConfigure<TelegramBotOptions>(options =>
+        {
+            if (string.IsNullOrWhiteSpace(options.WebhookBaseUrl))
+            {
+                options.WebhookBaseUrl = configuration["TecFlow:ShortLinks:PublicBaseUrl"] ?? "http://localhost:5001";
+            }
+        });
         services.AddScoped<IWhatsAppSessionService, WhatsAppSessionService>();
         services.AddScoped<IWhatsAppMessageProcessor, WhatsAppMessageProcessor>();
         services.AddScoped<IWhatsAppBroadcastService, WhatsAppBroadcastService>();
+        services.AddScoped<ITelegramApiService, TelegramApiService>();
+        services.AddScoped<ITelegramMessageProcessor, TelegramMessageProcessor>();
         services.AddScoped<ITelegramIntegrationService, TelegramIntegrationService>();
+        services.AddScoped<ITelegramBroadcastService, TelegramBroadcastService>();
         services.AddHttpClient<IEvolutionApiService, EvolutionApiService>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<EvolutionApiOptions>>().Value;

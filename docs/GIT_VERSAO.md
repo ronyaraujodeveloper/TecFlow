@@ -5,3 +5,4 @@
 [2026-09-30 21:22:34]feat(whatsapp): converte links do webhook Evolution em ate 3s
 [2026-09-30 21:43:37]feat(whatsapp): agenda disparos para grupos com intervalo anti-bloqueio
 [2026-09-30 22:06:41]feat(security): criptografa tokens de Telegram e WhatsApp e exige X-Webhook-Secret
+[2026-09-30 22:26:46]feat(telegram): conecta bot, converte links no privado e agenda disparos

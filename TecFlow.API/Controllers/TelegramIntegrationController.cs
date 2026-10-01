@@ -44,6 +44,20 @@ public sealed class TelegramIntegrationController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("conectar")]
+    public async Task<ActionResult<TelegramIntegrationResponseDto>> ConnectAsync(
+        [FromBody] SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(Fail("Usuário não autenticado."));
+        }
+
+        var result = await _telegram.ConnectAsync(userId, request ?? new SaveTelegramIntegrationDto(), cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     private bool TryGetUserId(out int userId)
     {
         userId = 0;

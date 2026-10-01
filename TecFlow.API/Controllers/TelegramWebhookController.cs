@@ -1,10 +1,8 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TecFlow.API.Security;
-using TecFlow.Business.Service.Security;
-using TecFlow.Database;
+using TecFlow.Business.Interfaces.Services;
 
 namespace TecFlow.API.Controllers;
 
@@ -14,12 +12,14 @@ namespace TecFlow.API.Controllers;
 [Route("api/v1/integrations/telegram")]
 public sealed class TelegramWebhookController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ITelegramMessageProcessor _processor;
     private readonly ILogger<TelegramWebhookController> _logger;
 
-    public TelegramWebhookController(AppDbContext context, ILogger<TelegramWebhookController> logger)
+    public TelegramWebhookController(
+        ITelegramMessageProcessor processor,
+        ILogger<TelegramWebhookController> logger)
     {
-        _context = context;
+        _processor = processor;
         _logger = logger;
     }
 
@@ -34,32 +34,19 @@ public sealed class TelegramWebhookController : ControllerBase
     {
         try
         {
-            if (userId is int currentUserId)
-            {
-                var integration = await _context.TelegramIntegrations
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(item => item.UserId == currentUserId && item.IsActive, cancellationToken);
-                if (integration is null)
-                {
-                    return Ok(new { ignored = true, reason = "no-integration" });
-                }
-
-                if (integration.UserId != currentUserId)
-                {
-                    throw new UnauthorizedAccessException();
-                }
-
-                IntegrationOwnershipGuard.EnsureOwner(integration.UserId, currentUserId);
-            }
-
-            _logger.LogDebug(
-                "Webhook Telegram recebido. UserId={UserId} HasPayload={HasPayload}",
-                userId,
-                payload.ValueKind != JsonValueKind.Undefined);
+            await _processor.ProcessAsync(userId, payload, cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
             return Unauthorized();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Webhook Telegram excedeu o limite de 2s.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha no webhook Telegram.");
         }
 
         return Ok(new { received = true });

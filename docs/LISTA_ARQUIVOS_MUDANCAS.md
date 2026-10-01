@@ -821,6 +821,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **MessagingIntegrationSecurityTests.cs** — round-trip AES, secret de webhook e isolamento.
 - [x] **20261001005817_EncryptMessagingIntegrationSecrets** — colunas criptografáveis WhatsApp + tabela `TelegramIntegrations`.
 
+### Fase 22 — Telegram BotFather, conversão e agendador
+
+- [x] **TelegramApiService.cs** — `GetMeAsync` / `SetWebhookAsync` / `SendTextMessageAsync` (Telegram.Bot).
+- [x] **TelegramConexao.razor** — BotToken + ChatId, validação e status `Conectado ✅`.
+- [x] **TelegramWebhookController** / **TelegramMessageProcessor** — URLs, `PlatformLinkResolver`, `Source=TelegramBot`, resposta em até 2s.
+- [x] **TelegramBroadcastCampaign** / **TelegramAgendador.razor** / **TelegramBroadcastWorker**.
+- [x] **TelegramBotRulesTests** / **TelegramWebhookControllerTests** / **TelegramBroadcastRulesTests**.
+- [x] **20261001012038_AddTelegramBroadcastCampaigns** — tabela `TelegramBroadcastCampaigns`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

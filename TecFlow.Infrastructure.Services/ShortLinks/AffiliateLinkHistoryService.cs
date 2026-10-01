@@ -7,6 +7,7 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.PublicPages;
+using TecFlow.Business.Service.Telegram;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -135,6 +136,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             Source = primary.Source,
             IsFromPublicPage = PublicConverterRules.IsPublicPageSource(primary.Source),
             IsFromWhatsAppBot = WhatsAppBotRules.IsWhatsAppBotSource(primary.Source),
+            IsFromTelegramBot = TelegramBotRules.IsTelegramBotSource(primary.Source),
             CreatedAt = group.Links.Min(link => link.CreatedAt),
             ClickCount = clickCount,
             Accounts = variants
@@ -186,6 +188,7 @@ public sealed class AffiliateLinkHistoryService : IAffiliateLinkHistoryService
             Source = link.Source,
             IsFromPublicPage = PublicConverterRules.IsPublicPageSource(link.Source),
             IsFromWhatsAppBot = WhatsAppBotRules.IsWhatsAppBotSource(link.Source),
+            IsFromTelegramBot = TelegramBotRules.IsTelegramBotSource(link.Source),
             CreatedAt = link.CreatedAt,
             ClickCount = clickCount,
             Accounts = [variant]

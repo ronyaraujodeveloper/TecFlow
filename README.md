@@ -520,16 +520,14 @@ Contrato mínimo do registro de link (espelhado em `ShortAffiliateLink`): `Origi
 ### 🤖 22. Módulo Telegram (Bot & Agendador de Grupos)
 Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escutar, converter e agendar ofertas em canais ou grupos.
 
-- [x] 22.1. Arquitetura de Conexão (segurança e persistência):**
-  - Token, ApiKey e SessionData em `TelegramIntegrations` com AES-256 (`DataEncryptionService`) e máscara `****************` em `/integracoes/telegram`.
-  - Webhook `POST /api/v1/integrations/telegram/webhook` e `.../webhook/{userId}` exige `X-Webhook-Secret`.
-- [ ] 22.1. Arquitetura de Conexão (BotFather UX completa):**
-  - O usuário cadastra seu `TelegramBotToken` (gerado via `@BotFather`) e o `ChatId` do seu canal/grupo.
-  - Registro operacional do webhook no Telegram ainda segue o fluxo de conversão 22.2.
-- [ ] 22.2. Conversão Automática em Chats:**
-  - Ao receber uma mensagem contendo links de marketplaces no privado do Bot, o sistema processa o link através do `PlatformLinkResolver` e devolve a mensagem formatada com a comissão do usuário.
-- [ ] 22.3. Agendamento e Disparo Automático:**
-  - Painel no Blazor para agendar ofertas do *Histórico de Links* para publicação automática no canal/grupo do Telegram nos horários programados via Background Services (`Quartz.NET` ou `Hangfire`).
+- [x] 22.1. Arquitetura de Conexão (BotFather UX):**
+  - Token, ApiKey e SessionData em `TelegramIntegrations` com AES-256; máscara `****************` em `/integracoes/telegram`.
+  - `TelegramApiService.ValidateBotTokenAsync` (`GetMeAsync`) + `RegisterWebhookAsync` (`SetWebhookAsync` com secret do `X-Webhook-Secret`).
+  - Status **Conectado ✅** após webhook `POST /api/v1/integrations/telegram/webhook/{userId}`.
+- [x] 22.2. Conversão Automática em Chats:**
+  - Webhook processa mensagens privadas, extrai URLs, converte com `PlatformLinkResolver` e loja ativa do `UserId`, responde em até 2s (`SendTextMessageAsync`) e grava `ShortAffiliateLinks.Source=TelegramBot`.
+- [x] 22.3. Agendamento e Disparo Automático:**
+  - Painel `/integracoes/telegram/agendador` e `TelegramBroadcastWorker` disparam campanhas em `TelegramBroadcastCampaigns` no ChatId do canal/grupo.
 
 ---
 

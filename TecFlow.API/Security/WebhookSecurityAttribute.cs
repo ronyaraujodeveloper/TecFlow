@@ -28,6 +28,11 @@ public sealed class WebhookSecurityFilter : IAsyncActionFilter
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var provided = context.HttpContext.Request.Headers[WebhookSecurityOptions.HeaderName].ToString();
+        if (string.IsNullOrWhiteSpace(provided))
+        {
+            provided = context.HttpContext.Request.Headers[WebhookSecurityOptions.TelegramSecretHeaderName].ToString();
+        }
+
         if (!SecretsEqual(_options.Secret, provided))
         {
             context.Result = new UnauthorizedResult();

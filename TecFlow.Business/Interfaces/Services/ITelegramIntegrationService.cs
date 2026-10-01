@@ -10,4 +10,9 @@ public interface ITelegramIntegrationService
         int userId,
         SaveTelegramIntegrationDto request,
         CancellationToken cancellationToken = default);
+
+    Task<TelegramIntegrationResponseDto> ConnectAsync(
+        int userId,
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default);
 }

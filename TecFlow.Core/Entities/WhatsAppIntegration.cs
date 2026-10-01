@@ -23,6 +23,9 @@ public class WhatsAppIntegration : BaseEntity
     [MaxLength(128)]
     public string? ProfileName { get; set; }
 
+    [MaxLength(512)]
+    public string? ProfilePictureUrl { get; set; }
+
     public DateTime? LastConnectedAt { get; set; }
 
     public bool IsActive { get; set; } = true;

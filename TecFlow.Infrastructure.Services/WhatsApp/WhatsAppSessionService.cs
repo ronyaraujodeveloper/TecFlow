@@ -81,6 +81,10 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
             {
                 row.PhoneNumber = NormalizePhone(state.PhoneNumber) ?? row.PhoneNumber;
                 row.ProfileName = string.IsNullOrWhiteSpace(state.ProfileName) ? row.ProfileName : state.ProfileName.Trim();
+                if (!string.IsNullOrWhiteSpace(state.ProfilePictureUrl))
+                {
+                    row.ProfilePictureUrl = state.ProfilePictureUrl.Trim();
+                }
                 row.LastConnectedAt = DateTime.UtcNow;
                 row.IsActive = true;
             }
@@ -170,6 +174,7 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
             UiStatusLabel = WhatsAppSessionRules.ToUiLabel(row.ConnectionStatus),
             PhoneNumber = row.PhoneNumber,
             ProfileName = row.ProfileName,
+            ProfilePictureUrl = row.ProfilePictureUrl,
             CreatedAt = row.CreatedAt,
             LastConnectedAt = row.LastConnectedAt,
             IsActive = row.IsActive,

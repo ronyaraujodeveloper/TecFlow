@@ -16,6 +16,8 @@ public class WhatsAppIntegrationDto
 
     public string? ProfileName { get; set; }
 
+    public string? ProfilePictureUrl { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? LastConnectedAt { get; set; }
@@ -61,6 +63,8 @@ public class EvolutionConnectionStateDto
     public string? PhoneNumber { get; set; }
 
     public string? ProfileName { get; set; }
+
+    public string? ProfilePictureUrl { get; set; }
 }
 
 public class WhatsAppIntegrationResponseDto : ResponseDto

@@ -535,6 +535,7 @@ Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escu
 Oferece uma experiência fluida para afiliados iniciantes conectarem seu número pessoal ou de trabalho lendo um QR Code, sem burocracia ou custos por mensagem da Meta.
 
 - [x] 23.1. Arquitetura de Sessão (Evolution API / Baileys):**
+  - Painel unificado `/integracoes/conexoes` (abas WhatsApp / Telegram), QR em modal e status com foto, nome e número.
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).

@@ -6,3 +6,4 @@
 [2026-09-30 21:43:37]feat(whatsapp): agenda disparos para grupos com intervalo anti-bloqueio
 [2026-09-30 22:06:41]feat(security): criptografa tokens de Telegram e WhatsApp e exige X-Webhook-Secret
 [2026-09-30 22:26:46]feat(telegram): conecta bot, converte links no privado e agenda disparos
+[2026-09-30 22:38:52]feat(ui): unifica conexoes WhatsApp e Telegram em abas com QR modal

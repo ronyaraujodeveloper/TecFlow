@@ -338,6 +338,7 @@ public class AppDbContext : DbContext
             entity.Property(item => item.ConnectionStatus).HasMaxLength(32).IsRequired();
             entity.Property(item => item.PhoneNumber).HasMaxLength(32);
             entity.Property(item => item.ProfileName).HasMaxLength(128);
+            entity.Property(item => item.ProfilePictureUrl).HasMaxLength(512);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
             entity.Property(item => item.EnableAutoConvertBot).HasDefaultValue(true);
             entity.Property(item => item.ReplyToPrivateMessages).HasDefaultValue(true);

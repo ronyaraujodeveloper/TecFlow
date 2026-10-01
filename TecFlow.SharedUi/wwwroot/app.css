@@ -333,6 +333,44 @@ html, body {
     background: #fff;
 }
 
+.conexoes-page .conexoes-tabs .nav-link {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.conexoes-page .conexoes-tabs .nav-link.active {
+    color: #0f172a;
+    border-bottom-color: #16a34a;
+}
+
+.conexoes-page .conexoes-card {
+    max-width: 40rem;
+}
+
+.conexoes-avatar {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #16a34a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.conexoes-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.conexoes-qr-modal {
+    z-index: 1055;
+}
+
 .portal-sidebar-backdrop {
     position: fixed;
     inset: 0;

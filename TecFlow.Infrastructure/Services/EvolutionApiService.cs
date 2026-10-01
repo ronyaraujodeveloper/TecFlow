@@ -99,6 +99,12 @@ public sealed class EvolutionApiService : IEvolutionApiService
         var infoJson = await infoResponse.Content.ReadAsStringAsync(cancellationToken);
         result.PhoneNumber = ExtractFirst(infoJson, "owner", "wuid", "wid", "phone", "number");
         result.ProfileName = ExtractFirst(infoJson, "profileName", "pushName", "name");
+        result.ProfilePictureUrl = ExtractFirst(
+            infoJson,
+            "profilePictureUrl",
+            "profilePicUrl",
+            "profilePicture",
+            "picture");
         return result;
     }
 

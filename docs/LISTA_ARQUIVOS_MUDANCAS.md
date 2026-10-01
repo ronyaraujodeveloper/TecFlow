@@ -830,6 +830,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramBotRulesTests** / **TelegramWebhookControllerTests** / **TelegramBroadcastRulesTests**.
 - [x] **20261001012038_AddTelegramBroadcastCampaigns** — tabela `TelegramBroadcastCampaigns`.
 
+### Painel unificado de conexões
+
+- [x] **Conexoes.razor** (`/integracoes/conexoes`) — abas WhatsApp (Evolution) e Telegram (BotFather).
+- [x] Modal de QR WhatsApp com recarga dinâmica e card de status (badge, foto, nome, número).
+- [x] Formulário Telegram Bot Token + Chat ID com validação `GetMeAsync` e `X-Webhook-Secret` mascarado.
+- [x] **WhatsAppIntegration.ProfilePictureUrl** — foto do perfil no card de status.
+- [x] **20261001013152_AddWhatsAppProfilePictureUrl** — coluna `ProfilePictureUrl` em `WhatsAppIntegrations`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

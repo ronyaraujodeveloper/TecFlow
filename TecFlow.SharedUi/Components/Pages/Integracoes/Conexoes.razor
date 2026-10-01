@@ -1,0 +1,448 @@
+﻿@page "/integracoes/conexoes"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Security
+@using TecFlow.Business.Service.Security
+@using TecFlow.Business.Service.Telegram
+@using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Services.Integrations
+@implements IAsyncDisposable
+@inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject ITelegramIntegrationApiService TelegramApi
+@inject ILogger<Conexoes> Logger
+@inject NavigationManager Navigation
+
+<PageTitle>Conexões — TecFlow</PageTitle>
+
+<div class="dashboard-page conexoes-page">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Gerenciamento de conexões</h1>
+            <p class="text-muted small mb-0">
+                Centralize WhatsApp (Evolution API) e Telegram (BotFather) com status, QR Code e validação do bot.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/integracoes/whatsapp/agendador" class="btn btn-outline-success btn-sm">Agendador WhatsApp</a>
+            <a href="/integracoes/telegram/agendador" class="btn btn-outline-primary btn-sm">Agendador Telegram</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_ok))
+    {
+        <div class="alert alert-success py-2 small" role="status">@_ok</div>
+    }
+
+    <ul class="nav nav-tabs conexoes-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link @(_tab == "whatsapp" ? "active" : string.Empty)"
+                    role="tab"
+                    aria-selected="@(_tab == "whatsapp")"
+                    @onclick='() => _tab = "whatsapp"'>
+                <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>
+                WhatsApp (Evolution API)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link @(_tab == "telegram" ? "active" : string.Empty)"
+                    role="tab"
+                    aria-selected="@(_tab == "telegram")"
+                    @onclick='() => _tab = "telegram"'>
+                <i class="bi bi-telegram me-1" aria-hidden="true"></i>
+                Telegram (BotFather)
+            </button>
+        </li>
+    </ul>
+
+    @if (_tab == "whatsapp")
+    {
+        <section class="card border-0 shadow-sm conexoes-card">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="conexoes-avatar" title="Foto de perfil da sessão Evolution">
+                            @if (!string.IsNullOrWhiteSpace(_whatsApp?.ProfilePictureUrl))
+                            {
+                                <img src="@_whatsApp.ProfilePictureUrl" alt="Foto de perfil WhatsApp" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            }
+                        </div>
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">Sessão Evolution</h2>
+                            <p class="text-muted small mb-0">
+                                @(_whatsApp?.ProfileName ?? "Nenhum perfil conectado")
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(_whatsApp?.PhoneNumber))
+                            {
+                                <p class="small mb-0 font-monospace">@_whatsApp.PhoneNumber</p>
+                            }
+                        </div>
+                    </div>
+                    <span class="badge @WhatsAppBadgeClass" title="Estado da instância isolada por usuário">
+                        @WhatsAppStatusText
+                    </span>
+                </div>
+
+                <button type="button"
+                        class="btn btn-success mb-4"
+                        disabled="@_isBusy"
+                        title="Gera uma nova instância e exibe o QR Code da Evolution API"
+                        @onclick="OpenWhatsAppQrModalAsync">
+                    @(_isBusy && _qrModalVisible ? "Gerando QR..." : "Gerar Conexão WhatsApp")
+                </button>
+
+                <h3 class="h6 fw-semibold mb-2">
+                    Segurança
+                    <i class="bi bi-info-circle text-muted"
+                       title="Tokens e chaves nunca são exibidos em texto puro. O header X-Webhook-Secret é exigido nos webhooks."></i>
+                </h3>
+                <dl class="row small mb-0">
+                    <dt class="col-sm-4 text-muted">Token</dt>
+                    <dd class="col-sm-8 font-monospace mb-1">@MaskOrDash(_whatsApp?.TokenMasked)</dd>
+                    <dt class="col-sm-4 text-muted">ApiKey Evolution</dt>
+                    <dd class="col-sm-8 font-monospace mb-1">@MaskOrDash(_whatsApp?.ApiKeyMasked)</dd>
+                    <dt class="col-sm-4 text-muted">SessionData</dt>
+                    <dd class="col-sm-8 font-monospace mb-1">@MaskOrDash(_whatsApp?.SessionDataMasked)</dd>
+                    <dt class="col-sm-4 text-muted">@WebhookSecurityOptions.HeaderName</dt>
+                    <dd class="col-sm-8 mb-0">
+                        <input class="form-control form-control-sm font-monospace"
+                               type="password"
+                               readonly
+                               value="@SecretMasking.MaskedValue"
+                               title="Valor configurado no servidor. Nunca é enviado à interface."
+                               autocomplete="off" />
+                    </dd>
+                </dl>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="card border-0 shadow-sm conexoes-card">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <h2 class="h5 fw-bold mb-0">BotFather</h2>
+                    <span class="badge @(_telegram?.IsConnected == true ? "text-bg-success" : "text-bg-secondary")"
+                          title="Resultado da última validação GetMeAsync">
+                        @(_telegram?.UiStatusLabel ?? TelegramBotRules.DisconnectedLabel)
+                    </span>
+                </div>
+
+                @if (_telegram?.IsConnected == true && !string.IsNullOrWhiteSpace(_telegram.BotUsername))
+                {
+                    <div class="alert alert-success py-2 small" role="status">
+                        Bot validado: <strong>@($"@{_telegram.BotUsername.TrimStart('@')}")</strong>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="cx-tg-token">Bot Token</label>
+                    <input id="cx-tg-token"
+                           class="form-control"
+                           type="password"
+                           autocomplete="off"
+                           placeholder="@SecretMasking.MaskedValue"
+                           title="Token gerado no BotFather. Armazenado com AES-256."
+                           @bind="_tokenInput" />
+                    <div class="form-text">Armazenado: @MaskOrDash(_telegram?.TokenMasked)</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="cx-tg-chat">Chat ID do Canal</label>
+                    <input id="cx-tg-chat"
+                           class="form-control"
+                           placeholder="-100..."
+                           title="ID numérico do canal ou grupo de destino"
+                           @bind="_chatId" />
+                </div>
+                <button type="button"
+                        class="btn btn-primary w-100 mb-4"
+                        disabled="@_isBusy"
+                        title="Chama GetMeAsync e registra o webhook com o secret do servidor"
+                        @onclick="ValidateTelegramAsync">
+                    @(_isBusy ? "Validando..." : "Validar e Salvar Bot")
+                </button>
+
+                <h3 class="h6 fw-semibold mb-2">Segurança</h3>
+                <dl class="row small mb-0">
+                    <dt class="col-sm-4 text-muted">ApiKey</dt>
+                    <dd class="col-sm-8 font-monospace mb-1">@MaskOrDash(_telegram?.ApiKeyMasked)</dd>
+                    <dt class="col-sm-4 text-muted">SessionData</dt>
+                    <dd class="col-sm-8 font-monospace mb-1">@MaskOrDash(_telegram?.SessionDataMasked)</dd>
+                    <dt class="col-sm-4 text-muted">@WebhookSecurityOptions.HeaderName</dt>
+                    <dd class="col-sm-8 mb-0">
+                        <input class="form-control form-control-sm font-monospace"
+                               type="password"
+                               readonly
+                               value="@SecretMasking.MaskedValue"
+                               title="Header exigido no webhook Telegram. O valor real não é exibido."
+                               autocomplete="off" />
+                    </dd>
+                </dl>
+            </div>
+        </section>
+    }
+</div>
+
+@if (_qrModalVisible)
+{
+    <div class="modal fade show d-block conexoes-qr-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="conexoes-qr-title">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <div>
+                        <h2 class="modal-title h5 fw-bold" id="conexoes-qr-title">Gerar Conexão WhatsApp</h2>
+                        <p class="text-muted small mb-0">Abra o WhatsApp no celular e leia o QR Code. O código é atualizado automaticamente.</p>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseQrModal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    @if (!string.IsNullOrWhiteSpace(_qrCode))
+                    {
+                        <img src="@_qrCode"
+                             alt="QR Code WhatsApp"
+                             class="whatsapp-qr img-fluid rounded border"
+                             width="240"
+                             height="240" />
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">Aguardando QR Code da Evolution API...</p>
+                    }
+                    <p class="small text-muted mt-3 mb-0">Status: @WhatsAppStatusText</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@_isBusy"
+                            title="Solicita um novo QR Code na Evolution API"
+                            @onclick="ReloadQrAsync">
+                        Recarregar QR
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="CloseQrModal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseQrModal"></div>
+}
+
+@code {
+    private string _tab = "whatsapp";
+    private WhatsAppIntegrationDto? _whatsApp;
+    private TelegramIntegrationDto? _telegram;
+    private string? _qrCode;
+    private bool _qrModalVisible;
+    private string _tokenInput = string.Empty;
+    private string? _chatId;
+    private string? _error;
+    private string? _ok;
+    private bool _isBusy;
+    private CancellationTokenSource? _pollCts;
+
+    private string WhatsAppStatusText =>
+        _whatsApp?.IsConnected == true
+            ? "Conectado"
+            : _whatsApp?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr
+                ? "Aguardando leitura"
+                : "Desconectado";
+
+    private string WhatsAppBadgeClass =>
+        _whatsApp?.IsConnected == true
+            ? "text-bg-success"
+            : _whatsApp?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr
+                ? "text-bg-warning"
+                : "text-bg-secondary";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = new Uri(Navigation.Uri).Query;
+        if (query.Contains("telegram", StringComparison.OrdinalIgnoreCase))
+        {
+            _tab = "telegram";
+        }
+
+        await LoadWhatsAppAsync();
+        await LoadTelegramAsync();
+        if (_whatsApp?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr)
+        {
+            StartPolling();
+        }
+    }
+
+    private async Task LoadWhatsAppAsync()
+    {
+        var response = await WhatsAppApi.GetMineAsync();
+        ApplyWhatsApp(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+    }
+
+    private async Task LoadTelegramAsync()
+    {
+        var response = await TelegramApi.GetMineAsync();
+        _telegram = response.Data?.Data;
+        _chatId = _telegram?.ChatId;
+        if (!response.Success)
+        {
+            _error = response.Data?.Descricao ?? response.ErrorMessage;
+        }
+    }
+
+    private async Task OpenWhatsAppQrModalAsync()
+    {
+        _qrModalVisible = true;
+        await ReloadQrAsync();
+    }
+
+    private async Task ReloadQrAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await WhatsAppApi.ConnectAsync();
+            ApplyWhatsApp(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+            if (!string.IsNullOrWhiteSpace(_qrCode) && _whatsApp?.IsConnected != true)
+            {
+                StartPolling();
+            }
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void CloseQrModal()
+    {
+        _qrModalVisible = false;
+        if (_whatsApp?.IsConnected == true)
+        {
+            _qrCode = null;
+        }
+    }
+
+    private async Task ValidateTelegramAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.ConnectAsync(new SaveTelegramIntegrationDto
+            {
+                Token = string.IsNullOrWhiteSpace(_tokenInput) ? SecretMasking.MaskedValue : _tokenInput,
+                ChatId = _chatId
+            });
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _telegram = response.Data?.Data;
+            var username = string.IsNullOrWhiteSpace(_telegram?.BotUsername)
+                ? string.Empty
+                : "@" + _telegram.BotUsername.TrimStart('@');
+            _ok = string.IsNullOrWhiteSpace(username)
+                ? (response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel)
+                : $"{TelegramBotRules.ConnectedLabel} {username}";
+            _tokenInput = string.Empty;
+            _tab = "telegram";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollCts?.Cancel();
+        _pollCts = new CancellationTokenSource();
+        _ = PollAsync(_pollCts.Token);
+    }
+
+    private async Task PollAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2.5));
+            var ticks = 0;
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                ticks++;
+                var response = await WhatsAppApi.RefreshStatusAsync(cancellationToken);
+                ApplyWhatsApp(response.Data?.Data, keepQr: true);
+                if (_whatsApp?.IsConnected == true)
+                {
+                    _qrModalVisible = false;
+                    _ok = "WhatsApp conectado.";
+                }
+
+                await InvokeAsync(StateHasChanged);
+                if (_whatsApp?.IsConnected == true || ticks >= 48)
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Polling WhatsApp na tela de conexões interrompido.");
+        }
+    }
+
+    private void ApplyWhatsApp(WhatsAppIntegrationDto? data, string? message = null, bool success = true, bool keepQr = false)
+    {
+        if (!success && !string.IsNullOrWhiteSpace(message))
+        {
+            _error = message;
+        }
+
+        if (data is null)
+        {
+            return;
+        }
+
+        _whatsApp = data;
+        if (!string.IsNullOrWhiteSpace(data.QrCodeDataUrl))
+        {
+            _qrCode = data.QrCodeDataUrl;
+        }
+        else if (!keepQr || data.IsConnected)
+        {
+            _qrCode = data.IsConnected ? null : _qrCode;
+        }
+
+        if (data.IsConnected)
+        {
+            _qrCode = null;
+            _pollCts?.Cancel();
+        }
+    }
+
+    private static string MaskOrDash(string? value) =>
+        string.IsNullOrEmpty(value) ? "—" : value;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollCts is not null)
+        {
+            await _pollCts.CancelAsync();
+            _pollCts.Dispose();
+        }
+    }
+}

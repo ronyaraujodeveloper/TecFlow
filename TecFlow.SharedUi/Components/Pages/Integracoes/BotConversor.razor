@@ -1,0 +1,155 @@
+﻿@page "/integracoes/bot-conversor"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.Telegram
+@using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Services.Integrations
+@inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject ITelegramIntegrationApiService TelegramApi
+
+<PageTitle>Bot de Conversão — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Bot de Conversão</h1>
+        <p class="text-muted small mb-0">
+            Ative a conversão automática de links no WhatsApp e no Telegram. As sessões continuam em Conexões.
+        </p>
+        <a href="/integracoes/conexoes" class="btn btn-outline-secondary btn-sm mt-2">Conexões (WA &amp; Telegram)</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_ok))
+    {
+        <div class="alert alert-success py-2 small" role="status">@_ok</div>
+    }
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <section class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 fw-bold mb-0">WhatsApp</h2>
+                        <span class="badge @(_whatsApp?.IsConnected == true ? "text-bg-success" : "text-bg-secondary")">
+                            @(_whatsApp?.UiStatusLabel ?? "Desconectado")
+                        </span>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="bot-wa-enable"
+                               checked="@(_whatsApp?.EnableAutoConvertBot ?? true)"
+                               disabled="@_isBusy"
+                               @onchange="e => SaveWhatsAppBotAsync(enable: IsChecked(e))" />
+                        <label class="form-check-label" for="bot-wa-enable">Ativar Bot de Conversão Automática</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="bot-wa-private"
+                               checked="@(_whatsApp?.ReplyToPrivateMessages ?? true)"
+                               disabled="@_isBusy"
+                               @onchange="e => SaveWhatsAppBotAsync(privateMessages: IsChecked(e))" />
+                        <label class="form-check-label" for="bot-wa-private">Atender mensagens privadas</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="bot-wa-groups"
+                               checked="@(_whatsApp?.ReplyToGroupMessages ?? false)"
+                               disabled="@_isBusy"
+                               @onchange="e => SaveWhatsAppBotAsync(groups: IsChecked(e))" />
+                        <label class="form-check-label" for="bot-wa-groups">Atender grupos</label>
+                    </div>
+                    <a href="/integracoes/whatsapp" class="btn btn-outline-success btn-sm">Abrir sessão WhatsApp</a>
+                </div>
+            </section>
+        </div>
+        <div class="col-lg-6">
+            <section class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 fw-bold mb-0">Telegram</h2>
+                        <span class="badge @(_telegram?.IsConnected == true ? "text-bg-success" : "text-bg-secondary")">
+                            @(_telegram?.UiStatusLabel ?? TelegramBotRules.DisconnectedLabel)
+                        </span>
+                    </div>
+                    <p class="small text-muted">
+                        Com o bot validado, mensagens privadas com links de marketplace são convertidas automaticamente (origem TelegramBot).
+                    </p>
+                    @if (!string.IsNullOrWhiteSpace(_telegram?.BotUsername))
+                    {
+                        <p class="fw-semibold">Bot: @($"@{_telegram.BotUsername.TrimStart('@')}")</p>
+                    }
+                    <a href="/integracoes/telegram" class="btn btn-outline-primary btn-sm">Abrir BotFather</a>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@code {
+    private WhatsAppIntegrationDto? _whatsApp;
+    private TelegramIntegrationDto? _telegram;
+    private string? _error;
+    private string? _ok;
+    private bool _isBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var wa = await WhatsAppApi.GetMineAsync();
+        _whatsApp = wa.Data?.Data;
+        if (!wa.Success)
+        {
+            _error = wa.Data?.Descricao ?? wa.ErrorMessage;
+        }
+
+        var tg = await TelegramApi.GetMineAsync();
+        _telegram = tg.Data?.Data;
+        if (!tg.Success && string.IsNullOrWhiteSpace(_error))
+        {
+            _error = tg.Data?.Descricao ?? tg.ErrorMessage;
+        }
+    }
+
+    private static bool IsChecked(ChangeEventArgs e) =>
+        (e.Value is bool flag && flag)
+        || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    private async Task SaveWhatsAppBotAsync(bool? enable = null, bool? privateMessages = null, bool? groups = null)
+    {
+        if (_whatsApp is null)
+        {
+            return;
+        }
+
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await WhatsAppApi.UpdateBotPreferencesAsync(new WhatsAppBotPreferencesDto
+            {
+                EnableAutoConvertBot = enable ?? _whatsApp.EnableAutoConvertBot,
+                ReplyToPrivateMessages = privateMessages ?? _whatsApp.ReplyToPrivateMessages,
+                ReplyToGroupMessages = groups ?? _whatsApp.ReplyToGroupMessages
+            });
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _whatsApp = response.Data?.Data ?? _whatsApp;
+            _ok = response.Data?.Descricao ?? "Preferências do bot salvas.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

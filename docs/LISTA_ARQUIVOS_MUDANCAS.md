@@ -838,6 +838,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppIntegration.ProfilePictureUrl** — foto do perfil no card de status.
 - [x] **20261001013152_AddWhatsAppProfilePictureUrl** — coluna `ProfilePictureUrl` em `WhatsAppIntegrations`.
 
+### Navegação unificada
+
+- [x] **NavMenu.razor** — Dashboard, Gerador de links, Minhas Lojas / Integrações, Minhas páginas públicas; grupo **Mensageria & Bots** (Conexões, Bot de Conversão, Agendador) sem remover rotas antigas de WhatsApp/Telegram.
+- [x] **BotConversor.razor** (`/integracoes/bot-conversor`) e **Agendador.razor** (`/integracoes/agendador`).
+- [x] **MinhasLojas.razor** — aliases `/integracoes/lojas` e `/marketplace-accounts`.
+- [x] **Conexoes.razor** — rota `/integracoes/conexoes` mantida.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

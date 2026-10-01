@@ -4,7 +4,7 @@
     <AuthorizeView>
         <Authorized>
             <a href="/dashboard" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
-                Painel
+                Dashboard
             </a>
             <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="NotifyNavigate">
                 Campanhas
@@ -44,10 +44,28 @@
                 @if (_integracoesOpen)
                 {
                     <a href="/minhas-lojas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-lojas")" @onclick="NotifyNavigate">
-                        Minhas lojas
+                        Minhas Lojas / Integrações
                     </a>
+                }
+            </div>
+
+            <div class="portal-nav-group">
+                <button type="button"
+                        class="portal-nav-link portal-nav-group-toggle @MensageriaActiveClass"
+                        aria-expanded="@_mensageriaOpen"
+                        @onclick="ToggleMensageria">
+                    Mensageria &amp; Bots
+                </button>
+                @if (_mensageriaOpen)
+                {
                     <a href="/integracoes/conexoes" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/conexoes")" @onclick="NotifyNavigate">
-                        Conexões
+                        Conexões (WA &amp; Telegram)
+                    </a>
+                    <a href="/integracoes/bot-conversor" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/bot-conversor")" @onclick="NotifyNavigate">
+                        Bot de Conversão
+                    </a>
+                    <a href="/integracoes/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/agendador")" @onclick="NotifyNavigate">
+                        Agendador de Grupos
                     </a>
                     <a href="/integracoes/whatsapp" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp")" @onclick="NotifyNavigate">
                         WhatsApp
@@ -82,28 +100,46 @@
     [Parameter] public EventCallback OnNavigate { get; set; }
 
     private bool _integracoesOpen;
+    private bool _mensageriaOpen;
 
     protected override void OnParametersSet()
     {
-        if (IsIntegracoesPath())
+        if (IsLojasPath())
         {
             _integracoesOpen = true;
+        }
+
+        if (IsMensageriaPath())
+        {
+            _mensageriaOpen = true;
         }
     }
 
     private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
 
+    private void ToggleMensageria() => _mensageriaOpen = !_mensageriaOpen;
+
     private Task NotifyNavigate() => OnNavigate.InvokeAsync();
 
-    private bool IsIntegracoesPath()
+    private bool IsLojasPath()
     {
         var current = CurrentPath();
         return current.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
             || current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
-            || current.StartsWith("/integracoes/", StringComparison.OrdinalIgnoreCase);
+            || current.Equals("/integracoes/lojas", StringComparison.OrdinalIgnoreCase)
+            || current.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase);
     }
 
-    private string IntegracoesActiveClass => IsIntegracoesPath() ? "active" : string.Empty;
+    private bool IsMensageriaPath()
+    {
+        var current = CurrentPath();
+        return current.StartsWith("/integracoes/", StringComparison.OrdinalIgnoreCase)
+            && !IsLojasPath();
+    }
+
+    private string IntegracoesActiveClass => IsLojasPath() ? "active" : string.Empty;
+
+    private string MensageriaActiveClass => IsMensageriaPath() ? "active" : string.Empty;
 
     private string CurrentPath()
     {
@@ -115,8 +151,17 @@
     {
         var current = CurrentPath();
 
+        if (path.Equals("/dashboard", StringComparison.OrdinalIgnoreCase)
+            && (current.Equals("/", StringComparison.OrdinalIgnoreCase)
+                || current.Equals("/dashboard", StringComparison.OrdinalIgnoreCase)))
+        {
+            return current.Equals("/dashboard", StringComparison.OrdinalIgnoreCase) ? "active" : "";
+        }
+
         if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
-            && current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase))
+            && (current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
+                || current.Equals("/integracoes/lojas", StringComparison.OrdinalIgnoreCase)
+                || current.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase)))
         {
             return "active";
         }
@@ -135,6 +180,13 @@
 
         if (path.Equals("/integracoes/telegram", StringComparison.OrdinalIgnoreCase)
             && current.StartsWith("/integracoes/telegram/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
+        }
+
+        if (path.Equals("/integracoes/agendador", StringComparison.OrdinalIgnoreCase)
+            && (current.Equals("/integracoes/whatsapp/agendador", StringComparison.OrdinalIgnoreCase)
+                || current.Equals("/integracoes/telegram/agendador", StringComparison.OrdinalIgnoreCase)))
         {
             return "";
         }

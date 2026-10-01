@@ -84,6 +84,11 @@ Diagnóstico das Fases **8** (auth/multi-loja), **10** (links backend), **11** (
    - Todos os arquivos editados ou criados devem ser salvos com a codificação **UTF-8 com BOM**.
    - As migrations do EF Core devem ser geradas e executadas exclusivamente para a sintaxe T-SQL / SQL Server direcionadas ao banco `AutomacaoSociais`.
 
+PRINCIPIO DE PRESERVAÇÃO TOTAL (REGRA INVIOLÁVEL):
+1. Altere APENAS o arquivo e o trecho de código explicitamente solicitados nesta instrução.
+2. É EXTREMAMENTE PROIBIDO remover, sobrescrever ou simplificar componentes Blazor (.razor), métodos C#, DTOs, links do NavMenu.razor ou regras de negócio existentes que não façam parte do escopo desta alteração.
+3. Parta sempre da versão mais recente salva e validada no Git.
+4. Salve todos os arquivos na codificação UTF-8 com BOM (REGRA 1).
 ---
 
 ## 🛠️ ROADMAP DE PLATAFORMAS (MULTI-MARKETPLACE)
@@ -536,6 +541,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 
 - [x] 23.1. Arquitetura de Sessão (Evolution API / Baileys):**
   - Painel unificado `/integracoes/conexoes` (abas WhatsApp / Telegram), QR em modal e status com foto, nome e número.
+  - Menu **Mensageria & Bots**: Conexões, Bot de Conversão (`/integracoes/bot-conversor`) e Agendador de Grupos (`/integracoes/agendador`), sem remover WhatsApp/Telegram originais.
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).

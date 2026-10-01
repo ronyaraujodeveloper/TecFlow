@@ -112,6 +112,10 @@ flowchart LR
   WAS --> EVO[EvolutionApiService]
   EVO -->|instance create/connect/connectionState| EVAPI[Evolution API]
   WAS -->|WhatsAppIntegrations UserId InstanceName| SQL
+  EVOWH[WhatsAppWebhookController] -->|MESSAGES_UPSERT ignora fromMe| WPROC[WhatsAppMessageProcessor]
+  WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN
+  WPROC -->|ShortAffiliateLinks Source=WhatsAppBot| SQL
+  WPROC -->|sendText 3s| EVO
 ```
 
 TecFlow.Infrastructure.Services/Integrations/

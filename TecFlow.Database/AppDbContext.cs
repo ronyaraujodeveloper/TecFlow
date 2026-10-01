@@ -335,6 +335,9 @@ public class AppDbContext : DbContext
             entity.Property(item => item.PhoneNumber).HasMaxLength(32);
             entity.Property(item => item.ProfileName).HasMaxLength(128);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.Property(item => item.EnableAutoConvertBot).HasDefaultValue(true);
+            entity.Property(item => item.ReplyToPrivateMessages).HasDefaultValue(true);
+            entity.Property(item => item.ReplyToGroupMessages).HasDefaultValue(false);
             entity.HasIndex(item => item.UserId);
             entity.HasIndex(item => item.InstanceName).IsUnique();
         });

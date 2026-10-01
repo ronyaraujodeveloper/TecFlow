@@ -537,9 +537,9 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).
-- [ ] 23.2. Bot de Conversão Automática (Escuta e Resposta):**
-  - Webhook de escuta ativado para contatos ou grupos autorizados.
-  - Quando o usuário ou um parceiro envia um link bruto no WhatsApp, o TecFlow captura o evento, faz o *Unshorten*, aplica a tag de comissão do usuário e responde na conversa em menos de 3 segundos.
+- [x] 23.2. Bot de Conversão Automática (Escuta e Resposta):**
+  - Webhook `POST /api/v1/integrations/whatsapp/webhook` processa `MESSAGES_UPSERT` e ignora `fromMe`.
+  - Conversão via `PlatformLinkResolver` + loja ativa do `UserId`; persistência `ShortAffiliateLinks.Source=WhatsAppBot`; resposta Evolution `sendText` em até 3s.
 - [ ] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
   - Mapeamento automático dos grupos em que o usuário é administrador.
   - Agendador de disparos com controle de frequência (delay anti-bloqueio entre mensagens) para envio em lote de promoções para grupos ou comunidades.

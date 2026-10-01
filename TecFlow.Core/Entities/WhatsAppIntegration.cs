@@ -26,6 +26,12 @@ public class WhatsAppIntegration : BaseEntity
     public DateTime? LastConnectedAt { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    public bool EnableAutoConvertBot { get; set; } = true;
+
+    public bool ReplyToPrivateMessages { get; set; } = true;
+
+    public bool ReplyToGroupMessages { get; set; } = false;
 }
 
 public static class WhatsAppConnectionStatuses

@@ -34,12 +34,7 @@ public sealed class EvolutionApiService : IEvolutionApiService
             return false;
         }
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            instanceName,
-            qrcode = true,
-            integration = "WHATSAPP-BAILEYS"
-        });
+        var payload = JsonSerializer.Serialize(BuildCreateInstanceBody(instanceName));
 
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
         using var response = await _httpClient.PostAsync("instance/create", content, cancellationToken);
@@ -105,6 +100,82 @@ public sealed class EvolutionApiService : IEvolutionApiService
         result.PhoneNumber = ExtractFirst(infoJson, "owner", "wuid", "wid", "phone", "number");
         result.ProfileName = ExtractFirst(infoJson, "profileName", "pushName", "name");
         return result;
+    }
+
+    public async Task<bool> SendTextMessageAsync(
+        string instanceName,
+        string remoteJid,
+        string messageText,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureConfigured()
+            || string.IsNullOrWhiteSpace(instanceName)
+            || string.IsNullOrWhiteSpace(remoteJid)
+            || string.IsNullOrWhiteSpace(messageText))
+        {
+            return false;
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMilliseconds(2500));
+
+        var body = JsonSerializer.Serialize(new
+        {
+            number = remoteJid,
+            text = messageText
+        });
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        try
+        {
+            using var response = await _httpClient.PostAsync(
+                $"message/sendText/{Uri.EscapeDataString(instanceName)}",
+                content,
+                timeout.Token);
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning(
+                "Evolution sendText falhou. Status={Status} Instance={Instance} Body={Body}",
+                (int)response.StatusCode,
+                instanceName,
+                responseBody);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Evolution sendText cancelado (limite 3s). Instance={Instance}", instanceName);
+            return false;
+        }
+    }
+
+    private object BuildCreateInstanceBody(string instanceName)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.WebhookUrl)
+            && Uri.TryCreate(_options.WebhookUrl, UriKind.Absolute, out _))
+        {
+            return new
+            {
+                instanceName,
+                qrcode = true,
+                integration = "WHATSAPP-BAILEYS",
+                webhook = new
+                {
+                    url = _options.WebhookUrl.Trim(),
+                    byEvents = true,
+                    events = new[] { "MESSAGES_UPSERT", "messages.upsert" }
+                }
+            };
+        }
+
+        return new
+        {
+            instanceName,
+            qrcode = true,
+            integration = "WHATSAPP-BAILEYS"
+        };
     }
 
     private void ApplyApiKeyHeader()

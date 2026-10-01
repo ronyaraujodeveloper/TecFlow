@@ -11,4 +11,10 @@ public interface IEvolutionApiService
     Task<EvolutionConnectionStateDto> GetConnectionStateAsync(
         string instanceName,
         CancellationToken cancellationToken = default);
+
+    Task<bool> SendTextMessageAsync(
+        string instanceName,
+        string remoteJid,
+        string messageText,
+        CancellationToken cancellationToken = default);
 }

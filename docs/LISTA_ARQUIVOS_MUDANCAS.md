@@ -791,6 +791,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppSessionRulesTests.cs** — instância isolada por usuário e mapeamento open/close/connecting.
 - [x] **20260930235426_AddWhatsAppIntegrations** — tabela `WhatsAppIntegrations` no SQL Server.
 
+### Fase 23.2 — Bot WhatsApp (webhook e resposta)
+
+- [x] **WhatsAppWebhookController.cs** — `POST /api/v1/integrations/whatsapp/webhook` (`MESSAGES_UPSERT`, ignora `fromMe`).
+- [x] **WhatsAppMessageProcessor.cs** — regex de URLs, `PlatformLinkResolver`, `Source=WhatsAppBot`.
+- [x] **EvolutionApiService.SendTextMessageAsync** — `POST /message/sendText/{instance}` em até 3s.
+- [x] **WhatsAppIntegration** — flags `EnableAutoConvertBot`, `ReplyToPrivateMessages`, `ReplyToGroupMessages`.
+- [x] **WhatsAppConexao.razor** — switches do bot persistidos no SQL Server.
+- [x] **WhatsAppBotRulesTests.cs** / **WhatsAppWebhookControllerTests.cs** — URLs, fromMe e grupos.
+- [x] **20261001001427_AddWhatsAppBotPreferences** — colunas de preferência do bot em `WhatsAppIntegrations`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

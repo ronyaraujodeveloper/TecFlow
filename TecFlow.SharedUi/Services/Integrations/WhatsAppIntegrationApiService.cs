@@ -12,6 +12,10 @@ public interface IWhatsAppIntegrationApiService
     Task<ApiResult<WhatsAppIntegrationResponseDto>> ConnectAsync(CancellationToken cancellationToken = default);
 
     Task<ApiResult<WhatsAppIntegrationResponseDto>> RefreshStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResult<WhatsAppIntegrationResponseDto>> UpdateBotPreferencesAsync(
+        WhatsAppBotPreferencesDto preferences,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class WhatsAppIntegrationApiService : IWhatsAppIntegrationApiService
@@ -44,4 +48,15 @@ public sealed class WhatsAppIntegrationApiService : IWhatsAppIntegrationApiServi
     public Task<ApiResult<WhatsAppIntegrationResponseDto>> RefreshStatusAsync(
         CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<WhatsAppIntegrationResponseDto>($"{Path}/status", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<WhatsAppIntegrationResponseDto>> UpdateBotPreferencesAsync(
+        WhatsAppBotPreferencesDto preferences,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Salvando preferências do bot...");
+        return _httpService.PutAsync<WhatsAppBotPreferencesDto, WhatsAppIntegrationResponseDto>(
+            $"{Path}/bot",
+            preferences,
+            cancellationToken);
+    }
 }

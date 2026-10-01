@@ -54,6 +54,23 @@ public sealed class WhatsAppIntegrationController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("bot")]
+    public async Task<ActionResult<WhatsAppIntegrationResponseDto>> UpdateBotAsync(
+        [FromBody] WhatsAppBotPreferencesDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(Fail("Usuário não autenticado."));
+        }
+
+        var result = await _sessions.UpdateBotPreferencesAsync(
+            userId,
+            request ?? new WhatsAppBotPreferencesDto(),
+            cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     private bool TryGetUserId(out int userId)
     {
         userId = 0;

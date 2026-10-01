@@ -87,6 +87,21 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
         return Ok(Map(row));
     }
 
+    public async Task<WhatsAppIntegrationResponseDto> UpdateBotPreferencesAsync(
+        int userId,
+        WhatsAppBotPreferencesDto preferences,
+        CancellationToken cancellationToken = default)
+    {
+        preferences ??= new WhatsAppBotPreferencesDto();
+        var row = await EnsureRowAsync(userId, cancellationToken);
+        row.EnableAutoConvertBot = preferences.EnableAutoConvertBot;
+        row.ReplyToPrivateMessages = preferences.ReplyToPrivateMessages;
+        row.ReplyToGroupMessages = preferences.ReplyToGroupMessages;
+        row.Touch();
+        await _context.SaveChangesAsync(cancellationToken);
+        return Ok(Map(row), "Preferências do bot salvas.");
+    }
+
     private async Task<WhatsAppIntegration> EnsureRowAsync(int userId, CancellationToken cancellationToken)
     {
         var instanceName = WhatsAppSessionRules.BuildInstanceName(userId);
@@ -112,7 +127,10 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
             UserId = userId,
             InstanceName = instanceName,
             ConnectionStatus = WhatsAppConnectionStatuses.Disconnected,
-            IsActive = true
+            IsActive = true,
+            EnableAutoConvertBot = true,
+            ReplyToPrivateMessages = true,
+            ReplyToGroupMessages = false
         };
         await _context.WhatsAppIntegrations.AddAsync(row, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
@@ -132,7 +150,10 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
             CreatedAt = row.CreatedAt,
             LastConnectedAt = row.LastConnectedAt,
             IsActive = row.IsActive,
-            IsConnected = row.ConnectionStatus == WhatsAppConnectionStatuses.Connected
+            IsConnected = row.ConnectionStatus == WhatsAppConnectionStatuses.Connected,
+            EnableAutoConvertBot = row.EnableAutoConvertBot,
+            ReplyToPrivateMessages = row.ReplyToPrivateMessages,
+            ReplyToGroupMessages = row.ReplyToGroupMessages
         };
 
     private static string? NormalizePhone(string? raw)

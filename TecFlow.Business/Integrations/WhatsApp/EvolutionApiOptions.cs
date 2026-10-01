@@ -11,6 +11,8 @@ public class EvolutionApiOptions
 
     public int TimeoutSeconds { get; set; } = 30;
 
+    public string WebhookUrl { get; set; } = string.Empty;
+
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(BaseUrl)
         && Uri.TryCreate(BaseUrl, UriKind.Absolute, out _);

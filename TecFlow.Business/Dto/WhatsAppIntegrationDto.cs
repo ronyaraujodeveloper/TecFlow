@@ -25,6 +25,21 @@ public class WhatsAppIntegrationDto
     public bool IsConnected { get; set; }
 
     public string? QrCodeDataUrl { get; set; }
+
+    public bool EnableAutoConvertBot { get; set; } = true;
+
+    public bool ReplyToPrivateMessages { get; set; } = true;
+
+    public bool ReplyToGroupMessages { get; set; }
+}
+
+public class WhatsAppBotPreferencesDto
+{
+    public bool EnableAutoConvertBot { get; set; } = true;
+
+    public bool ReplyToPrivateMessages { get; set; } = true;
+
+    public bool ReplyToGroupMessages { get; set; }
 }
 
 public class EvolutionConnectionStateDto

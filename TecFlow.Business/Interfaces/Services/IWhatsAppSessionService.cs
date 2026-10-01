@@ -9,4 +9,9 @@ public interface IWhatsAppSessionService
     Task<WhatsAppIntegrationResponseDto> ConnectAsync(int userId, CancellationToken cancellationToken = default);
 
     Task<WhatsAppIntegrationResponseDto> RefreshStatusAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<WhatsAppIntegrationResponseDto> UpdateBotPreferencesAsync(
+        int userId,
+        WhatsAppBotPreferencesDto preferences,
+        CancellationToken cancellationToken = default);
 }

@@ -106,6 +106,12 @@ flowchart LR
   ACC --> LOJAS
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
+  NAV[NavMenu Integrações] -->|WhatsApp| WAUI[WhatsAppConexao.razor]
+  WAUI -->|POST conectar + GET status polling| WAPI[WhatsAppIntegrationController]
+  WAPI --> WAS[WhatsAppSessionService]
+  WAS --> EVO[EvolutionApiService]
+  EVO -->|instance create/connect/connectionState| EVAPI[Evolution API]
+  WAS -->|WhatsAppIntegrations UserId InstanceName| SQL
 ```
 
 TecFlow.Infrastructure.Services/Integrations/

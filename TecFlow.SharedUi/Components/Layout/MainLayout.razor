@@ -42,56 +42,7 @@
         <aside id="portal-sidebar"
                class="portal-sidebar @(_navOpen ? "is-open" : "")"
                aria-label="Navega??o principal">
-            <nav class="portal-sidebar-nav">
-                <AuthorizeView>
-                    <Authorized>
-                        <a href="/dashboard" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="CloseNavOnMobile">
-                            Painel
-                        </a>
-                        <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="CloseNavOnMobile">
-                            Campanhas
-                        </a>
-                        <a href="/dashboard#metricas" class="portal-nav-link" @onclick="CloseNavOnMobile">
-                            Métricas / Comissões
-                        </a>
-                        <a href="/engajamento/fila" class="portal-nav-link @GetActiveClass("/engajamento/fila")" @onclick="CloseNavOnMobile">
-                            Fila de engajamento
-                        </a>
-                        <a href="/conciliacao/financeira" class="portal-nav-link @GetActiveClass("/conciliacao/financeira")" @onclick="CloseNavOnMobile">
-                            Conciliação financeira
-                        </a>
-                        <a href="/propaganda/produtos" class="portal-nav-link @GetActiveClass("/propaganda/produtos")" @onclick="CloseNavOnMobile">
-                            Produtos propaganda
-                        </a>
-                        <a href="/saude/painel" class="portal-nav-link @GetActiveClass("/saude/painel")" @onclick="CloseNavOnMobile">
-                            Saúde do sistema
-                        </a>
-                        <a href="/minha-conta" class="portal-nav-link @GetActiveClass("/minha-conta")" @onclick="CloseNavOnMobile">
-                            Minha conta / Segurança
-                        </a>
-                        <a href="/gerador-links" class="portal-nav-link @GetActiveClass("/gerador-links")" @onclick="CloseNavOnMobile">
-                            Gerador de links
-                        </a>
-                        <a href="/minhas-paginas-publicas" class="portal-nav-link @GetActiveClass("/minhas-paginas-publicas")" @onclick="CloseNavOnMobile">
-                            Minhas páginas públicas
-                        </a>
-                        <a href="/minhas-lojas" class="portal-nav-link @GetActiveClass("/minhas-lojas")" @onclick="CloseNavOnMobile">
-                            Minhas lojas / Integrações
-                        </a>
-                    </Authorized>
-                    <NotAuthorized>
-                        <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="CloseNavOnMobile">
-                            Entrar
-                        </a>
-                        <a href="/recuperar-senha" class="portal-nav-link @GetActiveClass("/recuperar-senha")" @onclick="CloseNavOnMobile">
-                            Recuperar senha
-                        </a>
-                    </NotAuthorized>
-                </AuthorizeView>
-                <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="CloseNavOnMobile">
-                    Início
-                </a>
-            </nav>
+            <NavMenu OnNavigate="CloseNavOnMobile" />
         </aside>
 
         <main class="portal-main flex-grow-1 container-fluid py-3 py-md-4">
@@ -116,8 +67,6 @@
 @code {
     private bool _navOpen;
 
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-
     private void ToggleNav() => _navOpen = !_navOpen;
 
     private void CloseNav() => _navOpen = false;
@@ -130,23 +79,4 @@
         }
     }
 
-    private string GetActiveClass(string path)
-    {
-        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
-        var current = string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
-
-        if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
-            && current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase))
-        {
-            return "active";
-        }
-
-        if (path.Equals("/gerador-links", StringComparison.OrdinalIgnoreCase)
-            && current.Equals("/comissao/gerar", StringComparison.OrdinalIgnoreCase))
-        {
-            return "active";
-        }
-
-        return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-    }
 }

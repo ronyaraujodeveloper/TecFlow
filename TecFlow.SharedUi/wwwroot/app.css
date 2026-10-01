@@ -314,6 +314,25 @@ html, body {
     color: #0d6efd;
 }
 
+.portal-nav-group-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.portal-nav-sublink {
+    padding-left: 1.65rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.whatsapp-qr {
+    max-width: 240px;
+    background: #fff;
+}
+
 .portal-sidebar-backdrop {
     position: fixed;
     inset: 0;

@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMarketplaceOAuthConnectService, MarketplaceOAuthConnectService>();
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();
         services.AddScoped<IPublicConverterApiService, PublicConverterApiService>();
+        services.AddScoped<IWhatsAppIntegrationApiService, WhatsAppIntegrationApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

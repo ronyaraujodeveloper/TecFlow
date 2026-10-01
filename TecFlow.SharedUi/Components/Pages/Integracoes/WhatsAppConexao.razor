@@ -1,0 +1,191 @@
+﻿@page "/integracoes/whatsapp"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Services.Integrations
+@implements IAsyncDisposable
+@inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject ILogger<WhatsAppConexao> Logger
+
+<PageTitle>WhatsApp — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">WhatsApp</h1>
+        <p class="text-muted small mb-0">
+            Conecte seu número lendo o QR Code. A sessão fica isolada por usuário na Evolution API.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+
+    <section class="card border-0 shadow-sm whatsapp-session-card mx-auto" style="max-width: 32rem;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <h2 class="h5 fw-bold mb-0">Sessão Evolution</h2>
+                <span class="badge @StatusBadgeClass">@_statusLabel</span>
+            </div>
+
+            @if (_session?.IsConnected == true)
+            {
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span class="badge text-bg-success">Conectado</span>
+                    @if (!string.IsNullOrWhiteSpace(_session.PhoneNumber))
+                    {
+                        <span class="badge text-bg-success-subtle text-success border border-success-subtle">@_session.PhoneNumber</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_session.ProfileName))
+                    {
+                        <span class="fw-semibold">@_session.ProfileName</span>
+                    }
+                </div>
+            }
+
+            <button type="button"
+                    class="btn btn-success w-100 mb-3"
+                    disabled="@_isBusy"
+                    @onclick="ConnectAsync">
+                @(_isBusy ? "Gerando conexão..." : "Conectar WhatsApp")
+            </button>
+
+            @if (!string.IsNullOrWhiteSpace(_qrCode))
+            {
+                <div class="text-center">
+                    <p class="small text-muted mb-2">Aguardando Leitura — abra o WhatsApp e leia o QR Code.</p>
+                    <img src="@_qrCode"
+                         alt="QR Code WhatsApp"
+                         class="whatsapp-qr img-fluid rounded border"
+                         width="240"
+                         height="240" />
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private WhatsAppIntegrationDto? _session;
+    private string _statusLabel = "Desconectado";
+    private string? _qrCode;
+    private string? _error;
+    private bool _isBusy;
+    private CancellationTokenSource? _pollCts;
+
+    private string StatusBadgeClass =>
+        _session?.ConnectionStatus == WhatsAppConnectionStatuses.Connected
+            ? "text-bg-success"
+            : _session?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr
+                ? "text-bg-warning"
+                : "text-bg-secondary";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMineAsync();
+        if (_session?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr)
+        {
+            StartPolling();
+        }
+    }
+
+    private async Task LoadMineAsync()
+    {
+        var response = await WhatsAppApi.GetMineAsync();
+        Apply(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+    }
+
+    private async Task ConnectAsync()
+    {
+        _error = null;
+        _isBusy = true;
+        try
+        {
+            var response = await WhatsAppApi.ConnectAsync();
+            Apply(response.Data?.Data, response.Data?.Descricao ?? response.ErrorMessage, response.Success);
+            if (!string.IsNullOrWhiteSpace(_qrCode) && _session?.IsConnected != true)
+            {
+                StartPolling();
+            }
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollCts?.Cancel();
+        _pollCts = new CancellationTokenSource();
+        _ = PollAsync(_pollCts.Token);
+    }
+
+    private async Task PollAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2.5));
+            var ticks = 0;
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                ticks++;
+                var response = await WhatsAppApi.RefreshStatusAsync(cancellationToken);
+                Apply(response.Data?.Data, keepQr: true);
+                await InvokeAsync(StateHasChanged);
+                if (_session?.IsConnected == true || ticks >= 48)
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Polling WhatsApp interrompido.");
+        }
+    }
+
+    private void Apply(WhatsAppIntegrationDto? data, string? message = null, bool success = true, bool keepQr = false)
+    {
+        if (!success && !string.IsNullOrWhiteSpace(message))
+        {
+            _error = message;
+        }
+
+        if (data is null)
+        {
+            return;
+        }
+
+        _session = data;
+        _statusLabel = string.IsNullOrWhiteSpace(data.UiStatusLabel) ? "Desconectado" : data.UiStatusLabel;
+        if (!string.IsNullOrWhiteSpace(data.QrCodeDataUrl))
+        {
+            _qrCode = data.QrCodeDataUrl;
+        }
+        else if (!keepQr || data.IsConnected)
+        {
+            _qrCode = data.IsConnected ? null : _qrCode;
+        }
+
+        if (data.IsConnected)
+        {
+            _qrCode = null;
+            _pollCts?.Cancel();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollCts is not null)
+        {
+            await _pollCts.CancelAsync();
+            _pollCts.Dispose();
+        }
+    }
+}

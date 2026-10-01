@@ -514,4 +514,36 @@ Contrato mínimo do registro de link (espelhado em `ShortAffiliateLink`): `Origi
 - [x] 21.4. Layout público compacto: badges ~35% menores, Converter/Limpar 50/50, divisor e duas linhas (comissao direta + rastreio TecFlow) com Copiar/Abrir.
 
 ---
+
+## 🚀 Roadmap de Expansão: Integrações e Bots de Distribuição
+
+### 🤖 22. Módulo Telegram (Bot & Agendador de Grupos)
+Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escutar, converter e agendar ofertas em canais ou grupos.
+
+- [ ] 22.1. Arquitetura de Conexão:**
+  - O usuário cadastra seu `TelegramBotToken` (gerado via `@BotFather`) e o `ChatId` do seu canal/grupo.
+  - O backend do TecFlow registra um Webhook seguro (`POST /api/v1/integrations/telegram/webhook/{userId}`) para escutar as mensagens recebidas.
+- [ ] 22.2. Conversão Automática em Chats:**
+  - Ao receber uma mensagem contendo links de marketplaces no privado do Bot, o sistema processa o link através do `PlatformLinkResolver` e devolve a mensagem formatada com a comissão do usuário.
+- [ ] 22.3. Agendamento e Disparo Automático:**
+  - Painel no Blazor para agendar ofertas do *Histórico de Links* para publicação automática no canal/grupo do Telegram nos horários programados via Background Services (`Quartz.NET` ou `Hangfire`).
+
+---
+
+### 🟢 23. Módulo WhatsApp (Conexão via QR Code / Evolution API)
+Oferece uma experiência fluida para afiliados iniciantes conectarem seu número pessoal ou de trabalho lendo um QR Code, sem burocracia ou custos por mensagem da Meta.
+
+- [x] 23.1. Arquitetura de Sessão (Evolution API / Baileys):**
+  - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
+  - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
+  - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).
+- [ ] 23.2. Bot de Conversão Automática (Escuta e Resposta):**
+  - Webhook de escuta ativado para contatos ou grupos autorizados.
+  - Quando o usuário ou um parceiro envia um link bruto no WhatsApp, o TecFlow captura o evento, faz o *Unshorten*, aplica a tag de comissão do usuário e responde na conversa em menos de 3 segundos.
+- [ ] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
+  - Mapeamento automático dos grupos em que o usuário é administrador.
+  - Agendador de disparos com controle de frequência (delay anti-bloqueio entre mensagens) para envio em lote de promoções para grupos ou comunidades.
+
+
+---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

@@ -781,6 +781,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShortAffiliateLinks.Source** — conversão pública grava `PublicPage` no `UserId` do afiliado e aparece no Histórico de Links.
 - [x] **PublicConverterRulesTests.cs** — slug inativo e deduplicação de plataformas.
 
+### Fase 23.1 — Sessão WhatsApp (Evolution API)
+
+- [x] **WhatsAppIntegration.cs** / **WhatsAppIntegrations** — sessão por `UserId` (`InstanceName`, `ConnectionStatus`, telefone, perfil, `LastConnectedAt`).
+- [x] **IEvolutionApiService** / **EvolutionApiService.cs** — `CreateInstanceAsync`, `FetchQrCodeAsync`, `GetConnectionStateAsync`.
+- [x] **WhatsAppSessionService.cs** / **WhatsAppIntegrationController** — persistência + QR + polling de status.
+- [x] **WhatsAppConexao.razor** (`/integracoes/whatsapp`) — card Desconectado / Aguardando Leitura / Conectado.
+- [x] **NavMenu.razor** — dropdown Integrações com Minhas lojas e WhatsApp.
+- [x] **WhatsAppSessionRulesTests.cs** — instância isolada por usuário e mapeamento open/close/connecting.
+- [x] **20260930235426_AddWhatsAppIntegrations** — tabela `WhatsAppIntegrations` no SQL Server.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

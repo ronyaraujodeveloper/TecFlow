@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
     public DbSet<ShortAffiliateLinkAccount> ShortAffiliateLinkAccounts { get; set; } = null!;
     public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
     public DbSet<PublicConverterPage> PublicConverterPages { get; set; } = null!;
+    public DbSet<WhatsAppIntegration> WhatsAppIntegrations { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -324,6 +325,18 @@ public class AppDbContext : DbContext
             entity.HasIndex(page => page.Slug).IsUnique();
             entity.HasIndex(page => page.PublicCode);
             entity.HasIndex(page => new { page.UserId, page.IsActive });
+        });
+
+        modelBuilder.Entity<WhatsAppIntegration>(entity =>
+        {
+            entity.ToTable("WhatsAppIntegrations");
+            entity.Property(item => item.InstanceName).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.ConnectionStatus).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.PhoneNumber).HasMaxLength(32);
+            entity.Property(item => item.ProfileName).HasMaxLength(128);
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => item.UserId);
+            entity.HasIndex(item => item.InstanceName).IsUnique();
         });
 
         modelBuilder.Entity<LinkClickLog>(entity =>

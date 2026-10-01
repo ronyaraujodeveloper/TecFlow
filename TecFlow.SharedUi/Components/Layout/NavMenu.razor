@@ -1,0 +1,120 @@
+﻿@inject NavigationManager Navigation
+
+<nav class="portal-sidebar-nav">
+    <AuthorizeView>
+        <Authorized>
+            <a href="/dashboard" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
+                Painel
+            </a>
+            <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="NotifyNavigate">
+                Campanhas
+            </a>
+            <a href="/dashboard#metricas" class="portal-nav-link" @onclick="NotifyNavigate">
+                Métricas / Comissões
+            </a>
+            <a href="/engajamento/fila" class="portal-nav-link @GetActiveClass("/engajamento/fila")" @onclick="NotifyNavigate">
+                Fila de engajamento
+            </a>
+            <a href="/conciliacao/financeira" class="portal-nav-link @GetActiveClass("/conciliacao/financeira")" @onclick="NotifyNavigate">
+                Conciliação financeira
+            </a>
+            <a href="/propaganda/produtos" class="portal-nav-link @GetActiveClass("/propaganda/produtos")" @onclick="NotifyNavigate">
+                Produtos propaganda
+            </a>
+            <a href="/saude/painel" class="portal-nav-link @GetActiveClass("/saude/painel")" @onclick="NotifyNavigate">
+                Saúde do sistema
+            </a>
+            <a href="/minha-conta" class="portal-nav-link @GetActiveClass("/minha-conta")" @onclick="NotifyNavigate">
+                Minha conta / Segurança
+            </a>
+            <a href="/gerador-links" class="portal-nav-link @GetActiveClass("/gerador-links")" @onclick="NotifyNavigate">
+                Gerador de links
+            </a>
+            <a href="/minhas-paginas-publicas" class="portal-nav-link @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
+                Minhas páginas públicas
+            </a>
+
+            <div class="portal-nav-group">
+                <button type="button"
+                        class="portal-nav-link portal-nav-group-toggle @IntegracoesActiveClass"
+                        aria-expanded="@_integracoesOpen"
+                        @onclick="ToggleIntegracoes">
+                    Integrações
+                </button>
+                @if (_integracoesOpen)
+                {
+                    <a href="/minhas-lojas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-lojas")" @onclick="NotifyNavigate">
+                        Minhas lojas
+                    </a>
+                    <a href="/integracoes/whatsapp" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp")" @onclick="NotifyNavigate">
+                        WhatsApp
+                    </a>
+                }
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="NotifyNavigate">
+                Entrar
+            </a>
+            <a href="/recuperar-senha" class="portal-nav-link @GetActiveClass("/recuperar-senha")" @onclick="NotifyNavigate">
+                Recuperar senha
+            </a>
+        </NotAuthorized>
+    </AuthorizeView>
+    <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="NotifyNavigate">
+        Início
+    </a>
+</nav>
+
+@code {
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private bool _integracoesOpen;
+
+    protected override void OnParametersSet()
+    {
+        if (IsIntegracoesPath())
+        {
+            _integracoesOpen = true;
+        }
+    }
+
+    private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
+
+    private Task NotifyNavigate() => OnNavigate.InvokeAsync();
+
+    private bool IsIntegracoesPath()
+    {
+        var current = CurrentPath();
+        return current.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
+            || current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
+            || current.StartsWith("/integracoes/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string IntegracoesActiveClass => IsIntegracoesPath() ? "active" : string.Empty;
+
+    private string CurrentPath()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
+    }
+
+    private string GetActiveClass(string path)
+    {
+        var current = CurrentPath();
+
+        if (path.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
+            && current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase))
+        {
+            return "active";
+        }
+
+        if (path.Equals("/gerador-links", StringComparison.OrdinalIgnoreCase)
+            && current.Equals("/comissao/gerar", StringComparison.OrdinalIgnoreCase))
+        {
+            return "active";
+        }
+
+        return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
+}

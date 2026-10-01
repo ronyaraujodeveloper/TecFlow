@@ -9,6 +9,7 @@ using TecFlow.Infrastructure.Services.Integrations.Catalog;
 using TecFlow.Infrastructure.Services.Integrations.Orders;
 using TecFlow.Infrastructure.Services.Messaging;
 using TecFlow.Infrastructure.Services.ShortLinks;
+using TecFlow.Infrastructure.Services.WhatsApp;
 
 
 namespace TecFlow.Infrastructure.Services
@@ -32,6 +33,7 @@ namespace TecFlow.Infrastructure.Services
             services.AddTecFlowExternalServices();
             services.AddTecFlowPushNotifications(configuration);
             services.AddTecFlowShortLinkServices(configuration);
+            services.AddTecFlowWhatsAppEvolution(configuration);
 
             return services;
         }

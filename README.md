@@ -540,9 +540,9 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.2. Bot de Conversão Automática (Escuta e Resposta):**
   - Webhook `POST /api/v1/integrations/whatsapp/webhook` processa `MESSAGES_UPSERT` e ignora `fromMe`.
   - Conversão via `PlatformLinkResolver` + loja ativa do `UserId`; persistência `ShortAffiliateLinks.Source=WhatsAppBot`; resposta Evolution `sendText` em até 3s.
-- [ ] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
-  - Mapeamento automático dos grupos em que o usuário é administrador.
-  - Agendador de disparos com controle de frequência (delay anti-bloqueio entre mensagens) para envio em lote de promoções para grupos ou comunidades.
+- [x] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
+  - Grupos sincronizados da Evolution (`WhatsAppGroups`) e campanhas em `WhatsAppBroadcastCampaigns`.
+  - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
 
 
 ---

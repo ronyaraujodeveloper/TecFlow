@@ -16,6 +16,16 @@ public interface IWhatsAppIntegrationApiService
     Task<ApiResult<WhatsAppIntegrationResponseDto>> UpdateBotPreferencesAsync(
         WhatsAppBotPreferencesDto preferences,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResult<WhatsAppBroadcastResponseDto>> ListGroupsAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResult<WhatsAppBroadcastResponseDto>> SyncGroupsAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResult<WhatsAppBroadcastResponseDto>> ListCampaignsAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResult<WhatsAppBroadcastResponseDto>> ScheduleCampaignAsync(
+        WhatsAppScheduleCampaignDto request,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class WhatsAppIntegrationApiService : IWhatsAppIntegrationApiService
@@ -57,6 +67,35 @@ public sealed class WhatsAppIntegrationApiService : IWhatsAppIntegrationApiServi
         return _httpService.PutAsync<WhatsAppBotPreferencesDto, WhatsAppIntegrationResponseDto>(
             $"{Path}/bot",
             preferences,
+            cancellationToken);
+    }
+
+    public Task<ApiResult<WhatsAppBroadcastResponseDto>> ListGroupsAsync(
+        CancellationToken cancellationToken = default) =>
+        _httpService.GetAsync<WhatsAppBroadcastResponseDto>($"{Path}/grupos", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<WhatsAppBroadcastResponseDto>> SyncGroupsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Sincronizando grupos do WhatsApp...");
+        return _httpService.PostAsync<object, WhatsAppBroadcastResponseDto>(
+            $"{Path}/grupos/sincronizar",
+            new { },
+            cancellationToken);
+    }
+
+    public Task<ApiResult<WhatsAppBroadcastResponseDto>> ListCampaignsAsync(
+        CancellationToken cancellationToken = default) =>
+        _httpService.GetAsync<WhatsAppBroadcastResponseDto>($"{Path}/campanhas", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<WhatsAppBroadcastResponseDto>> ScheduleCampaignAsync(
+        WhatsAppScheduleCampaignDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Agendando disparo...");
+        return _httpService.PostAsync<WhatsAppScheduleCampaignDto, WhatsAppBroadcastResponseDto>(
+            $"{Path}/campanhas",
+            request,
             cancellationToken);
     }
 }

@@ -116,6 +116,11 @@ flowchart LR
   WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN
   WPROC -->|ShortAffiliateLinks Source=WhatsAppBot| SQL
   WPROC -->|sendText 3s| EVO
+  WAAGEN[WhatsAppAgendador.razor] -->|sync grupos + agenda campanha| WABC[WhatsAppBroadcastController]
+  WABC --> WABS[WhatsAppBroadcastService]
+  WABS -->|fetchAllGroups sendMedia| EVO
+  WORK[WhatsAppBroadcastWorker] -->|Pending ScheduledAt IntervalSeconds| WABS
+  WABS -->|WhatsAppGroups WhatsAppBroadcastCampaigns| SQL
 ```
 
 TecFlow.Infrastructure.Services/Integrations/

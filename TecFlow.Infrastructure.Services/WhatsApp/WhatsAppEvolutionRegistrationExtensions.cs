@@ -17,6 +17,7 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.Configure<EvolutionApiOptions>(configuration.GetSection(EvolutionApiOptions.SectionName));
         services.AddScoped<IWhatsAppSessionService, WhatsAppSessionService>();
         services.AddScoped<IWhatsAppMessageProcessor, WhatsAppMessageProcessor>();
+        services.AddScoped<IWhatsAppBroadcastService, WhatsAppBroadcastService>();
         services.AddHttpClient<IEvolutionApiService, EvolutionApiService>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<EvolutionApiOptions>>().Value;

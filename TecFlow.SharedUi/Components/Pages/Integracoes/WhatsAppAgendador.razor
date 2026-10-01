@@ -1,0 +1,266 @@
+﻿@page "/integracoes/whatsapp/agendador"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Services.Integrations
+@inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject ILogger<WhatsAppAgendador> Logger
+
+<PageTitle>Agendador WhatsApp — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Disparo para grupos</h1>
+            <p class="text-muted small mb-0">
+                Sincronize os grupos, escolha os destinos e agende a oferta com intervalo anti-bloqueio.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/integracoes/whatsapp" class="btn btn-outline-secondary btn-touch">Conexão</a>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="SyncGroupsAsync">
+                @(_isBusy ? "Sincronizando..." : "Sincronizar Meus Grupos do WhatsApp")
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small" role="status">@_info</div>
+    }
+
+    <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 fw-bold mb-3">Nova campanha</h2>
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="wa-title">Título</label>
+                <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="wa-message">Mensagem</label>
+                <textarea id="wa-message"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Use [LINK_COMISSAO] para inserir o último link gerado."
+                          @oninput="e => _message = e.Value?.ToString() ?? string.Empty">@_message</textarea>
+                <div class="form-text">Tag suportada: <code>@("[LINK_COMISSAO]")</code></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="wa-image">URL da imagem (opcional)</label>
+                <input id="wa-image" class="form-control" value="@_imageUrl" @oninput="e => _imageUrl = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="wa-when">Data e hora</label>
+                    <input id="wa-when" type="datetime-local" class="form-control" value="@_scheduledLocal" @oninput="e => _scheduledLocal = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="wa-interval">Intervalo entre grupos</label>
+                    <select id="wa-interval" class="form-select" @onchange="OnIntervalChanged">
+                        <option value="15" selected="@(_interval == 15)">15 segundos</option>
+                        <option value="30" selected="@(_interval == 30)">30 segundos</option>
+                        <option value="45" selected="@(_interval == 45)">45 segundos</option>
+                        <option value="60" selected="@(_interval == 60)">60 segundos</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="fw-semibold mb-2">Grupos</p>
+            @if (_groups.Count == 0)
+            {
+                <p class="text-muted small">Nenhum grupo sincronizado. Conecte o WhatsApp e clique em sincronizar.</p>
+            }
+            else
+            {
+                <div class="row g-2 mb-3">
+                    @foreach (var group in _groups)
+                    {
+                        <div class="col-md-6">
+                            <label class="form-check border rounded px-3 py-2">
+                                <input class="form-check-input me-2"
+                                       type="checkbox"
+                                       checked="@_selectedJids.Contains(group.Jid)"
+                                       @onchange="e => ToggleGroup(group.Jid, IsChecked(e))" />
+                                <span>@group.Name</span>
+                                @if (group.IsAdmin)
+                                {
+                                    <span class="badge text-bg-success ms-1">Admin</span>
+                                }
+                                <span class="text-muted small ms-1">(@group.ParticipantCount)</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+
+            <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
+                Agendar disparo
+            </button>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Status</th>
+                            <th>Agendado</th>
+                            <th>Intervalo</th>
+                            <th>Grupos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_campaigns.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-muted small px-3 py-3">Nenhuma campanha ainda.</td>
+                            </tr>
+                        }
+                        @foreach (var item in _campaigns)
+                        {
+                            <tr>
+                                <td>@item.Title</td>
+                                <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
+                                <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.IntervalSeconds s</td>
+                                <td>@item.TargetGroupJids.Count</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private readonly List<WhatsAppGroupDto> _groups = [];
+    private readonly List<WhatsAppBroadcastCampaignDto> _campaigns = [];
+    private readonly HashSet<string> _selectedJids = new(StringComparer.OrdinalIgnoreCase);
+    private string _title = string.Empty;
+    private string _message = "Oferta TecFlow [LINK_COMISSAO]";
+    private string _imageUrl = string.Empty;
+    private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+    private int _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+    private bool _isBusy;
+    private string? _error;
+    private string? _info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var groups = await WhatsAppApi.ListGroupsAsync();
+        var campaigns = await WhatsAppApi.ListCampaignsAsync();
+        _groups.Clear();
+        _groups.AddRange(groups.Data?.Groups ?? []);
+        _campaigns.Clear();
+        _campaigns.AddRange(campaigns.Data?.Campaigns ?? []);
+    }
+
+    private async Task SyncGroupsAsync()
+    {
+        _error = null;
+        _info = null;
+        _isBusy = true;
+        try
+        {
+            var response = await WhatsAppApi.SyncGroupsAsync();
+            if (!response.Success || response.Data is null || !response.Data.Status)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível sincronizar os grupos.";
+                return;
+            }
+
+            _groups.Clear();
+            _groups.AddRange(response.Data.Groups);
+            _info = $"Grupos sincronizados: {_groups.Count}.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ScheduleAsync()
+    {
+        _error = null;
+        _info = null;
+        _isBusy = true;
+        try
+        {
+            DateTime? when = null;
+            if (DateTime.TryParse(_scheduledLocal, out var parsed))
+            {
+                when = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
+            }
+
+            var response = await WhatsAppApi.ScheduleCampaignAsync(new WhatsAppScheduleCampaignDto
+            {
+                Title = _title,
+                MessageText = _message,
+                ImageUrl = _imageUrl,
+                TargetGroupJids = _selectedJids.ToList(),
+                ScheduledAt = when,
+                IntervalSeconds = _interval
+            });
+            if (!response.Success || response.Data is null || !response.Data.Status)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível agendar.";
+                return;
+            }
+
+            _campaigns.Clear();
+            _campaigns.AddRange(response.Data.Campaigns);
+            _info = response.Data.Descricao;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void ToggleGroup(string jid, bool selected)
+    {
+        if (selected)
+        {
+            _selectedJids.Add(jid);
+        }
+        else
+        {
+            _selectedJids.Remove(jid);
+        }
+    }
+
+    private void OnIntervalChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var value))
+        {
+            _interval = value;
+        }
+    }
+
+    private static bool IsChecked(ChangeEventArgs e) =>
+        (e.Value is bool flag && flag)
+        || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    private static string StatusClass(string status) =>
+        status switch
+        {
+            WhatsAppBroadcastStatuses.Completed => "text-bg-success",
+            WhatsAppBroadcastStatuses.Failed => "text-bg-danger",
+            WhatsAppBroadcastStatuses.Processing => "text-bg-warning",
+            _ => "text-bg-secondary"
+        };
+}

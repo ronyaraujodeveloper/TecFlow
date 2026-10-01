@@ -49,6 +49,9 @@
                     <a href="/integracoes/whatsapp" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp")" @onclick="NotifyNavigate">
                         WhatsApp
                     </a>
+                    <a href="/integracoes/whatsapp/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp/agendador")" @onclick="NotifyNavigate">
+                        Agendador WhatsApp
+                    </a>
                 }
             </div>
         </Authorized>
@@ -113,6 +116,12 @@
             && current.Equals("/comissao/gerar", StringComparison.OrdinalIgnoreCase))
         {
             return "active";
+        }
+
+        if (path.Equals("/integracoes/whatsapp", StringComparison.OrdinalIgnoreCase)
+            && current.StartsWith("/integracoes/whatsapp/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
         }
 
         return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";

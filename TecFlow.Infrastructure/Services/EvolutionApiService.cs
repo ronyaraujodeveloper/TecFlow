@@ -151,6 +151,228 @@ public sealed class EvolutionApiService : IEvolutionApiService
         }
     }
 
+    public async Task<IReadOnlyList<EvolutionWhatsAppGroupDto>> FetchUserGroupsAsync(
+        string instanceName,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureConfigured() || string.IsNullOrWhiteSpace(instanceName))
+        {
+            return [];
+        }
+
+        using var response = await _httpClient.GetAsync(
+            $"group/fetchAllGroups/{Uri.EscapeDataString(instanceName)}?getParticipants=true",
+            cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Evolution fetch groups falhou. Status={Status} Instance={Instance}",
+                (int)response.StatusCode,
+                instanceName);
+        }
+
+        return ParseGroups(json);
+    }
+
+    public async Task<bool> SendMediaMessageAsync(
+        string instanceName,
+        string remoteJid,
+        string mediaUrl,
+        string caption,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureConfigured()
+            || string.IsNullOrWhiteSpace(instanceName)
+            || string.IsNullOrWhiteSpace(remoteJid)
+            || string.IsNullOrWhiteSpace(mediaUrl))
+        {
+            return false;
+        }
+
+        var body = JsonSerializer.Serialize(new
+        {
+            number = remoteJid,
+            mediatype = "image",
+            media = mediaUrl,
+            caption = caption ?? string.Empty
+        });
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var response = await _httpClient.PostAsync(
+            $"message/sendMedia/{Uri.EscapeDataString(instanceName)}",
+            content,
+            cancellationToken);
+        if (response.IsSuccessStatusCode)
+        {
+            return true;
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+        _logger.LogWarning(
+            "Evolution sendMedia falhou. Status={Status} Instance={Instance} Body={Body}",
+            (int)response.StatusCode,
+            instanceName,
+            responseBody);
+        return false;
+    }
+
+    private static IReadOnlyList<EvolutionWhatsAppGroupDto> ParseGroups(string json)
+    {
+        var groups = new List<EvolutionWhatsAppGroupDto>();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return groups;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            CollectGroups(document.RootElement, groups);
+        }
+        catch (JsonException)
+        {
+            return groups;
+        }
+
+        return groups
+            .Where(group => !string.IsNullOrWhiteSpace(group.Jid))
+            .DistinctBy(group => group.Jid, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void CollectGroups(JsonElement element, List<EvolutionWhatsAppGroupDto> groups)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                var jid = ReadString(element, "id", "jid", "groupJid");
+                if (!string.IsNullOrWhiteSpace(jid) && jid.Contains("@g.us", StringComparison.OrdinalIgnoreCase))
+                {
+                    var participants = ReadElement(element, "participants");
+                    var count = ReadInt(element, "size", "participantsCount", "participantCount");
+                    if (count == 0 && participants.ValueKind == JsonValueKind.Array)
+                    {
+                        count = participants.GetArrayLength();
+                    }
+
+                    groups.Add(new EvolutionWhatsAppGroupDto
+                    {
+                        Jid = jid,
+                        Name = ReadString(element, "subject", "name", "topic") ?? jid,
+                        ParticipantCount = count,
+                        IsAdmin = DetectAdmin(element, participants)
+                    });
+                }
+
+                foreach (var property in element.EnumerateObject())
+                {
+                    CollectGroups(property.Value, groups);
+                }
+
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CollectGroups(item, groups);
+                }
+
+                break;
+        }
+    }
+
+    private static bool DetectAdmin(JsonElement group, JsonElement participants)
+    {
+        var owner = ReadString(group, "owner", "ownerJid") ?? string.Empty;
+        if (participants.ValueKind != JsonValueKind.Array)
+        {
+            return ReadBool(group, "isAdmin", "admin");
+        }
+
+        foreach (var participant in participants.EnumerateArray())
+        {
+            var role = ReadString(participant, "admin", "role") ?? string.Empty;
+            var isAdminRole = role.Contains("admin", StringComparison.OrdinalIgnoreCase);
+            if (!isAdminRole)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                return true;
+            }
+
+            var participantId = ReadString(participant, "id", "jid", "lid") ?? string.Empty;
+            if (participantId.Contains(owner, StringComparison.OrdinalIgnoreCase)
+                || owner.Contains(participantId.Split('@')[0], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return ReadBool(group, "isAdmin", "admin");
+    }
+
+    private static JsonElement ReadElement(JsonElement parent, string name)
+    {
+        if (parent.ValueKind != JsonValueKind.Object)
+        {
+            return default;
+        }
+
+        foreach (var property in parent.EnumerateObject())
+        {
+            if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value;
+            }
+        }
+
+        return default;
+    }
+
+    private static string? ReadString(JsonElement parent, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var element = ReadElement(parent, name);
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                return element.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private static int ReadInt(JsonElement parent, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var element = ReadElement(parent, name);
+            if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var value))
+            {
+                return value;
+            }
+        }
+
+        return 0;
+    }
+
+    private static bool ReadBool(JsonElement parent, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var element = ReadElement(parent, name);
+            if (element.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private object BuildCreateInstanceBody(string instanceName)
     {
         if (!string.IsNullOrWhiteSpace(_options.WebhookUrl)

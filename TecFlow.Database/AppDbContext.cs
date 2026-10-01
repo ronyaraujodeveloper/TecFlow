@@ -51,6 +51,8 @@ public class AppDbContext : DbContext
     public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
     public DbSet<PublicConverterPage> PublicConverterPages { get; set; } = null!;
     public DbSet<WhatsAppIntegration> WhatsAppIntegrations { get; set; } = null!;
+    public DbSet<WhatsAppGroup> WhatsAppGroups { get; set; } = null!;
+    public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -340,6 +342,28 @@ public class AppDbContext : DbContext
             entity.Property(item => item.ReplyToGroupMessages).HasDefaultValue(false);
             entity.HasIndex(item => item.UserId);
             entity.HasIndex(item => item.InstanceName).IsUnique();
+        });
+
+        modelBuilder.Entity<WhatsAppGroup>(entity =>
+        {
+            entity.ToTable("WhatsAppGroups");
+            entity.Property(item => item.Jid).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Name).HasMaxLength(256).IsRequired();
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => new { item.UserId, item.Jid }).IsUnique();
+        });
+
+        modelBuilder.Entity<WhatsAppBroadcastCampaign>(entity =>
+        {
+            entity.ToTable("WhatsAppBroadcastCampaigns");
+            entity.Property(item => item.Title).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.MessageText).IsRequired();
+            entity.Property(item => item.ImageUrl).HasMaxLength(512);
+            entity.Property(item => item.TargetGroupJidsJson).IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.IntervalSeconds).HasDefaultValue(30);
+            entity.HasIndex(item => new { item.Status, item.ScheduledAt });
+            entity.HasIndex(item => item.UserId);
         });
 
         modelBuilder.Entity<LinkClickLog>(entity =>

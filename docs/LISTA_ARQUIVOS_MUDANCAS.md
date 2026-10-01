@@ -801,6 +801,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppBotRulesTests.cs** / **WhatsAppWebhookControllerTests.cs** — URLs, fromMe e grupos.
 - [x] **20261001001427_AddWhatsAppBotPreferences** — colunas de preferência do bot em `WhatsAppIntegrations`.
 
+### Fase 23.3 — Disparo e agendamento para grupos
+
+- [x] **WhatsAppGroup.cs** / **WhatsAppBroadcastCampaign.cs** — grupos (`Jid`, admin) e campanhas (`Pending/Processing/Completed/Failed`).
+- [x] **EvolutionApiService** — `FetchUserGroupsAsync`, `SendMediaMessageAsync`.
+- [x] **WhatsAppBroadcastWorker.cs** — BackgroundService no TecFlow.API com `IntervalSeconds` ≥ 15s.
+- [x] **WhatsAppAgendador.razor** — sincronizar grupos, multi-check, `[LINK_COMISSAO]`, agenda e tabela.
+- [x] **WhatsAppBroadcastRulesTests.cs** — intervalo anti-bloqueio e tag de comissão.
+- [x] **20261001003616_AddWhatsAppBroadcastCampaigns** — tabelas `WhatsAppGroups` e `WhatsAppBroadcastCampaigns`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

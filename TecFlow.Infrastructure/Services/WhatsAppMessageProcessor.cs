@@ -6,6 +6,7 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.PublicPages;
+using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Database;
 
@@ -57,6 +58,14 @@ public sealed class WhatsAppMessageProcessor : IWhatsAppMessageProcessor
         {
             return;
         }
+
+        if (!WhatsAppSessionRules.TryParseUserId(incoming.InstanceName, out var currentUserId)
+            || session.UserId != currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        IntegrationOwnershipGuard.EnsureOwner(session.UserId, currentUserId);
 
         if (!WhatsAppBotRules.ShouldHandleChat(
             session.EnableAutoConvertBot,

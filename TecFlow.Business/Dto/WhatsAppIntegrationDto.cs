@@ -31,6 +31,18 @@ public class WhatsAppIntegrationDto
     public bool ReplyToPrivateMessages { get; set; } = true;
 
     public bool ReplyToGroupMessages { get; set; }
+
+    public bool HasToken { get; set; }
+
+    public string TokenMasked { get; set; } = string.Empty;
+
+    public bool HasApiKey { get; set; }
+
+    public string ApiKeyMasked { get; set; } = string.Empty;
+
+    public bool HasSessionData { get; set; }
+
+    public string SessionDataMasked { get; set; } = string.Empty;
 }
 
 public class WhatsAppBotPreferencesDto

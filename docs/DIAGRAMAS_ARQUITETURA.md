@@ -112,10 +112,13 @@ flowchart LR
   WAS --> EVO[EvolutionApiService]
   EVO -->|instance create/connect/connectionState| EVAPI[Evolution API]
   WAS -->|WhatsAppIntegrations UserId InstanceName| SQL
-  EVOWH[WhatsAppWebhookController] -->|MESSAGES_UPSERT ignora fromMe| WPROC[WhatsAppMessageProcessor]
+  EVOWH[WhatsAppWebhookController] -->|X-Webhook-Secret + MESSAGES_UPSERT| WPROC[WhatsAppMessageProcessor]
   WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN
   WPROC -->|ShortAffiliateLinks Source=WhatsAppBot| SQL
+  WPROC -->|EnsureOwner UserId vs tecflow-u{id}| WPROC
   WPROC -->|sendText 3s| EVO
+  TGWH[TelegramWebhookController] -->|X-Webhook-Secret| TGI[TelegramIntegrations AES]
+  ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   WAAGEN[WhatsAppAgendador.razor] -->|sync grupos + agenda campanha| WABC[WhatsAppBroadcastController]
   WABC --> WABS[WhatsAppBroadcastService]
   WABS -->|fetchAllGroups sendMedia| EVO

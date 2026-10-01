@@ -810,6 +810,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppBroadcastRulesTests.cs** — intervalo anti-bloqueio e tag de comissão.
 - [x] **20261001003616_AddWhatsAppBroadcastCampaigns** — tabelas `WhatsAppGroups` e `WhatsAppBroadcastCampaigns`.
 
+### Segurança defensiva Telegram/WhatsApp
+
+- [x] **DataEncryptionService.cs** — AES-256 (`ENC1:`) em `TecFlow.Infrastructure/Security`; `IEncryptionService` no DbContext.
+- [x] **WhatsAppIntegration** / **TelegramIntegration** — `Token`, `ApiKey`, `SessionData` com `EncryptedStringConverter`.
+- [x] **WebhookSecurityAttribute.cs** / **WebhookSecurityFilter** — header `X-Webhook-Secret` fail-closed.
+- [x] **WhatsAppWebhookController** / **TelegramWebhookController** — `[WebhookSecurity]` em `POST .../webhook`.
+- [x] **IntegrationOwnershipGuard** — `UserId` da integração vs usuário atual nos serviços de sessão, disparo e webhook.
+- [x] **WhatsAppConexao.razor** / **TelegramConexao.razor** — tokens mascarados `****************`.
+- [x] **MessagingIntegrationSecurityTests.cs** — round-trip AES, secret de webhook e isolamento.
+- [x] **20261001005817_EncryptMessagingIntegrationSecrets** — colunas criptografáveis WhatsApp + tabela `TelegramIntegrations`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

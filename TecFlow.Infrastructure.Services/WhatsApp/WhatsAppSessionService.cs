@@ -1,7 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
@@ -12,15 +15,18 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
 {
     private readonly AppDbContext _context;
     private readonly IEvolutionApiService _evolution;
+    private readonly EvolutionApiOptions _evolutionOptions;
     private readonly ILogger<WhatsAppSessionService> _logger;
 
     public WhatsAppSessionService(
         AppDbContext context,
         IEvolutionApiService evolution,
+        IOptions<EvolutionApiOptions> evolutionOptions,
         ILogger<WhatsAppSessionService> logger)
     {
         _context = context;
         _evolution = evolution;
+        _evolutionOptions = evolutionOptions.Value;
         _logger = logger;
     }
 
@@ -46,6 +52,9 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
         var qr = await _evolution.FetchQrCodeAsync(row.InstanceName, cancellationToken);
         row.ConnectionStatus = WhatsAppConnectionStatuses.AwaitingQr;
         row.IsActive = true;
+        row.ApiKey = string.IsNullOrWhiteSpace(_evolutionOptions.ApiKey) ? row.ApiKey : _evolutionOptions.ApiKey;
+        row.Token = row.InstanceName;
+        PersistSessionSnapshot(row);
         row.Touch();
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -76,6 +85,7 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
                 row.IsActive = true;
             }
 
+            PersistSessionSnapshot(row);
             row.Touch();
             await _context.SaveChangesAsync(cancellationToken);
         }
@@ -112,6 +122,7 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
 
         if (row is not null)
         {
+            IntegrationOwnershipGuard.EnsureOwner(row.UserId, userId);
             if (!string.Equals(row.InstanceName, instanceName, StringComparison.OrdinalIgnoreCase))
             {
                 row.InstanceName = instanceName;
@@ -134,11 +145,23 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
         };
         await _context.WhatsAppIntegrations.AddAsync(row, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+        IntegrationOwnershipGuard.EnsureOwner(row.UserId, userId);
         return row;
     }
 
-    private static WhatsAppIntegrationDto Map(WhatsAppIntegration row) =>
-        new()
+    private static void PersistSessionSnapshot(WhatsAppIntegration row) =>
+        row.SessionData = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            instance = row.InstanceName,
+            status = row.ConnectionStatus,
+            phone = row.PhoneNumber,
+            lastConnectedAt = row.LastConnectedAt
+        });
+
+    private static WhatsAppIntegrationDto Map(WhatsAppIntegration row)
+    {
+        IntegrationOwnershipGuard.EnsureOwner(row.UserId, row.UserId);
+        return new WhatsAppIntegrationDto
         {
             Id = row.Id,
             UserId = row.UserId,
@@ -153,8 +176,15 @@ public sealed class WhatsAppSessionService : IWhatsAppSessionService
             IsConnected = row.ConnectionStatus == WhatsAppConnectionStatuses.Connected,
             EnableAutoConvertBot = row.EnableAutoConvertBot,
             ReplyToPrivateMessages = row.ReplyToPrivateMessages,
-            ReplyToGroupMessages = row.ReplyToGroupMessages
+            ReplyToGroupMessages = row.ReplyToGroupMessages,
+            HasToken = !string.IsNullOrEmpty(row.Token),
+            TokenMasked = SecretMasking.Mask(row.Token),
+            HasApiKey = !string.IsNullOrEmpty(row.ApiKey),
+            ApiKeyMasked = SecretMasking.Mask(row.ApiKey),
+            HasSessionData = !string.IsNullOrEmpty(row.SessionData),
+            SessionDataMasked = SecretMasking.Mask(row.SessionData)
         };
+    }
 
     private static string? NormalizePhone(string? raw)
     {

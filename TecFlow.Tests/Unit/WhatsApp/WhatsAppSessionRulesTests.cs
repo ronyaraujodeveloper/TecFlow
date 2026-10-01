@@ -32,6 +32,13 @@ public class WhatsAppSessionRulesTests
     }
 
     [Fact]
+    public void TryParseUserId_ShouldExtractOwner()
+    {
+        Assert.True(WhatsAppSessionRules.TryParseUserId("tecflow-u42", out var userId));
+        Assert.Equal(42, userId);
+    }
+
+    [Fact]
     public void NormalizeQrDataUrl_ShouldPrefixBase64()
     {
         var url = WhatsAppSessionRules.NormalizeQrDataUrl("abc123");

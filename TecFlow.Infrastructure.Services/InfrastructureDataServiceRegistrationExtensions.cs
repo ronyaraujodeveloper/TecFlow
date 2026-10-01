@@ -18,6 +18,8 @@ using TecFlow.Infrastructure.Services.Stock;
 using TecFlow.Infrastructure.Services.Sales;
 using TecFlow.Infrastructure.Services.Tenancy;
 using TecFlow.Infrastructure.Services.Integrations;
+using Microsoft.Extensions.Options;
+using TecFlow.Business.Security;
 using TecFlow.Util.Security;
 
 namespace TecFlow.Infrastructure.Services
@@ -58,7 +60,13 @@ namespace TecFlow.Infrastructure.Services
 
             if (configuration is not null)
             {
-                services.AddTecFlowEncryption(configuration);
+                services.Configure<EncryptionOptions>(configuration.GetSection(EncryptionOptions.SectionName));
+                services.Configure<WebhookSecurityOptions>(
+                    configuration.GetSection(WebhookSecurityOptions.SectionName));
+                var dataEncryption = new DataEncryptionService(
+                    configuration[$"{EncryptionOptions.SectionName}:Key"] ?? string.Empty);
+                services.AddSingleton<IDataEncryptionService>(dataEncryption);
+                services.AddSingleton<IEncryptionService>(dataEncryption);
             }
 
             services.AddHttpContextAccessor();

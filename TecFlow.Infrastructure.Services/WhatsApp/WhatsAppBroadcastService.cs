@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
@@ -34,6 +35,19 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             .ThenBy(group => group.Name)
             .ToListAsync(cancellationToken);
 
+        var integration = await _context.WhatsAppIntegrations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
+        if (integration is not null)
+        {
+            if (integration.UserId != userId)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            IntegrationOwnershipGuard.EnsureOwner(integration.UserId, userId);
+        }
+
         return Ok(groups: groups.Select(MapGroup).ToList());
     }
 
@@ -42,6 +56,15 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         CancellationToken cancellationToken = default)
     {
         var instanceName = WhatsAppSessionRules.BuildInstanceName(userId);
+        var integration = await _context.WhatsAppIntegrations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
+        if (integration is null)
+        {
+            return Fail("Conecte o WhatsApp antes de sincronizar grupos.");
+        }
+
+        IntegrationOwnershipGuard.EnsureOwner(integration.UserId, userId);
         var remote = await _evolution.FetchUserGroupsAsync(instanceName, cancellationToken);
         if (remote.Count == 0)
         {
@@ -172,6 +195,23 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         }
 
         var instanceName = WhatsAppSessionRules.BuildInstanceName(campaign.UserId);
+        var integration = await _context.WhatsAppIntegrations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.UserId == campaign.UserId, cancellationToken);
+        if (integration is null)
+        {
+            campaign.Status = WhatsAppBroadcastStatuses.Failed;
+            campaign.Touch();
+            await _context.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        if (integration.UserId != campaign.UserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        IntegrationOwnershipGuard.EnsureOwner(integration.UserId, campaign.UserId);
         var commissionLink = await _context.ShortAffiliateLinks
             .IgnoreQueryFilters()
             .AsNoTracking()

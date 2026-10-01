@@ -94,6 +94,17 @@
                        @onchange="e => SaveBotAsync(groups: IsChecked(e))" />
                 <label class="form-check-label" for="wa-bot-groups">Atender Grupos de WhatsApp</label>
             </div>
+
+            <hr class="my-3 border-secondary-subtle" />
+            <h3 class="h6 fw-semibold mb-2">Credenciais (mascaradas)</h3>
+            <dl class="row small mb-0">
+                <dt class="col-4 text-muted">Token</dt>
+                <dd class="col-8 font-monospace mb-1">@(string.IsNullOrEmpty(_session?.TokenMasked) ? "—" : _session.TokenMasked)</dd>
+                <dt class="col-4 text-muted">ApiKey</dt>
+                <dd class="col-8 font-monospace mb-1">@(string.IsNullOrEmpty(_session?.ApiKeyMasked) ? "—" : _session.ApiKeyMasked)</dd>
+                <dt class="col-4 text-muted">Sessão</dt>
+                <dd class="col-8 font-monospace mb-0">@(string.IsNullOrEmpty(_session?.SessionDataMasked) ? "—" : _session.SessionDataMasked)</dd>
+            </dl>
         </div>
     </section>
 </div>

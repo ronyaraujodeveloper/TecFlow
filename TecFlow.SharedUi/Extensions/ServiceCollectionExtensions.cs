@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();
         services.AddScoped<IPublicConverterApiService, PublicConverterApiService>();
         services.AddScoped<IWhatsAppIntegrationApiService, WhatsAppIntegrationApiService>();
+        services.AddScoped<ITelegramIntegrationApiService, TelegramIntegrationApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

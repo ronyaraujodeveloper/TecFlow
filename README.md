@@ -520,9 +520,12 @@ Contrato mínimo do registro de link (espelhado em `ShortAffiliateLink`): `Origi
 ### 🤖 22. Módulo Telegram (Bot & Agendador de Grupos)
 Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escutar, converter e agendar ofertas em canais ou grupos.
 
-- [ ] 22.1. Arquitetura de Conexão:**
+- [x] 22.1. Arquitetura de Conexão (segurança e persistência):**
+  - Token, ApiKey e SessionData em `TelegramIntegrations` com AES-256 (`DataEncryptionService`) e máscara `****************` em `/integracoes/telegram`.
+  - Webhook `POST /api/v1/integrations/telegram/webhook` e `.../webhook/{userId}` exige `X-Webhook-Secret`.
+- [ ] 22.1. Arquitetura de Conexão (BotFather UX completa):**
   - O usuário cadastra seu `TelegramBotToken` (gerado via `@BotFather`) e o `ChatId` do seu canal/grupo.
-  - O backend do TecFlow registra um Webhook seguro (`POST /api/v1/integrations/telegram/webhook/{userId}`) para escutar as mensagens recebidas.
+  - Registro operacional do webhook no Telegram ainda segue o fluxo de conversão 22.2.
 - [ ] 22.2. Conversão Automática em Chats:**
   - Ao receber uma mensagem contendo links de marketplaces no privado do Bot, o sistema processa o link através do `PlatformLinkResolver` e devolve a mensagem formatada com a comissão do usuário.
 - [ ] 22.3. Agendamento e Disparo Automático:**
@@ -543,6 +546,8 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
   - Grupos sincronizados da Evolution (`WhatsAppGroups`) e campanhas em `WhatsAppBroadcastCampaigns`.
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
+- [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
+  - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 
 
 ---

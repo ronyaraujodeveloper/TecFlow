@@ -1,10 +1,8 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.API.Controllers;
-using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
 
 namespace TecFlow.Tests.Unit.WhatsApp;
@@ -17,7 +15,6 @@ public class WhatsAppWebhookControllerTests
         var processor = new Mock<IWhatsAppMessageProcessor>();
         var controller = new WhatsAppWebhookController(
             processor.Object,
-            Options.Create(new EvolutionApiOptions()),
             NullLogger<WhatsAppWebhookController>.Instance);
 
         using var document = JsonDocument.Parse("""
@@ -45,7 +42,6 @@ public class WhatsAppWebhookControllerTests
         var processor = new Mock<IWhatsAppMessageProcessor>();
         var controller = new WhatsAppWebhookController(
             processor.Object,
-            Options.Create(new EvolutionApiOptions()),
             NullLogger<WhatsAppWebhookController>.Instance);
 
         using var document = JsonDocument.Parse("""{ "event": "CONNECTION_UPDATE" }""");

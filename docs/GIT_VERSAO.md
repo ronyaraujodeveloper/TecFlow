@@ -4,3 +4,4 @@
 [2026-09-30 21:03:02]feat(whatsapp): orquestra sessao Evolution API por usuario
 [2026-09-30 21:22:34]feat(whatsapp): converte links do webhook Evolution em ate 3s
 [2026-09-30 21:43:37]feat(whatsapp): agenda disparos para grupos com intervalo anti-bloqueio
+[2026-09-30 22:06:41]feat(security): criptografa tokens de Telegram e WhatsApp e exige X-Webhook-Secret

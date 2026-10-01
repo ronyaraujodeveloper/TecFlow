@@ -53,6 +53,7 @@ public class AppDbContext : DbContext
     public DbSet<WhatsAppIntegration> WhatsAppIntegrations { get; set; } = null!;
     public DbSet<WhatsAppGroup> WhatsAppGroups { get; set; } = null!;
     public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
+    public DbSet<TelegramIntegration> TelegramIntegrations { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -340,8 +341,23 @@ public class AppDbContext : DbContext
             entity.Property(item => item.EnableAutoConvertBot).HasDefaultValue(true);
             entity.Property(item => item.ReplyToPrivateMessages).HasDefaultValue(true);
             entity.Property(item => item.ReplyToGroupMessages).HasDefaultValue(false);
+            entity.Property(item => item.Token).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.ApiKey).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.SessionData).HasColumnType("nvarchar(max)");
             entity.HasIndex(item => item.UserId);
             entity.HasIndex(item => item.InstanceName).IsUnique();
+        });
+
+        modelBuilder.Entity<TelegramIntegration>(entity =>
+        {
+            entity.ToTable("TelegramIntegrations");
+            entity.Property(item => item.Token).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.ApiKey).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.SessionData).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.ChatId).HasMaxLength(64);
+            entity.Property(item => item.BotUsername).HasMaxLength(128);
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => item.UserId);
         });
 
         modelBuilder.Entity<WhatsAppGroup>(entity =>
@@ -535,5 +551,15 @@ public class AppDbContext : DbContext
 
         user.HasIndex(u => u.Email)
             .IsUnique();
+
+        var whatsApp = modelBuilder.Entity<WhatsAppIntegration>();
+        whatsApp.Property(item => item.Token).HasConversion(encryptedNullableString);
+        whatsApp.Property(item => item.ApiKey).HasConversion(encryptedNullableString);
+        whatsApp.Property(item => item.SessionData).HasConversion(encryptedNullableString);
+
+        var telegram = modelBuilder.Entity<TelegramIntegration>();
+        telegram.Property(item => item.Token).HasConversion(encryptedNullableString);
+        telegram.Property(item => item.ApiKey).HasConversion(encryptedNullableString);
+        telegram.Property(item => item.SessionData).HasConversion(encryptedNullableString);
     }
 }

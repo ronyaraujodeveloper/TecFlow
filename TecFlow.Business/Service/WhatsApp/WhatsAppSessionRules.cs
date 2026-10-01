@@ -7,6 +7,19 @@ public static class WhatsAppSessionRules
 {
     public static string BuildInstanceName(int userId) => $"tecflow-u{userId}";
 
+    public static bool TryParseUserId(string? instanceName, out int userId)
+    {
+        userId = 0;
+        var value = (instanceName ?? string.Empty).Trim();
+        const string prefix = "tecflow-u";
+        if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return int.TryParse(value[prefix.Length..], out userId);
+    }
+
     public static string MapFromEvolutionState(string? evolutionState)
     {
         var state = (evolutionState ?? string.Empty).Trim().ToLowerInvariant();

@@ -1,0 +1,126 @@
+﻿@page "/integracoes/telegram"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.Security
+@using TecFlow.SharedUi.Services.Integrations
+@inject ITelegramIntegrationApiService TelegramApi
+
+<PageTitle>Telegram — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Telegram</h1>
+        <p class="text-muted small mb-0">
+            Cadastre o token do BotFather. O valor é criptografado no servidor e aparece mascarado nesta tela.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_ok))
+    {
+        <div class="alert alert-success py-2 small" role="status">@_ok</div>
+    }
+
+    <section class="card border-0 shadow-sm mx-auto" style="max-width: 32rem;">
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-token">Bot token</label>
+                <input id="tg-token"
+                       class="form-control"
+                       type="password"
+                       autocomplete="off"
+                       placeholder="@SecretMasking.MaskedValue"
+                       @bind="_tokenInput" />
+                <div class="form-text">Armazenado: @(_session?.TokenMasked ?? "—")</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-apikey">ApiKey (opcional)</label>
+                <input id="tg-apikey"
+                       class="form-control"
+                       type="password"
+                       autocomplete="off"
+                       placeholder="@SecretMasking.MaskedValue"
+                       @bind="_apiKeyInput" />
+                <div class="form-text">Armazenado: @(_session?.ApiKeyMasked ?? "—")</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-chat">ChatId</label>
+                <input id="tg-chat" class="form-control" @bind="_chatId" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-bot">Bot username</label>
+                <input id="tg-bot" class="form-control" placeholder="meu_bot" @bind="_botUsername" />
+            </div>
+            <dl class="row small mb-3">
+                <dt class="col-4 text-muted">SessionData</dt>
+                <dd class="col-8 font-monospace mb-0">@(string.IsNullOrEmpty(_session?.SessionDataMasked) ? "—" : _session.SessionDataMasked)</dd>
+            </dl>
+            <button type="button" class="btn btn-primary w-100" disabled="@_isBusy" @onclick="SaveAsync">
+                @(_isBusy ? "Salvando..." : "Salvar")
+            </button>
+        </div>
+    </section>
+</div>
+
+@code {
+    private TelegramIntegrationDto? _session;
+    private string _tokenInput = string.Empty;
+    private string _apiKeyInput = string.Empty;
+    private string? _chatId;
+    private string? _botUsername;
+    private string? _error;
+    private string? _ok;
+    private bool _isBusy;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var response = await TelegramApi.GetMineAsync();
+        _session = response.Data?.Data;
+        _chatId = _session?.ChatId;
+        _botUsername = _session?.BotUsername;
+        _tokenInput = string.Empty;
+        _apiKeyInput = string.Empty;
+        if (!response.Success)
+        {
+            _error = response.Data?.Descricao ?? response.ErrorMessage;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.SaveAsync(new SaveTelegramIntegrationDto
+            {
+                Token = string.IsNullOrWhiteSpace(_tokenInput) ? SecretMasking.MaskedValue : _tokenInput,
+                ApiKey = string.IsNullOrWhiteSpace(_apiKeyInput) ? SecretMasking.MaskedValue : _apiKeyInput,
+                ChatId = _chatId,
+                BotUsername = _botUsername
+            });
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _session = response.Data?.Data;
+            _ok = response.Data?.Descricao ?? "Salvo.";
+            _tokenInput = string.Empty;
+            _apiKeyInput = string.Empty;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

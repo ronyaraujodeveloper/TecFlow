@@ -32,6 +32,12 @@ public class WhatsAppIntegration : BaseEntity
     public bool ReplyToPrivateMessages { get; set; } = true;
 
     public bool ReplyToGroupMessages { get; set; } = false;
+
+    public string? Token { get; set; }
+
+    public string? ApiKey { get; set; }
+
+    public string? SessionData { get; set; }
 }
 
 public static class WhatsAppConnectionStatuses

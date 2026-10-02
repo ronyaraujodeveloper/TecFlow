@@ -20,6 +20,7 @@ public interface IEvolutionApiService
 
     Task<IReadOnlyList<EvolutionWhatsAppGroupDto>> FetchUserGroupsAsync(
         string instanceName,
+        string? ownerPhoneOrJid = null,
         CancellationToken cancellationToken = default);
 
     Task<bool> SendMediaMessageAsync(

@@ -554,6 +554,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Grupos sincronizados da Evolution (`WhatsAppGroups`) e campanhas em `WhatsAppBroadcastCampaigns`.
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
   - Nova campanha: Título, Mensagem (sem URL), seletor de links e campo Link de Comissão; o disparo concatena copy + URL.
+  - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

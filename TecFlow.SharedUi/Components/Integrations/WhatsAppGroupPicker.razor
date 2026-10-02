@@ -1,0 +1,245 @@
+﻿@using TecFlow.Business.Dto
+@inject IJSRuntime Js
+@inject ILogger<WhatsAppGroupPicker> Logger
+
+<div class="whatsapp-group-picker mb-3">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-2">
+        <p class="fw-semibold mb-0">Grupos</p>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="small text-muted">Atalhos rápidos:</span>
+            @foreach (var size in ShortcutSizes)
+            {
+                <button type="button"
+                        class="btn btn-sm btn-touch @(size == _shortcutLimit ? "btn-primary" : "btn-outline-secondary")"
+                        @onclick="() => SetShortcutLimitAsync(size)">
+                    @size
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (FrequentGroups.Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            @foreach (var group in FrequentGroups)
+            {
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        @onclick="() => AddGroup(group.Jid)">
+                    @group.Name
+                    @if (group.IsAdmin)
+                    {
+                        <span class="badge text-bg-success ms-1">Admin</span>
+                    }
+                </button>
+            }
+        </div>
+    }
+
+    <div class="d-flex flex-wrap gap-2 mb-2">
+        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="SelectFrequentAsync">Selecionar Frequentes</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SelectVisibleAsync">Selecionar Todos</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ClearSelectionAsync">Limpar Seleção</button>
+        <label class="form-check mb-0 ms-lg-auto">
+            <input class="form-check-input" type="checkbox" checked="@_adminOnly" @onchange="OnAdminOnlyChanged" />
+            <span class="form-check-label small">Exibir apenas grupos em que sou Admin</span>
+        </label>
+    </div>
+
+    <div class="group-multiselect" @onclick="FocusSearch">
+        @foreach (var group in SelectedGroups)
+        {
+            <span class="group-chip">
+                @group.Name
+                @if (group.IsAdmin)
+                {
+                    <span class="badge text-bg-success ms-1">Admin</span>
+                }
+                <button type="button" class="btn-close btn-close-white group-chip-remove" aria-label="Remover @group.Name" @onclick:stopPropagation="true" @onclick="() => RemoveGroup(group.Jid)"></button>
+            </span>
+        }
+        <input id="@SearchId"
+               class="group-multiselect-input"
+               autocomplete="off"
+               placeholder="@(SelectedGroups.Count == 0 ? "Busque e selecione os grupos..." : "")"
+               value="@_search"
+               @oninput="OnSearchInput"
+               @onfocus="() => _showSuggestions = true" />
+        @if (_showSuggestions && Suggestions.Count > 0)
+        {
+            <ul class="dropdown-menu show group-multiselect-dropdown" role="listbox">
+                @foreach (var group in Suggestions)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item" @onclick="() => AddGroup(group.Jid)">
+                            <span class="fw-semibold">@group.Name</span>
+                            @if (group.IsAdmin)
+                            {
+                                <span class="badge text-bg-success ms-1">Admin</span>
+                            }
+                            <span class="text-muted small ms-1">(@group.ParticipantCount)</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+    <div class="form-text">@SelectedJids.Count grupo(s) selecionado(s). Digite para filtrar e clique para adicionar como tag.</div>
+</div>
+
+@code {
+    public const string ShortcutLimitKey = "tecflow.whatsapp.groupShortcutLimit";
+    private static readonly int[] ShortcutSizes = [5, 10, 15, 20];
+
+    private string _search = string.Empty;
+    private bool _showSuggestions;
+    private bool _adminOnly;
+    private int _shortcutLimit = 10;
+    private bool _prefsLoaded;
+    private string SearchId { get; } = "wa-group-search-" + Guid.NewGuid().ToString("N")[..8];
+
+    [Parameter]
+    public IReadOnlyList<WhatsAppGroupDto> Groups { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WhatsAppBroadcastCampaignDto> Campaigns { get; set; } = [];
+
+    [Parameter]
+    public HashSet<string> SelectedJids { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [Parameter]
+    public EventCallback SelectionChanged { get; set; }
+
+    private IEnumerable<WhatsAppGroupDto> VisibleGroups =>
+        Groups.Where(group => !_adminOnly || group.IsAdmin);
+
+    private IReadOnlyList<WhatsAppGroupDto> SelectedGroups =>
+        Groups.Where(group => SelectedJids.Contains(group.Jid)).ToList();
+
+    private IReadOnlyList<WhatsAppGroupDto> Suggestions
+    {
+        get
+        {
+            var query = VisibleGroups.Where(group => !SelectedJids.Contains(group.Jid));
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                query = query.Where(group => group.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query.Take(12).ToList();
+        }
+    }
+
+    private IReadOnlyList<WhatsAppGroupDto> FrequentGroups
+    {
+        get
+        {
+            var counts = Campaigns
+                .SelectMany(item => item.TargetGroupJids ?? [])
+                .Where(jid => !string.IsNullOrWhiteSpace(jid))
+                .GroupBy(jid => jid, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+            return VisibleGroups
+                .OrderByDescending(group => counts.GetValueOrDefault(group.Jid))
+                .ThenBy(group => group.Name, StringComparer.OrdinalIgnoreCase)
+                .Take(_shortcutLimit)
+                .ToList();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _prefsLoaded)
+        {
+            return;
+        }
+
+        _prefsLoaded = true;
+        try
+        {
+            var stored = await Js.InvokeAsync<string?>("tecFlowAppInterop.getPreference", ShortcutLimitKey);
+            if (int.TryParse(stored, out var value) && ShortcutSizes.Contains(value))
+            {
+                _shortcutLimit = value;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Não foi possível ler a preferência de atalhos de grupos.");
+        }
+    }
+
+    private async Task SetShortcutLimitAsync(int size)
+    {
+        _shortcutLimit = size;
+        try
+        {
+            await Js.InvokeVoidAsync("tecFlowAppInterop.setPreference", ShortcutLimitKey, size.ToString());
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Não foi possível gravar a preferência de atalhos de grupos.");
+        }
+    }
+
+    private async Task SelectFrequentAsync()
+    {
+        foreach (var group in FrequentGroups)
+        {
+            SelectedJids.Add(group.Jid);
+        }
+
+        await NotifyAsync();
+    }
+
+    private async Task SelectVisibleAsync()
+    {
+        foreach (var group in VisibleGroups)
+        {
+            SelectedJids.Add(group.Jid);
+        }
+
+        await NotifyAsync();
+    }
+
+    private async Task ClearSelectionAsync()
+    {
+        SelectedJids.Clear();
+        await NotifyAsync();
+    }
+
+    private async Task AddGroup(string jid)
+    {
+        SelectedJids.Add(jid);
+        _search = string.Empty;
+        _showSuggestions = false;
+        await NotifyAsync();
+    }
+
+    private async Task RemoveGroup(string jid)
+    {
+        SelectedJids.Remove(jid);
+        await NotifyAsync();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _showSuggestions = true;
+    }
+
+    private async Task OnAdminOnlyChanged(ChangeEventArgs e)
+    {
+        _adminOnly = (e.Value is bool flag && flag)
+            || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        var allowed = VisibleGroups.Select(group => group.Jid).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        SelectedJids.RemoveWhere(jid => !allowed.Contains(jid));
+        await NotifyAsync();
+    }
+
+    private void FocusSearch() => _showSuggestions = true;
+
+    private Task NotifyAsync() => SelectionChanged.InvokeAsync();
+}

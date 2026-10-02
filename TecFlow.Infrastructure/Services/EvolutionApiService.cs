@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.WhatsApp;
 
 namespace TecFlow.Infrastructure.Services;
 
@@ -193,11 +194,19 @@ public sealed class EvolutionApiService : IEvolutionApiService
 
     public async Task<IReadOnlyList<EvolutionWhatsAppGroupDto>> FetchUserGroupsAsync(
         string instanceName,
+        string? ownerPhoneOrJid = null,
         CancellationToken cancellationToken = default)
     {
         if (!EnsureConfigured() || string.IsNullOrWhiteSpace(instanceName))
         {
             return [];
+        }
+
+        var owner = ownerPhoneOrJid;
+        if (string.IsNullOrWhiteSpace(owner))
+        {
+            var state = await GetConnectionStateAsync(instanceName, cancellationToken);
+            owner = state.PhoneNumber;
         }
 
         using var response = await _httpClient.GetAsync(
@@ -206,13 +215,10 @@ public sealed class EvolutionApiService : IEvolutionApiService
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning(
-                "Evolution fetch groups falhou. Status={Status} Instance={Instance}",
-                (int)response.StatusCode,
-                instanceName);
+            LogEvolutionHttpError("FetchUserGroupsAsync", instanceName, response.StatusCode, json);
         }
 
-        return ParseGroups(json);
+        return ParseGroups(json, owner);
     }
 
     public async Task<bool> SendMediaMessageAsync(
@@ -256,7 +262,7 @@ public sealed class EvolutionApiService : IEvolutionApiService
         return false;
     }
 
-    private static IReadOnlyList<EvolutionWhatsAppGroupDto> ParseGroups(string json)
+    private static IReadOnlyList<EvolutionWhatsAppGroupDto> ParseGroups(string json, string? ownerIdentity)
     {
         var groups = new List<EvolutionWhatsAppGroupDto>();
         if (string.IsNullOrWhiteSpace(json))
@@ -267,7 +273,7 @@ public sealed class EvolutionApiService : IEvolutionApiService
         try
         {
             using var document = JsonDocument.Parse(json);
-            CollectGroups(document.RootElement, groups);
+            CollectGroups(document.RootElement, groups, ownerIdentity);
         }
         catch (JsonException)
         {
@@ -280,7 +286,10 @@ public sealed class EvolutionApiService : IEvolutionApiService
             .ToList();
     }
 
-    private static void CollectGroups(JsonElement element, List<EvolutionWhatsAppGroupDto> groups)
+    private static void CollectGroups(
+        JsonElement element,
+        List<EvolutionWhatsAppGroupDto> groups,
+        string? ownerIdentity)
     {
         switch (element.ValueKind)
         {
@@ -300,57 +309,70 @@ public sealed class EvolutionApiService : IEvolutionApiService
                         Jid = jid,
                         Name = ReadString(element, "subject", "name", "topic") ?? jid,
                         ParticipantCount = count,
-                        IsAdmin = DetectAdmin(element, participants)
+                        IsAdmin = DetectAdmin(element, participants, ownerIdentity)
                     });
                 }
 
                 foreach (var property in element.EnumerateObject())
                 {
-                    CollectGroups(property.Value, groups);
+                    CollectGroups(property.Value, groups, ownerIdentity);
                 }
 
                 break;
             case JsonValueKind.Array:
                 foreach (var item in element.EnumerateArray())
                 {
-                    CollectGroups(item, groups);
+                    CollectGroups(item, groups, ownerIdentity);
                 }
 
                 break;
         }
     }
 
-    private static bool DetectAdmin(JsonElement group, JsonElement participants)
+    private static bool DetectAdmin(JsonElement group, JsonElement participants, string? ownerIdentity)
     {
-        var owner = ReadString(group, "owner", "ownerJid") ?? string.Empty;
-        if (participants.ValueKind != JsonValueKind.Array)
+        if (participants.ValueKind == JsonValueKind.Array)
         {
-            return ReadBool(group, "isAdmin", "admin");
+            foreach (var participant in participants.EnumerateArray())
+            {
+                if (!ParticipantHasAdminRole(participant))
+                {
+                    continue;
+                }
+
+                if (ReadBool(participant, "isMe"))
+                {
+                    return true;
+                }
+
+                var participantId = ReadString(participant, "id", "jid", "lid", "phone", "number") ?? string.Empty;
+                if (WhatsAppBroadcastRules.PhoneOrJidMatchesOwner(participantId, ownerIdentity))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        foreach (var participant in participants.EnumerateArray())
+        var groupOwner = ReadString(group, "owner", "ownerJid");
+        if (!WhatsAppBroadcastRules.PhoneOrJidMatchesOwner(groupOwner, ownerIdentity))
         {
-            var role = ReadString(participant, "admin", "role") ?? string.Empty;
-            var isAdminRole = role.Contains("admin", StringComparison.OrdinalIgnoreCase);
-            if (!isAdminRole)
-            {
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(owner))
-            {
-                return true;
-            }
-
-            var participantId = ReadString(participant, "id", "jid", "lid") ?? string.Empty;
-            if (participantId.Contains(owner, StringComparison.OrdinalIgnoreCase)
-                || owner.Contains(participantId.Split('@')[0], StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return false;
         }
 
-        return ReadBool(group, "isAdmin", "admin");
+        return ParticipantHasAdminRole(group) || ReadBool(group, "isAdmin", "admin");
+    }
+
+    private static bool ParticipantHasAdminRole(JsonElement participant)
+    {
+        if (ReadBool(participant, "isAdmin", "isSuperAdmin", "superAdmin", "admin"))
+        {
+            return true;
+        }
+
+        var role = ReadString(participant, "admin", "role");
+        return WhatsAppBroadcastRules.IsPrivilegedWhatsAppRole(role);
     }
 
     private static JsonElement ReadElement(JsonElement parent, string name)

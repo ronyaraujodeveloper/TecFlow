@@ -88,32 +88,15 @@
                 </div>
             </div>
 
-            <p class="fw-semibold mb-2">Grupos</p>
             @if (_groups.Count == 0)
             {
                 <p class="text-muted small">Nenhum grupo sincronizado. Conecte o WhatsApp e clique em sincronizar.</p>
             }
             else
             {
-                <div class="row g-2 mb-3">
-                    @foreach (var group in _groups)
-                    {
-                        <div class="col-md-6">
-                            <label class="form-check border rounded px-3 py-2">
-                                <input class="form-check-input me-2"
-                                       type="checkbox"
-                                       checked="@_selectedJids.Contains(group.Jid)"
-                                       @onchange="e => ToggleGroup(group.Jid, IsChecked(e))" />
-                                <span>@group.Name</span>
-                                @if (group.IsAdmin)
-                                {
-                                    <span class="badge text-bg-success ms-1">Admin</span>
-                                }
-                                <span class="text-muted small ms-1">(@group.ParticipantCount)</span>
-                            </label>
-                        </div>
-                    }
-                </div>
+                <WhatsAppGroupPicker Groups="_groups"
+                                     Campaigns="_campaigns"
+                                     SelectedJids="_selectedJids" />
             }
 
             <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
@@ -290,18 +273,6 @@
         }
     }
 
-    private void ToggleGroup(string jid, bool selected)
-    {
-        if (selected)
-        {
-            _selectedJids.Add(jid);
-        }
-        else
-        {
-            _selectedJids.Remove(jid);
-        }
-    }
-
     private void OnIntervalChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out var value))
@@ -309,10 +280,6 @@
             _interval = value;
         }
     }
-
-    private static bool IsChecked(ChangeEventArgs e) =>
-        (e.Value is bool flag && flag)
-        || string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
 
     private static string StatusClass(string status) =>
         status switch

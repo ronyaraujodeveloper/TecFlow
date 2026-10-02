@@ -110,6 +110,49 @@ public static class WhatsAppBroadcastRules
         return $"{copy}\n\n{link}";
     }
 
+    public static bool IsPrivilegedWhatsAppRole(string? role)
+    {
+        var value = (role ?? string.Empty).Trim().ToLowerInvariant().Replace("_", string.Empty).Replace("-", string.Empty);
+        return value is "admin" or "superadmin" or "superadm";
+    }
+
+    public static bool PhoneOrJidMatchesOwner(string? participantId, string? ownerIdentity)
+    {
+        var left = NormalizeWhatsAppIdentity(participantId);
+        var right = NormalizeWhatsAppIdentity(ownerIdentity);
+        if (left.Length < 8 || right.Length < 8)
+        {
+            return false;
+        }
+
+        return left.Equals(right, StringComparison.Ordinal)
+            || left.EndsWith(right, StringComparison.Ordinal)
+            || right.EndsWith(left, StringComparison.Ordinal);
+    }
+
+    public static string NormalizeWhatsAppIdentity(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var local = value.Trim();
+        var at = local.IndexOf('@');
+        if (at > 0)
+        {
+            local = local[..at];
+        }
+
+        var digits = new string(local.Where(char.IsDigit).ToArray());
+        if (digits.StartsWith("55", StringComparison.Ordinal) && digits.Length > 12)
+        {
+            return digits;
+        }
+
+        return digits;
+    }
+
     public static string ToUiStatus(string? status) =>
         status switch
         {

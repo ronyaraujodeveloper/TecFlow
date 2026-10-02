@@ -68,5 +68,22 @@
         }
 
         return next;
+    },
+
+    getPreference: function (key) {
+        try {
+            return window.localStorage.getItem(key || "") || "";
+        } catch (error) {
+            return "";
+        }
+    },
+
+    setPreference: function (key, value) {
+        try {
+            window.localStorage.setItem(key || "", value == null ? "" : String(value));
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 };

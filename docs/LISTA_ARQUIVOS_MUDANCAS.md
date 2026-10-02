@@ -859,6 +859,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **CommissionLinkPicker.razor** — filtro de plataforma, período e typeahead de links de comissão.
 - [x] **WhatsAppAgendador.razor** — ordem Título → Mensagem → seletor → Link de Comissão; bloqueia URL no copy; concatena no disparo.
 - [x] **WhatsAppBroadcastRules.ComposeDispatchMessage** — `"{Mensagem}\n\n{LinkUrl}"` na Evolution API.
+- [x] **WhatsAppGroupPicker.razor** — MultiSelect com chips, atalhos 5/10/15/20 (LocalStorage) e filtro “sou Admin”.
+- [x] **EvolutionApiService.DetectAdmin** — `IsAdmin` só se o número conectado for admin/superadmin do grupo.
 - [x] **TelegramAgendador.razor** — mesmo seletor e reset após agendar.
 - [x] **app-interop.js** — `insertAtCursor` para colar o link na posição do cursor.
 

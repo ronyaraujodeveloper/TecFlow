@@ -139,6 +139,7 @@ flowchart LR
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   WAAGEN[WhatsAppAgendador.razor] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
+  WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC
   WAAGEN -->|CommissionLinkPicker historico| HIST[AffiliateLinksController historico]
   WABC --> WABS[WhatsAppBroadcastService]
   WABS -->|fetchAllGroups sendMedia| EVO

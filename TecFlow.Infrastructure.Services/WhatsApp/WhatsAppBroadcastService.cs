@@ -65,7 +65,10 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         }
 
         IntegrationOwnershipGuard.EnsureOwner(integration.UserId, userId);
-        var remote = await _evolution.FetchUserGroupsAsync(instanceName, cancellationToken);
+        var remote = await _evolution.FetchUserGroupsAsync(
+            instanceName,
+            integration.PhoneNumber,
+            cancellationToken);
         if (remote.Count == 0)
         {
             return await ListGroupsAsync(userId, cancellationToken);
@@ -91,6 +94,17 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             row.IsAdmin = item.IsAdmin;
             row.IsActive = true;
             row.Touch();
+        }
+
+        var remoteJids = remote
+            .Select(item => item.Jid)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in existing)
+        {
+            if (!remoteJids.Contains(row.Jid))
+            {
+                row.IsAdmin = false;
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);

@@ -35,6 +35,27 @@ public class WhatsAppBroadcastRulesTests
         Assert.Equal("Oferta relâmpago\n\nhttps://shopee.com.br/x", text);
     }
 
+    [Theory]
+    [InlineData("admin", true)]
+    [InlineData("superadmin", true)]
+    [InlineData("super-admin", true)]
+    [InlineData("member", false)]
+    public void IsPrivilegedWhatsAppRole_ShouldAcceptAdminAndSuperAdmin(string role, bool expected)
+    {
+        Assert.Equal(expected, WhatsAppBroadcastRules.IsPrivilegedWhatsAppRole(role));
+    }
+
+    [Fact]
+    public void PhoneOrJidMatchesOwner_ShouldMatchConnectedNumber()
+    {
+        Assert.True(WhatsAppBroadcastRules.PhoneOrJidMatchesOwner(
+            "5511999887766@s.whatsapp.net",
+            "11999887766"));
+        Assert.False(WhatsAppBroadcastRules.PhoneOrJidMatchesOwner(
+            "5511888777666@s.whatsapp.net",
+            "11999887766"));
+    }
+
     [Fact]
     public void ContainsHttpUrl_ShouldDetectPastedLinks()
     {

@@ -553,6 +553,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
   - Grupos sincronizados da Evolution (`WhatsAppGroups`) e campanhas em `WhatsAppBroadcastCampaigns`.
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
+  - Nova campanha: seletor de links de comissão (plataforma, período, busca) e limpeza do formulário após agendar.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

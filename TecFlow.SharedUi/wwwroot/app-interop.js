@@ -48,5 +48,25 @@
         }
 
         return element.value;
+    },
+
+    insertAtCursor: function (elementId, text) {
+        const element = document.getElementById(elementId);
+        const snippet = text || "";
+        if (!element || typeof element.value !== "string") {
+            return snippet;
+        }
+
+        const start = typeof element.selectionStart === "number" ? element.selectionStart : element.value.length;
+        const end = typeof element.selectionEnd === "number" ? element.selectionEnd : start;
+        const next = element.value.slice(0, start) + snippet + element.value.slice(end);
+        element.value = next;
+        const caret = start + snippet.length;
+        if (typeof element.setSelectionRange === "function") {
+            element.focus();
+            element.setSelectionRange(caret, caret);
+        }
+
+        return next;
     }
 };

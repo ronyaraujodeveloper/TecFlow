@@ -3,8 +3,10 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
 @using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
 <PageTitle>Agendador WhatsApp — TecFlow</PageTitle>
@@ -42,13 +44,13 @@
                 <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="mb-3">
+                <CommissionLinkPicker @ref="_linkPicker" OnLinkSelected="InsertCommissionLinkAsync" />
                 <label class="form-label fw-semibold" for="wa-message">Mensagem</label>
                 <textarea id="wa-message"
                           class="form-control"
                           rows="4"
-                          placeholder="Use [LINK_COMISSAO] para inserir o último link gerado."
+                          placeholder="Escreva a oferta e insira um link de comissão pela busca acima."
                           @oninput="e => _message = e.Value?.ToString() ?? string.Empty">@_message</textarea>
-                <div class="form-text">Tag suportada: <code>@("[LINK_COMISSAO]")</code></div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-image">URL da imagem (opcional)</label>
@@ -61,11 +63,11 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="wa-interval">Intervalo entre grupos</label>
-                    <select id="wa-interval" class="form-select" @onchange="OnIntervalChanged">
-                        <option value="15" selected="@(_interval == 15)">15 segundos</option>
-                        <option value="30" selected="@(_interval == 30)">30 segundos</option>
-                        <option value="45" selected="@(_interval == 45)">45 segundos</option>
-                        <option value="60" selected="@(_interval == 60)">60 segundos</option>
+                    <select id="wa-interval" class="form-select" value="@_interval" @onchange="OnIntervalChanged">
+                        <option value="15">15 segundos</option>
+                        <option value="30">30 segundos</option>
+                        <option value="45">45 segundos</option>
+                        <option value="60">60 segundos</option>
                     </select>
                 </div>
             </div>
@@ -145,8 +147,9 @@
     private readonly List<WhatsAppGroupDto> _groups = [];
     private readonly List<WhatsAppBroadcastCampaignDto> _campaigns = [];
     private readonly HashSet<string> _selectedJids = new(StringComparer.OrdinalIgnoreCase);
+    private CommissionLinkPicker? _linkPicker;
     private string _title = string.Empty;
-    private string _message = "Oferta TecFlow [LINK_COMISSAO]";
+    private string _message = string.Empty;
     private string _imageUrl = string.Empty;
     private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
     private int _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
@@ -223,12 +226,51 @@
 
             _campaigns.Clear();
             _campaigns.AddRange(response.Data.Campaigns);
-            _info = response.Data.Descricao;
+            _info = response.Data.Descricao ?? "Disparo agendado com sucesso.";
+            await ResetFormAsync();
         }
         finally
         {
             _isBusy = false;
         }
+    }
+
+    private async Task InsertCommissionLinkAsync(string url)
+    {
+        try
+        {
+            var next = await Js.InvokeAsync<string>("tecFlowAppInterop.insertAtCursor", "wa-message", url);
+            _message = string.IsNullOrWhiteSpace(next) ? AppendLink(_message, url) : next;
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Falha ao inserir link na posição do cursor; anexando ao final.");
+            _message = AppendLink(_message, url);
+        }
+    }
+
+    private async Task ResetFormAsync()
+    {
+        _title = string.Empty;
+        _message = string.Empty;
+        _imageUrl = string.Empty;
+        _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+        _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+        _selectedJids.Clear();
+        if (_linkPicker is not null)
+        {
+            await _linkPicker.ResetAsync();
+        }
+    }
+
+    private static string AppendLink(string message, string url)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return url;
+        }
+
+        return message.TrimEnd() + " " + url;
     }
 
     private void ToggleGroup(string jid, bool selected)

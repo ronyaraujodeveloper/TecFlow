@@ -3,8 +3,11 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
 @using TecFlow.Core.Entities
+@using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Services.Integrations
 @inject ITelegramIntegrationApiService TelegramApi
+@inject IJSRuntime Js
+@inject ILogger<TelegramAgendador> Logger
 
 <PageTitle>Agendador Telegram — TecFlow</PageTitle>
 
@@ -13,7 +16,7 @@
         <div>
             <h1 class="h3 fw-bold mb-1">Disparo para canal/grupo</h1>
             <p class="text-muted small mb-0">
-                Monte a oferta e agende a publicação no ChatId cadastrado. Use [LINK_COMISSAO] para o último link gerado.
+                Monte a oferta e agende a publicação no ChatId cadastrado. Escolha um link de comissão na busca abaixo.
             </p>
         </div>
         <a href="/integracoes/telegram" class="btn btn-outline-secondary btn-touch">Conexão</a>
@@ -36,12 +39,13 @@
                 <input id="tg-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="mb-3">
+                <CommissionLinkPicker @ref="_linkPicker" OnLinkSelected="InsertCommissionLinkAsync" />
                 <label class="form-label fw-semibold" for="tg-message">Mensagem</label>
                 <textarea id="tg-message"
                           class="form-control"
                           rows="4"
+                          placeholder="Escreva a oferta e insira um link de comissão pela busca acima."
                           @oninput="e => _message = e.Value?.ToString() ?? string.Empty">@_message</textarea>
-                <div class="form-text">Tag suportada: <code>@("[LINK_COMISSAO]")</code></div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="tg-image">URL da imagem (opcional)</label>
@@ -100,8 +104,9 @@
 
 @code {
     private readonly List<TelegramBroadcastCampaignDto> _campaigns = [];
+    private CommissionLinkPicker? _linkPicker;
     private string _title = string.Empty;
-    private string _message = "Oferta TecFlow [LINK_COMISSAO]";
+    private string _message = string.Empty;
     private string _imageUrl = string.Empty;
     private string _chatId = string.Empty;
     private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
@@ -149,14 +154,53 @@
                 return;
             }
 
-            _info = response.Data.Descricao;
+            _info = response.Data.Descricao ?? "Publicação agendada com sucesso.";
             _campaigns.Clear();
             _campaigns.AddRange(response.Data.Campaigns);
+            await ResetFormAsync();
         }
         finally
         {
             _isBusy = false;
         }
+    }
+
+    private async Task InsertCommissionLinkAsync(string url)
+    {
+        try
+        {
+            var next = await Js.InvokeAsync<string>("tecFlowAppInterop.insertAtCursor", "tg-message", url);
+            _message = string.IsNullOrWhiteSpace(next) ? AppendLink(_message, url) : next;
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Falha ao inserir link na posição do cursor; anexando ao final.");
+            _message = AppendLink(_message, url);
+        }
+    }
+
+    private async Task ResetFormAsync()
+    {
+        var chatId = _chatId;
+        _title = string.Empty;
+        _message = string.Empty;
+        _imageUrl = string.Empty;
+        _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+        _chatId = chatId;
+        if (_linkPicker is not null)
+        {
+            await _linkPicker.ResetAsync();
+        }
+    }
+
+    private static string AppendLink(string message, string url)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return url;
+        }
+
+        return message.TrimEnd() + " " + url;
     }
 
     private static string StatusClass(string status) =>

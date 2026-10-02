@@ -1,0 +1,275 @@
+﻿@using TecFlow.Business.Dto
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Filter
+@using TecFlow.Database.Pagin
+@using TecFlow.SharedUi.Services.LinkGenerator
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject ILogger<CommissionLinkPicker> Logger
+
+<div class="commission-link-picker mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <label class="form-label fw-semibold mb-0" for="@SearchInputId">Inserir link de comissão</label>
+        <button type="button"
+                class="btn btn-link btn-sm p-0"
+                @onclick="TogglePeriodFilter">
+            @(_showPeriod ? "Ocultar período" : "Filtrar por período")
+        </button>
+    </div>
+    <div class="row g-2 mb-2">
+        <div class="col-md-4">
+            <label class="form-label small mb-1" for="@PlatformSelectId">Plataforma</label>
+            <select id="@PlatformSelectId" class="form-select form-select-sm" @onchange="OnPlatformChanged">
+                <option value="" selected="@(_platform is null)">Todas</option>
+                @foreach (var platform in Platforms)
+                {
+                    <option value="@((int)platform)" selected="@(_platform == platform)">@platform.GetDisplayName()</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label small mb-1" for="@SearchInputId">Buscar produto ou termo</label>
+            <div class="position-relative">
+                <input id="@SearchInputId"
+                       class="form-control form-control-sm"
+                       autocomplete="off"
+                       placeholder="Digite o nome do produto ou parte da URL"
+                       value="@_search"
+                       @onfocus="ShowSuggestions"
+                       @oninput="OnSearchInput" />
+                @if (_showSuggestions)
+                {
+                    <ul class="dropdown-menu show commission-link-dropdown" role="listbox">
+                        @if (_isLoading)
+                        {
+                            <li class="dropdown-item text-muted small">Carregando links...</li>
+                        }
+                        else if (_suggestions.Count == 0)
+                        {
+                            <li class="dropdown-item text-muted small">Nenhum link encontrado com os filtros atuais.</li>
+                        }
+                        else
+                        {
+                            @foreach (var item in _suggestions)
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item commission-link-item"
+                                            @onclick="() => SelectLinkAsync(item)">
+                                        <span class="d-block fw-semibold text-truncate">@GetTitle(item)</span>
+                                        <span class="d-block small">
+                                            <span class="badge text-bg-light border">@item.PlatformName</span>
+                                        </span>
+                                        <span class="d-block small text-muted text-truncate font-monospace">@ResolveUrl(item)</span>
+                                    </button>
+                                </li>
+                            }
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    @if (_showPeriod)
+    {
+        <div class="row g-2 mb-2">
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="@FromInputId">Criado a partir de</label>
+                <input id="@FromInputId" type="date" class="form-control form-control-sm" value="@_fromDate" @oninput="OnFromDateChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="@ToInputId">Criado até</label>
+                <input id="@ToInputId" type="date" class="form-control form-control-sm" value="@_toDate" @oninput="OnToDateChanged" />
+            </div>
+        </div>
+    }
+    <p class="form-text mb-0">Selecione um link para inserir a URL na mensagem (no cursor ou no final do texto).</p>
+</div>
+
+@code {
+    private static readonly MarketplaceType[] Platforms = Enum.GetValues<MarketplaceType>();
+
+    private readonly List<AffiliateLinkHistoryItemDto> _allLinks = [];
+    private readonly List<AffiliateLinkHistoryItemDto> _suggestions = [];
+    private MarketplaceType? _platform;
+    private string _search = string.Empty;
+    private string _fromDate = string.Empty;
+    private string _toDate = string.Empty;
+    private bool _showPeriod;
+    private bool _showSuggestions;
+    private bool _isLoading;
+    private int _searchVersion;
+    private string SearchInputId { get; } = "commission-link-search-" + Guid.NewGuid().ToString("N")[..8];
+    private string PlatformSelectId { get; } = "commission-link-platform-" + Guid.NewGuid().ToString("N")[..8];
+    private string FromInputId { get; } = "commission-link-from-" + Guid.NewGuid().ToString("N")[..8];
+    private string ToInputId { get; } = "commission-link-to-" + Guid.NewGuid().ToString("N")[..8];
+
+    [Parameter]
+    public EventCallback<string> OnLinkSelected { get; set; }
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    public async Task ResetAsync()
+    {
+        _platform = null;
+        _search = string.Empty;
+        _fromDate = string.Empty;
+        _toDate = string.Empty;
+        _showPeriod = false;
+        _showSuggestions = false;
+        await ReloadAsync();
+    }
+
+    private async Task OnPlatformChanged(ChangeEventArgs e)
+    {
+        _platform = int.TryParse(e.Value?.ToString(), out var value) && Enum.IsDefined(typeof(MarketplaceType), value)
+            ? (MarketplaceType)value
+            : null;
+        await ReloadAsync();
+        ShowSuggestions();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        var version = ++_searchVersion;
+        await Task.Delay(220);
+        if (version != _searchVersion)
+        {
+            return;
+        }
+
+        ApplyFilters();
+        _showSuggestions = true;
+    }
+
+    private void OnFromDateChanged(ChangeEventArgs e)
+    {
+        _fromDate = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+        _showSuggestions = true;
+    }
+
+    private void OnToDateChanged(ChangeEventArgs e)
+    {
+        _toDate = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+        _showSuggestions = true;
+    }
+
+    private void TogglePeriodFilter()
+    {
+        _showPeriod = !_showPeriod;
+        if (!_showPeriod)
+        {
+            _fromDate = string.Empty;
+            _toDate = string.Empty;
+            ApplyFilters();
+        }
+    }
+
+    private void ShowSuggestions()
+    {
+        ApplyFilters();
+        _showSuggestions = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var response = await AffiliateLinkApi.ListHistoryAsync(new AffiliateLinkFilter
+            {
+                Page = 1,
+                PageSize = PagedListHelper.MaxPageSize,
+                PlatformType = _platform
+            });
+            _allLinks.Clear();
+            if (response.Status && response.DataList is { Count: > 0 })
+            {
+                _allLinks.AddRange(response.DataList);
+            }
+
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao carregar links de comissão para o agendador.");
+            _allLinks.Clear();
+            _suggestions.Clear();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<AffiliateLinkHistoryItemDto> query = _allLinks;
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var term = _search.Trim();
+            query = query.Where(item =>
+                Contains(item.DisplayTitle, term)
+                || Contains(item.ProductName, term)
+                || Contains(item.PlatformName, term)
+                || Contains(item.ShortenedUrl, term)
+                || Contains(item.AffiliateUrl, term)
+                || Contains(item.OriginalUrl, term));
+        }
+
+        if (DateTime.TryParse(_fromDate, out var from))
+        {
+            var start = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
+            query = query.Where(item => item.CreatedAt >= start);
+        }
+
+        if (DateTime.TryParse(_toDate, out var to))
+        {
+            var end = DateTime.SpecifyKind(to.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            query = query.Where(item => item.CreatedAt <= end);
+        }
+
+        _suggestions.Clear();
+        _suggestions.AddRange(query.Take(12));
+    }
+
+    private async Task SelectLinkAsync(AffiliateLinkHistoryItemDto item)
+    {
+        var url = ResolveUrl(item);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        _showSuggestions = false;
+        _search = GetTitle(item);
+        await OnLinkSelected.InvokeAsync(url);
+    }
+
+    private static string GetTitle(AffiliateLinkHistoryItemDto item) =>
+        string.IsNullOrWhiteSpace(item.ProductName)
+            ? (string.IsNullOrWhiteSpace(item.DisplayTitle) ? "Produto" : item.DisplayTitle)
+            : item.ProductName;
+
+    private static string ResolveUrl(AffiliateLinkHistoryItemDto item) =>
+        FirstNonEmpty(item.ShortenedUrl, item.AffiliateUrl, item.OriginalUrl);
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool Contains(string? source, string term) =>
+        !string.IsNullOrWhiteSpace(source)
+        && source.Contains(term, StringComparison.OrdinalIgnoreCase);
+}

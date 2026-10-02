@@ -10,3 +10,4 @@
 [2026-09-30 22:57:34]feat(ui): unifica menu de mensageria sem perder rotas
 [2026-09-30 23:20:51]fix(ui): restaura lojas no menu e evita tela em branco nas paginas publicas
 [2026-09-30 23:42:24]fix(whatsapp): trata falhas da Evolution API sem 500 generico
+[2026-10-01 21:44:49]feat(ui): seletor de links e reset no agendador de grupos

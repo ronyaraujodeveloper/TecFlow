@@ -854,6 +854,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **Conexoes.razor** / **WhatsAppConexao.razor** — alerta amigável quando a Evolution API está indisponível.
 - [x] **WhatsAppSessionRules.ResolveConnectUiMessage** — mapeia 500 genérico para texto de UI.
 
+### Agendador de grupos — formulário de campanha
+
+- [x] **CommissionLinkPicker.razor** — filtro de plataforma, período e typeahead de links de comissão.
+- [x] **WhatsAppAgendador.razor** — reset do formulário após agendar; inserção da URL no textarea; remove tag estática `[LINK_COMISSAO]`.
+- [x] **TelegramAgendador.razor** — mesmo seletor e reset após agendar.
+- [x] **app-interop.js** — `insertAtCursor` para colar o link na posição do cursor.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

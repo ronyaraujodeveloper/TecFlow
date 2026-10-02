@@ -35,6 +35,16 @@ public class WhatsAppBroadcastRulesTests
         Assert.Equal("Oferta relâmpago\n\nhttps://shopee.com.br/x", text);
     }
 
+    [Fact]
+    public void SplitDispatchMessage_ShouldSeparateCopyAndLink()
+    {
+        var (copy, link) = WhatsAppBroadcastRules.SplitDispatchMessage(
+            "Oferta relâmpago\n\nhttps://shopee.com.br/x");
+
+        Assert.Equal("Oferta relâmpago", copy);
+        Assert.Equal("https://shopee.com.br/x", link);
+    }
+
     [Theory]
     [InlineData("admin", true)]
     [InlineData("superadmin", true)]

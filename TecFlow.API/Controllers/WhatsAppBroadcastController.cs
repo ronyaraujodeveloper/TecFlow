@@ -66,6 +66,20 @@ public sealed class WhatsAppBroadcastController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
+    [HttpDelete("campanhas/{id:int}")]
+    public async Task<ActionResult<WhatsAppBroadcastResponseDto>> DeleteCampaignAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(Fail("Usuário não autenticado."));
+        }
+
+        var result = await _broadcasts.DeleteCampaignAsync(userId, id, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     private bool TryGetUserId(out int userId)
     {
         userId = 0;

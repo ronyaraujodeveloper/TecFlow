@@ -864,6 +864,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramAgendador.razor** — mesmo seletor e reset após agendar.
 - [x] **app-interop.js** — `insertAtCursor` para colar o link na posição do cursor.
 
+### Agendador WhatsApp — lista de disparos
+
+- [x] **WhatsAppAgendador.razor** — coluna Ações (editar/excluir), filtros, paginação 10–100, popover de grupos e polling de status.
+- [x] **WhatsAppBroadcastController** — `DELETE /api/integracoes/whatsapp/campanhas/{id}` e POST com `Id` para atualizar pendentes.
+- [x] **WhatsAppBroadcastService** — `DeleteCampaignAsync`, nomes dos grupos na listagem, ordenação por mais recente.
+- [x] **WhatsAppBroadcastRules.SplitDispatchMessage** — separa copy e URL ao editar.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

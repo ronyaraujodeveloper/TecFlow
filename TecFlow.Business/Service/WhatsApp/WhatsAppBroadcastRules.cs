@@ -110,6 +110,37 @@ public static class WhatsAppBroadcastRules
         return $"{copy}\n\n{link}";
     }
 
+    public static (string Copy, string Link) SplitDispatchMessage(string? stored)
+    {
+        var text = (stored ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var separator = text.LastIndexOf("\n\n", StringComparison.Ordinal);
+        if (separator >= 0)
+        {
+            var maybeLink = text[(separator + 2)..].Trim();
+            if (LooksLikeUrl(maybeLink))
+            {
+                return (text[..separator].Trim(), maybeLink);
+            }
+        }
+
+        var match = HttpUrlRegex.Match(text);
+        if (match.Success && match.Index + match.Length == text.Length)
+        {
+            return (text[..match.Index].Trim(), match.Value);
+        }
+
+        return (text, string.Empty);
+    }
+
+    private static bool LooksLikeUrl(string value) =>
+        value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
     public static bool IsPrivilegedWhatsAppRole(string? role)
     {
         var value = (role ?? string.Empty).Trim().ToLowerInvariant().Replace("_", string.Empty).Replace("-", string.Empty);

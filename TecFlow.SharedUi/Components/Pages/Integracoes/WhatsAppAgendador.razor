@@ -1,12 +1,14 @@
 ﻿@page "/integracoes/whatsapp/agendador"
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@implements IAsyncDisposable
 @using TecFlow.Business.Dto
 @using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
 <PageTitle>Agendador WhatsApp — TecFlow</PageTitle>
@@ -38,7 +40,7 @@
 
     <section class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h2 class="h5 fw-bold mb-3">Nova campanha</h2>
+            <h2 class="h5 fw-bold mb-3">@(_editingId is null ? "Nova campanha" : "Editar campanha")</h2>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-title">Título</label>
                 <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
@@ -94,59 +96,159 @@
             }
             else
             {
-                <WhatsAppGroupPicker Groups="_groups"
+                <WhatsAppGroupPicker @key="_pickerEpoch"
+                                     Groups="_groups"
                                      Campaigns="_campaigns"
                                      SelectedJids="_selectedJids" />
             }
 
-            <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
-                Agendar disparo
-            </button>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
+                    @(_editingId is null ? "Agendar disparo" : "Salvar Alterações")
+                </button>
+                @if (_editingId is not null)
+                {
+                    <button type="button" class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelEditAsync">
+                        Cancelar edição
+                    </button>
+                }
+            </div>
         </div>
     </section>
 
     <section class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
-                    <thead>
+        <div class="card-body">
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small mb-1" for="wa-page-size">Exibir registros</label>
+                    <select id="wa-page-size" class="form-select form-select-sm" value="@_pageSize" @onchange="OnPageSizeChanged">
+                        @foreach (var size in PageSizes)
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small mb-1" for="wa-filter-status">Status</label>
+                    <select id="wa-filter-status" class="form-select form-select-sm" value="@_statusFilter" @onchange="OnStatusFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="@WhatsAppBroadcastStatuses.Pending">Pendente</option>
+                        <option value="@WhatsAppBroadcastStatuses.Processing">Processando</option>
+                        <option value="@WhatsAppBroadcastStatuses.Completed">Concluído</option>
+                        <option value="@WhatsAppBroadcastStatuses.Failed">Falhou</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small mb-1" for="wa-filter-from">Data de (agendamento)</label>
+                    <input id="wa-filter-from" type="date" class="form-control form-control-sm" value="@_filterFrom" @oninput="OnFilterFromInput" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small mb-1" for="wa-filter-to">Data até</label>
+                    <input id="wa-filter-to" type="date" class="form-control form-control-sm" value="@_filterTo" @oninput="OnFilterToInput" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small mb-1" for="wa-filter-search">Busca (título ou grupo)</label>
+                    <input id="wa-filter-search"
+                           class="form-control form-control-sm"
+                           placeholder="Filtrar por título ou nome do grupo"
+                           value="@_searchText"
+                           @oninput="OnSearchInput" />
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Status</th>
+                        <th>Agendado</th>
+                        <th>Intervalo</th>
+                        <th>Grupos</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (PagedCampaigns.Count == 0)
+                    {
                         <tr>
-                            <th>Título</th>
-                            <th>Status</th>
-                            <th>Agendado</th>
-                            <th>Intervalo</th>
-                            <th>Grupos</th>
+                            <td colspan="6" class="text-muted small px-3 py-3">Nenhuma campanha ainda.</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @if (_campaigns.Count == 0)
-                        {
-                            <tr>
-                                <td colspan="5" class="text-muted small px-3 py-3">Nenhuma campanha ainda.</td>
-                            </tr>
-                        }
-                        @foreach (var item in _campaigns)
-                        {
-                            <tr>
-                                <td>@item.Title</td>
-                                <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
-                                <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@item.IntervalSeconds s</td>
-                                <td>@item.TargetGroupJids.Count</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                    }
+                    @foreach (var item in PagedCampaigns)
+                    {
+                        <tr>
+                            <td>@item.Title</td>
+                            <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
+                            <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@item.IntervalSeconds s</td>
+                            <td>
+                                <div class="campaign-groups-popover" tabindex="0">
+                                    <button type="button" class="badge text-bg-light border text-dark">
+                                        @item.TargetGroupJids.Count @(item.TargetGroupJids.Count == 1 ? "grupo" : "grupos")
+                                    </button>
+                                    <div class="campaign-groups-menu" role="tooltip">
+                                        @if (item.TargetGroupNames.Count == 0)
+                                        {
+                                            <div class="text-muted">Nenhum grupo.</div>
+                                        }
+                                        else
+                                        {
+                                            <ul class="list-unstyled mb-0">
+                                                @foreach (var name in item.TargetGroupNames)
+                                                {
+                                                    <li>@name</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary"
+                                            title="Editar"
+                                            aria-label="Editar"
+                                            disabled="@(!item.CanEdit || _isBusy)"
+                                            @onclick="() => BeginEditAsync(item)">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            title="Excluir"
+                                            aria-label="Excluir"
+                                            disabled="@(!item.CanDelete || _isBusy)"
+                                            @onclick="() => DeleteAsync(item)">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+            <span class="small text-muted">
+                @FilteredCount registro(s) • página @_pageIndex de @TotalPages
+            </span>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary" disabled="@(_pageIndex <= 1)" @onclick="PreviousPage">Anterior</button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@(_pageIndex >= TotalPages)" @onclick="NextPage">Próxima</button>
             </div>
         </div>
     </section>
 </div>
 
 @code {
+    private static readonly int[] PageSizes = [10, 25, 50, 75, 100];
     private readonly List<WhatsAppGroupDto> _groups = [];
     private readonly List<WhatsAppBroadcastCampaignDto> _campaigns = [];
     private readonly HashSet<string> _selectedJids = new(StringComparer.OrdinalIgnoreCase);
     private CommissionLinkPicker? _linkPicker;
+    private PeriodicTimer? _pollTimer;
+    private CancellationTokenSource? _pollCts;
     private string _title = string.Empty;
     private string _message = string.Empty;
     private string _commissionLink = string.Empty;
@@ -157,20 +259,107 @@
     private bool _isBusy;
     private string? _error;
     private string? _info;
+    private int? _editingId;
+    private int _pickerEpoch;
+    private int _pageSize = 10;
+    private int _pageIndex = 1;
+    private string _statusFilter = string.Empty;
+    private string _filterFrom = string.Empty;
+    private string _filterTo = string.Empty;
+    private string _searchText = string.Empty;
+
+    private IEnumerable<WhatsAppBroadcastCampaignDto> FilteredCampaigns
+    {
+        get
+        {
+            IEnumerable<WhatsAppBroadcastCampaignDto> query = _campaigns;
+            if (!string.IsNullOrWhiteSpace(_statusFilter))
+            {
+                query = query.Where(item => item.Status == _statusFilter);
+            }
+
+            if (DateTime.TryParse(_filterFrom, out var from))
+            {
+                var start = from.Date;
+                query = query.Where(item => item.ScheduledAt.ToLocalTime().Date >= start);
+            }
+
+            if (DateTime.TryParse(_filterTo, out var to))
+            {
+                var end = to.Date;
+                query = query.Where(item => item.ScheduledAt.ToLocalTime().Date <= end);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var term = _searchText.Trim();
+                query = query.Where(item =>
+                    item.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || item.TargetGroupNames.Any(name => name.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            return query;
+        }
+    }
+
+    private int FilteredCount => FilteredCampaigns.Count();
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(FilteredCount / (double)_pageSize));
+
+    private List<WhatsAppBroadcastCampaignDto> PagedCampaigns =>
+        FilteredCampaigns.Skip((_pageIndex - 1) * _pageSize).Take(_pageSize).ToList();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
+        StartPolling();
+    }
+
+    private void StartPolling()
+    {
+        _pollCts = new CancellationTokenSource();
+        _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+        _ = PollLoopAsync();
+    }
+
+    private async Task PollLoopAsync()
+    {
+        if (_pollTimer is null || _pollCts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            while (await _pollTimer.WaitForNextTickAsync(_pollCts.Token))
+            {
+                await RefreshCampaignsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Falha no polling de campanhas WhatsApp.");
+        }
     }
 
     private async Task LoadAsync()
     {
         var groups = await WhatsAppApi.ListGroupsAsync();
-        var campaigns = await WhatsAppApi.ListCampaignsAsync();
         _groups.Clear();
         _groups.AddRange(groups.Data?.Groups ?? []);
+        await RefreshCampaignsAsync();
+    }
+
+    private async Task RefreshCampaignsAsync()
+    {
+        var campaigns = await WhatsAppApi.ListCampaignsAsync();
         _campaigns.Clear();
         _campaigns.AddRange(campaigns.Data?.Campaigns ?? []);
+        ClampPage();
     }
 
     private async Task SyncGroupsAsync()
@@ -212,6 +401,7 @@
 
             var response = await WhatsAppApi.ScheduleCampaignAsync(new WhatsAppScheduleCampaignDto
             {
+                Id = _editingId ?? 0,
                 Title = _title,
                 MessageText = _message,
                 CommissionLinkUrl = _commissionLink,
@@ -228,8 +418,91 @@
 
             _campaigns.Clear();
             _campaigns.AddRange(response.Data.Campaigns);
+            ClampPage();
             _info = response.Data.Descricao ?? "Disparo agendado com sucesso.";
             await ResetFormAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task BeginEditAsync(WhatsAppBroadcastCampaignDto item)
+    {
+        if (!item.CanEdit)
+        {
+            _error = "Somente agendamentos pendentes podem ser editados.";
+            return;
+        }
+
+        var (copy, link) = WhatsAppBroadcastRules.SplitDispatchMessage(item.MessageText);
+        _editingId = item.Id;
+        _title = item.Title;
+        _message = copy;
+        _commissionLink = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
+        _messageUrlWarning = null;
+        _imageUrl = item.ImageUrl ?? string.Empty;
+        _scheduledLocal = item.ScheduledAt.ToLocalTime().ToString("yyyy-MM-ddTHH:mm");
+        _interval = WhatsAppBroadcastRules.ClampIntervalSeconds(item.IntervalSeconds);
+        if (_interval is not 15 and not 30 and not 45 and not 60)
+        {
+            _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+        }
+
+        _selectedJids.Clear();
+        foreach (var jid in item.TargetGroupJids)
+        {
+            _selectedJids.Add(jid);
+        }
+
+        _pickerEpoch++;
+        _info = "Editando agendamento. Salve as alterações no formulário acima.";
+        _error = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task CancelEditAsync()
+    {
+        await ResetFormAsync();
+        _info = null;
+    }
+
+    private async Task DeleteAsync(WhatsAppBroadcastCampaignDto item)
+    {
+        if (!item.CanDelete)
+        {
+            _error = "Este agendamento não pode ser excluído.";
+            return;
+        }
+
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Excluir o agendamento \"{item.Title}\"?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _error = null;
+        _info = null;
+        _isBusy = true;
+        try
+        {
+            var response = await WhatsAppApi.DeleteCampaignAsync(item.Id);
+            if (!response.Success || response.Data is null || !response.Data.Status)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível excluir.";
+                return;
+            }
+
+            _campaigns.Clear();
+            _campaigns.AddRange(response.Data.Campaigns);
+            ClampPage();
+            if (_editingId == item.Id)
+            {
+                await ResetFormAsync();
+            }
+
+            _info = response.Data.Descricao ?? "Agendamento excluído.";
         }
         finally
         {
@@ -259,6 +532,7 @@
 
     private async Task ResetFormAsync()
     {
+        _editingId = null;
         _title = string.Empty;
         _message = string.Empty;
         _commissionLink = string.Empty;
@@ -267,6 +541,7 @@
         _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
         _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
         _selectedJids.Clear();
+        _pickerEpoch++;
         if (_linkPicker is not null)
         {
             await _linkPicker.ResetAsync();
@@ -281,6 +556,68 @@
         }
     }
 
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var value) && PageSizes.Contains(value))
+        {
+            _pageSize = value;
+            _pageIndex = 1;
+        }
+    }
+
+    private void OnStatusFilterChanged(ChangeEventArgs e)
+    {
+        _statusFilter = e.Value?.ToString() ?? string.Empty;
+        _pageIndex = 1;
+    }
+
+    private void OnFilterFromInput(ChangeEventArgs e)
+    {
+        _filterFrom = e.Value?.ToString() ?? string.Empty;
+        _pageIndex = 1;
+    }
+
+    private void OnFilterToInput(ChangeEventArgs e)
+    {
+        _filterTo = e.Value?.ToString() ?? string.Empty;
+        _pageIndex = 1;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        _pageIndex = 1;
+    }
+
+    private void PreviousPage()
+    {
+        if (_pageIndex > 1)
+        {
+            _pageIndex--;
+        }
+    }
+
+    private void NextPage()
+    {
+        if (_pageIndex < TotalPages)
+        {
+            _pageIndex++;
+        }
+    }
+
+    private void ClampPage()
+    {
+        if (_pageIndex > TotalPages)
+        {
+            _pageIndex = TotalPages;
+        }
+
+        if (_pageIndex < 1)
+        {
+            _pageIndex = 1;
+        }
+    }
+
     private static string StatusClass(string status) =>
         status switch
         {
@@ -289,4 +626,15 @@
             WhatsAppBroadcastStatuses.Processing => "text-bg-warning",
             _ => "text-bg-secondary"
         };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollCts is not null)
+        {
+            await _pollCts.CancelAsync();
+        }
+
+        _pollTimer?.Dispose();
+        _pollCts?.Dispose();
+    }
 }

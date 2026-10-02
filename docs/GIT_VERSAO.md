@@ -13,3 +13,4 @@
 [2026-10-01 21:44:49]feat(ui): seletor de links e reset no agendador de grupos
 [2026-10-01 22:18:46]feat(whatsapp): separa copy e link no disparo para grupos
 [2026-10-01 22:41:05]feat(whatsapp): MultiSelect de grupos com admin real e atalhos
+[2026-10-01 23:06:30]feat(whatsapp): edita e pagina lista de disparos

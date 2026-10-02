@@ -15,5 +15,10 @@ public interface IWhatsAppBroadcastService
         WhatsAppScheduleCampaignDto request,
         CancellationToken cancellationToken = default);
 
+    Task<WhatsAppBroadcastResponseDto> DeleteCampaignAsync(
+        int userId,
+        int campaignId,
+        CancellationToken cancellationToken = default);
+
     Task ProcessDueCampaignsAsync(CancellationToken cancellationToken = default);
 }

@@ -141,6 +141,7 @@ flowchart LR
   WAAGEN[WhatsAppAgendador.razor] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
   WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC
   WAAGEN -->|CommissionLinkPicker historico| HIST[AffiliateLinksController historico]
+  WAAGEN -->|editar POST campanhas Id excluir DELETE PeriodicTimer| WABC
   WABC --> WABS[WhatsAppBroadcastService]
   WABS -->|fetchAllGroups sendMedia| EVO
   WORK[WhatsAppBroadcastWorker] -->|Pending ScheduledAt IntervalSeconds| WABS

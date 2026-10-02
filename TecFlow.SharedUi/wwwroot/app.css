@@ -333,6 +333,33 @@ html, body {
     background: #fff;
 }
 
+.campaign-groups-popover {
+    position: relative;
+    display: inline-block;
+}
+
+.campaign-groups-popover .campaign-groups-menu {
+    display: none;
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    top: calc(100% + 0.35rem);
+    min-width: 12rem;
+    max-width: 18rem;
+    max-height: 14rem;
+    overflow: auto;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.18);
+    font-size: 0.8125rem;
+}
+
+.campaign-groups-popover:hover .campaign-groups-menu,
+.campaign-groups-popover:focus-within .campaign-groups-menu {
+    display: block;
+}
+
 .conexoes-page .conexoes-tabs .nav-link {
     font-weight: 600;
     color: #4b5563;

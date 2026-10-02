@@ -555,6 +555,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
   - Nova campanha: Título, Mensagem (sem URL), seletor de links e campo Link de Comissão; o disparo concatena copy + URL.
   - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
+  - Lista de disparos: ações editar/excluir, filtros (status, data, texto), paginação 10–100, popover com nomes dos grupos e atualização de status a cada 4s.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

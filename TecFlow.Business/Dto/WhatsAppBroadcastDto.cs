@@ -34,9 +34,13 @@ public class WhatsAppBroadcastCampaignDto
 
     public string MessageText { get; set; } = string.Empty;
 
+    public string? CommissionLinkUrl { get; set; }
+
     public string? ImageUrl { get; set; }
 
     public List<string> TargetGroupJids { get; set; } = [];
+
+    public List<string> TargetGroupNames { get; set; } = [];
 
     public DateTime ScheduledAt { get; set; }
 
@@ -46,11 +50,17 @@ public class WhatsAppBroadcastCampaignDto
 
     public string UiStatusLabel { get; set; } = string.Empty;
 
+    public bool CanEdit { get; set; }
+
+    public bool CanDelete { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
 
 public class WhatsAppScheduleCampaignDto
 {
+    public int Id { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string MessageText { get; set; } = string.Empty;

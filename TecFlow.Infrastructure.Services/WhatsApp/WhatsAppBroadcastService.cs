@@ -119,6 +119,7 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         request ??= new WhatsAppScheduleCampaignDto();
         var title = (request.Title ?? string.Empty).Trim();
         var message = (request.MessageText ?? string.Empty).Trim();
+        var commissionLink = (request.CommissionLinkUrl ?? string.Empty).Trim();
         var jids = WhatsAppBroadcastRules.DeserializeJids(
             WhatsAppBroadcastRules.SerializeJids(request.TargetGroupJids));
         if (title.Length is < 3 or > 128)
@@ -129,6 +130,11 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         if (string.IsNullOrWhiteSpace(message))
         {
             return Fail("Informe o texto da oferta.");
+        }
+
+        if (WhatsAppBroadcastRules.ContainsHttpUrl(message))
+        {
+            return Fail("A mensagem deve conter apenas o texto da oferta. Informe a URL no campo Link de Comissão.");
         }
 
         if (jids.Count == 0)
@@ -146,7 +152,7 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         {
             UserId = userId,
             Title = title,
-            MessageText = message,
+            MessageText = WhatsAppBroadcastRules.ComposeDispatchMessage(message, commissionLink),
             ImageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim(),
             TargetGroupJidsJson = WhatsAppBroadcastRules.SerializeJids(jids),
             ScheduledAt = scheduledAt,
@@ -219,7 +225,15 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             .OrderByDescending(link => link.CreatedAt)
             .Select(link => link.AffiliateUrl)
             .FirstOrDefaultAsync(cancellationToken);
-        var text = WhatsAppBroadcastRules.ApplyCommissionTag(campaign.MessageText, commissionLink);
+        var text = campaign.MessageText ?? string.Empty;
+        if (text.Contains(WhatsAppBroadcastRules.CommissionTag, StringComparison.OrdinalIgnoreCase))
+        {
+            text = WhatsAppBroadcastRules.ApplyCommissionTag(text, commissionLink);
+        }
+        else if (!WhatsAppBroadcastRules.ContainsHttpUrl(text))
+        {
+            text = WhatsAppBroadcastRules.ComposeDispatchMessage(text, commissionLink);
+        }
         var interval = TimeSpan.FromSeconds(WhatsAppBroadcastRules.ClampIntervalSeconds(campaign.IntervalSeconds));
         var sent = 0;
 

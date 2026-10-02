@@ -55,6 +55,8 @@ public class WhatsAppScheduleCampaignDto
 
     public string MessageText { get; set; } = string.Empty;
 
+    public string? CommissionLinkUrl { get; set; }
+
     public string? ImageUrl { get; set; }
 
     public List<string> TargetGroupJids { get; set; } = [];

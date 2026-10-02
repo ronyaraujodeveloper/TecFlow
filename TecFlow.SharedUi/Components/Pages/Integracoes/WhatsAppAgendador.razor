@@ -2,11 +2,11 @@
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
+@using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
-@inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
 <PageTitle>Agendador WhatsApp — TecFlow</PageTitle>
@@ -44,13 +44,29 @@
                 <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="mb-3">
-                <CommissionLinkPicker @ref="_linkPicker" OnLinkSelected="InsertCommissionLinkAsync" />
                 <label class="form-label fw-semibold" for="wa-message">Mensagem</label>
                 <textarea id="wa-message"
-                          class="form-control"
+                          class="form-control @(_messageUrlWarning is null ? string.Empty : "is-invalid")"
                           rows="4"
-                          placeholder="Escreva a oferta e insira um link de comissão pela busca acima."
-                          @oninput="e => _message = e.Value?.ToString() ?? string.Empty">@_message</textarea>
+                          placeholder="Escreva somente o texto da oferta. URLs devem ir no campo Link de Comissão."
+                          @oninput="OnMessageInput">@_message</textarea>
+                @if (!string.IsNullOrWhiteSpace(_messageUrlWarning))
+                {
+                    <div class="invalid-feedback d-block">@_messageUrlWarning</div>
+                }
+                else
+                {
+                    <div class="form-text">Somente o copy da oferta. Não cole links neste campo.</div>
+                }
+            </div>
+            <CommissionLinkPicker @ref="_linkPicker" OnLinkSelected="OnCommissionLinkSelected" />
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="wa-commission-link">Link de Comissão</label>
+                <input id="wa-commission-link"
+                       class="form-control font-monospace"
+                       value="@_commissionLink"
+                       @oninput="e => _commissionLink = e.Value?.ToString() ?? string.Empty" />
+                <div class="form-text">O link selecionado será anexado automaticamente ao final da mensagem no momento do disparo.</div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-image">URL da imagem (opcional)</label>
@@ -150,6 +166,8 @@
     private CommissionLinkPicker? _linkPicker;
     private string _title = string.Empty;
     private string _message = string.Empty;
+    private string _commissionLink = string.Empty;
+    private string? _messageUrlWarning;
     private string _imageUrl = string.Empty;
     private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
     private int _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
@@ -213,6 +231,7 @@
             {
                 Title = _title,
                 MessageText = _message,
+                CommissionLinkUrl = _commissionLink,
                 ImageUrl = _imageUrl,
                 TargetGroupJids = _selectedJids.ToList(),
                 ScheduledAt = when,
@@ -235,24 +254,32 @@
         }
     }
 
-    private async Task InsertCommissionLinkAsync(string url)
+    private void OnMessageInput(ChangeEventArgs e)
     {
-        try
+        var value = e.Value?.ToString() ?? string.Empty;
+        if (WhatsAppBroadcastRules.ContainsHttpUrl(value))
         {
-            var next = await Js.InvokeAsync<string>("tecFlowAppInterop.insertAtCursor", "wa-message", url);
-            _message = string.IsNullOrWhiteSpace(next) ? AppendLink(_message, url) : next;
+            _messageUrlWarning = "A mensagem deve conter só o texto da oferta. URLs vão no campo Link de Comissão.";
+            _message = WhatsAppBroadcastRules.StripHttpUrls(value);
+            return;
         }
-        catch (JSException ex)
-        {
-            Logger.LogWarning(ex, "Falha ao inserir link na posição do cursor; anexando ao final.");
-            _message = AppendLink(_message, url);
-        }
+
+        _messageUrlWarning = null;
+        _message = value;
+    }
+
+    private Task OnCommissionLinkSelected(string url)
+    {
+        _commissionLink = url ?? string.Empty;
+        return Task.CompletedTask;
     }
 
     private async Task ResetFormAsync()
     {
         _title = string.Empty;
         _message = string.Empty;
+        _commissionLink = string.Empty;
+        _messageUrlWarning = null;
         _imageUrl = string.Empty;
         _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
         _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
@@ -261,16 +288,6 @@
         {
             await _linkPicker.ResetAsync();
         }
-    }
-
-    private static string AppendLink(string message, string url)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return url;
-        }
-
-        return message.TrimEnd() + " " + url;
     }
 
     private void ToggleGroup(string jid, bool selected)

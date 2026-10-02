@@ -857,7 +857,8 @@ API / Orquestrador / Worker / WebUi
 ### Agendador de grupos — formulário de campanha
 
 - [x] **CommissionLinkPicker.razor** — filtro de plataforma, período e typeahead de links de comissão.
-- [x] **WhatsAppAgendador.razor** — reset do formulário após agendar; inserção da URL no textarea; remove tag estática `[LINK_COMISSAO]`.
+- [x] **WhatsAppAgendador.razor** — ordem Título → Mensagem → seletor → Link de Comissão; bloqueia URL no copy; concatena no disparo.
+- [x] **WhatsAppBroadcastRules.ComposeDispatchMessage** — `"{Mensagem}\n\n{LinkUrl}"` na Evolution API.
 - [x] **TelegramAgendador.razor** — mesmo seletor e reset após agendar.
 - [x] **app-interop.js** — `insertAtCursor` para colar o link na posição do cursor.
 

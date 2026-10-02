@@ -26,6 +26,23 @@ public class WhatsAppBroadcastRulesTests
     }
 
     [Fact]
+    public void ComposeDispatchMessage_ShouldAppendLinkAfterCopy()
+    {
+        var text = WhatsAppBroadcastRules.ComposeDispatchMessage(
+            "Oferta relâmpago",
+            "https://shopee.com.br/x");
+
+        Assert.Equal("Oferta relâmpago\n\nhttps://shopee.com.br/x", text);
+    }
+
+    [Fact]
+    public void ContainsHttpUrl_ShouldDetectPastedLinks()
+    {
+        Assert.True(WhatsAppBroadcastRules.ContainsHttpUrl("Veja https://shopee.com.br/x agora"));
+        Assert.Equal("Veja agora", WhatsAppBroadcastRules.StripHttpUrls("Veja https://shopee.com.br/x agora"));
+    }
+
+    [Fact]
     public void SerializeJids_ShouldDeduplicate()
     {
         var json = WhatsAppBroadcastRules.SerializeJids(["  a@g.us ", "a@g.us", "b@g.us"]);

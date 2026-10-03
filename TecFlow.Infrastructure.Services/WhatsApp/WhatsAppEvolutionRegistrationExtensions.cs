@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Telegram;
 using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Infrastructure.Services;
 
 namespace TecFlow.Infrastructure.Services.WhatsApp;
@@ -26,6 +27,7 @@ public static class WhatsAppEvolutionRegistrationExtensions
         });
         services.AddScoped<IWhatsAppSessionService, WhatsAppSessionService>();
         services.AddScoped<IWhatsAppMessageProcessor, WhatsAppMessageProcessor>();
+        services.AddSingleton<IWhatsAppBroadcastJobCoordinator, WhatsAppBroadcastJobCoordinator>();
         services.AddScoped<IWhatsAppBroadcastService, WhatsAppBroadcastService>();
         services.AddScoped<ITelegramApiService, TelegramApiService>();
         services.AddScoped<ITelegramMessageProcessor, TelegramMessageProcessor>();

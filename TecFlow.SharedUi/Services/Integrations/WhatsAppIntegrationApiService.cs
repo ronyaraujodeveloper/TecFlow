@@ -27,6 +27,10 @@ public interface IWhatsAppIntegrationApiService
         WhatsAppScheduleCampaignDto request,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResult<WhatsAppBroadcastResponseDto>> UpdateCampaignAsync(
+        UpdateAgendamentoCommand command,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResult<WhatsAppBroadcastResponseDto>> DeleteCampaignAsync(
         int campaignId,
         CancellationToken cancellationToken = default);
@@ -96,10 +100,21 @@ public sealed class WhatsAppIntegrationApiService : IWhatsAppIntegrationApiServi
         WhatsAppScheduleCampaignDto request,
         CancellationToken cancellationToken = default)
     {
-        using var _ = _loadingService.BeginScope(request.Id > 0 ? "Salvando alterações..." : "Agendando disparo...");
+        using var _ = _loadingService.BeginScope("Agendando disparo...");
         return _httpService.PostAsync<WhatsAppScheduleCampaignDto, WhatsAppBroadcastResponseDto>(
             $"{Path}/campanhas",
             request,
+            cancellationToken);
+    }
+
+    public Task<ApiResult<WhatsAppBroadcastResponseDto>> UpdateCampaignAsync(
+        UpdateAgendamentoCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Salvando alterações...");
+        return _httpService.PutAsync<UpdateAgendamentoCommand, WhatsAppBroadcastResponseDto>(
+            $"{Path}/campanhas/{command.Id}",
+            command,
             cancellationToken);
     }
 

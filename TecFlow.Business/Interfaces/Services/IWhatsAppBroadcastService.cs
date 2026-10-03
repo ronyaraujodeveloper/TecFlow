@@ -15,6 +15,11 @@ public interface IWhatsAppBroadcastService
         WhatsAppScheduleCampaignDto request,
         CancellationToken cancellationToken = default);
 
+    Task<WhatsAppBroadcastResponseDto> UpdateAsync(
+        int userId,
+        UpdateAgendamentoCommand command,
+        CancellationToken cancellationToken = default);
+
     Task<WhatsAppBroadcastResponseDto> DeleteCampaignAsync(
         int userId,
         int campaignId,

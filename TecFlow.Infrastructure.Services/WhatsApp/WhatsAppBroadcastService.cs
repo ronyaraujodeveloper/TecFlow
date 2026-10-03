@@ -13,15 +13,18 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
 {
     private readonly AppDbContext _context;
     private readonly IEvolutionApiService _evolution;
+    private readonly IWhatsAppBroadcastJobCoordinator _jobs;
     private readonly ILogger<WhatsAppBroadcastService> _logger;
 
     public WhatsAppBroadcastService(
         AppDbContext context,
         IEvolutionApiService evolution,
+        IWhatsAppBroadcastJobCoordinator jobs,
         ILogger<WhatsAppBroadcastService> logger)
     {
         _context = context;
         _evolution = evolution;
+        _jobs = jobs;
         _logger = logger;
     }
 
@@ -164,43 +167,91 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             scheduledAt = DateTime.UtcNow;
         }
 
-        WhatsAppBroadcastCampaign campaign;
-        var isUpdate = request.Id > 0;
-        if (isUpdate)
+        if (request.Id > 0)
         {
-            var existing = await _context.WhatsAppBroadcastCampaigns
-                .FirstOrDefaultAsync(item => item.Id == request.Id && item.UserId == userId, cancellationToken);
-            if (existing is null)
-            {
-                return Fail("Agendamento não encontrado.");
-            }
-
-            if (existing.Status != WhatsAppBroadcastStatuses.Pending)
-            {
-                return Fail("Somente agendamentos pendentes podem ser editados.");
-            }
-
-            campaign = existing;
-        }
-        else
-        {
-            campaign = new WhatsAppBroadcastCampaign { UserId = userId };
-            await _context.WhatsAppBroadcastCampaigns.AddAsync(campaign, cancellationToken);
+            return await UpdateAsync(
+                userId,
+                new UpdateAgendamentoCommand
+                {
+                    Id = request.Id,
+                    Title = title,
+                    MessageText = message,
+                    CommissionLinkUrl = commissionLink,
+                    ImageUrl = request.ImageUrl,
+                    TargetGroupJids = jids.ToList(),
+                    ScheduledAt = scheduledAt,
+                    IntervalSeconds = request.IntervalSeconds
+                },
+                cancellationToken);
         }
 
-        campaign.Title = title;
-        campaign.MessageText = WhatsAppBroadcastRules.ComposeDispatchMessage(message, commissionLink);
-        campaign.ImageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim();
-        campaign.TargetGroupJidsJson = WhatsAppBroadcastRules.SerializeJids(jids);
-        campaign.ScheduledAt = scheduledAt;
-        campaign.IntervalSeconds = WhatsAppBroadcastRules.ClampIntervalSeconds(request.IntervalSeconds);
-        campaign.Status = WhatsAppBroadcastStatuses.Pending;
-        campaign.Touch();
+        var campaign = new WhatsAppBroadcastCampaign { UserId = userId };
+        ApplyCampaignPayload(campaign, title, message, commissionLink, request.ImageUrl, jids, scheduledAt, request.IntervalSeconds);
+        await _context.WhatsAppBroadcastCampaigns.AddAsync(campaign, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         var listed = await ListCampaignsAsync(userId, cancellationToken);
         listed.Campaign = listed.Campaigns.FirstOrDefault(item => item.Id == campaign.Id);
-        listed.Descricao = isUpdate ? "Agendamento atualizado." : "Campanha agendada.";
+        listed.Descricao = "Campanha agendada.";
+        return listed;
+    }
+
+    public async Task<WhatsAppBroadcastResponseDto> UpdateAsync(
+        int userId,
+        UpdateAgendamentoCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        command ??= new UpdateAgendamentoCommand();
+        var title = (command.Title ?? string.Empty).Trim();
+        var message = (command.MessageText ?? string.Empty).Trim();
+        var commissionLink = (command.CommissionLinkUrl ?? string.Empty).Trim();
+        var jids = WhatsAppBroadcastRules.DeserializeJids(
+            WhatsAppBroadcastRules.SerializeJids(command.TargetGroupJids));
+        if (title.Length is < 3 or > 128)
+        {
+            return Fail("Informe um título entre 3 e 128 caracteres.");
+        }
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return Fail("Informe o texto da oferta.");
+        }
+
+        if (WhatsAppBroadcastRules.ContainsHttpUrl(message))
+        {
+            return Fail("A mensagem deve conter apenas o texto da oferta. Informe a URL no campo Link de Comissão.");
+        }
+
+        if (jids.Count == 0)
+        {
+            return Fail("Selecione ao menos um grupo.");
+        }
+
+        var campaign = await _context.WhatsAppBroadcastCampaigns
+            .FirstOrDefaultAsync(item => item.Id == command.Id && item.UserId == userId, cancellationToken);
+        if (campaign is null)
+        {
+            return Fail("Agendamento não encontrado.");
+        }
+
+        if (campaign.Status != WhatsAppBroadcastStatuses.Pending)
+        {
+            return Fail("Somente agendamentos pendentes podem ser editados.");
+        }
+
+        var scheduledAt = command.ScheduledAt?.ToUniversalTime() ?? DateTime.UtcNow;
+        if (scheduledAt < DateTime.UtcNow.AddMinutes(-2))
+        {
+            scheduledAt = DateTime.UtcNow;
+        }
+
+        _jobs.Cancel(campaign.Id);
+        ApplyCampaignPayload(campaign, title, message, commissionLink, command.ImageUrl, jids, scheduledAt, command.IntervalSeconds);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var listed = await ListCampaignsAsync(userId, cancellationToken);
+        listed.Campaign = listed.Campaigns.FirstOrDefault(item => item.Id == campaign.Id);
+        listed.Descricao = "Agendamento atualizado.";
         return listed;
     }
 
@@ -216,16 +267,14 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             return Fail("Agendamento não encontrado.");
         }
 
-        if (campaign.Status == WhatsAppBroadcastStatuses.Processing)
-        {
-            return Fail("Não é possível excluir um disparo em andamento.");
-        }
-
         if (campaign.Status == WhatsAppBroadcastStatuses.Completed)
         {
             return Fail("Não é possível excluir um disparo já concluído.");
         }
 
+        _jobs.Cancel(campaignId);
+        campaign.Status = WhatsAppBroadcastStatuses.Cancelled;
+        campaign.Touch();
         _context.WhatsAppBroadcastCampaigns.Remove(campaign);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -253,93 +302,141 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
 
     private async Task ProcessOneAsync(WhatsAppBroadcastCampaign campaign, CancellationToken cancellationToken)
     {
-        campaign.Status = WhatsAppBroadcastStatuses.Processing;
-        campaign.Touch();
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var jids = WhatsAppBroadcastRules.DeserializeJids(campaign.TargetGroupJidsJson);
-        if (jids.Count == 0)
+        var jobToken = _jobs.Register(campaign.Id, cancellationToken);
+        try
         {
-            campaign.Status = WhatsAppBroadcastStatuses.Failed;
+            campaign.Status = WhatsAppBroadcastStatuses.Processing;
             campaign.Touch();
-            await _context.SaveChangesAsync(cancellationToken);
-            return;
-        }
+            await SaveIfExistsAsync(campaign, jobToken);
 
-        var instanceName = WhatsAppSessionRules.BuildInstanceName(campaign.UserId);
-        var integration = await _context.WhatsAppIntegrations
-            .AsNoTracking()
-            .FirstOrDefaultAsync(item => item.UserId == campaign.UserId, cancellationToken);
-        if (integration is null)
-        {
-            campaign.Status = WhatsAppBroadcastStatuses.Failed;
-            campaign.Touch();
-            await _context.SaveChangesAsync(cancellationToken);
-            return;
-        }
-
-        if (integration.UserId != campaign.UserId)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        IntegrationOwnershipGuard.EnsureOwner(integration.UserId, campaign.UserId);
-        var commissionLink = await _context.ShortAffiliateLinks
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Where(link => link.UserId == campaign.UserId && link.IsActive)
-            .OrderByDescending(link => link.CreatedAt)
-            .Select(link => link.AffiliateUrl)
-            .FirstOrDefaultAsync(cancellationToken);
-        var text = campaign.MessageText ?? string.Empty;
-        if (text.Contains(WhatsAppBroadcastRules.CommissionTag, StringComparison.OrdinalIgnoreCase))
-        {
-            text = WhatsAppBroadcastRules.ApplyCommissionTag(text, commissionLink);
-        }
-        else if (!WhatsAppBroadcastRules.ContainsHttpUrl(text))
-        {
-            text = WhatsAppBroadcastRules.ComposeDispatchMessage(text, commissionLink);
-        }
-        var interval = TimeSpan.FromSeconds(WhatsAppBroadcastRules.ClampIntervalSeconds(campaign.IntervalSeconds));
-        var sent = 0;
-
-        for (var index = 0; index < jids.Count; index++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var jid = jids[index];
-            try
+            var jids = WhatsAppBroadcastRules.DeserializeJids(campaign.TargetGroupJidsJson);
+            if (jids.Count == 0)
             {
-                var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
-                    ? await _evolution.SendTextMessageAsync(instanceName, jid, text, cancellationToken)
-                    : await _evolution.SendMediaMessageAsync(
-                        instanceName,
-                        jid,
-                        campaign.ImageUrl,
-                        text,
-                        cancellationToken);
-                if (ok)
+                campaign.Status = WhatsAppBroadcastStatuses.Failed;
+                campaign.Touch();
+                await SaveIfExistsAsync(campaign, jobToken);
+                return;
+            }
+
+            var instanceName = WhatsAppSessionRules.BuildInstanceName(campaign.UserId);
+            var integration = await _context.WhatsAppIntegrations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.UserId == campaign.UserId, jobToken);
+            if (integration is null)
+            {
+                campaign.Status = WhatsAppBroadcastStatuses.Failed;
+                campaign.Touch();
+                await SaveIfExistsAsync(campaign, jobToken);
+                return;
+            }
+
+            if (integration.UserId != campaign.UserId)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            IntegrationOwnershipGuard.EnsureOwner(integration.UserId, campaign.UserId);
+            var commissionLink = await _context.ShortAffiliateLinks
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(link => link.UserId == campaign.UserId && link.IsActive)
+                .OrderByDescending(link => link.CreatedAt)
+                .Select(link => link.AffiliateUrl)
+                .FirstOrDefaultAsync(jobToken);
+            var text = campaign.MessageText ?? string.Empty;
+            if (text.Contains(WhatsAppBroadcastRules.CommissionTag, StringComparison.OrdinalIgnoreCase))
+            {
+                text = WhatsAppBroadcastRules.ApplyCommissionTag(text, commissionLink);
+            }
+            else if (!WhatsAppBroadcastRules.ContainsHttpUrl(text))
+            {
+                text = WhatsAppBroadcastRules.ComposeDispatchMessage(text, commissionLink);
+            }
+
+            var interval = TimeSpan.FromSeconds(WhatsAppBroadcastRules.ClampIntervalSeconds(campaign.IntervalSeconds));
+            var sent = 0;
+
+            for (var index = 0; index < jids.Count; index++)
+            {
+                jobToken.ThrowIfCancellationRequested();
+                if (!await CampaignExistsAsync(campaign.Id, jobToken))
                 {
-                    sent++;
+                    return;
+                }
+
+                var jid = jids[index];
+                try
+                {
+                    var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
+                        ? await _evolution.SendTextMessageAsync(instanceName, jid, text, jobToken)
+                        : await _evolution.SendMediaMessageAsync(
+                            instanceName,
+                            jid,
+                            campaign.ImageUrl,
+                            text,
+                            jobToken);
+                    if (ok)
+                    {
+                        sent++;
+                    }
+                }
+                catch (OperationCanceledException) when (jobToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Falha no disparo WhatsApp. CampaignId={CampaignId} Jid={Jid}",
+                        campaign.Id,
+                        jid);
+                }
+
+                if (index < jids.Count - 1)
+                {
+                    await Task.Delay(interval, jobToken);
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Falha no disparo WhatsApp. CampaignId={CampaignId} Jid={Jid}",
-                    campaign.Id,
-                    jid);
-            }
 
-            if (index < jids.Count - 1)
+            campaign.Status = sent > 0 ? WhatsAppBroadcastStatuses.Completed : WhatsAppBroadcastStatuses.Failed;
+            campaign.Touch();
+            await SaveIfExistsAsync(campaign, CancellationToken.None);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            if (await CampaignExistsAsync(campaign.Id, CancellationToken.None))
             {
-                await Task.Delay(interval, cancellationToken);
+                campaign.Status = WhatsAppBroadcastStatuses.Cancelled;
+                campaign.Touch();
+                await SaveIfExistsAsync(campaign, CancellationToken.None);
             }
         }
+        finally
+        {
+            _jobs.Unregister(campaign.Id);
+        }
+    }
 
-        campaign.Status = sent > 0 ? WhatsAppBroadcastStatuses.Completed : WhatsAppBroadcastStatuses.Failed;
-        campaign.Touch();
-        await _context.SaveChangesAsync(cancellationToken);
+    private async Task<bool> CampaignExistsAsync(int campaignId, CancellationToken cancellationToken) =>
+        await _context.WhatsAppBroadcastCampaigns.AnyAsync(item => item.Id == campaignId, cancellationToken);
+
+    private async Task SaveIfExistsAsync(WhatsAppBroadcastCampaign campaign, CancellationToken cancellationToken)
+    {
+        if (!await CampaignExistsAsync(campaign.Id, cancellationToken) && campaign.Id > 0)
+        {
+            _context.Entry(campaign).State = EntityState.Detached;
+            return;
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _context.Entry(campaign).State = EntityState.Detached;
+        }
     }
 
     private static WhatsAppGroupDto MapGroup(WhatsAppGroup group) =>
@@ -398,9 +495,31 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             Status = campaign.Status,
             UiStatusLabel = WhatsAppBroadcastRules.ToUiStatus(campaign.Status),
             CanEdit = campaign.Status == WhatsAppBroadcastStatuses.Pending,
-            CanDelete = campaign.Status is WhatsAppBroadcastStatuses.Pending or WhatsAppBroadcastStatuses.Failed,
+            CanDelete = campaign.Status is WhatsAppBroadcastStatuses.Pending
+                or WhatsAppBroadcastStatuses.Failed
+                or WhatsAppBroadcastStatuses.Processing,
             CreatedAt = campaign.CreatedAt
         };
+    }
+
+    private static void ApplyCampaignPayload(
+        WhatsAppBroadcastCampaign campaign,
+        string title,
+        string message,
+        string commissionLink,
+        string? imageUrl,
+        IReadOnlyList<string> jids,
+        DateTime scheduledAt,
+        int intervalSeconds)
+    {
+        campaign.Title = title;
+        campaign.MessageText = WhatsAppBroadcastRules.ComposeDispatchMessage(message, commissionLink);
+        campaign.ImageUrl = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim();
+        campaign.TargetGroupJidsJson = WhatsAppBroadcastRules.SerializeJids(jids);
+        campaign.ScheduledAt = scheduledAt;
+        campaign.IntervalSeconds = WhatsAppBroadcastRules.ClampIntervalSeconds(intervalSeconds);
+        campaign.Status = WhatsAppBroadcastStatuses.Pending;
+        campaign.Touch();
     }
 
     private static WhatsAppBroadcastResponseDto Ok(

@@ -6,6 +6,7 @@
 @using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Components.Integrations
+@using TecFlow.SharedUi.Models
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
 @inject IJSRuntime Js
@@ -38,9 +39,9 @@
         <div class="alert alert-success py-2 small" role="status">@_info</div>
     }
 
-    <section class="card border-0 shadow-sm mb-4">
+    <section id="wa-campaign-form" class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h2 class="h5 fw-bold mb-3">@(_editingId is null ? "Nova campanha" : "Editar campanha")</h2>
+            <h2 class="h5 fw-bold mb-3">@(editingId is null ? "Nova campanha" : "Editar campanha")</h2>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-title">Título</label>
                 <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
@@ -103,13 +104,13 @@
             }
 
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
-                    @(_editingId is null ? "Agendar disparo" : "Salvar Alterações")
+                <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="SaveCampaignAsync">
+                    @(editingId is null ? "Agendar disparo" : "Salvar Alterações")
                 </button>
-                @if (_editingId is not null)
+                @if (editingId is not null)
                 {
                     <button type="button" class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelEditAsync">
-                        Cancelar edição
+                        Cancelar Edição
                     </button>
                 }
             </div>
@@ -210,7 +211,7 @@
                                             class="btn btn-outline-secondary"
                                             title="Editar"
                                             aria-label="Editar"
-                                            disabled="@(!item.CanEdit || _isBusy)"
+                                            disabled="@(!CanEditRow(item) || _isBusy)"
                                             @onclick="() => BeginEditAsync(item)">
                                         <i class="bi bi-pencil" aria-hidden="true"></i>
                                     </button>
@@ -218,8 +219,8 @@
                                             class="btn btn-outline-danger"
                                             title="Excluir"
                                             aria-label="Excluir"
-                                            disabled="@(!item.CanDelete || _isBusy)"
-                                            @onclick="() => DeleteAsync(item)">
+                                            disabled="@(!CanDeleteRow(item) || _isBusy)"
+                                            @onclick="() => AskDeleteAsync(item)">
                                         <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -239,6 +240,39 @@
             </div>
         </div>
     </section>
+
+    @if (_deleteTarget is not null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="wa-delete-title">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="wa-delete-title">Excluir agendamento</h2>
+                        <button type="button" class="btn-close" aria-label="Fechar" disabled="@_isBusy" @onclick="CancelDelete"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">Deseja realmente excluir este agendamento?</p>
+                        @if (!string.IsNullOrWhiteSpace(_deleteTarget.Title))
+                        {
+                            <p class="small text-muted mt-2 mb-0">@_deleteTarget.Title</p>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelDelete">Cancelar</button>
+                        <button type="button" class="btn btn-danger" disabled="@_isBusy" @onclick="ConfirmDeleteAsync">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_toastMessage))
+    {
+        <div class="toast show campaign-toast" role="status" aria-live="polite">
+            <div class="toast-body">@_toastMessage</div>
+        </div>
+    }
 </div>
 
 @code {
@@ -259,7 +293,10 @@
     private bool _isBusy;
     private string? _error;
     private string? _info;
-    private int? _editingId;
+    private int? editingId;
+    private WhatsAppBroadcastCampaignDto? _deleteTarget;
+    private string? _toastMessage;
+    private CancellationTokenSource? _toastCts;
     private int _pickerEpoch;
     private int _pageSize = 10;
     private int _pageIndex = 1;
@@ -386,7 +423,7 @@
         }
     }
 
-    private async Task ScheduleAsync()
+    private async Task SaveCampaignAsync()
     {
         _error = null;
         _info = null;
@@ -399,28 +436,50 @@
                 when = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
             }
 
-            var response = await WhatsAppApi.ScheduleCampaignAsync(new WhatsAppScheduleCampaignDto
+            ApiResult<WhatsAppBroadcastResponseDto> response;
+            if (editingId is > 0)
             {
-                Id = _editingId ?? 0,
-                Title = _title,
-                MessageText = _message,
-                CommissionLinkUrl = _commissionLink,
-                ImageUrl = _imageUrl,
-                TargetGroupJids = _selectedJids.ToList(),
-                ScheduledAt = when,
-                IntervalSeconds = _interval
-            });
+                response = await WhatsAppApi.UpdateCampaignAsync(new UpdateAgendamentoCommand
+                {
+                    Id = editingId.Value,
+                    Title = _title,
+                    MessageText = _message,
+                    CommissionLinkUrl = _commissionLink,
+                    ImageUrl = _imageUrl,
+                    TargetGroupJids = _selectedJids.ToList(),
+                    ScheduledAt = when,
+                    IntervalSeconds = _interval
+                });
+            }
+            else
+            {
+                response = await WhatsAppApi.ScheduleCampaignAsync(new WhatsAppScheduleCampaignDto
+                {
+                    Title = _title,
+                    MessageText = _message,
+                    CommissionLinkUrl = _commissionLink,
+                    ImageUrl = _imageUrl,
+                    TargetGroupJids = _selectedJids.ToList(),
+                    ScheduledAt = when,
+                    IntervalSeconds = _interval
+                });
+            }
+
             if (!response.Success || response.Data is null || !response.Data.Status)
             {
-                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível agendar.";
+                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível salvar o agendamento.";
                 return;
             }
 
             _campaigns.Clear();
             _campaigns.AddRange(response.Data.Campaigns);
             ClampPage();
-            _info = response.Data.Descricao ?? "Disparo agendado com sucesso.";
+            var success = editingId is > 0
+                ? (response.Data.Descricao ?? "Agendamento atualizado com sucesso.")
+                : (response.Data.Descricao ?? "Disparo agendado com sucesso.");
+            _info = success;
             await ResetFormAsync();
+            await ShowToastAsync(success);
         }
         finally
         {
@@ -430,14 +489,14 @@
 
     private async Task BeginEditAsync(WhatsAppBroadcastCampaignDto item)
     {
-        if (!item.CanEdit)
+        if (!CanEditRow(item))
         {
             _error = "Somente agendamentos pendentes podem ser editados.";
             return;
         }
 
         var (copy, link) = WhatsAppBroadcastRules.SplitDispatchMessage(item.MessageText);
-        _editingId = item.Id;
+        editingId = item.Id;
         _title = item.Title;
         _message = copy;
         _commissionLink = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
@@ -459,7 +518,7 @@
         _pickerEpoch++;
         _info = "Editando agendamento. Salve as alterações no formulário acima.";
         _error = null;
-        await Task.CompletedTask;
+        await Js.InvokeVoidAsync("tecFlowAppInterop.scrollIntoViewById", "wa-campaign-form", "start");
     }
 
     private async Task CancelEditAsync()
@@ -468,20 +527,28 @@
         _info = null;
     }
 
-    private async Task DeleteAsync(WhatsAppBroadcastCampaignDto item)
+    private Task AskDeleteAsync(WhatsAppBroadcastCampaignDto item)
     {
-        if (!item.CanDelete)
+        if (!CanDeleteRow(item))
         {
             _error = "Este agendamento não pode ser excluído.";
-            return;
+            return Task.CompletedTask;
         }
 
-        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Excluir o agendamento \"{item.Title}\"?");
-        if (!confirmed)
+        _deleteTarget = item;
+        return Task.CompletedTask;
+    }
+
+    private void CancelDelete() => _deleteTarget = null;
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deleteTarget is null)
         {
             return;
         }
 
+        var item = _deleteTarget;
         _error = null;
         _info = null;
         _isBusy = true;
@@ -497,12 +564,15 @@
             _campaigns.Clear();
             _campaigns.AddRange(response.Data.Campaigns);
             ClampPage();
-            if (_editingId == item.Id)
+            if (editingId == item.Id)
             {
                 await ResetFormAsync();
             }
 
-            _info = response.Data.Descricao ?? "Agendamento excluído.";
+            var success = response.Data.Descricao ?? "Agendamento excluído com sucesso.";
+            _info = success;
+            _deleteTarget = null;
+            await ShowToastAsync(success);
         }
         finally
         {
@@ -532,7 +602,7 @@
 
     private async Task ResetFormAsync()
     {
-        _editingId = null;
+        editingId = null;
         _title = string.Empty;
         _message = string.Empty;
         _commissionLink = string.Empty;
@@ -624,8 +694,40 @@
             WhatsAppBroadcastStatuses.Completed => "text-bg-success",
             WhatsAppBroadcastStatuses.Failed => "text-bg-danger",
             WhatsAppBroadcastStatuses.Processing => "text-bg-warning",
+            WhatsAppBroadcastStatuses.Cancelled => "text-bg-dark",
             _ => "text-bg-secondary"
         };
+
+    private static bool CanEditRow(WhatsAppBroadcastCampaignDto item) =>
+        item.CanEdit || item.Status == WhatsAppBroadcastStatuses.Pending;
+
+    private static bool CanDeleteRow(WhatsAppBroadcastCampaignDto item) =>
+        item.CanDelete
+        || item.Status is WhatsAppBroadcastStatuses.Pending
+            or WhatsAppBroadcastStatuses.Failed
+            or WhatsAppBroadcastStatuses.Processing;
+
+    private async Task ShowToastAsync(string message)
+    {
+        _toastMessage = message;
+        if (_toastCts is not null)
+        {
+            await _toastCts.CancelAsync();
+            _toastCts.Dispose();
+        }
+
+        _toastCts = new CancellationTokenSource();
+        var token = _toastCts.Token;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            _toastMessage = null;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -634,7 +736,13 @@
             await _pollCts.CancelAsync();
         }
 
+        if (_toastCts is not null)
+        {
+            await _toastCts.CancelAsync();
+        }
+
         _pollTimer?.Dispose();
         _pollCts?.Dispose();
+        _toastCts?.Dispose();
     }
 }

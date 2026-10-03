@@ -190,6 +190,7 @@ public static class WhatsAppBroadcastRules
             WhatsAppBroadcastStatuses.Processing => "Enviando",
             WhatsAppBroadcastStatuses.Completed => "Concluída",
             WhatsAppBroadcastStatuses.Failed => "Falhou",
+            WhatsAppBroadcastStatuses.Cancelled => "Cancelado",
             _ => "Agendada"
         };
 }

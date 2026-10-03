@@ -91,5 +91,19 @@ public class WhatsAppBroadcastRulesTests
         Assert.Equal("Enviando", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Processing));
         Assert.Equal("Concluída", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Completed));
         Assert.Equal("Falhou", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Failed));
+        Assert.Equal("Cancelado", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Cancelled));
+    }
+
+    [Fact]
+    public void JobCoordinator_ShouldCancelRegisteredCampaign()
+    {
+        var coordinator = new WhatsAppBroadcastJobCoordinator();
+        using var parent = new CancellationTokenSource();
+        var token = coordinator.Register(10, parent.Token);
+
+        Assert.True(coordinator.Cancel(10));
+        Assert.True(token.IsCancellationRequested);
+        coordinator.Unregister(10);
+        Assert.False(coordinator.Cancel(10));
     }
 }

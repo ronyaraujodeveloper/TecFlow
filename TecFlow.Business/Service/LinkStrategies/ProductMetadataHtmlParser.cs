@@ -25,6 +25,10 @@ public static class ProductMetadataHtmlParser
         @"itemprop\s*=\s*[""']name[""'][^>]*>(?<text>[^<]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex ItemPropImageRegex = new(
+        @"itemprop\s*=\s*[""']image[""'][^>]*(?:content|src|href)\s*=\s*[""'](?<url>[^""']+)[""']|(?:content|src|href)\s*=\s*[""'](?<url>[^""']+)[""'][^>]*itemprop\s*=\s*[""']image[""']",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex ItemPropPriceRegex = new(
         @"itemprop\s*=\s*[""']price[""'][^>]*(?:content\s*=\s*[""'](?<content>[^""']+)[""']|>(?<text>[^<]+))|(?:content\s*=\s*[""'](?<content>[^""']+)[""'][^>]*itemprop\s*=\s*[""']price[""'])",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -100,8 +104,10 @@ public static class ProductMetadataHtmlParser
 
         var image = FirstNonEmpty(
             ReadMeta(html, "og:image"),
+            ReadMeta(html, "og:image:secure_url"),
             ReadMeta(html, "twitter:image"),
-            ReadJsonLdString(html, "image"));
+            ReadJsonLdString(html, "image"),
+            ReadItemPropImage(html));
 
         return new ProductMetadataDto
         {
@@ -109,7 +115,7 @@ public static class ProductMetadataHtmlParser
                 !string.IsNullOrWhiteSpace(slugName) ? slugName : (CleanProductName(name) ?? fallback.ProductName),
                 255)),
             ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
-            ProductImageUrl = Truncate(CleanText(image), 500)
+            ProductImageUrl = NormalizePersistedProductImageUrl(image)
         };
     }
 
@@ -231,6 +237,35 @@ public static class ProductMetadataHtmlParser
 
     public static string? NormalizePersistedProductName(string? name) =>
         IsInvalidProductName(name) ? null : name!.Trim();
+
+    public static string? NormalizePersistedProductImageUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var trimmed = CleanText(url);
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return null;
+        }
+
+        if (trimmed.StartsWith("//", StringComparison.Ordinal))
+        {
+            trimmed = "https:" + trimmed;
+        }
+
+        trimmed = Truncate(trimmed, 500);
+        if (string.IsNullOrWhiteSpace(trimmed)
+            || !Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        return trimmed;
+    }
 
     public static string FormatBrl(decimal? price)
     {
@@ -369,6 +404,12 @@ public static class ProductMetadataHtmlParser
     {
         var match = ItemPropNameRegex.Match(html);
         return match.Success ? match.Groups["text"].Value : null;
+    }
+
+    private static string? ReadItemPropImage(string html)
+    {
+        var match = ItemPropImageRegex.Match(html);
+        return match.Success ? match.Groups["url"].Value : null;
     }
 
     private static string? ReadItemPropPrice(string html)

@@ -173,20 +173,28 @@ public class AffiliateLinksControllerTests
                 7,
                 "Cadeira gamer azul",
                 199.90m,
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                "https://cdn.example.com/cadeira.jpg",
+                true))
             .ReturnsAsync(true);
 
         var controller = CreateController(shortLink: shortLink.Object);
         var id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var action = await controller.UpdateMetadataAsync(
             id,
-            new UpdateAffiliateProductMetadataDto { ProductName = "Cadeira gamer azul", ProductPrice = 199.90m },
+            new UpdateAffiliateProductMetadataDto
+            {
+                ProductName = "Cadeira gamer azul",
+                ProductPrice = 199.90m,
+                ProductImageUrl = "https://cdn.example.com/cadeira.jpg"
+            },
             CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(action.Result);
         var body = Assert.IsType<UpdateAffiliateProductMetadataDto>(ok.Value);
         Assert.Equal("Cadeira gamer azul", body.ProductName);
         Assert.Equal(199.90m, body.ProductPrice);
+        Assert.Equal("https://cdn.example.com/cadeira.jpg", body.ProductImageUrl);
 
         var unauthorized = await CreateController(userId: null).UpdateMetadataAsync(
             id,

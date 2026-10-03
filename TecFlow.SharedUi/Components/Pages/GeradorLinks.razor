@@ -183,15 +183,20 @@
                                        value="@_editingModel.ProductPriceText"
                                        disabled="@_isSavingMetadata"
                                        @oninput="OnEditProductPriceChanged" />
-                                <button type="button"
-                                        class="btn btn-outline-primary"
-                                        title="Salvar"
-                                        aria-label="Salvar nome e preço"
-                                        disabled="@_isSavingMetadata"
-                                        @onclick="SaveLinkMetadataAsync">
-                                    <i class="bi bi-floppy" aria-hidden="true"></i>
-                                </button>
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <ProductImagePreview InputId="edit-link-product-image"
+                                                 ImageUrl="@_editingModel.ProductImageUrl"
+                                                 ImageUrlChanged="OnEditProductImageChanged" />
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm mt-2"
+                                    title="Salvar"
+                                    aria-label="Salvar nome, preço e imagem"
+                                    disabled="@_isSavingMetadata"
+                                    @onclick="SaveLinkMetadataAsync">
+                                <i class="bi bi-floppy" aria-hidden="true"></i> Salvar produto
+                            </button>
                         </div>
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                             <span class="fw-semibold small">Contas</span>
@@ -614,6 +619,7 @@
         _editingModel.ProductPriceText = item.ProductPrice.HasValue
             ? item.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
             : string.Empty;
+        _editingModel.ProductImageUrl = item.ProductImageUrl;
         _editSelectedStoreIds.Clear();
         foreach (var account in item.Accounts.Where(account => account.IsActive && account.StoreId > 0))
         {
@@ -640,6 +646,7 @@
         _editingModel.ProductName = null;
         _editingModel.ProductPrice = null;
         _editingModel.ProductPriceText = string.Empty;
+        _editingModel.ProductImageUrl = null;
         _editSelectedStoreIds.Clear();
     }
 
@@ -653,6 +660,9 @@
         _editingModel.ProductPriceText = e.Value?.ToString() ?? string.Empty;
         _editingModel.ProductPrice = TryParseEditPrice(_editingModel.ProductPriceText);
     }
+
+    private void OnEditProductImageChanged(string? url) =>
+        _editingModel.ProductImageUrl = url;
 
     private async Task SaveLinkMetadataAsync()
     {
@@ -673,15 +683,18 @@
                 new UpdateAffiliateProductMetadataDto
                 {
                     ProductName = _editingModel.ProductName,
-                    ProductPrice = price
+                    ProductPrice = price,
+                    ProductImageUrl = _editingModel.ProductImageUrl
                 });
 
             if (result.Success && result.Data is not null)
             {
                 _editItem.ProductName = result.Data.ProductName;
                 _editItem.ProductPrice = result.Data.ProductPrice;
+                _editItem.ProductImageUrl = result.Data.ProductImageUrl;
                 _editingModel.ProductName = result.Data.ProductName;
                 _editingModel.ProductPrice = result.Data.ProductPrice;
+                _editingModel.ProductImageUrl = result.Data.ProductImageUrl;
                 _editingModel.ProductPriceText = result.Data.ProductPrice.HasValue
                     ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                     : string.Empty;
@@ -690,6 +703,7 @@
                 {
                     _generatedResponse.ProductName = result.Data.ProductName;
                     _generatedResponse.ProductPrice = result.Data.ProductPrice;
+                    _generatedResponse.ProductImageUrl = result.Data.ProductImageUrl;
                 }
 
                 _historyRefreshToken++;
@@ -988,5 +1002,7 @@
         public decimal? ProductPrice { get; set; }
 
         public string ProductPriceText { get; set; } = string.Empty;
+
+        public string? ProductImageUrl { get; set; }
     }
 }

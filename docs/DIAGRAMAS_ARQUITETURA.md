@@ -138,9 +138,13 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
+  GEN -->|og:image twitter:image itemprop ProductImageUrl| SQL
+  UI[GeradorLinks + ProductImagePreview] -->|PUT metadata ProductImageUrl| AFFAPI[AffiliateLinksController]
+  AFFAPI -->|UpdateProductMetadataAsync| SLS[ShortLinkService]
   WAAGEN[WhatsAppAgendador.razor] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
+  WAAGEN -->|CommissionLinkPicker ProductImageUrl -> model.ImageUrl| HIST[AffiliateLinksController historico]
+  WAAGEN -->|ProductImagePreview 96px Remover Imagem| WABC
   WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC
-  WAAGEN -->|CommissionLinkPicker historico + PlatformBadgeHelper| HIST[AffiliateLinksController historico]
   WAAGEN -->|UpdateAgendamentoCommand PUT campanhas/{id}| WABC
   WAAGEN -->|ConfirmModal SolicitarExclusao| WABC
   WAAGEN -->|DELETE campanhas/{id} cancela job| WABC

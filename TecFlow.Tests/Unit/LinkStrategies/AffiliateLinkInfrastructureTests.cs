@@ -216,7 +216,9 @@ public class AffiliateLinkGenerationServiceTests
             int userId,
             string? productName,
             decimal? productPrice,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            string? productImageUrl = null,
+            bool updateImage = false) =>
             Task.FromResult(false);
     }
 

@@ -81,8 +81,9 @@
                 <div class="form-text">O link selecionado será anexado automaticamente ao final da mensagem no momento do disparo.</div>
             </div>
             <div class="mb-3">
-                <label class="form-label fw-semibold" for="wa-image">URL da imagem (opcional)</label>
-                <input id="wa-image" class="form-control" value="@model.ImageUrl" @oninput="e => model.ImageUrl = e.Value?.ToString() ?? string.Empty" />
+                <ProductImagePreview InputId="wa-image"
+                                     ImageUrl="@model.ImageUrl"
+                                     ImageUrlChanged="OnImageUrlChanged" />
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
@@ -649,8 +650,12 @@
     {
         _commissionPlatform = item.PlatformType;
         _commissionPlatformName = PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType);
+        model.ImageUrl = item.ProductImageUrl ?? string.Empty;
         return Task.CompletedTask;
     }
+
+    private void OnImageUrlChanged(string? url) =>
+        model.ImageUrl = url ?? string.Empty;
 
     private void OnCommissionLinkInput(ChangeEventArgs e)
     {

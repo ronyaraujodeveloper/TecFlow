@@ -55,7 +55,16 @@
                                     <button type="button"
                                             class="dropdown-item commission-link-item"
                                             @onclick="() => SelectLinkAsync(item)">
-                                        <span class="d-block fw-semibold text-truncate">@GetTitle(item)</span>
+                                        <span class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
+                                            {
+                                                <img src="@item.ProductImageUrl"
+                                                     alt=""
+                                                     class="product-preview-thumb product-preview-thumb--sm"
+                                                     loading="lazy" />
+                                            }
+                                            <span class="d-block fw-semibold text-truncate">@GetTitle(item)</span>
+                                        </span>
                                         <span class="d-block small">
                                             <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformType, item.PlatformName)">
                                                 @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)

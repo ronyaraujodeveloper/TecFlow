@@ -251,7 +251,9 @@ public sealed class ShortLinkService : IShortLinkService
         int userId,
         string? productName,
         decimal? productPrice,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? productImageUrl = null,
+        bool updateImage = false)
     {
         var entity = await _context.ShortAffiliateLinks
             .FirstOrDefaultAsync(
@@ -266,6 +268,11 @@ public sealed class ShortLinkService : IShortLinkService
         entity.ProductPrice = productPrice is > 0
             ? decimal.Round(productPrice.Value, 2, MidpointRounding.AwayFromZero)
             : null;
+        if (updateImage)
+        {
+            entity.ProductImageUrl = ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(productImageUrl);
+        }
+
         entity.Touch();
         await _context.SaveChangesAsync(cancellationToken);
         return true;
@@ -292,10 +299,10 @@ public sealed class ShortLinkService : IShortLinkService
 
         entity.ProductPrice = metadata.ProductPrice is > 0 ? metadata.ProductPrice : null;
 
-        if (!string.IsNullOrWhiteSpace(metadata.ProductImageUrl))
+        var image = ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(metadata.ProductImageUrl);
+        if (!string.IsNullOrWhiteSpace(image))
         {
-            var image = metadata.ProductImageUrl.Trim();
-            entity.ProductImageUrl = image.Length <= 500 ? image : image[..500];
+            entity.ProductImageUrl = image;
         }
     }
 

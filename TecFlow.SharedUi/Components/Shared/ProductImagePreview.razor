@@ -1,0 +1,95 @@
+﻿<div class="product-image-field">
+    @if (ShowInput)
+    {
+        <label class="form-label fw-semibold" for="@InputId">@Label</label>
+        <input id="@InputId"
+               class="form-control"
+               value="@ImageUrl"
+               placeholder="https://..."
+               @oninput="OnUrlChanged" />
+    }
+    <div class="d-flex align-items-start gap-3 mt-2">
+        <div class="@BoxClass" aria-label="Prévia da imagem do produto">
+            @if (HasVisibleImage)
+            {
+                <img src="@ImageUrl"
+                     alt="Prévia da imagem do produto"
+                     class="product-image-preview-img"
+                     loading="lazy"
+                     @onerror="OnImageError" />
+            }
+            else
+            {
+                <span class="product-image-preview-placeholder">Sem imagem</span>
+            }
+        </div>
+        @if (ShowRemove)
+        {
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    disabled="@string.IsNullOrWhiteSpace(ImageUrl)"
+                    @onclick="RemoveAsync">
+                Remover Imagem
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _loadFailed;
+    private string? _lastUrl;
+
+    [Parameter]
+    public string? ImageUrl { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ImageUrlChanged { get; set; }
+
+    [Parameter]
+    public string InputId { get; set; } = "product-image-url";
+
+    [Parameter]
+    public string Label { get; set; } = "URL da imagem (opcional)";
+
+    [Parameter]
+    public bool ShowInput { get; set; } = true;
+
+    [Parameter]
+    public bool ShowRemove { get; set; } = true;
+
+    [Parameter]
+    public string Size { get; set; } = "default";
+
+    private bool HasVisibleImage => !string.IsNullOrWhiteSpace(ImageUrl) && !_loadFailed;
+
+    private string BoxClass =>
+        string.Equals(Size, "sm", StringComparison.OrdinalIgnoreCase)
+            ? "product-image-preview-box product-image-preview-box--sm"
+            : "product-image-preview-box";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_lastUrl, ImageUrl, StringComparison.Ordinal))
+        {
+            _lastUrl = ImageUrl;
+            _loadFailed = false;
+        }
+    }
+
+    private Task OnUrlChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        ImageUrl = value;
+        _loadFailed = false;
+        return ImageUrlChanged.InvokeAsync(value);
+    }
+
+    private Task RemoveAsync()
+    {
+        ImageUrl = string.Empty;
+        _loadFailed = false;
+        return ImageUrlChanged.InvokeAsync(string.Empty);
+    }
+
+    private void OnImageError() => _loadFailed = true;
+}

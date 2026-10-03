@@ -157,6 +157,19 @@ Para evitar que botões de ação em listas/tabelas fiquem inativos após refato
 - **Binding de Eventos:** Garanta sempre o uso de `@onclick="() => AbrirModalExclusao(item.Id)"` para evitar chamadas automáticas durante a renderização.
 - **Renderização Reativa de Modais:** Ao disparar um modal customizado, altere o flag de exibição (ex: `isDeleteModalOpen = true`) e invoque `StateHasChanged()` explicitamente.
 - **Isolamento de Componente:** Mantenha o componente de Modal fora da tag `<table>` ou do loop `@foreach`, posicionando-o no final do arquivo `.razor`.
+
+## 🖼️ Gerenciamento e Auto-Preenchimento de Imagens de Produtos
+
+1. **Captura na Conversão de Links (`/links`):**
+   - Ao converter qualquer link de comissão, o crawler/parser do backend deve extrair a tag `og:image` ou a imagem principal da página do produto e armazená-la no campo `ProductImageUrl`.
+   - Se a imagem não for localizada automaticamente, o afiliado poderá informar ou editar a URL da imagem manualmente.
+
+2. **Preenchimento Automático no Agendador (`/integracoes/whatsapp/agendador`):**
+   - Ao selecionar um link de comissão no filtro/autocomplete da tela de agendamento, o campo `URL da imagem (opcional)` é preenchido automaticamente com a imagem salva do produto.
+   - O afiliado mantém total liberdade para alterar a URL ou limpá-la a qualquer momento antes de agendar.
+
+3. **Preview da Imagem na Interface:**
+   - O campo "URL da imagem" deve contar com um elemento de **Preview Visual (Thumbnail)** de 80x80px que exibe a foto em tempo real assim que uma URL válida estiver presente.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -608,9 +621,11 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 
-### 🟢 24. quando for converter qualquer link, pentar pegar o link principal da imagem e deixar guardado, para apresentar na tela Gerador de Links de Comissão, se não encontrar possibilitar que o afiliado coloque manualmente.
-
-já na tela integracoes/whatsapp/agendador, já preencher automatico quando o associado escolher o produto que ela vai querer. e possibilidade de ser trocado na hora do agendamento
+### 🟢 24. quando for converter qualquer link, tentar pegar o link principal da imagem e deixar guardado, para apresentar na tela Gerador de Links de Comissão, se não encontrar possibilitar que o afiliado coloque manualmente.
+- [x] Parser (`og:image`, `og:image:secure_url`, `twitter:image`, JSON-LD e `itemprop=image`) grava `ShortAffiliateLinks.ProductImageUrl`.
+- [x] Gerador de Links exibe a miniatura e permite editar/salvar a URL da imagem.
+- [x] Agendador WhatsApp preenche `model.ImageUrl` ao selecionar o produto no autocomplete.
+- [x] `ProductImagePreview`: thumbnail 96×96, placeholder “Sem imagem” (`onerror`) e botão Remover Imagem.
 
 ### 🟢 25. 
 

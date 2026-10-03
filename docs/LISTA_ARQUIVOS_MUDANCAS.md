@@ -878,6 +878,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppBroadcastRules.SplitDispatchMessage** — separa copy e URL ao editar.
 - [x] **WhatsAppBroadcastRules.ResolveEditScheduledAt** — na edição, preserva data futura e ajusta passada para +10 minutos.
 
+### Imagem do produto (captura, edição e preview)
+
+- [x] **ProductMetadataHtmlParser.cs** — `og:image`, `twitter:image`, JSON-LD e `itemprop=image`; `NormalizePersistedProductImageUrl`.
+- [x] **UpdateAffiliateProductMetadataDto.cs** — `ProductImageUrl` persistido em `UpdateProductMetadataAsync`.
+- [x] **ShortLinkService.cs** — grava/limpa `ProductImageUrl` na conversão e na edição manual.
+- [x] **AffiliateLinksController.cs** — PUT/PATCH metadata devolve a URL da imagem.
+- [x] **ProductImagePreview.razor** — input, thumbnail 96×96, placeholder e Remover Imagem.
+- [x] **LinkGeneratorResultPanel.razor** / **GeradorLinks.razor** / **HistoricoLinks.razor** — preview e edição da imagem.
+- [x] **WhatsAppAgendador.razor** — `OnCommissionLinkItemSelected` preenche `model.ImageUrl`.
+- [x] **CommissionLinkPicker.razor** — miniatura nas sugestões do autocomplete.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

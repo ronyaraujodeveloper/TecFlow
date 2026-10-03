@@ -1406,6 +1406,44 @@ html, body {
     border-radius: 0.45rem;
 }
 
+.product-image-preview-box {
+    width: 96px;
+    height: 96px;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+.product-image-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image-preview-placeholder {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-align: center;
+    padding: 0.35rem;
+    line-height: 1.2;
+}
+
+.product-image-preview-box--sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.45rem;
+}
+
+.product-image-preview-box--sm .product-image-preview-placeholder {
+    font-size: 0.5rem;
+    padding: 0.15rem;
+}
+
 .product-preview-price-input {
     max-width: 8.5rem;
 }

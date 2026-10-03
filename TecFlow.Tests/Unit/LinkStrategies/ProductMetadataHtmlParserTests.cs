@@ -23,6 +23,20 @@ public class ProductMetadataHtmlParserTests
     }
 
     [Fact]
+    public void Parse_ShouldReadItemPropImage_WhenOpenGraphIsMissing()
+    {
+        const string html = """
+            <html><body>
+            <img itemprop="image" src="https://cdn.example.com/itemprop.jpg" />
+            </body></html>
+            """;
+
+        var parsed = ProductMetadataHtmlParser.Parse(html, "https://www.kabum.com.br/produto/item-prop");
+
+        Assert.Equal("https://cdn.example.com/itemprop.jpg", parsed.ProductImageUrl);
+    }
+
+    [Fact]
     public void Parse_ShouldReadJsonLdProductNameAndPrice()
     {
         const string html = """

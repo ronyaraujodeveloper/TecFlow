@@ -145,12 +145,16 @@ public class AffiliateLinksController : ControllerBase
         }
 
         request ??= new UpdateAffiliateProductMetadataDto();
+        var imageUrl = TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser
+            .NormalizePersistedProductImageUrl(request.ProductImageUrl);
         var updated = await _shortLinkService.UpdateProductMetadataAsync(
             affiliateLinkId,
             userId,
             request.ProductName,
             request.ProductPrice,
-            cancellationToken);
+            cancellationToken,
+            imageUrl,
+            updateImage: true);
         if (!updated)
         {
             return NotFound();
@@ -161,7 +165,8 @@ public class AffiliateLinksController : ControllerBase
             ProductName = TecFlow.Business.Service.LinkStrategies.ProductMetadataHtmlParser.NormalizePersistedProductName(request.ProductName),
             ProductPrice = request.ProductPrice is > 0
                 ? decimal.Round(request.ProductPrice.Value, 2, MidpointRounding.AwayFromZero)
-                : null
+                : null,
+            ProductImageUrl = imageUrl
         });
     }
 

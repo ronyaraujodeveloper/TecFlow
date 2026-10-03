@@ -15,3 +15,4 @@
 [2026-10-01 22:41:05]feat(whatsapp): MultiSelect de grupos com admin real e atalhos
 [2026-10-01 23:06:30]feat(whatsapp): edita e pagina lista de disparos
 [2026-10-03 18:47:15]feat(whatsapp): confirma e atualiza agendamentos
+[2026-10-03 19:04:02]fix(whatsapp): habilita clique nas acoes do agendador

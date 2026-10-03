@@ -370,6 +370,20 @@ html, body {
     color: #fff;
 }
 
+.campaign-actions {
+    position: relative;
+    z-index: 2;
+}
+
+.campaign-actions .btn {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.campaign-actions .btn i {
+    pointer-events: none;
+}
+
 .conexoes-page .conexoes-tabs .nav-link {
     font-weight: 600;
     color: #4b5563;

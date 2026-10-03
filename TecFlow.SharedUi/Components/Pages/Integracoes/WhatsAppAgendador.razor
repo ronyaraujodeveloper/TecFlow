@@ -44,7 +44,7 @@
             <h2 class="h5 fw-bold mb-3">@(editingId is null ? "Nova campanha" : "Editar campanha")</h2>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-title">Título</label>
-                <input id="wa-title" class="form-control" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" />
+                <input id="wa-title" class="form-control" value="@model.Titulo" @oninput="e => model.Titulo = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-message">Mensagem</label>
@@ -52,7 +52,7 @@
                           class="form-control @(_messageUrlWarning is null ? string.Empty : "is-invalid")"
                           rows="4"
                           placeholder="Escreva somente o texto da oferta. URLs devem ir no campo Link de Comissão."
-                          @oninput="OnMessageInput">@_message</textarea>
+                          @oninput="OnMessageInput">@model.Mensagem</textarea>
                 @if (!string.IsNullOrWhiteSpace(_messageUrlWarning))
                 {
                     <div class="invalid-feedback d-block">@_messageUrlWarning</div>
@@ -67,22 +67,22 @@
                 <label class="form-label fw-semibold" for="wa-commission-link">Link de Comissão</label>
                 <input id="wa-commission-link"
                        class="form-control font-monospace"
-                       value="@_commissionLink"
-                       @oninput="e => _commissionLink = e.Value?.ToString() ?? string.Empty" />
+                       value="@model.LinkComissaoUrl"
+                       @oninput="e => model.LinkComissaoUrl = e.Value?.ToString() ?? string.Empty" />
                 <div class="form-text">O link selecionado será anexado automaticamente ao final da mensagem no momento do disparo.</div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold" for="wa-image">URL da imagem (opcional)</label>
-                <input id="wa-image" class="form-control" value="@_imageUrl" @oninput="e => _imageUrl = e.Value?.ToString() ?? string.Empty" />
+                <input id="wa-image" class="form-control" value="@model.ImageUrl" @oninput="e => model.ImageUrl = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="wa-when">Data e hora</label>
-                    <input id="wa-when" type="datetime-local" class="form-control" value="@_scheduledLocal" @oninput="e => _scheduledLocal = e.Value?.ToString() ?? string.Empty" />
+                    <input id="wa-when" type="datetime-local" class="form-control" value="@model.DataHoraLocal" @oninput="e => model.DataHoraLocal = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="wa-interval">Intervalo entre grupos</label>
-                    <select id="wa-interval" class="form-select" value="@_interval" @onchange="OnIntervalChanged">
+                    <select id="wa-interval" class="form-select" value="@model.IntervaloSegundos" @onchange="OnIntervalChanged">
                         <option value="15">15 segundos</option>
                         <option value="30">30 segundos</option>
                         <option value="45">45 segundos</option>
@@ -100,7 +100,7 @@
                 <WhatsAppGroupPicker @key="_pickerEpoch"
                                      Groups="_groups"
                                      Campaigns="_campaigns"
-                                     SelectedJids="_selectedJids" />
+                                     SelectedJids="model.GruposSelecionados" />
             }
 
             <div class="d-flex flex-wrap gap-2">
@@ -206,21 +206,21 @@
                                 </div>
                             </td>
                             <td class="text-end">
-                                <div class="btn-group btn-group-sm" role="group">
+                                <div class="btn-group btn-group-sm campaign-actions" role="group">
                                     <button type="button"
                                             class="btn btn-outline-secondary"
                                             title="Editar"
                                             aria-label="Editar"
-                                            disabled="@(!CanEditRow(item) || _isBusy)"
-                                            @onclick="() => BeginEditAsync(item)">
+                                            @onclick:stopPropagation="true"
+                                            @onclick="async () => await EditarAgendamento(item)">
                                         <i class="bi bi-pencil" aria-hidden="true"></i>
                                     </button>
                                     <button type="button"
                                             class="btn btn-outline-danger"
                                             title="Excluir"
                                             aria-label="Excluir"
-                                            disabled="@(!CanDeleteRow(item) || _isBusy)"
-                                            @onclick="() => AskDeleteAsync(item)">
+                                            @onclick:stopPropagation="true"
+                                            @onclick="() => ConfirmarExclusao(item.Id)">
                                         <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -241,32 +241,6 @@
         </div>
     </section>
 
-    @if (_deleteTarget is not null)
-    {
-        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="wa-delete-title">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 class="modal-title h5" id="wa-delete-title">Excluir agendamento</h2>
-                        <button type="button" class="btn-close" aria-label="Fechar" disabled="@_isBusy" @onclick="CancelDelete"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-0">Deseja realmente excluir este agendamento?</p>
-                        @if (!string.IsNullOrWhiteSpace(_deleteTarget.Title))
-                        {
-                            <p class="small text-muted mt-2 mb-0">@_deleteTarget.Title</p>
-                        }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelDelete">Cancelar</button>
-                        <button type="button" class="btn btn-danger" disabled="@_isBusy" @onclick="ConfirmDeleteAsync">Excluir</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-backdrop fade show"></div>
-    }
-
     @if (!string.IsNullOrWhiteSpace(_toastMessage))
     {
         <div class="toast show campaign-toast" role="status" aria-live="polite">
@@ -279,22 +253,15 @@
     private static readonly int[] PageSizes = [10, 25, 50, 75, 100];
     private readonly List<WhatsAppGroupDto> _groups = [];
     private readonly List<WhatsAppBroadcastCampaignDto> _campaigns = [];
-    private readonly HashSet<string> _selectedJids = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CampaignFormModel model = new();
     private CommissionLinkPicker? _linkPicker;
     private PeriodicTimer? _pollTimer;
     private CancellationTokenSource? _pollCts;
-    private string _title = string.Empty;
-    private string _message = string.Empty;
-    private string _commissionLink = string.Empty;
     private string? _messageUrlWarning;
-    private string _imageUrl = string.Empty;
-    private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
-    private int _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
     private bool _isBusy;
     private string? _error;
     private string? _info;
     private int? editingId;
-    private WhatsAppBroadcastCampaignDto? _deleteTarget;
     private string? _toastMessage;
     private CancellationTokenSource? _toastCts;
     private int _pickerEpoch;
@@ -431,7 +398,7 @@
         try
         {
             DateTime? when = null;
-            if (DateTime.TryParse(_scheduledLocal, out var parsed))
+            if (DateTime.TryParse(model.DataHoraLocal, out var parsed))
             {
                 when = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
             }
@@ -442,26 +409,26 @@
                 response = await WhatsAppApi.UpdateCampaignAsync(new UpdateAgendamentoCommand
                 {
                     Id = editingId.Value,
-                    Title = _title,
-                    MessageText = _message,
-                    CommissionLinkUrl = _commissionLink,
-                    ImageUrl = _imageUrl,
-                    TargetGroupJids = _selectedJids.ToList(),
+                    Title = model.Titulo,
+                    MessageText = model.Mensagem,
+                    CommissionLinkUrl = model.LinkComissaoUrl,
+                    ImageUrl = model.ImageUrl,
+                    TargetGroupJids = model.GruposSelecionados.ToList(),
                     ScheduledAt = when,
-                    IntervalSeconds = _interval
+                    IntervalSeconds = model.IntervaloSegundos
                 });
             }
             else
             {
                 response = await WhatsAppApi.ScheduleCampaignAsync(new WhatsAppScheduleCampaignDto
                 {
-                    Title = _title,
-                    MessageText = _message,
-                    CommissionLinkUrl = _commissionLink,
-                    ImageUrl = _imageUrl,
-                    TargetGroupJids = _selectedJids.ToList(),
+                    Title = model.Titulo,
+                    MessageText = model.Mensagem,
+                    CommissionLinkUrl = model.LinkComissaoUrl,
+                    ImageUrl = model.ImageUrl,
+                    TargetGroupJids = model.GruposSelecionados.ToList(),
                     ScheduledAt = when,
-                    IntervalSeconds = _interval
+                    IntervalSeconds = model.IntervaloSegundos
                 });
             }
 
@@ -487,38 +454,49 @@
         }
     }
 
-    private async Task BeginEditAsync(WhatsAppBroadcastCampaignDto item)
+    private async Task EditarAgendamento(WhatsAppBroadcastCampaignDto item)
     {
-        if (!CanEditRow(item))
-        {
-            _error = "Somente agendamentos pendentes podem ser editados.";
-            return;
-        }
-
         var (copy, link) = WhatsAppBroadcastRules.SplitDispatchMessage(item.MessageText);
         editingId = item.Id;
-        _title = item.Title;
-        _message = copy;
-        _commissionLink = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
-        _messageUrlWarning = null;
-        _imageUrl = item.ImageUrl ?? string.Empty;
-        _scheduledLocal = item.ScheduledAt.ToLocalTime().ToString("yyyy-MM-ddTHH:mm");
-        _interval = WhatsAppBroadcastRules.ClampIntervalSeconds(item.IntervalSeconds);
-        if (_interval is not 15 and not 30 and not 45 and not 60)
+        model.Titulo = item.Title;
+        model.Mensagem = copy;
+        model.LinkComissaoUrl = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
+        model.ImageUrl = item.ImageUrl ?? string.Empty;
+        model.DataHora = item.ScheduledAt.ToLocalTime();
+        model.DataHoraLocal = model.DataHora.ToString("yyyy-MM-ddTHH:mm");
+        model.IntervaloSegundos = WhatsAppBroadcastRules.ClampIntervalSeconds(item.IntervalSeconds);
+        if (model.IntervaloSegundos is not 15 and not 30 and not 45 and not 60)
         {
-            _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+            model.IntervaloSegundos = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
         }
 
-        _selectedJids.Clear();
+        model.GruposSelecionados.Clear();
         foreach (var jid in item.TargetGroupJids)
         {
-            _selectedJids.Add(jid);
+            model.GruposSelecionados.Add(jid);
         }
 
         _pickerEpoch++;
+        _messageUrlWarning = null;
         _info = "Editando agendamento. Salve as alterações no formulário acima.";
         _error = null;
-        await Js.InvokeVoidAsync("tecFlowAppInterop.scrollIntoViewById", "wa-campaign-form", "start");
+        StateHasChanged();
+        try
+        {
+            await Js.InvokeVoidAsync("scrollToTop");
+        }
+        catch (JSException)
+        {
+            await Js.InvokeVoidAsync("window.scrollTo", 0, 0);
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("tecFlowAppInterop.scrollIntoViewById", "wa-campaign-form", "start");
+        }
+        catch (JSException)
+        {
+        }
     }
 
     private async Task CancelEditAsync()
@@ -527,51 +505,42 @@
         _info = null;
     }
 
-    private Task AskDeleteAsync(WhatsAppBroadcastCampaignDto item)
+    private async Task ConfirmarExclusao(int id)
     {
-        if (!CanDeleteRow(item))
-        {
-            _error = "Este agendamento não pode ser excluído.";
-            return Task.CompletedTask;
-        }
-
-        _deleteTarget = item;
-        return Task.CompletedTask;
-    }
-
-    private void CancelDelete() => _deleteTarget = null;
-
-    private async Task ConfirmDeleteAsync()
-    {
-        if (_deleteTarget is null)
+        var confirmed = await Js.InvokeAsync<bool>("confirm", "Deseja realmente excluir este agendamento?");
+        if (!confirmed)
         {
             return;
         }
 
-        var item = _deleteTarget;
         _error = null;
         _info = null;
         _isBusy = true;
         try
         {
-            var response = await WhatsAppApi.DeleteCampaignAsync(item.Id);
+            var response = await WhatsAppApi.DeleteCampaignAsync(id);
             if (!response.Success || response.Data is null || !response.Data.Status)
             {
                 _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível excluir.";
                 return;
             }
 
-            _campaigns.Clear();
-            _campaigns.AddRange(response.Data.Campaigns);
+            _campaigns.RemoveAll(item => item.Id == id);
+            if (response.Data.Campaigns.Count > 0)
+            {
+                _campaigns.Clear();
+                _campaigns.AddRange(response.Data.Campaigns);
+            }
+
             ClampPage();
-            if (editingId == item.Id)
+            if (editingId == id)
             {
                 await ResetFormAsync();
             }
 
+            StateHasChanged();
             var success = response.Data.Descricao ?? "Agendamento excluído com sucesso.";
             _info = success;
-            _deleteTarget = null;
             await ShowToastAsync(success);
         }
         finally
@@ -586,31 +555,25 @@
         if (WhatsAppBroadcastRules.ContainsHttpUrl(value))
         {
             _messageUrlWarning = "A mensagem deve conter só o texto da oferta. URLs vão no campo Link de Comissão.";
-            _message = WhatsAppBroadcastRules.StripHttpUrls(value);
+            model.Mensagem = WhatsAppBroadcastRules.StripHttpUrls(value);
             return;
         }
 
         _messageUrlWarning = null;
-        _message = value;
+        model.Mensagem = value;
     }
 
     private Task OnCommissionLinkSelected(string url)
     {
-        _commissionLink = url ?? string.Empty;
+        model.LinkComissaoUrl = url ?? string.Empty;
         return Task.CompletedTask;
     }
 
     private async Task ResetFormAsync()
     {
         editingId = null;
-        _title = string.Empty;
-        _message = string.Empty;
-        _commissionLink = string.Empty;
+        model.Reset();
         _messageUrlWarning = null;
-        _imageUrl = string.Empty;
-        _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
-        _interval = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
-        _selectedJids.Clear();
         _pickerEpoch++;
         if (_linkPicker is not null)
         {
@@ -622,7 +585,7 @@
     {
         if (int.TryParse(e.Value?.ToString(), out var value))
         {
-            _interval = value;
+            model.IntervaloSegundos = value;
         }
     }
 
@@ -698,15 +661,6 @@
             _ => "text-bg-secondary"
         };
 
-    private static bool CanEditRow(WhatsAppBroadcastCampaignDto item) =>
-        item.CanEdit || item.Status == WhatsAppBroadcastStatuses.Pending;
-
-    private static bool CanDeleteRow(WhatsAppBroadcastCampaignDto item) =>
-        item.CanDelete
-        || item.Status is WhatsAppBroadcastStatuses.Pending
-            or WhatsAppBroadcastStatuses.Failed
-            or WhatsAppBroadcastStatuses.Processing;
-
     private async Task ShowToastAsync(string message)
     {
         _toastMessage = message;
@@ -744,5 +698,36 @@
         _pollTimer?.Dispose();
         _pollCts?.Dispose();
         _toastCts?.Dispose();
+    }
+
+    private sealed class CampaignFormModel
+    {
+        public string Titulo { get; set; } = string.Empty;
+
+        public string Mensagem { get; set; } = string.Empty;
+
+        public string LinkComissaoUrl { get; set; } = string.Empty;
+
+        public string ImageUrl { get; set; } = string.Empty;
+
+        public DateTime DataHora { get; set; } = DateTime.Now.AddMinutes(5);
+
+        public string DataHoraLocal { get; set; } = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+
+        public int IntervaloSegundos { get; set; } = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+
+        public HashSet<string> GruposSelecionados { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Reset()
+        {
+            Titulo = string.Empty;
+            Mensagem = string.Empty;
+            LinkComissaoUrl = string.Empty;
+            ImageUrl = string.Empty;
+            DataHora = DateTime.Now.AddMinutes(5);
+            DataHoraLocal = DataHora.ToString("yyyy-MM-ddTHH:mm");
+            IntervaloSegundos = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
+            GruposSelecionados.Clear();
+        }
     }
 }

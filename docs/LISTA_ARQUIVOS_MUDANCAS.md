@@ -862,11 +862,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppGroupPicker.razor** — MultiSelect com chips, atalhos 5/10/15/20 (LocalStorage) e filtro “sou Admin”.
 - [x] **EvolutionApiService.DetectAdmin** — `IsAdmin` só se o número conectado for admin/superadmin do grupo.
 - [x] **TelegramAgendador.razor** — mesmo seletor e reset após agendar.
-- [x] **app-interop.js** — `insertAtCursor` para colar o link na posição do cursor.
+- [x] **app-interop.js** — `insertAtCursor` e `scrollToTop` no formulário de campanha.
 
 ### Agendador WhatsApp — lista de disparos
 
-- [x] **WhatsAppAgendador.razor** — coluna Ações (editar/excluir), filtros, paginação 10–100, popover de grupos e polling de status.
+- [x] **WhatsAppAgendador.razor** — Ações sempre clicáveis (`EditarAgendamento` / `ConfirmarExclusao`), sem `disabled`; scroll `scrollToTop`.
 - [x] **UpdateAgendamentoCommand.cs** — comando PUT de atualização de agendamento pendente.
 - [x] **WhatsAppBroadcastJobCoordinator.cs** — cancela job em processamento ao excluir/editar.
 - [x] **WhatsAppBroadcastController** — `PUT /api/integracoes/whatsapp/campanhas/{id}`, `DELETE` cancela o worker.

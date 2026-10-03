@@ -28,6 +28,11 @@
         return { success: false, cancelled: false, method: "fallback" };
     },
 
+    scrollToTop: function () {
+        window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        return true;
+    },
+
     scrollIntoViewById: function (elementId, block) {
         const element = document.getElementById(elementId);
         if (!element) {
@@ -87,3 +92,5 @@
         }
     }
 };
+
+window.scrollToTop = window.tecFlowAppInterop.scrollToTop;

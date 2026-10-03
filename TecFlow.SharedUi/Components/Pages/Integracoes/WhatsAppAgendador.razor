@@ -10,7 +10,6 @@
 @using TecFlow.SharedUi.Models
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
-@inject IModalService ModalService
 @inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
@@ -234,7 +233,7 @@
                                             title="Excluir"
                                             aria-label="Excluir"
                                             @onclick:stopPropagation="true"
-                                            @onclick="() => ConfirmarExclusao(item.Id)">
+                                            @onclick="() => SolicitarExclusao(item)">
                                         <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -261,6 +260,15 @@
             <div class="toast-body">@_toastMessage</div>
         </div>
     }
+
+    <ConfirmModal IsOpen="isDeleteModalOpen"
+                  Title="Confirmar exclusão"
+                  Message="@DeleteModalMessage"
+                  ConfirmText="Excluir Agendamento"
+                  CancelText="Cancelar"
+                  Kind="ConfirmDialogKind.Danger"
+                  OnConfirm="ConfirmarExclusao"
+                  OnCancel="CancelarExclusao" />
 </div>
 
 @code {
@@ -277,6 +285,8 @@
     private string? _info;
     private MarketplaceType? _commissionPlatform;
     private string? _commissionPlatformName;
+    private bool isDeleteModalOpen;
+    private WhatsAppBroadcastCampaignDto? itemParaExcluir;
     private int? editingId;
     private string? _toastMessage;
     private CancellationTokenSource? _toastCts;
@@ -328,6 +338,9 @@
 
     private List<WhatsAppBroadcastCampaignDto> PagedCampaigns =>
         FilteredCampaigns.Skip((_pageIndex - 1) * _pageSize).Take(_pageSize).ToList();
+
+    private string DeleteModalMessage =>
+        $"Tem certeza que deseja excluir o agendamento '{itemParaExcluir?.Title ?? "este agendamento"}'? Esta ação não poderá ser desfeita.";
 
     private bool HasCommissionPlatformBadge =>
         !string.IsNullOrWhiteSpace(model.LinkComissaoUrl)
@@ -545,18 +558,21 @@
         _info = null;
     }
 
-    private async Task ConfirmarExclusao(int id)
+    private void SolicitarExclusao(WhatsAppBroadcastCampaignDto item)
     {
-        var title = _campaigns.FirstOrDefault(item => item.Id == id)?.Title ?? "este agendamento";
-        var confirmed = await ModalService.ConfirmDeleteAsync(
-            title,
-            "agendamento",
-            "Excluir Agendamento");
-        if (!confirmed)
+        itemParaExcluir = item;
+        isDeleteModalOpen = true;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmarExclusao()
+    {
+        if (itemParaExcluir is null)
         {
             return;
         }
 
+        var id = itemParaExcluir.Id;
         _error = null;
         _info = null;
         _isBusy = true;
@@ -582,15 +598,30 @@
                 await ResetFormAsync();
             }
 
-            StateHasChanged();
-            var success = response.Data.Descricao ?? "Agendamento excluído com sucesso.";
+            var success = response.Data.Descricao ?? "Agendamento excluído com sucesso!";
             _info = success;
-            await ShowToastAsync(success);
+            _ = ShowToastAsync(success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao excluir agendamento WhatsApp. Id={CampaignId}", id);
+            _error = $"Erro ao excluir: {ex.Message}";
+            _ = ShowToastAsync(_error);
         }
         finally
         {
+            isDeleteModalOpen = false;
+            itemParaExcluir = null;
             _isBusy = false;
+            StateHasChanged();
         }
+    }
+
+    private void CancelarExclusao()
+    {
+        isDeleteModalOpen = false;
+        itemParaExcluir = null;
+        StateHasChanged();
     }
 
     private void OnMessageInput(ChangeEventArgs e)

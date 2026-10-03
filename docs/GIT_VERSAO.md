@@ -19,3 +19,4 @@
 [2026-10-03 19:29:03]feat(ui): padroniza badges coloridas de plataforma
 [2026-10-03 19:36:30]feat(ui): substitui confirm nativo por modal global
 [2026-10-03 19:47:37]fix(whatsapp): preserva data futura na edicao
+[2026-10-03 19:54:51]fix(whatsapp): abre modal de exclusao na propria tela

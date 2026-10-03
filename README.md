@@ -604,7 +604,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
   - Nova campanha: Título, Mensagem (sem URL), seletor de links com badges coloridas e campo Link de Comissão com badge da plataforma; o disparo concatena copy + URL.
   - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
-  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; data futura é preservada e data passada vai para +10 minutos; lixeira confirma no `ConfirmDialogHost` (`IModalService`) e cancela o job do worker.
+  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; data futura é preservada e data passada vai para +10 minutos; lixeira abre `ConfirmModal` no próprio componente e exclui o registro.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

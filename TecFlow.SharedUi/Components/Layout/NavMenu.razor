@@ -95,49 +95,55 @@
             <div class="portal-nav-group">
                 <button type="button"
                         class="portal-nav-link portal-nav-group-toggle @ProximosActiveClass"
-                        aria-expanded="@isProximosDesenvolvimentosOpen"
-                        @onclick="ToggleProximosDesenvolvimentos"
-                        @onclick:preventDefault="true">
-                    <i class="bi bi-hourglass-split portal-nav-icon" aria-hidden="true"></i>
-                    <span class="portal-nav-link-label">Próximos Desenvolvimentos</span>
-                    <i class="bi bi-chevron-down portal-nav-caret transform transition-transform duration-200 @(isProximosDesenvolvimentosOpen ? "rotate-180" : "")"
+                        aria-expanded="@isProximosOpen"
+                        @onclick="ToggleProximosSubmenu"
+                        @onclick:preventDefault="true"
+                        @onclick:stopPropagation="true">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-rocket-takeoff portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Próximos Desenvolvimentos</span>
+                    </span>
+                    <i class="bi bi-chevron-down portal-nav-caret transform transition-transform duration-200 @(isProximosOpen ? "rotate-180" : "")"
                        aria-hidden="true"></i>
                 </button>
-                <div class="portal-nav-collapse @(isProximosDesenvolvimentosOpen ? "block" : "hidden") transition-all duration-300">
-                    <a href="/dashboard" class="portal-nav-link portal-nav-sublink @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
-                        <i class="bi bi-speedometer2 portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Dashboard</span>
-                    </a>
-                    <a href="/dashboard#campanhas" class="portal-nav-link portal-nav-sublink" @onclick="NotifyNavigate">
-                        <i class="bi bi-megaphone portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Campanhas</span>
-                    </a>
-                    <a href="/dashboard#metricas" class="portal-nav-link portal-nav-sublink" @onclick="NotifyNavigate">
-                        <i class="bi bi-graph-up portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Métricas / Comissões</span>
-                    </a>
-                    <a href="/engajamento/fila" class="portal-nav-link portal-nav-sublink @GetActiveClass("/engajamento/fila")" @onclick="NotifyNavigate">
-                        <i class="bi bi-inbox portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Fila de engajamento</span>
-                        <span class="portal-nav-soon">Em breve</span>
-                    </a>
-                    <a href="/conciliacao/financeira" class="portal-nav-link portal-nav-sublink @GetActiveClass("/conciliacao/financeira")" @onclick="NotifyNavigate">
-                        <i class="bi bi-cash-stack portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Conciliação financeira</span>
-                    </a>
-                    <a href="/propaganda/produtos" class="portal-nav-link portal-nav-sublink @GetActiveClass("/propaganda/produtos")" @onclick="NotifyNavigate">
-                        <i class="bi bi-tag portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Produtos propaganda</span>
-                    </a>
-                    <a href="/saude/painel" class="portal-nav-link portal-nav-sublink @GetActiveClass("/saude/painel")" @onclick="NotifyNavigate">
-                        <i class="bi bi-heart-pulse portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Saúde do sistema</span>
-                    </a>
-                    <a href="/minha-conta" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minha-conta", alsoExact: ContaAliasPaths)" @onclick="NotifyNavigate">
-                        <i class="bi bi-shield-lock portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Minha conta / Segurança</span>
-                    </a>
-                </div>
+                @if (isProximosOpen)
+                {
+                    <div class="portal-nav-collapse block transition-all">
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard" @onclick="NotifyNavigate">
+                            <i class="bi bi-speedometer2 portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Dashboard</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard#campanhas" @onclick="NotifyNavigate">
+                            <i class="bi bi-megaphone portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Campanhas</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard#metricas" @onclick="NotifyNavigate">
+                            <i class="bi bi-graph-up portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Métricas / Comissões</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/engajamento/fila" @onclick="NotifyNavigate">
+                            <i class="bi bi-inbox portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Fila de engajamento</span>
+                            <span class="portal-nav-soon">Em breve</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/conciliacao/financeira" @onclick="NotifyNavigate">
+                            <i class="bi bi-cash-stack portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Conciliação financeira</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/propaganda/produtos" @onclick="NotifyNavigate">
+                            <i class="bi bi-tag portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Produtos propaganda</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/saude/painel" @onclick="NotifyNavigate">
+                            <i class="bi bi-heart-pulse portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Saúde do sistema</span>
+                        </NavLink>
+                        <NavLink class="portal-nav-link portal-nav-sublink" href="/minha-conta" @onclick="NotifyNavigate">
+                            <i class="bi bi-shield-lock portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">Minha conta / Segurança</span>
+                        </NavLink>
+                    </div>
+                }
             </div>
         </Authorized>
         <NotAuthorized>
@@ -209,7 +215,7 @@
     private bool _whatsAppOpen;
     private bool _telegramOpen;
     private bool _integracoesOpen = true;
-    private bool isProximosDesenvolvimentosOpen;
+    private bool isProximosOpen;
     private bool _proximosToggleInitialized;
     private string? _proximosRouteWhenOpened;
 
@@ -237,7 +243,7 @@
         OpenGroupsForCurrentPath();
         if (IsProximosPath() && !string.Equals(_proximosRouteWhenOpened, CurrentPath(), StringComparison.OrdinalIgnoreCase))
         {
-            isProximosDesenvolvimentosOpen = true;
+            isProximosOpen = true;
             _proximosRouteWhenOpened = CurrentPath();
         }
         else if (!IsProximosPath())
@@ -278,7 +284,7 @@
             return;
         }
 
-        isProximosDesenvolvimentosOpen = true;
+        isProximosOpen = true;
         _proximosRouteWhenOpened = CurrentPath();
     }
 
@@ -290,12 +296,15 @@
 
     private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
 
-    private void ToggleProximosDesenvolvimentos()
+    private void ToggleProximosSubmenu()
     {
-        isProximosDesenvolvimentosOpen = !isProximosDesenvolvimentosOpen;
-        _proximosRouteWhenOpened = isProximosDesenvolvimentosOpen && IsProximosPath()
-            ? CurrentPath()
-            : _proximosRouteWhenOpened;
+        isProximosOpen = !isProximosOpen;
+        if (isProximosOpen && IsProximosPath())
+        {
+            _proximosRouteWhenOpened = CurrentPath();
+        }
+
+        StateHasChanged();
     }
 
     private Task NotifyNavigate() => OnNavigate.InvokeAsync();

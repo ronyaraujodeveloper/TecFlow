@@ -199,7 +199,7 @@ O menu lateral do TecFlow deve seguir rigorosamente a seguinte estrutura hierár
    - Saúde do sistema
    - Minha conta / Segurança
 - [x] Sidebar (`NavMenu.razor`) reorganizada nesta árvore, sem duplicar Minhas Lojas, com ícones e destaque do grupo/página ativos.
-- [x] Accordion “Próximos Desenvolvimentos” usa estado C# (`isProximosDesenvolvimentosOpen`), `@onclick:preventDefault` e permanece aberto só quando a rota interna é a atual (sem travar o fechamento).
+- [x] Accordion “Próximos Desenvolvimentos”: `button` (não NavLink no cabeçalho), `isProximosOpen` + `ToggleProximosSubmenu()` com `StateHasChanged()`, subitens em `@if`.
 
 ## 📱 Comportamento de Submenus Retrrateis (Accordion / Collapsible Nav)
 

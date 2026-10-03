@@ -894,6 +894,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **NavMenu.razor** — remove duplicata de Minhas Lojas; grupos Mensageria, WhatsApp, Telegram, Integrações e accordion Próximos Desenvolvimentos; ícones Bootstrap e item ativo em cor primária.
 - [x] **app.css** — destaque `active` com barra primária, chevron e badge “Em breve”.
 - [x] **NavMenu.razor** — toggle `isProximosDesenvolvimentosOpen` com `@onclick:preventDefault`; abre só na rota do grupo, sem reabrir ao clicar para fechar.
+- [x] **NavMenu.razor** — cabeçalho `button` + `ToggleProximosSubmenu`/`StateHasChanged`; 8 subitens em `@if (isProximosOpen)` com rotas reais.
 
 ---
 

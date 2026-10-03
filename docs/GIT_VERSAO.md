@@ -23,3 +23,4 @@
 [2026-10-03 20:16:33]feat(links): captura e preview da imagem do produto
 [2026-10-03 20:33:05]feat(ui): reorganiza grupos do menu lateral
 [2026-10-03 20:47:45]fix(ui): corrige toggle do accordion Proximos Desenvolvimentos
+[2026-10-03 20:59:53]fix(ui): accordion Proximos Desenvolvimentos via botao e StateHasChanged

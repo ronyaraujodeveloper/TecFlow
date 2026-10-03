@@ -170,6 +170,35 @@ Para evitar que botões de ação em listas/tabelas fiquem inativos após refato
 
 3. **Preview da Imagem na Interface:**
    - O campo "URL da imagem" deve contar com um elemento de **Preview Visual (Thumbnail)** de 80x80px que exibe a foto em tempo real assim que uma URL válida estiver presente.
+
+   ## 🗂️ Arquitetura do Menu Lateral (Sidebar Navigation)
+
+O menu lateral do TecFlow deve seguir rigorosamente a seguinte estrutura hierárquica e agrupamento de módulos:
+
+1. **Mensageria & Bots** (Core operacional diário):
+   - Conexões (WA & Telegram)
+   - Agendador de Grupos
+   - Bot de Conversão
+
+2. **Canais Específicos:**
+   - **WhatsApp:** Agendador WhatsApp
+   - **Telegram:** Agendador Telegram
+
+3. **Integrações & Afiliados:**
+   - Minhas Lojas / Integrações *(Única ocorrência do módulo)*
+   - Gerador de Links
+   - Minhas Páginas Públicas
+
+4. **Próximos Desenvolvimentos** (Submenu retrátil/accordion para recursos em roadmap/gestão):
+   - Dashboard
+   - Campanhas
+   - Métricas / Comissões
+   - Fila de engajamento *(badge “Em breve”)*
+   - Conciliação financeira
+   - Produtos propaganda
+   - Saúde do sistema
+   - Minha conta / Segurança
+- [x] Sidebar (`NavMenu.razor`) reorganizada nesta árvore, sem duplicar Minhas Lojas, com ícones e destaque do grupo/página ativos.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -604,7 +633,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.1. Arquitetura de Sessão (Evolution API / Baileys):**
   - Painel unificado `/integracoes/conexoes` (abas WhatsApp / Telegram), QR em modal e status com foto, nome e número.
   - Menu **Mensageria & Bots**: Conexões, Bot de Conversão (`/integracoes/bot-conversor`) e Agendador de Grupos (`/integracoes/agendador`), sem remover WhatsApp/Telegram originais.
-  - NavMenu: Dashboard (`/`), Gerador de Links, Minhas Lojas / Integrações (`/marketplace-accounts`) visível, Minhas Páginas Públicas com loading/erro (sem tela em branco).
+  - NavMenu: Mensageria & Bots (Conexões, Agendador de Grupos, Bot), WhatsApp/Telegram (agendadores), Integrações (Lojas única, Gerador, Páginas) e accordion Próximos Desenvolvimentos.
   - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - `EvolutionApiService` trata HTTP 40x/50x com log do body, ignora instância já criada e busca o QR; a UI exibe alerta amigável em vez de 500 genérico.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.

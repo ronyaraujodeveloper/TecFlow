@@ -1,148 +1,293 @@
 ﻿@inject NavigationManager Navigation
+@implements IDisposable
 
-<nav class="portal-sidebar-nav">
+<nav class="portal-sidebar-nav" aria-label="Menu principal">
     <AuthorizeView>
         <Authorized>
-            <a href="/" class="portal-nav-link @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
-                Dashboard
-            </a>
-            <a href="/dashboard#campanhas" class="portal-nav-link" @onclick="NotifyNavigate">
-                Campanhas
-            </a>
-            <a href="/dashboard#metricas" class="portal-nav-link" @onclick="NotifyNavigate">
-                Métricas / Comissões
-            </a>
-            <a href="/engajamento/fila" class="portal-nav-link @GetActiveClass("/engajamento/fila")" @onclick="NotifyNavigate">
-                Fila de engajamento
-            </a>
-            <a href="/conciliacao/financeira" class="portal-nav-link @GetActiveClass("/conciliacao/financeira")" @onclick="NotifyNavigate">
-                Conciliação financeira
-            </a>
-            <a href="/propaganda/produtos" class="portal-nav-link @GetActiveClass("/propaganda/produtos")" @onclick="NotifyNavigate">
-                Produtos propaganda
-            </a>
-            <a href="/saude/painel" class="portal-nav-link @GetActiveClass("/saude/painel")" @onclick="NotifyNavigate">
-                Saúde do sistema
-            </a>
-            <a href="/minha-conta" class="portal-nav-link @GetActiveClass("/minha-conta")" @onclick="NotifyNavigate">
-                Minha conta / Segurança
-            </a>
-            <a href="/gerador-links" class="portal-nav-link @GetActiveClass("/gerador-links")" @onclick="NotifyNavigate">
-                Gerador de Links
-            </a>
-            <a href="/marketplace-accounts" class="portal-nav-link @GetActiveClass("/marketplace-accounts")" @onclick="NotifyNavigate">
-                Minhas Lojas / Integrações
-            </a>
-            <a href="/minhas-paginas-publicas" class="portal-nav-link @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
-                Minhas Páginas Públicas
-            </a>
+            <div class="portal-nav-group">
+                <button type="button"
+                        class="portal-nav-link portal-nav-group-toggle @MensageriaActiveClass"
+                        aria-expanded="@_mensageriaOpen"
+                        @onclick="ToggleMensageria">
+                    <i class="bi bi-chat-dots portal-nav-icon" aria-hidden="true"></i>
+                    <span class="portal-nav-link-label">Mensageria &amp; Bots</span>
+                    <i class="bi @(_mensageriaOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
+                </button>
+                @if (_mensageriaOpen)
+                {
+                    <a href="/integracoes/conexoes" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/conexoes", alsoExact: ConexaoLegacyPaths)" @onclick="NotifyNavigate">
+                        <i class="bi bi-qr-code portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Conexões (WA &amp; Telegram)</span>
+                    </a>
+                    <a href="/integracoes/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/agendador")" @onclick="NotifyNavigate">
+                        <i class="bi bi-calendar-week portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Agendador de Grupos</span>
+                    </a>
+                    <a href="/integracoes/bot-conversor" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/bot-conversor")" @onclick="NotifyNavigate">
+                        <i class="bi bi-robot portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Bot de Conversão</span>
+                    </a>
+                }
+            </div>
+
+            <div class="portal-nav-group">
+                <button type="button"
+                        class="portal-nav-link portal-nav-group-toggle @WhatsAppActiveClass"
+                        aria-expanded="@_whatsAppOpen"
+                        @onclick="ToggleWhatsApp">
+                    <i class="bi bi-whatsapp portal-nav-icon" aria-hidden="true"></i>
+                    <span class="portal-nav-link-label">WhatsApp</span>
+                    <i class="bi @(_whatsAppOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
+                </button>
+                @if (_whatsAppOpen)
+                {
+                    <a href="/integracoes/whatsapp/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp/agendador")" @onclick="NotifyNavigate">
+                        <i class="bi bi-send portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Agendador WhatsApp</span>
+                    </a>
+                }
+            </div>
+
+            <div class="portal-nav-group">
+                <button type="button"
+                        class="portal-nav-link portal-nav-group-toggle @TelegramActiveClass"
+                        aria-expanded="@_telegramOpen"
+                        @onclick="ToggleTelegram">
+                    <i class="bi bi-telegram portal-nav-icon" aria-hidden="true"></i>
+                    <span class="portal-nav-link-label">Telegram</span>
+                    <i class="bi @(_telegramOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
+                </button>
+                @if (_telegramOpen)
+                {
+                    <a href="/integracoes/telegram/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram/agendador")" @onclick="NotifyNavigate">
+                        <i class="bi bi-send portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Agendador Telegram</span>
+                    </a>
+                }
+            </div>
 
             <div class="portal-nav-group">
                 <button type="button"
                         class="portal-nav-link portal-nav-group-toggle @IntegracoesActiveClass"
                         aria-expanded="@_integracoesOpen"
                         @onclick="ToggleIntegracoes">
-                    Integrações
+                    <i class="bi bi-plug portal-nav-icon" aria-hidden="true"></i>
+                    <span class="portal-nav-link-label">Integrações</span>
+                    <i class="bi @(_integracoesOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
                 </button>
                 @if (_integracoesOpen)
                 {
-                    <a href="/marketplace-accounts" class="portal-nav-link portal-nav-sublink @GetActiveClass("/marketplace-accounts")" @onclick="NotifyNavigate">
-                        Minhas Lojas / Integrações
+                    <a href="/marketplace-accounts" class="portal-nav-link portal-nav-sublink @GetActiveClass("/marketplace-accounts", alsoExact: LojasAliasPaths)" @onclick="NotifyNavigate">
+                        <i class="bi bi-shop portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Minhas Lojas / Integrações</span>
+                    </a>
+                    <a href="/gerador-links" class="portal-nav-link portal-nav-sublink @GetActiveClass("/gerador-links", alsoExact: GeradorAliasPaths)" @onclick="NotifyNavigate">
+                        <i class="bi bi-link-45deg portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Gerador de Links</span>
+                    </a>
+                    <a href="/minhas-paginas-publicas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
+                        <i class="bi bi-globe2 portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Minhas Páginas Públicas</span>
                     </a>
                 }
             </div>
 
             <div class="portal-nav-group">
                 <button type="button"
-                        class="portal-nav-link portal-nav-group-toggle @MensageriaActiveClass"
-                        aria-expanded="@_mensageriaOpen"
-                        @onclick="ToggleMensageria">
-                    Mensageria &amp; Bots
+                        class="portal-nav-link portal-nav-group-toggle @ProximosActiveClass"
+                        aria-expanded="@_proximosOpen"
+                        @onclick="ToggleProximos">
+                    <i class="bi bi-hourglass-split portal-nav-icon" aria-hidden="true"></i>
+                    <span class="portal-nav-link-label">Próximos Desenvolvimentos</span>
+                    <i class="bi @(_proximosOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
                 </button>
-                @if (_mensageriaOpen)
+                @if (_proximosOpen)
                 {
-                    <a href="/integracoes/conexoes" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/conexoes")" @onclick="NotifyNavigate">
-                        Conexões (WA &amp; Telegram)
+                    <a href="/dashboard" class="portal-nav-link portal-nav-sublink @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
+                        <i class="bi bi-speedometer2 portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Dashboard</span>
                     </a>
-                    <a href="/integracoes/bot-conversor" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/bot-conversor")" @onclick="NotifyNavigate">
-                        Bot de Conversão
+                    <a href="/dashboard#campanhas" class="portal-nav-link portal-nav-sublink" @onclick="NotifyNavigate">
+                        <i class="bi bi-megaphone portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Campanhas</span>
                     </a>
-                    <a href="/integracoes/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/agendador")" @onclick="NotifyNavigate">
-                        Agendador de Grupos
+                    <a href="/dashboard#metricas" class="portal-nav-link portal-nav-sublink" @onclick="NotifyNavigate">
+                        <i class="bi bi-graph-up portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Métricas / Comissões</span>
                     </a>
-                    <a href="/integracoes/whatsapp" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp")" @onclick="NotifyNavigate">
-                        WhatsApp
+                    <a href="/engajamento/fila" class="portal-nav-link portal-nav-sublink @GetActiveClass("/engajamento/fila")" @onclick="NotifyNavigate">
+                        <i class="bi bi-inbox portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Fila de engajamento</span>
+                        <span class="portal-nav-soon">Em breve</span>
                     </a>
-                    <a href="/integracoes/whatsapp/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp/agendador")" @onclick="NotifyNavigate">
-                        Agendador WhatsApp
+                    <a href="/conciliacao/financeira" class="portal-nav-link portal-nav-sublink @GetActiveClass("/conciliacao/financeira")" @onclick="NotifyNavigate">
+                        <i class="bi bi-cash-stack portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Conciliação financeira</span>
                     </a>
-                    <a href="/integracoes/telegram" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram")" @onclick="NotifyNavigate">
-                        Telegram
+                    <a href="/propaganda/produtos" class="portal-nav-link portal-nav-sublink @GetActiveClass("/propaganda/produtos")" @onclick="NotifyNavigate">
+                        <i class="bi bi-tag portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Produtos propaganda</span>
                     </a>
-                    <a href="/integracoes/telegram/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram/agendador")" @onclick="NotifyNavigate">
-                        Agendador Telegram
+                    <a href="/saude/painel" class="portal-nav-link portal-nav-sublink @GetActiveClass("/saude/painel")" @onclick="NotifyNavigate">
+                        <i class="bi bi-heart-pulse portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Saúde do sistema</span>
+                    </a>
+                    <a href="/minha-conta" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minha-conta", alsoExact: ContaAliasPaths)" @onclick="NotifyNavigate">
+                        <i class="bi bi-shield-lock portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Minha conta / Segurança</span>
                     </a>
                 }
             </div>
         </Authorized>
         <NotAuthorized>
             <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="NotifyNavigate">
-                Entrar
+                <i class="bi bi-box-arrow-in-right portal-nav-icon" aria-hidden="true"></i>
+                <span class="portal-nav-link-label">Entrar</span>
             </a>
             <a href="/recuperar-senha" class="portal-nav-link @GetActiveClass("/recuperar-senha")" @onclick="NotifyNavigate">
-                Recuperar senha
+                <i class="bi bi-key portal-nav-icon" aria-hidden="true"></i>
+                <span class="portal-nav-link-label">Recuperar senha</span>
             </a>
         </NotAuthorized>
     </AuthorizeView>
     <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="NotifyNavigate">
-        Início
+        <i class="bi bi-house portal-nav-icon" aria-hidden="true"></i>
+        <span class="portal-nav-link-label">Início</span>
     </a>
 </nav>
 
 @code {
+    private static readonly string[] LojasAliasPaths =
+    [
+        "/minhas-lojas",
+        "/account/integrations",
+        "/integracoes/lojas",
+        "/marketplace-accounts"
+    ];
+
+    private static readonly string[] GeradorAliasPaths = ["/gerador-links", "/comissao/gerar"];
+
+    private static readonly string[] ContaAliasPaths = ["/minha-conta", "/account/security"];
+
+    private static readonly string[] ConexaoLegacyPaths = ["/integracoes/whatsapp", "/integracoes/telegram"];
+
+    private static readonly string[] MensageriaExactPaths =
+    [
+        "/integracoes/conexoes",
+        "/integracoes/agendador",
+        "/integracoes/bot-conversor",
+        "/integracoes/whatsapp",
+        "/integracoes/telegram"
+    ];
+
+    private static readonly string[] IntegracoesExactPaths =
+    [
+        "/marketplace-accounts",
+        "/minhas-lojas",
+        "/account/integrations",
+        "/integracoes/lojas",
+        "/gerador-links",
+        "/comissao/gerar",
+        "/minhas-paginas-publicas"
+    ];
+
+    private static readonly string[] ProximosExactPaths =
+    [
+        "/dashboard",
+        "/engajamento/fila",
+        "/conciliacao/financeira",
+        "/propaganda/produtos",
+        "/saude/painel",
+        "/minha-conta",
+        "/account/security"
+    ];
+
     [Parameter] public EventCallback OnNavigate { get; set; }
 
+    private bool _mensageriaOpen;
+    private bool _whatsAppOpen;
+    private bool _telegramOpen;
     private bool _integracoesOpen = true;
-    private bool _mensageriaOpen = true;
+    private bool _proximosOpen;
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
     {
-        if (IsLojasPath())
-        {
-            _integracoesOpen = true;
-        }
+        Navigation.LocationChanged += OnLocationChanged;
+        OpenGroupsForCurrentPath();
+    }
 
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        OpenGroupsForCurrentPath();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenGroupsForCurrentPath()
+    {
         if (IsMensageriaPath())
         {
             _mensageriaOpen = true;
         }
-    }
 
-    private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
+        if (IsWhatsAppPath())
+        {
+            _whatsAppOpen = true;
+        }
+
+        if (IsTelegramPath())
+        {
+            _telegramOpen = true;
+        }
+
+        if (IsIntegracoesPath())
+        {
+            _integracoesOpen = true;
+        }
+
+        if (IsProximosPath())
+        {
+            _proximosOpen = true;
+        }
+    }
 
     private void ToggleMensageria() => _mensageriaOpen = !_mensageriaOpen;
 
+    private void ToggleWhatsApp() => _whatsAppOpen = !_whatsAppOpen;
+
+    private void ToggleTelegram() => _telegramOpen = !_telegramOpen;
+
+    private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
+
+    private void ToggleProximos() => _proximosOpen = !_proximosOpen;
+
     private Task NotifyNavigate() => OnNavigate.InvokeAsync();
 
-    private bool IsLojasPath()
+    private bool IsMensageriaPath() => PathEqualsAny(MensageriaExactPaths);
+
+    private bool IsWhatsAppPath() => CurrentPath().Equals("/integracoes/whatsapp/agendador", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsTelegramPath() => CurrentPath().Equals("/integracoes/telegram/agendador", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsIntegracoesPath() => PathEqualsAny(IntegracoesExactPaths);
+
+    private bool IsProximosPath()
     {
         var current = CurrentPath();
-        return current.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
-            || current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
-            || current.Equals("/integracoes/lojas", StringComparison.OrdinalIgnoreCase)
-            || current.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase);
+        return PathEqualsAny(ProximosExactPaths)
+            || current.StartsWith("/conciliacao/", StringComparison.OrdinalIgnoreCase);
     }
-
-    private bool IsMensageriaPath()
-    {
-        var current = CurrentPath();
-        return current.StartsWith("/integracoes/", StringComparison.OrdinalIgnoreCase)
-            && !IsLojasPath();
-    }
-
-    private string IntegracoesActiveClass => IsLojasPath() ? "active" : string.Empty;
 
     private string MensageriaActiveClass => IsMensageriaPath() ? "active" : string.Empty;
+
+    private string WhatsAppActiveClass => IsWhatsAppPath() ? "active" : string.Empty;
+
+    private string TelegramActiveClass => IsTelegramPath() ? "active" : string.Empty;
+
+    private string IntegracoesActiveClass => IsIntegracoesPath() ? "active" : string.Empty;
+
+    private string ProximosActiveClass => IsProximosPath() ? "active" : string.Empty;
 
     private string CurrentPath()
     {
@@ -150,51 +295,31 @@
         return string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
     }
 
-    private string GetActiveClass(string path)
+    private bool PathEqualsAny(IEnumerable<string> paths)
     {
         var current = CurrentPath();
+        return paths.Any(path => current.Equals(path, StringComparison.OrdinalIgnoreCase));
+    }
 
-        if (path.Equals("/dashboard", StringComparison.OrdinalIgnoreCase)
-            && (current.Equals("/", StringComparison.OrdinalIgnoreCase)
-                || current.Equals("/dashboard", StringComparison.OrdinalIgnoreCase)))
-        {
-            return current.Equals("/dashboard", StringComparison.OrdinalIgnoreCase) ? "active" : "";
-        }
-
-        if (path.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase)
-            && (current.Equals("/minhas-lojas", StringComparison.OrdinalIgnoreCase)
-                || current.Equals("/account/integrations", StringComparison.OrdinalIgnoreCase)
-                || current.Equals("/integracoes/lojas", StringComparison.OrdinalIgnoreCase)
-                || current.Equals("/marketplace-accounts", StringComparison.OrdinalIgnoreCase)))
+    private string GetActiveClass(string path, IEnumerable<string>? alsoExact = null)
+    {
+        var current = CurrentPath();
+        if (current.Equals(path, StringComparison.OrdinalIgnoreCase))
         {
             return "active";
         }
 
-        if (path.Equals("/gerador-links", StringComparison.OrdinalIgnoreCase)
-            && current.Equals("/comissao/gerar", StringComparison.OrdinalIgnoreCase))
+        if (alsoExact is not null && alsoExact.Any(alias => current.Equals(alias, StringComparison.OrdinalIgnoreCase)))
         {
             return "active";
-        }
-
-        if (path.Equals("/integracoes/whatsapp", StringComparison.OrdinalIgnoreCase)
-            && current.StartsWith("/integracoes/whatsapp/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "";
-        }
-
-        if (path.Equals("/integracoes/telegram", StringComparison.OrdinalIgnoreCase)
-            && current.StartsWith("/integracoes/telegram/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "";
         }
 
         if (path.Equals("/integracoes/agendador", StringComparison.OrdinalIgnoreCase)
-            && (current.Equals("/integracoes/whatsapp/agendador", StringComparison.OrdinalIgnoreCase)
-                || current.Equals("/integracoes/telegram/agendador", StringComparison.OrdinalIgnoreCase)))
+            && (IsWhatsAppPath() || IsTelegramPath()))
         {
-            return "";
+            return string.Empty;
         }
 
-        return current.Equals(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+        return string.Empty;
     }
 }

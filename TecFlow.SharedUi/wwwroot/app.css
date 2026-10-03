@@ -343,19 +343,25 @@ html, body {
 .portal-nav-link {
     display: flex;
     align-items: center;
+    gap: 0.45rem;
     min-height: var(--touch-target-min);
     padding: 0.625rem 1rem;
     border-radius: 0.5rem;
     color: #212529;
     text-decoration: none;
     font-weight: 500;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
 .portal-nav-link:hover,
 .portal-nav-link.active {
-    background: rgba(13, 110, 253, 0.1);
+    background: rgba(13, 110, 253, 0.12);
     color: #0d6efd;
+}
+
+.portal-nav-link.active {
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 #0d6efd;
 }
 
 .portal-nav-group-toggle {
@@ -366,10 +372,47 @@ html, body {
     cursor: pointer;
 }
 
+.portal-nav-group-toggle.active {
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+    font-weight: 600;
+}
+
 .portal-nav-sublink {
     padding-left: 1.65rem;
     font-weight: 500;
     font-size: 0.95rem;
+}
+
+.portal-nav-icon {
+    width: 1.15rem;
+    flex-shrink: 0;
+    opacity: 0.85;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.portal-nav-link-label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.portal-nav-caret {
+    margin-left: auto;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.portal-nav-soon {
+    flex-shrink: 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #6c757d;
+    background: #e9ecef;
+    border-radius: 999px;
+    padding: 0.12rem 0.4rem;
 }
 
 .whatsapp-qr {

@@ -889,6 +889,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppAgendador.razor** — `OnCommissionLinkItemSelected` preenche `model.ImageUrl`.
 - [x] **CommissionLinkPicker.razor** — miniatura nas sugestões do autocomplete.
 
+### Menu lateral (NavMenu)
+
+- [x] **NavMenu.razor** — remove duplicata de Minhas Lojas; grupos Mensageria, WhatsApp, Telegram, Integrações e accordion Próximos Desenvolvimentos; ícones Bootstrap e item ativo em cor primária.
+- [x] **app.css** — destaque `active` com barra primária, chevron e badge “Em breve”.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

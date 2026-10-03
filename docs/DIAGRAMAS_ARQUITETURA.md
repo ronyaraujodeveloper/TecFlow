@@ -106,15 +106,16 @@ flowchart LR
   ACC --> LOJAS
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
-  NAV[NavMenu] -->|Dashboard /| DASH[Dashboard.razor]
-  NAV -->|Gerador de Links| GER[GeradorLinks.razor]
-  NAV -->|Minhas Lojas / Integrações /marketplace-accounts| MINHAS
-  NAV -->|Minhas Páginas Públicas| MINE
+  NAV[NavMenu] -->|Próximos Desenvolvimentos| DASH[Dashboard.razor]
+  NAV -->|Integrações Gerador de Links| GER[GeradorLinks.razor]
+  NAV -->|Integrações Minhas Lojas única| MINHAS
+  NAV -->|Integrações Páginas Públicas| MINE
   NAV -->|Mensageria Conexões| CX[Conexoes.razor]
-  NAV -->|Bot de Conversão| BOTC[BotConversor.razor]
-  NAV -->|Agendador de Grupos| AGHUB[Agendador.razor]
+  NAV -->|Mensageria Bot de Conversão| BOTC[BotConversor.razor]
+  NAV -->|Mensageria Agendador de Grupos| AGHUB[Agendador.razor]
+  NAV -->|WhatsApp Agendador| WAAGEN
+  NAV -->|Telegram Agendador| TGAGEN
   CX -->|abas WhatsApp Telegram| WAUI[WhatsAppConexao.razor]
-  NAV -->|WhatsApp legado| WAUI
   WAUI -->|POST conectar + GET status polling| WAPI[WhatsAppIntegrationController]
   WAPI --> WAS[WhatsAppSessionService]
   WAS --> EVO[EvolutionApiService]

@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();
+        services.AddScoped<IModalService, ModalService>();
         services.AddScoped<IDashboardApiService, DashboardApiService>();
         services.AddScoped<IAffiliateAnalyticsApiService, AffiliateAnalyticsApiService>();
         services.AddScoped<IAdvertisingProductApiService, AdvertisingProductApiService>();

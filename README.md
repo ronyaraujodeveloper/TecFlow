@@ -123,6 +123,25 @@ Sempre que exibir o nome, tag ou selo de uma plataforma no TecFlow (listas, busc
 
 ### Componente Reutilizável de Badge:
 Deve seguir o padrão de cantos arredondados (`rounded-full` ou `rounded-md`), fonte em negrito (`font-semibold`) e tamanho compacto (`text-xs px-2.5 py-1`).
+
+## 🔲 Padronização de Modais e Diálogos de Confirmação
+
+Para manter a consistência visual e a elegância da interface em toda a plataforma TecFlow, **é estritamente proibido o uso de diálogos nativos do navegador** (`window.confirm`, `window.alert` ou `window.prompt`).
+
+### Diretrizes de Modais:
+1. **Ações Críticas (Exclusão / Edição / Desconexão):**
+   - **Nunca** utilize `confirm()` nativo[cite: 11].
+   - Utilize obrigatoriamente um componente de **Modal customizado** (ou biblioteca estilizada como SweetAlert2 / Blazor Bootstrap Modal).
+   - O modal de confirmação de exclusão deve conter:
+     - Título claro (ex: *Confirmar Exclusão*).
+     - Ícone de alerta (ex: Lixeira vermelha ou Triângulo de Aviso).
+     - Descrição com o nome do item a ser excluído.
+     - Botão de ação destrutiva destacado em vermelho (ex: *Sim, excluir*).
+     - Botão de cancelamento neutro (ex: *Cancelar*).
+
+2. **Acessibilidade & UX:**
+   - O modal deve fechar ao clicar na tecla `ESC` ou fora dele (backdrop click).
+   - Deve ser utilizado de forma global e padronizada em todos os módulos da aplicação.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -570,7 +589,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
   - Nova campanha: Título, Mensagem (sem URL), seletor de links com badges coloridas e campo Link de Comissão com badge da plataforma; o disparo concatena copy + URL.
   - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
-  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; lixeira confirma em modal, apaga o registro e cancela o job do worker.
+  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; lixeira confirma no `ConfirmDialogHost` (`IModalService`) e cancela o job do worker.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

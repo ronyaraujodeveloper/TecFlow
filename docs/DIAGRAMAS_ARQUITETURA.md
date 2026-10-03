@@ -142,6 +142,7 @@ flowchart LR
   WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC
   WAAGEN -->|CommissionLinkPicker historico + PlatformBadgeHelper| HIST[AffiliateLinksController historico]
   WAAGEN -->|UpdateAgendamentoCommand PUT campanhas/{id}| WABC
+  WAAGEN -->|IModalService ConfirmDialogHost| WABC
   WAAGEN -->|DELETE campanhas/{id} cancela job| WABC
   WABC --> WABS[WhatsAppBroadcastService]
   JOB[WhatsAppBroadcastJobCoordinator] -->|Cancel Processing| WABS

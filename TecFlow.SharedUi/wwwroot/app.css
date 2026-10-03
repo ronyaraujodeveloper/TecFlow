@@ -205,6 +205,47 @@ html, body {
 .provider-icon.icloud { background: #555; font-size: 1.1rem; }
 .provider-icon.email { background: #212529; }
 
+.confirm-dialog-host {
+    z-index: 1065;
+}
+
+.confirm-dialog-backdrop {
+    z-index: 1060;
+    background: rgba(15, 23, 42, 0.62);
+}
+
+.confirm-dialog-content {
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, 0.28);
+}
+
+.confirm-dialog-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.confirm-dialog-icon--danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.confirm-dialog-icon--warning {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.confirm-dialog-icon--info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
 .loading-overlay {
     position: fixed;
     inset: 0;

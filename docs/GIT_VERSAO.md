@@ -17,3 +17,4 @@
 [2026-10-03 18:47:15]feat(whatsapp): confirma e atualiza agendamentos
 [2026-10-03 19:04:02]fix(whatsapp): habilita clique nas acoes do agendador
 [2026-10-03 19:29:03]feat(ui): padroniza badges coloridas de plataforma
+[2026-10-03 19:36:30]feat(ui): substitui confirm nativo por modal global

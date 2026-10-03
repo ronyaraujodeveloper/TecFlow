@@ -868,6 +868,8 @@ API / Orquestrador / Worker / WebUi
 ### Agendador WhatsApp — lista de disparos
 
 - [x] **WhatsAppAgendador.razor** — Ações sempre clicáveis (`EditarAgendamento` / `ConfirmarExclusao`), sem `disabled`; scroll `scrollToTop`.
+- [x] **IModalService.cs** / **ModalService.cs** — confirmação reutilizável sem `window.confirm`.
+- [x] **ConfirmDialogHost.razor** — modal Bootstrap global no `MainLayout` / `PublicLayout`.
 - [x] **UpdateAgendamentoCommand.cs** — comando PUT de atualização de agendamento pendente.
 - [x] **WhatsAppBroadcastJobCoordinator.cs** — cancela job em processamento ao excluir/editar.
 - [x] **WhatsAppBroadcastController** — `PUT /api/integracoes/whatsapp/campanhas/{id}`, `DELETE` cancela o worker.

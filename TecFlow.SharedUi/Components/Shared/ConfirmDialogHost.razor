@@ -1,0 +1,86 @@
+﻿@implements IDisposable
+@inject IModalService ModalService
+
+@if (ModalService.Current is { } dialog)
+{
+    <div class="modal fade show d-block confirm-dialog-host"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="confirm-dialog-title"
+         @onkeydown="OnKeyDown">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content confirm-dialog-content">
+                <div class="modal-header border-0 pb-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="confirm-dialog-icon @IconClass(dialog.Kind)" aria-hidden="true">
+                            <i class="bi @IconName(dialog.Kind)"></i>
+                        </span>
+                        <h2 class="modal-title h5 mb-0" id="confirm-dialog-title">@dialog.Title</h2>
+                    </div>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Fechar"
+                            @onclick="() => ModalService.Complete(false)"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <p class="mb-0">@dialog.Message</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="() => ModalService.Complete(false)">
+                        @dialog.CancelText
+                    </button>
+                    <button type="button"
+                            class="btn @ConfirmClass(dialog.Kind)"
+                            @onclick="() => ModalService.Complete(true)">
+                        @dialog.ConfirmText
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show confirm-dialog-backdrop"
+         @onclick="() => ModalService.Complete(false)"></div>
+}
+
+@code {
+    protected override void OnInitialized() => ModalService.OnChange += HandleChanged;
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Escape")
+        {
+            ModalService.Complete(false);
+        }
+    }
+
+    private static string IconClass(ConfirmDialogKind kind) =>
+        kind switch
+        {
+            ConfirmDialogKind.Warning => "confirm-dialog-icon--warning",
+            ConfirmDialogKind.Info => "confirm-dialog-icon--info",
+            _ => "confirm-dialog-icon--danger"
+        };
+
+    private static string IconName(ConfirmDialogKind kind) =>
+        kind switch
+        {
+            ConfirmDialogKind.Warning => "bi-exclamation-triangle-fill",
+            ConfirmDialogKind.Info => "bi-info-circle-fill",
+            _ => "bi-exclamation-octagon-fill"
+        };
+
+    private static string ConfirmClass(ConfirmDialogKind kind) =>
+        kind switch
+        {
+            ConfirmDialogKind.Warning => "btn-warning",
+            ConfirmDialogKind.Info => "btn-primary",
+            _ => "btn-danger"
+        };
+
+    public void Dispose() => ModalService.OnChange -= HandleChanged;
+}

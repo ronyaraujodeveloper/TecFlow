@@ -10,6 +10,7 @@
 @using TecFlow.SharedUi.Models
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject IModalService ModalService
 @inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
@@ -531,7 +532,11 @@
 
     private async Task ConfirmarExclusao(int id)
     {
-        var confirmed = await Js.InvokeAsync<bool>("confirm", "Deseja realmente excluir este agendamento?");
+        var title = _campaigns.FirstOrDefault(item => item.Id == id)?.Title ?? "este agendamento";
+        var confirmed = await ModalService.ConfirmDeleteAsync(
+            title,
+            "agendamento",
+            "Excluir Agendamento");
         if (!confirmed)
         {
             return;

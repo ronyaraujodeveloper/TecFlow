@@ -411,17 +411,8 @@
     private string GetFilterButtonClass(MarketplaceType? platform) =>
         _platformFilter == platform ? "btn-primary" : "btn-outline-secondary";
 
-    private static string GetPlatformBadgeClass(MarketplaceType platformType) => platformType switch
-    {
-        MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
-        MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
-        MarketplaceType.MercadoLivre => "marketplace-platform-badge--mercadolivre",
-        MarketplaceType.Amazon => "marketplace-platform-badge--amazon",
-        MarketplaceType.MagazineLuiza => "marketplace-platform-badge--magalu",
-        MarketplaceType.Kabum => "marketplace-platform-badge--kabum",
-        MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
-        _ => string.Empty
-    };
+    private static string GetPlatformBadgeClass(MarketplaceType platformType) =>
+        PlatformBadgeHelper.GetPlatformBadgeClass(platformType);
 
     private void ClearLoadError() => _loadError = null;
 

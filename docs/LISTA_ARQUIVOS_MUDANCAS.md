@@ -856,7 +856,8 @@ API / Orquestrador / Worker / WebUi
 
 ### Agendador de grupos — formulário de campanha
 
-- [x] **CommissionLinkPicker.razor** — filtro de plataforma, período e typeahead de links de comissão.
+- [x] **CommissionLinkPicker.razor** — typeahead com badges oficiais de plataforma (`PlatformBadgeHelper`).
+- [x] **PlatformBadgeHelper.cs** — `GetPlatformBadgeClass` / `GetPlatformColor` centralizados para Amazon, ML, Shopee, Magalu, TikTok, Hotmart, Braip e padrão.
 - [x] **WhatsAppAgendador.razor** — ordem Título → Mensagem → seletor → Link de Comissão; bloqueia URL no copy; concatena no disparo.
 - [x] **WhatsAppBroadcastRules.ComposeDispatchMessage** — `"{Mensagem}\n\n{LinkUrl}"` na Evolution API.
 - [x] **WhatsAppGroupPicker.razor** — MultiSelect com chips, atalhos 5/10/15/20 (LocalStorage) e filtro “sou Admin”.

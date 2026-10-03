@@ -57,7 +57,9 @@
                                             @onclick="() => SelectLinkAsync(item)">
                                         <span class="d-block fw-semibold text-truncate">@GetTitle(item)</span>
                                         <span class="d-block small">
-                                            <span class="badge text-bg-light border">@item.PlatformName</span>
+                                            <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformType, item.PlatformName)">
+                                                @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)
+                                            </span>
                                         </span>
                                         <span class="d-block small text-muted text-truncate font-monospace">@ResolveUrl(item)</span>
                                     </button>
@@ -105,6 +107,9 @@
 
     [Parameter]
     public EventCallback<string> OnLinkSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<AffiliateLinkHistoryItemDto> OnLinkItemSelected { get; set; }
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
 
@@ -246,6 +251,10 @@
         _showSuggestions = false;
         _search = GetTitle(item);
         await OnLinkSelected.InvokeAsync(url);
+        if (OnLinkItemSelected.HasDelegate)
+        {
+            await OnLinkItemSelected.InvokeAsync(item);
+        }
     }
 
     private static string GetTitle(AffiliateLinkHistoryItemDto item) =>

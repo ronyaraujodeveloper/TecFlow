@@ -6,8 +6,11 @@
     --brand-tiktok: #000000;
     --brand-tiktok-accent: #FE2C55;
     --brand-mercadolivre: #FFE600;
-    --brand-mercadolivre-text: #2D3277;
+    --brand-mercadolivre-text: #000000;
     --brand-mercadolivre-border: #C9A227;
+    --brand-hotmart: #FF5200;
+    --brand-braip: #12B76A;
+    --brand-platform-default: #6B7280;
     --brand-amazon: #FF9900;
     --brand-amazon-dark: #131921;
     --brand-magalu: #0086FF;
@@ -877,7 +880,6 @@ html, body {
 .marketplace-platform-badge--tiktok {
     background: var(--brand-tiktok);
     color: #fff;
-    box-shadow: inset 0 -2px 0 var(--brand-tiktok-accent);
 }
 
 .badge-mercadolivre,
@@ -909,6 +911,31 @@ html, body {
 .marketplace-platform-badge--casasbahia {
     background: var(--brand-casasbahia);
     color: #fff;
+}
+
+.badge-hotmart,
+.marketplace-platform-badge--hotmart {
+    background: var(--brand-hotmart);
+    color: #fff;
+}
+
+.badge-braip,
+.marketplace-platform-badge--braip {
+    background: var(--brand-braip);
+    color: #fff;
+}
+
+.badge-default,
+.marketplace-platform-badge--default {
+    background: var(--brand-platform-default);
+    color: #fff;
+}
+
+.commission-link-label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .marketplace-platform-picker {

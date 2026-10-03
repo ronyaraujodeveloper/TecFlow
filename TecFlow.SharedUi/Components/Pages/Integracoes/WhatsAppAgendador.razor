@@ -5,6 +5,7 @@
 @using TecFlow.Business.Dto
 @using TecFlow.Business.Service.WhatsApp
 @using TecFlow.Core.Entities
+@using TecFlow.Core.Enums
 @using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Models
 @using TecFlow.SharedUi.Services.Integrations
@@ -62,13 +63,21 @@
                     <div class="form-text">Somente o copy da oferta. Não cole links neste campo.</div>
                 }
             </div>
-            <CommissionLinkPicker @ref="_linkPicker" OnLinkSelected="OnCommissionLinkSelected" />
+            <CommissionLinkPicker @ref="_linkPicker"
+                                  OnLinkSelected="OnCommissionLinkSelected"
+                                  OnLinkItemSelected="OnCommissionLinkItemSelected" />
             <div class="mb-3">
-                <label class="form-label fw-semibold" for="wa-commission-link">Link de Comissão</label>
+                <label class="form-label fw-semibold commission-link-label" for="wa-commission-link">
+                    Link de Comissão
+                    @if (HasCommissionPlatformBadge)
+                    {
+                        <span class="marketplace-platform-badge @CommissionPlatformBadgeClass">@CommissionPlatformLabel</span>
+                    }
+                </label>
                 <input id="wa-commission-link"
                        class="form-control font-monospace"
                        value="@model.LinkComissaoUrl"
-                       @oninput="e => model.LinkComissaoUrl = e.Value?.ToString() ?? string.Empty" />
+                       @oninput="OnCommissionLinkInput" />
                 <div class="form-text">O link selecionado será anexado automaticamente ao final da mensagem no momento do disparo.</div>
             </div>
             <div class="mb-3">
@@ -261,6 +270,8 @@
     private bool _isBusy;
     private string? _error;
     private string? _info;
+    private MarketplaceType? _commissionPlatform;
+    private string? _commissionPlatformName;
     private int? editingId;
     private string? _toastMessage;
     private CancellationTokenSource? _toastCts;
@@ -312,6 +323,18 @@
 
     private List<WhatsAppBroadcastCampaignDto> PagedCampaigns =>
         FilteredCampaigns.Skip((_pageIndex - 1) * _pageSize).Take(_pageSize).ToList();
+
+    private bool HasCommissionPlatformBadge =>
+        !string.IsNullOrWhiteSpace(model.LinkComissaoUrl)
+        && (!string.IsNullOrWhiteSpace(_commissionPlatformName) || _commissionPlatform is not null);
+
+    private string CommissionPlatformBadgeClass =>
+        _commissionPlatform is { } platform
+            ? PlatformBadgeHelper.GetPlatformBadgeClass(platform, _commissionPlatformName)
+            : PlatformBadgeHelper.GetPlatformBadgeClass(_commissionPlatformName);
+
+    private string CommissionPlatformLabel =>
+        PlatformBadgeHelper.GetPlatformLabel(_commissionPlatformName, _commissionPlatform);
 
     protected override async Task OnInitializedAsync()
     {
@@ -476,6 +499,7 @@
             model.GruposSelecionados.Add(jid);
         }
 
+        DetectCommissionPlatform(model.LinkComissaoUrl);
         _pickerEpoch++;
         _messageUrlWarning = null;
         _info = "Editando agendamento. Salve as alterações no formulário acima.";
@@ -566,13 +590,50 @@
     private Task OnCommissionLinkSelected(string url)
     {
         model.LinkComissaoUrl = url ?? string.Empty;
+        DetectCommissionPlatform(url);
         return Task.CompletedTask;
+    }
+
+    private Task OnCommissionLinkItemSelected(AffiliateLinkHistoryItemDto item)
+    {
+        _commissionPlatform = item.PlatformType;
+        _commissionPlatformName = PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType);
+        return Task.CompletedTask;
+    }
+
+    private void OnCommissionLinkInput(ChangeEventArgs e)
+    {
+        model.LinkComissaoUrl = e.Value?.ToString() ?? string.Empty;
+        DetectCommissionPlatform(model.LinkComissaoUrl);
+    }
+
+    private void DetectCommissionPlatform(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _commissionPlatform = null;
+            _commissionPlatformName = null;
+            return;
+        }
+
+        var detected = MarketplaceUrlDetector.Detect(url);
+        if (detected is null)
+        {
+            _commissionPlatform = null;
+            _commissionPlatformName = "Outros";
+            return;
+        }
+
+        _commissionPlatform = detected.IntegrationType;
+        _commissionPlatformName = detected.DisplayName;
     }
 
     private async Task ResetFormAsync()
     {
         editingId = null;
         model.Reset();
+        _commissionPlatform = null;
+        _commissionPlatformName = null;
         _messageUrlWarning = null;
         _pickerEpoch++;
         if (_linkPicker is not null)

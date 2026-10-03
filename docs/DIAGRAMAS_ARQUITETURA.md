@@ -140,7 +140,7 @@ flowchart LR
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   WAAGEN[WhatsAppAgendador.razor] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
   WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC
-  WAAGEN -->|CommissionLinkPicker historico| HIST[AffiliateLinksController historico]
+  WAAGEN -->|CommissionLinkPicker historico + PlatformBadgeHelper| HIST[AffiliateLinksController historico]
   WAAGEN -->|UpdateAgendamentoCommand PUT campanhas/{id}| WABC
   WAAGEN -->|DELETE campanhas/{id} cancela job| WABC
   WABC --> WABS[WhatsAppBroadcastService]

@@ -93,17 +93,8 @@
         _ => Store.PlatformType.ToString()
     };
 
-    private string GetPlatformBadgeClass() => Store.PlatformType switch
-    {
-        MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
-        MarketplaceType.Shopee => "marketplace-platform-badge--shopee",
-        MarketplaceType.MercadoLivre => "marketplace-platform-badge--mercadolivre",
-        MarketplaceType.Amazon => "marketplace-platform-badge--amazon",
-        MarketplaceType.MagazineLuiza => "marketplace-platform-badge--magalu",
-        MarketplaceType.Kabum => "marketplace-platform-badge--kabum",
-        MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
-        _ => string.Empty
-    };
+    private string GetPlatformBadgeClass() =>
+        PlatformBadgeHelper.GetPlatformBadgeClass(Store.PlatformType);
 
     private string GetStatusLabel() => Store.Status switch
     {

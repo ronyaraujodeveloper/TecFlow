@@ -108,6 +108,21 @@ O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a a
 | **AliExpress** | `AliExpressLinkStrategy.cs` | Em planejamento | ⏳ **Backlog** |
 | **Magazine Luiza** | `MagazineLuizaLinkStrategy.cs` | Magazine Você `/{loja}/p/{id}/` ou `?parceiro=` (expande `magalu.me`) | 🟢 **Concluído** |
 
+## 🎨 Padronização Visual de Plataformas (Badges & Branding)
+
+Sempre que exibir o nome, tag ou selo de uma plataforma no TecFlow (listas, buscas, cards ou formulários), utilize a paleta de cores corporativas oficial com texto em alto contraste:
+
+- **Amazon:** `#FF9900` (Laranja) | Texto: `#FFFFFF`
+- **Mercado Livre:** `#FFE600` (Amarelo) | Texto: `#000000` (ou `#2D3277`)
+- **Shopee:** `#EE4D2D` (Laranja/Vermelho) | Texto: `#FFFFFF`
+- **Magazine Luiza (Magalu):** `#0086FF` (Azul) | Texto: `#FFFFFF`
+- **TikTok Shop:** `#000000` (Preto) | Texto: `#FFFFFF` (Com detalhe em Cyan `#00F2FE` / Rosa `#FE2C55` se aplicável)
+- **Hotmart:** `#FF5200` (Laranja Queimado) | Texto: `#FFFFFF`
+- **Braip:** `#12B76A` (Verde) | Texto: `#FFFFFF`
+- **Outros / Genérico:** `#6B7280` (Cinza) | Texto: `#FFFFFF`
+
+### Componente Reutilizável de Badge:
+Deve seguir o padrão de cantos arredondados (`rounded-full` ou `rounded-md`), fonte em negrito (`font-semibold`) e tamanho compacto (`text-xs px-2.5 py-1`).
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -553,12 +568,25 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] 23.3. Disparo e Agendamento para Grupos de Ofertas:**
   - Grupos sincronizados da Evolution (`WhatsAppGroups`) e campanhas em `WhatsAppBroadcastCampaigns`.
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
-  - Nova campanha: Título, Mensagem (sem URL), seletor de links e campo Link de Comissão; o disparo concatena copy + URL.
+  - Nova campanha: Título, Mensagem (sem URL), seletor de links com badges coloridas e campo Link de Comissão com badge da plataforma; o disparo concatena copy + URL.
   - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
   - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; lixeira confirma em modal, apaga o registro e cancela o job do worker.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 
+### 🟢 24. quando for converter qualquer link, pentar pegar o link principal da imagem e deixar guardado, para apresentar na tela Gerador de Links de Comissão, se não encontrar possibilitar que o afiliado coloque manualmente.
 
+já na tela integracoes/whatsapp/agendador, já preencher automatico quando o associado escolher o produto que ela vai querer. e possibilidade de ser trocado na hora do agendamento
+
+### 🟢 25. 
+
+### 🟢 26. 
+
+### 🟢 27. criar tela voltada a administração de grupos já existente de outras pessoas que vamos copiar as promoções lha elistente
+- criar botão para sincronizar grupos no whatsapp ou telegran
+- quando for clicado em um dos grupos, mostrar lista de promoções e links que estão lá, conforme filtro
+- filtro, ultimas 10 horas, ultimas 24 horas, ultimos 2 dias
+- nessa lista de conteudo, deve aparecer imagem, nome do produto, valor, deixar apenas botão do link, para caso o afiliado quiser abrir para conferir
+- em algum momento, vamos converir se aguele preço ainda é valido, se ainda existe aquele anuncio
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

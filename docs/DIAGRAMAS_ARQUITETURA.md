@@ -106,7 +106,7 @@ flowchart LR
   ACC --> LOJAS
   PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
-  NAV[NavMenu] -->|Próximos Desenvolvimentos| DASH[Dashboard.razor]
+  NAV[NavMenu] -->|Próximos accordion isProximosDesenvolvimentosOpen| DASH[Dashboard.razor]
   NAV -->|Integrações Gerador de Links| GER[GeradorLinks.razor]
   NAV -->|Integrações Minhas Lojas única| MINHAS
   NAV -->|Integrações Páginas Públicas| MINE

@@ -95,14 +95,15 @@
             <div class="portal-nav-group">
                 <button type="button"
                         class="portal-nav-link portal-nav-group-toggle @ProximosActiveClass"
-                        aria-expanded="@_proximosOpen"
-                        @onclick="ToggleProximos">
+                        aria-expanded="@isProximosDesenvolvimentosOpen"
+                        @onclick="ToggleProximosDesenvolvimentos"
+                        @onclick:preventDefault="true">
                     <i class="bi bi-hourglass-split portal-nav-icon" aria-hidden="true"></i>
                     <span class="portal-nav-link-label">Próximos Desenvolvimentos</span>
-                    <i class="bi @(_proximosOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
+                    <i class="bi bi-chevron-down portal-nav-caret transform transition-transform duration-200 @(isProximosDesenvolvimentosOpen ? "rotate-180" : "")"
+                       aria-hidden="true"></i>
                 </button>
-                @if (_proximosOpen)
-                {
+                <div class="portal-nav-collapse @(isProximosDesenvolvimentosOpen ? "block" : "hidden") transition-all duration-300">
                     <a href="/dashboard" class="portal-nav-link portal-nav-sublink @GetActiveClass("/dashboard")" @onclick="NotifyNavigate">
                         <i class="bi bi-speedometer2 portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Dashboard</span>
@@ -136,7 +137,7 @@
                         <i class="bi bi-shield-lock portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Minha conta / Segurança</span>
                     </a>
-                }
+                </div>
             </div>
         </Authorized>
         <NotAuthorized>
@@ -208,12 +209,25 @@
     private bool _whatsAppOpen;
     private bool _telegramOpen;
     private bool _integracoesOpen = true;
-    private bool _proximosOpen;
+    private bool isProximosDesenvolvimentosOpen;
+    private bool _proximosToggleInitialized;
+    private string? _proximosRouteWhenOpened;
 
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
         OpenGroupsForCurrentPath();
+        SyncProximosDesenvolvimentosFromRoute();
+        _proximosToggleInitialized = true;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!_proximosToggleInitialized)
+        {
+            SyncProximosDesenvolvimentosFromRoute();
+            _proximosToggleInitialized = true;
+        }
     }
 
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
@@ -221,6 +235,16 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         OpenGroupsForCurrentPath();
+        if (IsProximosPath() && !string.Equals(_proximosRouteWhenOpened, CurrentPath(), StringComparison.OrdinalIgnoreCase))
+        {
+            isProximosDesenvolvimentosOpen = true;
+            _proximosRouteWhenOpened = CurrentPath();
+        }
+        else if (!IsProximosPath())
+        {
+            _proximosRouteWhenOpened = null;
+        }
+
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -245,11 +269,17 @@
         {
             _integracoesOpen = true;
         }
+    }
 
-        if (IsProximosPath())
+    private void SyncProximosDesenvolvimentosFromRoute()
+    {
+        if (!IsProximosPath())
         {
-            _proximosOpen = true;
+            return;
         }
+
+        isProximosDesenvolvimentosOpen = true;
+        _proximosRouteWhenOpened = CurrentPath();
     }
 
     private void ToggleMensageria() => _mensageriaOpen = !_mensageriaOpen;
@@ -260,7 +290,13 @@
 
     private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
 
-    private void ToggleProximos() => _proximosOpen = !_proximosOpen;
+    private void ToggleProximosDesenvolvimentos()
+    {
+        isProximosDesenvolvimentosOpen = !isProximosDesenvolvimentosOpen;
+        _proximosRouteWhenOpened = isProximosDesenvolvimentosOpen && IsProximosPath()
+            ? CurrentPath()
+            : _proximosRouteWhenOpened;
+    }
 
     private Task NotifyNavigate() => OnNavigate.InvokeAsync();
 

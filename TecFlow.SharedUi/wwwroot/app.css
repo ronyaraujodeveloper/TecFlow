@@ -403,6 +403,36 @@ html, body {
     opacity: 0.7;
 }
 
+.portal-nav-caret.transform {
+    display: inline-block;
+}
+
+.portal-nav-caret.transition-transform {
+    transition: transform 0.2s ease;
+}
+
+.portal-nav-caret.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.portal-nav-collapse {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.portal-nav-collapse.transition-all {
+    transition: opacity 0.3s ease;
+}
+
+.portal-nav-collapse.block {
+    display: flex;
+}
+
+.portal-nav-collapse.hidden {
+    display: none;
+}
+
 .portal-nav-soon {
     flex-shrink: 0;
     font-size: 0.62rem;

@@ -199,6 +199,14 @@ O menu lateral do TecFlow deve seguir rigorosamente a seguinte estrutura hierár
    - Saúde do sistema
    - Minha conta / Segurança
 - [x] Sidebar (`NavMenu.razor`) reorganizada nesta árvore, sem duplicar Minhas Lojas, com ícones e destaque do grupo/página ativos.
+- [x] Accordion “Próximos Desenvolvimentos” usa estado C# (`isProximosDesenvolvimentosOpen`), `@onclick:preventDefault` e permanece aberto só quando a rota interna é a atual (sem travar o fechamento).
+
+## 📱 Comportamento de Submenus Retrrateis (Accordion / Collapsible Nav)
+
+Para todos os submenus interativos da Sidebar (como "Próximos Desenvolvimentos"):
+- **Controle de Estado Local:** O componente da Sidebar deve gerenciar o estado de abertura (`isExpanded`) via código C# no Blazor Server/Wasm.
+- **Isolamento de Manipulação do DOM:** Evite dependências de JavaScript externo (Bootstrap JS / Alpine) para alternar visibilidade de menus se o estado puder ser controlado diretamente via binding `@onclick` e classes condicionais do Blazor.
+- **Acessibilidade e Transição:** Utilize transições CSS suaves (`transition-all duration-200`) e altere o ícone do indicador (chevron para baixo `v` / chevron para o lado `>`) conforme o menu expande ou recolhe.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)

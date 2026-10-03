@@ -18,3 +18,4 @@
 [2026-10-03 19:04:02]fix(whatsapp): habilita clique nas acoes do agendador
 [2026-10-03 19:29:03]feat(ui): padroniza badges coloridas de plataforma
 [2026-10-03 19:36:30]feat(ui): substitui confirm nativo por modal global
+[2026-10-03 19:47:37]fix(whatsapp): preserva data futura na edicao

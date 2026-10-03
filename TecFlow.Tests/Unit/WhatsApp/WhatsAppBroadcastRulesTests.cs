@@ -95,6 +95,30 @@ public class WhatsAppBroadcastRulesTests
     }
 
     [Fact]
+    public void ResolveEditScheduledAt_ShouldKeepFutureDate()
+    {
+        var now = new DateTime(2026, 10, 3, 19, 0, 0, DateTimeKind.Local);
+        var scheduled = now.AddHours(2);
+
+        var resolved = WhatsAppBroadcastRules.ResolveEditScheduledAt(scheduled, now, out var adjusted);
+
+        Assert.False(adjusted);
+        Assert.Equal(scheduled, resolved);
+    }
+
+    [Fact]
+    public void ResolveEditScheduledAt_ShouldAdvancePastDateByTenMinutes()
+    {
+        var now = new DateTime(2026, 10, 3, 19, 0, 0, DateTimeKind.Local);
+        var scheduled = now.AddMinutes(-30);
+
+        var resolved = WhatsAppBroadcastRules.ResolveEditScheduledAt(scheduled, now, out var adjusted);
+
+        Assert.True(adjusted);
+        Assert.Equal(now.AddMinutes(10), resolved);
+    }
+
+    [Fact]
     public void JobCoordinator_ShouldCancelRegisteredCampaign()
     {
         var coordinator = new WhatsAppBroadcastJobCoordinator();

@@ -88,7 +88,11 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="wa-when">Data e hora</label>
-                    <input id="wa-when" type="datetime-local" class="form-control" value="@model.DataHoraLocal" @oninput="e => model.DataHoraLocal = e.Value?.ToString() ?? string.Empty" />
+                    <input id="wa-when"
+                           type="datetime-local"
+                           class="form-control"
+                           value="@model.DataHora.ToString("yyyy-MM-ddTHH:mm")"
+                           @oninput="OnScheduledAtInput" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="wa-interval">Intervalo entre grupos</label>
@@ -486,7 +490,8 @@
         model.Mensagem = copy;
         model.LinkComissaoUrl = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
         model.ImageUrl = item.ImageUrl ?? string.Empty;
-        model.DataHora = item.ScheduledAt.ToLocalTime();
+        var agora = DateTime.Now;
+        model.DataHora = WhatsAppBroadcastRules.ResolveEditScheduledAt(item.ScheduledAt, agora, out var dataAjustada);
         model.DataHoraLocal = model.DataHora.ToString("yyyy-MM-ddTHH:mm");
         model.IntervaloSegundos = WhatsAppBroadcastRules.ClampIntervalSeconds(item.IntervalSeconds);
         if (model.IntervaloSegundos is not 15 and not 30 and not 45 and not 60)
@@ -503,8 +508,18 @@
         DetectCommissionPlatform(model.LinkComissaoUrl);
         _pickerEpoch++;
         _messageUrlWarning = null;
-        _info = "Editando agendamento. Salve as alterações no formulário acima.";
         _error = null;
+        if (dataAjustada)
+        {
+            const string aviso = "A data original do agendamento já passou. O horário foi ajustado automaticamente para +10 minutos.";
+            _info = aviso;
+            _ = ShowToastAsync(aviso);
+        }
+        else
+        {
+            _info = "Editando agendamento. Salve as alterações no formulário acima.";
+        }
+
         StateHasChanged();
         try
         {
@@ -644,6 +659,15 @@
         if (_linkPicker is not null)
         {
             await _linkPicker.ResetAsync();
+        }
+    }
+
+    private void OnScheduledAtInput(ChangeEventArgs e)
+    {
+        model.DataHoraLocal = e.Value?.ToString() ?? string.Empty;
+        if (DateTime.TryParse(model.DataHoraLocal, out var parsed))
+        {
+            model.DataHora = DateTime.SpecifyKind(parsed, DateTimeKind.Local);
         }
     }
 

@@ -142,6 +142,21 @@ Para manter a consistência visual e a elegância da interface em toda a platafo
 2. **Acessibilidade & UX:**
    - O modal deve fechar ao clicar na tecla `ESC` ou fora dele (backdrop click).
    - Deve ser utilizado de forma global e padronizada em todos os módulos da aplicação.
+
+
+## ⏰ Regra de Validação de Horário na Edição de Agendamentos
+
+Ao carregar um agendamento para edição na tela de disparo:
+- **Verificação de Data Futura:** Se a `DataAgendada` for maior que o horário atual (`DataAgendada > DateTime.Now`), **mantenha exatamente a data e hora originais**.
+- **Ajuste Apenas para Agendamentos Retroativos:** Caso a data/hora original já tenha passado (`DataAgendada <= DateTime.Now`), ajuste automaticamente o campo para **10 minutos à frente** do horário atual (`DateTime.Now.AddMinutes(10)`).
+- **Feedback:** Exiba um aviso informativo apenas quando o ajuste de +10 minutos for aplicado.
+
+## 🛠️ Diagnóstico e Boas Práticas para Ações de Tabela (Blazor Modais)
+
+Para evitar que botões de ação em listas/tabelas fiquem inativos após refatorações:
+- **Binding de Eventos:** Garanta sempre o uso de `@onclick="() => AbrirModalExclusao(item.Id)"` para evitar chamadas automáticas durante a renderização.
+- **Renderização Reativa de Modais:** Ao disparar um modal customizado, altere o flag de exibição (ex: `isDeleteModalOpen = true`) e invoque `StateHasChanged()` explicitamente.
+- **Isolamento de Componente:** Mantenha o componente de Modal fora da tag `<table>` ou do loop `@foreach`, posicionando-o no final do arquivo `.razor`.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -589,7 +604,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Worker com intervalo anti-bloqueio (15–180s) e tela `/integracoes/whatsapp/agendador`.
   - Nova campanha: Título, Mensagem (sem URL), seletor de links com badges coloridas e campo Link de Comissão com badge da plataforma; o disparo concatena copy + URL.
   - Grupos: MultiSelect com chips, atalhos frequentes persistidos e `IsAdmin` somente para o número conectado.
-  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; lixeira confirma no `ConfirmDialogHost` (`IModalService`) e cancela o job do worker.
+  - Lista de disparos: lápis preenche o formulário e chama `UpdateAgendamentoCommand`; data futura é preservada e data passada vai para +10 minutos; lixeira confirma no `ConfirmDialogHost` (`IModalService`) e cancela o job do worker.
 - [x] 23.4. Segurança defensiva (Telegram/WhatsApp):**
   - AES-256 em Token/ApiKey/SessionData; webhook `X-Webhook-Secret`; `UnauthorizedAccessException` se `integration.UserId != currentUserId`; tokens mascarados no Blazor.
 

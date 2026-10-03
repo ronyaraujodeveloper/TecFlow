@@ -875,6 +875,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppBroadcastController** — `PUT /api/integracoes/whatsapp/campanhas/{id}`, `DELETE` cancela o worker.
 - [x] **WhatsAppBroadcastService** — `UpdateAsync` / `DeleteCampaignAsync` com nomes dos grupos e ordenação por mais recente.
 - [x] **WhatsAppBroadcastRules.SplitDispatchMessage** — separa copy e URL ao editar.
+- [x] **WhatsAppBroadcastRules.ResolveEditScheduledAt** — na edição, preserva data futura e ajusta passada para +10 minutos.
 
 ---
 

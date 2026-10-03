@@ -141,6 +141,22 @@ public static class WhatsAppBroadcastRules
         value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
         || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
+    public static DateTime ResolveEditScheduledAt(DateTime scheduledAt, DateTime now, out bool adjusted)
+    {
+        var localScheduled = scheduledAt.Kind == DateTimeKind.Utc
+            ? scheduledAt.ToLocalTime()
+            : DateTime.SpecifyKind(scheduledAt, DateTimeKind.Local);
+        var localNow = now.Kind == DateTimeKind.Utc ? now.ToLocalTime() : now;
+        if (localScheduled > localNow)
+        {
+            adjusted = false;
+            return localScheduled;
+        }
+
+        adjusted = true;
+        return localNow.AddMinutes(10);
+    }
+
     public static bool IsPrivilegedWhatsAppRole(string? role)
     {
         var value = (role ?? string.Empty).Trim().ToLowerInvariant().Replace("_", string.Empty).Replace("-", string.Empty);

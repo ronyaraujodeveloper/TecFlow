@@ -144,7 +144,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.API/web.config** — `stdoutLogEnabled="true"`, `requestTimeout="20:00:00"` para o UserBot contínuo no IIS.
 - [x] **Configurar-Logs-IIS.ps1** — cria `logs\` em `C:\inetpub\tecflow\api` e `webui`; `FullControl` para `IIS_IUSRS`, `DefaultAppPool` e app pools dedicados.
 - [x] **Liberar-Logs-WebUi.ps1** — cria `C:\inetpub\tecflow\webui\logs\` e concede `FullControl` a `IIS_IUSRS` / app pools.
-- [x] **HttpService.cs** / **WebAccessTokenProvider.cs** — 401 vazio deixa de parecer CORS; sem JWT não chama a API; token lido do cookie do circuito Blazor.
+- [x] **HttpService.cs** / **WebAccessTokenProvider.cs** — 401 vazio vira mensagem de sessão; login sem JWT continua permitido.
 - [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — seção `Serilog.MinimumLevel` (Information em homolog).
 - [x] **TecFlow.WebUi/Program.cs** — Serilog Console + `logs/app-.txt`, `UseSerilogRequestLogging`, `Log.CloseAndFlush`.
 - [x] **TecFlow.WebUi/Logging/BlazorCircuitLoggingHandler.cs** — log de abertura/fechamento/reconexão de circuitos SignalR.
@@ -924,7 +924,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats.Values` + `GetHistory` paginado (200) e fila `Channel`; sync da tela dispara `CatchUpUserAsync`.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
-- [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50” e redireciona ao login em HTTP 401.
+- [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50”; 401 mostra alerta de sessão sem sair da rota.
 - [x] **MonitoredGroupsController.cs** / **MonitoredGroupService.cs** — listagem paginada (`skip`/`take`, sem `Take(120)`).
 
 ---

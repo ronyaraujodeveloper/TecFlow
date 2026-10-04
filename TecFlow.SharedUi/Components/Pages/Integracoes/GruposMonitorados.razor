@@ -217,11 +217,6 @@
         try
         {
             var result = await Api.SyncAsync(Channel);
-            if (result.StatusCode == 401)
-            {
-                Navigation.NavigateTo("/", forceLoad: true);
-                return;
-            }
             Apply(result.Data, result.ErrorMessage, append: false, silent: false);
             if (result.Data is { Status: true })
             {
@@ -257,11 +252,6 @@
                 Channel,
                 skip,
                 GroupOfferCaptureRules.OffersPageSize);
-            if (result.StatusCode == 401)
-            {
-                Navigation.NavigateTo("/", forceLoad: true);
-                return;
-            }
             if (result.Data is not null)
             {
                 Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);

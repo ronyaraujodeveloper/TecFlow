@@ -686,6 +686,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] **Clonar para Minha Campanha** gera o link de comissão e abre `/integracoes/whatsapp/agendador` com mensagem e imagem.
 - [x] Sync de grupos monitorados com try/catch, log do stack trace, UserId fallback 1 e falha isolada WhatsApp/Telegram.
 - [x] `IUserContextProvider` registrado no DI da API (corrige 500 na tela de grupos monitorados).
+- [x] HTTP 401 na listagem/sync não força `NavigateTo("/")`; o menu e a tela permanecem e o login sem JWT segue via `HttpService`.
 
 ### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
 [ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:

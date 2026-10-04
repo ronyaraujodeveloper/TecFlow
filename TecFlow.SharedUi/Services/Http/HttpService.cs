@@ -70,16 +70,11 @@ public class HttpService : IHttpService
             using var request = new HttpRequestMessage(method, relativeUrl);
 
             var accessToken = await ResolveAccessTokenAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(accessToken))
+            if (!string.IsNullOrWhiteSpace(accessToken))
             {
-                return ApiResult<TResponse>.Fail(
-                    "Sessão expirada ou não autenticada. Entre novamente no TecFlow.",
-                    401,
-                    "UNAUTHORIZED");
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
             }
-
-            request.Headers.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
 
             if (body is not null)
             {

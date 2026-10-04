@@ -8,6 +8,8 @@ public class TelegramGroupDto
 
     public string Name { get; set; } = string.Empty;
 
+    public string GroupName { get; set; } = string.Empty;
+
     public int ParticipantCount { get; set; }
 
     public bool IsAdmin { get; set; }
@@ -53,6 +55,8 @@ public class TelegramScheduleCampaignDto
     public string? TargetChatId { get; set; }
 
     public List<string> TargetChatIds { get; set; } = [];
+
+    public List<string> SelectedChatIds { get; set; } = [];
 
     public DateTime? ScheduledAt { get; set; }
 

@@ -78,20 +78,15 @@
                 </div>
             </div>
 
-            @if (_pickerGroups.Count == 0)
+            @if (model.Groups.Count == 0)
             {
                 <p class="text-muted small">Nenhum canal sincronizado. Conecte o Telegram e clique em sincronizar.</p>
             }
             else
             {
-                <WhatsAppGroupPicker @key="_pickerEpoch"
-                                     Title="Canais e grupos"
-                                     SearchPlaceholder="Busque e selecione os canais..."
-                                     CountLabel="canal(is) selecionado(s)"
-                                     AdminOnlyLabel="Exibir apenas canais em que o bot é Admin"
-                                     Groups="_pickerGroups"
-                                     Campaigns="_pickerCampaigns"
-                                     SelectedJids="_selectedChatIds" />
+                <TelegramGroupPicker @key="_pickerEpoch"
+                                     Groups="model.Groups"
+                                     SelectedChatIds="model.SelectedChatIds" />
             }
 
             <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
@@ -142,10 +137,8 @@
 </div>
 
 @code {
+    private readonly TelegramCampaignForm model = new();
     private readonly List<TelegramBroadcastCampaignDto> _campaigns = [];
-    private readonly List<WhatsAppGroupDto> _pickerGroups = [];
-    private readonly List<WhatsAppBroadcastCampaignDto> _pickerCampaigns = [];
-    private readonly HashSet<string> _selectedChatIds = new(StringComparer.OrdinalIgnoreCase);
     private CommissionLinkPicker? _linkPicker;
     private string _title = string.Empty;
     private string _message = string.Empty;
@@ -163,23 +156,7 @@
     {
         _campaigns.Clear();
         _campaigns.AddRange(data?.Campaigns ?? []);
-        _pickerGroups.Clear();
-        _pickerGroups.AddRange((data?.Groups ?? []).Select(item => new WhatsAppGroupDto
-        {
-            Id = item.Id,
-            Jid = item.ChatId,
-            Name = item.Name,
-            ParticipantCount = item.ParticipantCount,
-            IsAdmin = item.IsAdmin,
-            IsActive = item.IsActive
-        }));
-        _pickerCampaigns.Clear();
-        _pickerCampaigns.AddRange(_campaigns.Select(item => new WhatsAppBroadcastCampaignDto
-        {
-            Id = item.Id,
-            Title = item.Title,
-            TargetGroupJids = item.TargetChatIds
-        }));
+        model.Groups = data?.Groups ?? [];
         _pickerEpoch++;
     }
 
@@ -188,9 +165,9 @@
         var response = await TelegramApi.ListCampaignsAsync();
         ApplyPayload(response.Data);
         if (!string.IsNullOrWhiteSpace(response.Data?.DefaultChatId)
-            && _selectedChatIds.Count == 0)
+            && model.SelectedChatIds.Count == 0)
         {
-            _selectedChatIds.Add(response.Data.DefaultChatId);
+            model.SelectedChatIds.Add(response.Data.DefaultChatId);
         }
     }
 
@@ -248,7 +225,8 @@
                 Title = _title,
                 MessageText = _message,
                 ImageUrl = _imageUrl,
-                TargetChatIds = _selectedChatIds.ToList(),
+                SelectedChatIds = model.SelectedChatIds,
+                TargetChatIds = model.SelectedChatIds,
                 ScheduledAt = when,
                 IntervalSeconds = _intervalSeconds
             });
@@ -313,4 +291,11 @@
             TelegramBroadcastStatuses.Processing => "text-bg-warning",
             _ => "text-bg-secondary"
         };
+
+    private sealed class TelegramCampaignForm
+    {
+        public List<string> SelectedChatIds { get; set; } = [];
+
+        public IReadOnlyList<TelegramGroupDto> Groups { get; set; } = [];
+    }
 }

@@ -16,6 +16,18 @@ public static class TelegramBroadcastRules
     public static IReadOnlyList<string> DeserializeChatIds(string? json) =>
         WhatsAppBroadcastRules.DeserializeJids(json);
 
+    public const string UntitledGroupName = "Grupo sem nome";
+
+    public static string ResolveFriendlyName(string? title, string? fallbackChatId = null)
+    {
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            return title.Trim();
+        }
+
+        return UntitledGroupName;
+    }
+
     public static IReadOnlyList<string> ResolveChatIds(string? json, string? legacyChatId)
     {
         var ids = DeserializeChatIds(json).ToList();

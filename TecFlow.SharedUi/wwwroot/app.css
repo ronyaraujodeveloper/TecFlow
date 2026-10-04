@@ -2071,6 +2071,12 @@ html, body {
     font-size: 0.8rem;
 }
 
+.group-chip-id {
+    font-size: 0.7rem;
+    opacity: 0.75;
+    font-family: ui-monospace, Consolas, monospace;
+}
+
 .group-chip-remove {
     width: 0.55rem;
     height: 0.55rem;

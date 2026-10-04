@@ -15,6 +15,13 @@ public class TelegramBroadcastRulesTests
     }
 
     [Fact]
+    public void ResolveFriendlyName_ShouldUseTitleOrUntitled()
+    {
+        Assert.Equal("achadinhos", TelegramBroadcastRules.ResolveFriendlyName("achadinhos", "-100707440297"));
+        Assert.Equal(TelegramBroadcastRules.UntitledGroupName, TelegramBroadcastRules.ResolveFriendlyName("  ", "-100707440297"));
+    }
+
+    [Fact]
     public void ResolveChatIds_ShouldPreferJsonAndFallbackToLegacy()
     {
         var fromJson = TelegramBroadcastRules.ResolveChatIds("""["-1001","-1002"]""", "-1009");

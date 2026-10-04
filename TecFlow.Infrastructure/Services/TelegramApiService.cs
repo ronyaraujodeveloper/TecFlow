@@ -224,11 +224,12 @@ public sealed class TelegramApiService : ITelegramApiService
                     _logger.LogDebug(ex, "Não foi possível contar membros do chat {ChatId}.", chatId);
                 }
 
-                var name = string.IsNullOrWhiteSpace(chat.Title) ? chatId : chat.Title.Trim();
+                var name = TelegramBroadcastRules.ResolveFriendlyName(chat.Title, chatId);
                 result.Add(new TelegramGroupDto
                 {
                     ChatId = chat.Id.ToString(),
                     Name = name,
+                    GroupName = name,
                     ParticipantCount = members,
                     IsAdmin = isAdmin,
                     IsActive = true
@@ -237,6 +238,13 @@ public sealed class TelegramApiService : ITelegramApiService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Falha no GetChat do Telegram. ChatId={ChatId}", chatId);
+                result.Add(new TelegramGroupDto
+                {
+                    ChatId = chatId,
+                    Name = TelegramBroadcastRules.UntitledGroupName,
+                    GroupName = TelegramBroadcastRules.UntitledGroupName,
+                    IsActive = true
+                });
             }
         }
 

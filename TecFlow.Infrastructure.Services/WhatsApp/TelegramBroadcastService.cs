@@ -99,7 +99,9 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
                 existing.Add(row);
             }
 
-            row.Name = string.IsNullOrWhiteSpace(item.Name) ? item.ChatId : item.Name.Trim();
+            row.Name = TelegramBroadcastRules.ResolveFriendlyName(
+                string.IsNullOrWhiteSpace(item.GroupName) ? item.Name : item.GroupName,
+                item.ChatId);
             row.ParticipantCount = item.ParticipantCount;
             row.IsAdmin = item.IsAdmin;
             row.IsActive = true;
@@ -117,7 +119,7 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
                 {
                     UserId = userId,
                     ChatId = chatId,
-                    Name = chatId,
+                    Name = TelegramBroadcastRules.UntitledGroupName,
                     IsAdmin = true,
                     IsActive = true
                 };
@@ -152,8 +154,9 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
 
         var title = (request.Title ?? string.Empty).Trim();
         var message = (request.MessageText ?? string.Empty).Trim();
+        var selected = request.SelectedChatIds.Count > 0 ? request.SelectedChatIds : request.TargetChatIds;
         var chatIds = TelegramBroadcastRules.ResolveChatIds(
-            TelegramBroadcastRules.SerializeChatIds(request.TargetChatIds),
+            TelegramBroadcastRules.SerializeChatIds(selected),
             request.TargetChatId ?? integration.ChatId);
         if (title.Length is < 3 or > 128)
         {
@@ -331,6 +334,9 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
             Id = group.Id,
             ChatId = group.ChatId,
             Name = group.Name,
+            GroupName = string.IsNullOrWhiteSpace(group.Name)
+                ? TelegramBroadcastRules.UntitledGroupName
+                : group.Name,
             ParticipantCount = group.ParticipantCount,
             IsAdmin = group.IsAdmin,
             IsActive = group.IsActive

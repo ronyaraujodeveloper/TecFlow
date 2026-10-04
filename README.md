@@ -710,9 +710,10 @@ Nas páginas de agendamento (`/integracoes/whatsapp/agendador` e `/integracoes/t
 ## 🤖 Sincronização de Grupos/Canais no Agendador Telegram
 
 Para equiparar a experiência ao agendador do WhatsApp:
-1. **Botão de Sincronização:** Adicionar o botão "Sincronizar Meus Canais/Grupos do Telegram" no topo do agendador (`/integracoes/telegram/agendador`).
-2. **Consulta via API:** Ao clicar, o sistema deve invocar `GetUpdates` ou consultar os chats gerenciados pelo BotToken ativo e salvar em `TelegramGroups`.
-3. **Componente Multi-Select:** Substituir o disparo fixo em Chat ID único por um seletor múltiplo com chips de grupos/canais disponíveis, permitindo disparar para um ou mais canais simultaneamente no mesmo agendamento.
+1. [x] **Botão de Sincronização:** Adicionar o botão "Sincronizar Meus Canais/Grupos do Telegram" no topo do agendador (`/integracoes/telegram/agendador`).
+2. [x] **Consulta via API:** Ao clicar, o sistema deve invocar `GetUpdates` ou consultar os chats gerenciados pelo BotToken ativo e salvar em `TelegramGroups`.
+3. [x] **Nome amigável:** `GetChatAsync` grava `chat.Title` (ex: *achadinhos*) em `TelegramGroups.Name`/`GroupName`.
+4. [x] **Componente Multi-Select:** chips com nome + Chat ID, busca em tempo real, Selecionar Todos / Limpar Seleção e `SelectedChatIds`.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

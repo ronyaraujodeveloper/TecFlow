@@ -1,0 +1,132 @@
+﻿@using TecFlow.Business.Dto
+
+<div class="whatsapp-group-picker mb-3">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-2">
+        <p class="fw-semibold mb-0">Canais e grupos</p>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SelectAllAsync">Selecionar Todos</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ClearSelectionAsync">Limpar Seleção</button>
+        </div>
+    </div>
+
+    <div class="group-multiselect" @onclick="() => _showSuggestions = true">
+        @foreach (var group in SelectedGroups)
+        {
+            <span class="group-chip" title="@group.ChatId">
+                <span>@FriendlyName(group)</span>
+                <span class="group-chip-id">@group.ChatId</span>
+                <button type="button"
+                        class="btn-close btn-close-white group-chip-remove"
+                        aria-label="Remover @FriendlyName(group)"
+                        @onclick:stopPropagation="true"
+                        @onclick="() => RemoveGroup(group.ChatId)"></button>
+            </span>
+        }
+        <input id="tg-group-search"
+               class="group-multiselect-input"
+               autocomplete="off"
+               placeholder="@(SelectedGroups.Count == 0 ? "Busque pelo nome do canal..." : "")"
+               value="@_search"
+               @oninput="OnSearchInput"
+               @onfocus="() => _showSuggestions = true" />
+        @if (_showSuggestions && Suggestions.Count > 0)
+        {
+            <ul class="dropdown-menu show group-multiselect-dropdown" role="listbox">
+                @foreach (var group in Suggestions)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item" @onclick="() => AddGroup(group.ChatId)">
+                            <span class="fw-semibold">@FriendlyName(group)</span>
+                            <span class="text-muted small ms-1">@group.ChatId</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+    <div class="form-text">@SelectedChatIds.Count canal(is) selecionado(s). A busca filtra pelo nome amigável em tempo real.</div>
+</div>
+
+@code {
+    private string _search = string.Empty;
+    private bool _showSuggestions;
+
+    [Parameter]
+    public IReadOnlyList<TelegramGroupDto> Groups { get; set; } = [];
+
+    [Parameter]
+    public List<string> SelectedChatIds { get; set; } = [];
+
+    [Parameter]
+    public EventCallback SelectionChanged { get; set; }
+
+    private IReadOnlyList<TelegramGroupDto> SelectedGroups =>
+        Groups.Where(group => SelectedChatIds.Contains(group.ChatId, StringComparer.OrdinalIgnoreCase)).ToList();
+
+    private IReadOnlyList<TelegramGroupDto> Suggestions
+    {
+        get
+        {
+            var query = Groups.Where(group =>
+                !SelectedChatIds.Contains(group.ChatId, StringComparer.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                query = query.Where(group =>
+                    FriendlyName(group).Contains(_search, StringComparison.OrdinalIgnoreCase)
+                    || group.ChatId.Contains(_search, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query.Take(12).ToList();
+        }
+    }
+
+    private static string FriendlyName(TelegramGroupDto group) =>
+        string.IsNullOrWhiteSpace(group.GroupName)
+            ? (string.IsNullOrWhiteSpace(group.Name) ? group.ChatId : group.Name)
+            : group.GroupName;
+
+    private async Task SelectAllAsync()
+    {
+        foreach (var group in Groups)
+        {
+            if (!SelectedChatIds.Contains(group.ChatId, StringComparer.OrdinalIgnoreCase))
+            {
+                SelectedChatIds.Add(group.ChatId);
+            }
+        }
+
+        await NotifyAsync();
+    }
+
+    private async Task ClearSelectionAsync()
+    {
+        SelectedChatIds.Clear();
+        await NotifyAsync();
+    }
+
+    private async Task AddGroup(string chatId)
+    {
+        if (!SelectedChatIds.Contains(chatId, StringComparer.OrdinalIgnoreCase))
+        {
+            SelectedChatIds.Add(chatId);
+        }
+
+        _search = string.Empty;
+        _showSuggestions = false;
+        await NotifyAsync();
+    }
+
+    private async Task RemoveGroup(string chatId)
+    {
+        SelectedChatIds.RemoveAll(item => item.Equals(chatId, StringComparison.OrdinalIgnoreCase));
+        await NotifyAsync();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _showSuggestions = true;
+    }
+
+    private Task NotifyAsync() => SelectionChanged.InvokeAsync();
+}

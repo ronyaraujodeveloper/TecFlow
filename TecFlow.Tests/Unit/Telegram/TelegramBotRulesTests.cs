@@ -43,6 +43,19 @@ public class TelegramBotRulesTests
         Assert.True(TelegramBotRules.ShouldIgnore(incoming!));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("*****")]
+    [InlineData("****************")]
+    public void IsPlaceholderToken_ShouldRejectEmptyAndAsterisks(string? token) =>
+        Assert.True(TelegramBotRules.IsPlaceholderToken(token));
+
+    [Fact]
+    public void IsPlaceholderToken_ShouldAcceptBotFatherToken() =>
+        Assert.False(TelegramBotRules.IsPlaceholderToken("8743142006:AAHdemo"));
+
     [Fact]
     public void FormatConvertedReply_ShouldListCommissionLinks()
     {

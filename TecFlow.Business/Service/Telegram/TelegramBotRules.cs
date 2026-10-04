@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.WhatsApp;
 
 namespace TecFlow.Business.Service.Telegram;
@@ -30,9 +31,36 @@ public static class TelegramBotRules
     public const int ReplyTimeoutMilliseconds = 1800;
     public const string ConnectedLabel = "Conectado ✅";
     public const string DisconnectedLabel = "Desconectado";
+    public const string AwaitingChannelMessageLabel = "Aguardando mensagem no canal...";
+    public const string MissingTokenMessage = "Por favor, informe a token válida emitida pelo @BotFather.";
+    public const string InvalidTokenMessage = "Token do Telegram inválida ou não reconhecida";
 
     public static bool IsTelegramBotSource(string? source) =>
         string.Equals(source, TelegramBotSource, StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsPlaceholderToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return true;
+        }
+
+        var trimmed = token.Trim();
+        if (trimmed == SecretMasking.MaskedValue)
+        {
+            return true;
+        }
+
+        foreach (var character in trimmed)
+        {
+            if (character != '*')
+            {
+                return false;
+            }
+        }
+
+        return trimmed.Length > 0;
+    }
 
     public static TelegramIncomingMessage? TryParseIncoming(JsonElement payload)
     {

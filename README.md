@@ -208,6 +208,17 @@ Para todos os submenus interativos da Sidebar (como "Próximos Desenvolvimentos"
 - **Controle de Estado Local:** O componente da Sidebar deve gerenciar o estado de abertura (`isExpanded`) via código C# no Blazor Server/Wasm.
 - **Isolamento de Manipulação do DOM:** Evite dependências de JavaScript externo (Bootstrap JS / Alpine) para alternar visibilidade de menus se o estado puder ser controlado diretamente via binding `@onclick` e classes condicionais do Blazor.
 - **Acessibilidade e Transição:** Utilize transições CSS suaves (`transition-all duration-200`) e altere o ícone do indicador (chevron para baixo `v` / chevron para o lado `>`) conforme o menu expande ou recolhe.
+
+## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
+
+1. **Validação e Feedbacks do Botão:**
+   - [x] Ao clicar em "Validar e Conectar Bot", o sistema valida o formato da chave (Bot Token). Se estiver vazio ou preenchido com asteriscos, cancela o envio e exibe um alerta explicativo.
+   - [x] Trata exceções da API da Telegram (como token inválido/inexistente ou erro de permissão no Webhook) exibindo toasts/alertas visuais sem travar o componente Blazor.
+   - [x] Spinner `_isLoading` no botão; sucesso ativa webhook e status "Aguardando mensagem no canal...".
+
+2. **Modal Auxiliar "Saiba onde obter o código":**
+   - [x] Ao lado do campo Bot Token, incluir o botão/link **"Saiba onde obter o código"**.
+   - [x] Ao clicar, exibe um modal estilizado do TecFlow com o passo a passo ilustrado de como criar o robô no `@BotFather` e copiar o token gerado.
 ---
 
 ## 🏛️ GUIA DE ARQUITETURA PARA NOVAS INTEGRAÇÕES (EXTENSIBILIDADE)
@@ -629,6 +640,7 @@ Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escu
   - Token, ApiKey e SessionData em `TelegramIntegrations` com AES-256; máscara `****************` em `/integracoes/telegram`.
   - `TelegramApiService.ValidateBotTokenAsync` (`GetMeAsync`) + `RegisterWebhookAsync` (`SetWebhookAsync` com secret do `X-Webhook-Secret`).
   - Status **Conectado ✅** após webhook `POST /api/v1/integrations/telegram/webhook/{userId}`.
+  - `/integracoes/conexoes` (aba Telegram): valida Bot Token vazio/`*****`, spinner, toasts e modal **Saiba onde obter o código**.
 - [x] 22.2. Conversão Automática em Chats:**
   - Webhook processa mensagens privadas, extrai URLs, converte com `PlatformLinkResolver` e loja ativa do `UserId`, responde em até 2s (`SendTextMessageAsync`) e grava `ShortAffiliateLinks.Source=TelegramBot`.
 - [x] 22.3. Agendamento e Disparo Automático:**

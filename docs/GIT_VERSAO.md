@@ -26,3 +26,4 @@
 [2026-10-03 20:59:53]fix(ui): accordion Proximos Desenvolvimentos via botao e StateHasChanged
 [2026-10-03 21:17:08]fix(ui): torna NavMenu InteractiveServer para abrir submenus
 [2026-10-03 21:56:11]feat(grupos): monitora e clona ofertas de grupos
+[2026-10-03 22:38:45]feat(telegram): valida token e modal BotFather

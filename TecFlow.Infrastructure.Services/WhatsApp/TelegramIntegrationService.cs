@@ -55,10 +55,15 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         CancellationToken cancellationToken = default)
     {
         request ??= new SaveTelegramIntegrationDto();
-        var row = await ApplyFieldsAsync(userId, request, cancellationToken);
-        if (string.IsNullOrWhiteSpace(row.Token))
+        if (TelegramBotRules.IsPlaceholderToken(request.Token))
         {
-            return Fail("Informe o BotToken gerado no @BotFather.");
+            return Fail(TelegramBotRules.MissingTokenMessage);
+        }
+
+        var row = await ApplyFieldsAsync(userId, request, cancellationToken);
+        if (string.IsNullOrWhiteSpace(row.Token) || TelegramBotRules.IsPlaceholderToken(row.Token))
+        {
+            return Fail(TelegramBotRules.MissingTokenMessage);
         }
 
         if (string.IsNullOrWhiteSpace(row.ChatId))
@@ -66,10 +71,21 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             return Fail("Informe o ChatId do canal ou grupo.");
         }
 
-        var identity = await _telegramApi.ValidateBotTokenAsync(row.Token, cancellationToken);
+        TelegramBotIdentityDto? identity;
+        try
+        {
+            identity = await _telegramApi.ValidateBotTokenAsync(row.Token, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return Fail(string.IsNullOrWhiteSpace(ex.Message)
+                ? TelegramBotRules.InvalidTokenMessage
+                : ex.Message);
+        }
+
         if (identity is null)
         {
-            return Fail("Token inválido. Confira o valor gerado no @BotFather.");
+            return Fail(TelegramBotRules.InvalidTokenMessage);
         }
 
         if (string.IsNullOrWhiteSpace(_webhookOptions.Secret))

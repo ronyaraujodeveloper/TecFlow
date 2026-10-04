@@ -38,6 +38,12 @@
     {
         <div class="alert alert-success py-2 small" role="status">@_ok</div>
     }
+    @if (!string.IsNullOrWhiteSpace(_toastMessage))
+    {
+        <div class="toast show campaign-toast @(_toastSuccess ? "text-bg-success" : "text-bg-danger")" role="status" aria-live="polite">
+            <div class="toast-body">@_toastMessage</div>
+        </div>
+    }
 
     <ul class="nav nav-tabs conexoes-tabs mb-3" role="tablist">
         <li class="nav-item" role="presentation">
@@ -133,9 +139,9 @@
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
                     <h2 class="h5 fw-bold mb-0">BotFather</h2>
-                    <span class="badge @(_telegram?.IsConnected == true ? "text-bg-success" : "text-bg-secondary")"
+                    <span class="badge @TelegramBadgeClass"
                           title="Resultado da última validação GetMeAsync">
-                        @(_telegram?.UiStatusLabel ?? TelegramBotRules.DisconnectedLabel)
+                        @TelegramStatusText
                     </span>
                 </div>
 
@@ -147,7 +153,16 @@
                 }
 
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="cx-tg-token">Bot Token</label>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <label class="form-label small fw-semibold mb-0" for="cx-tg-token">Bot Token</label>
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 text-decoration-none"
+                                title="Abre o passo a passo do @("@BotFather")"
+                                @onclick="OpenBotFatherHelpModal">
+                            <i class="bi bi-question-circle me-1" aria-hidden="true"></i>
+                            Saiba onde obter o código
+                        </button>
+                    </div>
                     <input id="cx-tg-token"
                            class="form-control"
                            type="password"
@@ -167,10 +182,18 @@
                 </div>
                 <button type="button"
                         class="btn btn-primary w-100 mb-4"
-                        disabled="@_isBusy"
+                        disabled="@_isLoading"
                         title="Chama GetMeAsync e registra o webhook com o secret do servidor"
                         @onclick="ValidateTelegramAsync">
-                    @(_isBusy ? "Validando..." : "Validar e Salvar Bot")
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Validando...</span>
+                    }
+                    else
+                    {
+                        <span>Validar e Conectar Bot</span>
+                    }
                 </button>
 
                 <h3 class="h6 fw-semibold mb-2">Segurança</h3>
@@ -237,6 +260,38 @@
     <div class="modal-backdrop fade show" @onclick="CloseQrModal"></div>
 }
 
+@if (isBotFatherHelpModalOpen)
+{
+    <div class="modal fade show d-block conexoes-qr-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="botfather-help-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="confirm-dialog-icon confirm-dialog-icon--info" aria-hidden="true">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </span>
+                        <h2 class="modal-title h5 fw-bold mb-0" id="botfather-help-title">Como obter o seu Bot Token no Telegram</h2>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseBotFatherHelpModal"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <ol class="small mb-0 ps-3">
+                        <li class="mb-2">Abra o app do <strong>Telegram</strong> e pesquise por <strong>@("@BotFather")</strong> (conta oficial com selo azul).</li>
+                        <li class="mb-2">Inicie a conversa e envie o comando <code>/newbot</code>.</li>
+                        <li class="mb-2">Digite o <strong>Nome</strong> para o seu robô (ex: <em>Ofertas da Minha Loja</em>).</li>
+                        <li class="mb-2">Digite o <strong>Username</strong> do robô (deve terminar obrigatoriamente com <code>bot</code>, ex: <em>minha_loja_ofertas_bot</em>).</li>
+                        <li class="mb-0">Copie o <strong>HTTP API Token</strong> gerado (ex: <code>8743142006:AAH...</code>) e cole no campo ao lado.</li>
+                    </ol>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary" @onclick="CloseBotFatherHelpModal">Entendi, fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseBotFatherHelpModal"></div>
+}
+
 @code {
     private string _tab = "whatsapp";
     private WhatsAppIntegrationDto? _whatsApp;
@@ -247,8 +302,14 @@
     private string? _chatId;
     private string? _error;
     private string? _ok;
+    private string? _toastMessage;
+    private bool _toastSuccess;
     private bool _isBusy;
+    private bool _isLoading;
+    private bool isBotFatherHelpModalOpen;
+    private string? _telegramUiStatus;
     private CancellationTokenSource? _pollCts;
+    private CancellationTokenSource? _toastCts;
 
     private string WhatsAppStatusText =>
         _whatsApp?.IsConnected == true
@@ -256,6 +317,18 @@
             : _whatsApp?.ConnectionStatus == WhatsAppConnectionStatuses.AwaitingQr
                 ? "Aguardando leitura"
                 : "Desconectado";
+
+    private string TelegramStatusText =>
+        _telegramUiStatus
+        ?? _telegram?.UiStatusLabel
+        ?? TelegramBotRules.DisconnectedLabel;
+
+    private string TelegramBadgeClass =>
+        string.Equals(TelegramStatusText, TelegramBotRules.AwaitingChannelMessageLabel, StringComparison.Ordinal)
+            ? "text-bg-warning"
+            : _telegram?.IsConnected == true
+                ? "text-bg-success"
+                : "text-bg-secondary";
 
     private string WhatsAppBadgeClass =>
         _whatsApp?.IsConnected == true
@@ -343,37 +416,91 @@
         }
     }
 
+    private void OpenBotFatherHelpModal() => isBotFatherHelpModalOpen = true;
+
+    private void CloseBotFatherHelpModal() => isBotFatherHelpModalOpen = false;
+
     private async Task ValidateTelegramAsync()
     {
         _error = null;
         _ok = null;
-        _isBusy = true;
+        _tab = "telegram";
+        if (TelegramBotRules.IsPlaceholderToken(_tokenInput))
+        {
+            await ShowToastAsync(TelegramBotRules.MissingTokenMessage, success: false);
+            return;
+        }
+
+        _isLoading = true;
         try
         {
             var response = await TelegramApi.ConnectAsync(new SaveTelegramIntegrationDto
             {
-                Token = string.IsNullOrWhiteSpace(_tokenInput) ? SecretMasking.MaskedValue : _tokenInput,
+                Token = _tokenInput,
                 ChatId = _chatId
             });
             if (!response.Success)
             {
-                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                var fail = response.Data?.Descricao ?? response.ErrorMessage ?? TelegramBotRules.InvalidTokenMessage;
+                await ShowToastAsync(fail, success: false);
                 return;
             }
 
             _telegram = response.Data?.Data;
+            _telegramUiStatus = TelegramBotRules.AwaitingChannelMessageLabel;
+            if (_telegram is not null)
+            {
+                _telegram.UiStatusLabel = TelegramBotRules.AwaitingChannelMessageLabel;
+            }
+
             var username = string.IsNullOrWhiteSpace(_telegram?.BotUsername)
                 ? string.Empty
                 : "@" + _telegram.BotUsername.TrimStart('@');
-            _ok = string.IsNullOrWhiteSpace(username)
+            var success = string.IsNullOrWhiteSpace(username)
                 ? (response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel)
                 : $"{TelegramBotRules.ConnectedLabel} {username}";
+            _ok = success;
             _tokenInput = string.Empty;
-            _tab = "telegram";
+            await ShowToastAsync(success, success: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao validar o BotToken do Telegram.");
+            await ShowToastAsync(
+                string.IsNullOrWhiteSpace(ex.Message) ? TelegramBotRules.InvalidTokenMessage : ex.Message,
+                success: false);
         }
         finally
         {
-            _isBusy = false;
+            _isLoading = false;
+        }
+    }
+
+    private async Task ShowToastAsync(string message, bool success)
+    {
+        _toastMessage = message;
+        _toastSuccess = success;
+        if (!success)
+        {
+            _error = message;
+        }
+
+        if (_toastCts is not null)
+        {
+            await _toastCts.CancelAsync();
+            _toastCts.Dispose();
+        }
+
+        _toastCts = new CancellationTokenSource();
+        var token = _toastCts.Token;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(4), token);
+            _toastMessage = null;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 
@@ -455,6 +582,12 @@
         {
             await _pollCts.CancelAsync();
             _pollCts.Dispose();
+        }
+
+        if (_toastCts is not null)
+        {
+            await _toastCts.CancelAsync();
+            _toastCts.Dispose();
         }
     }
 }

@@ -139,8 +139,10 @@ flowchart LR
   TPROC -->|ShortAffiliateLinks Source=TelegramBot| SQL
   TPROC -->|SendTextMessageAsync 2s| TGAPI[TelegramApiService GetMeAsync SetWebhookAsync]
   TGUI[TelegramConexao.razor] -->|POST conectar BotToken ChatId| TGIC[TelegramIntegrationController]
+  CXUI[Conexoes.razor aba Telegram] -->|valida placeholder + POST conectar| TGIC
+  CXUI -->|modal isBotFatherHelpModalOpen| HELP[Tutorial BotFather]
   TGIC --> TGIS[TelegramIntegrationService]
-  TGIS --> TGAPI
+  TGIS -->|GetMeAsync 400/401| TGAPI
   TGAGEN[TelegramAgendador.razor] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS

@@ -844,6 +844,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **BotConversor.razor** (`/integracoes/bot-conversor`) e **Agendador.razor** (`/integracoes/agendador`).
 - [x] **MinhasLojas.razor** — aliases `/integracoes/lojas` e `/marketplace-accounts`.
 - [x] **Conexoes.razor** — rota `/integracoes/conexoes` mantida.
+- [x] **Conexoes.razor** — botão Validar e Conectar Bot com `_isLoading`/spinner, recusa token vazio/`*****` e modal BotFather.
 - [x] **MinhasPaginasPublicas.razor** — `_isLoading` + try/catch em `OnInitializedAsync` para não ficar em branco sem registros.
 
 ### Resiliência Evolution API

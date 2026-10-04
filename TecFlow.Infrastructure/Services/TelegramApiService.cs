@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Telegram;
 
 namespace TecFlow.Infrastructure.Services;
 
@@ -35,10 +37,15 @@ public sealed class TelegramApiService : ITelegramApiService
                 FirstName = me.FirstName
             };
         }
+        catch (ApiRequestException ex) when (ex.ErrorCode is 400 or 401)
+        {
+            _logger.LogWarning(ex, "GetMeAsync recusou o BotToken. ErrorCode={ErrorCode}", ex.ErrorCode);
+            throw new InvalidOperationException(TelegramBotRules.InvalidTokenMessage, ex);
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Token Telegram inválido no GetMeAsync.");
-            return null;
+            throw new InvalidOperationException(TelegramBotRules.InvalidTokenMessage, ex);
         }
     }
 

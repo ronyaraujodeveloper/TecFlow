@@ -222,14 +222,15 @@
                                class="form-control @(_apiIdInvalid ? "is-invalid" : string.Empty)"
                                type="text"
                                inputmode="numeric"
-                               pattern="[0-9]*"
-                               maxlength="12"
+                               maxlength="80"
                                autocomplete="off"
-                               placeholder="28471934"
+                               placeholder="@TelegramUserMonitorRules.ApiIdPlaceholder"
                                value="@_userBotApiId"
                                @oninput="OnApiIdInput" />
                         <div class="form-text @(_apiIdInvalid ? "text-danger" : string.Empty)">
-                            @TelegramUserMonitorRules.InvalidApiIdMessage
+                            @(_apiIdInvalid && !string.IsNullOrWhiteSpace(_apiIdError)
+                                ? _apiIdError
+                                : TelegramUserMonitorRules.ApiIdHelper)
                         </div>
                     </div>
                     <div class="col-md-8">
@@ -238,8 +239,9 @@
                                class="form-control"
                                type="password"
                                autocomplete="off"
-                               placeholder="@SecretMasking.MaskedValue"
+                               placeholder="@TelegramUserMonitorRules.ApiHashPlaceholder"
                                @bind="_userBotApiHash" />
+                        <div class="form-text">@TelegramUserMonitorRules.ApiHashHelper</div>
                         <div class="form-text">Armazenado: @MaskOrDash(_telegram?.UserBotApiHashMasked)</div>
                     </div>
                     <div class="col-md-6">
@@ -261,22 +263,31 @@
                                inputmode="numeric"
                                maxlength="5"
                                autocomplete="one-time-code"
-                               placeholder="12345"
-                               disabled="@(!CanConfirmUserBot)"
+                               placeholder="34793"
+                               disabled="@isCodeInputDisabled"
                                value="@_userBotCode"
                                @oninput="OnPinInput" />
+                        <div class="form-text">@TelegramUserMonitorRules.VerificationPinHelper</div>
+                        @if (_showManualPinFallback && isCodeInputDisabled)
+                        {
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 mt-1"
+                                    @onclick="ForceEnableCodeInput">
+                                Já recebi o PIN — preencher manualmente
+                            </button>
+                        }
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
                     <button type="button"
                             class="btn btn-outline-primary"
                             disabled="@_isRequestingUserBotCode"
-                            @onclick="RequestUserBotCodeAsync">
+                            @onclick="SolicitarCodigo">
                         @(_isRequestingUserBotCode ? "Enviando..." : "Solicitar Código")
                     </button>
                     <button type="button"
                             class="btn btn-primary"
-                            disabled="@(!CanConfirmUserBot || _isConfirmingUserBot)"
+                            disabled="@(isCodeInputDisabled || _isConfirmingUserBot)"
                             @onclick="ConfirmUserBotAsync">
                         @(_isConfirmingUserBot ? "Autenticando..." : "Confirmar e Autenticar")
                     </button>
@@ -436,8 +447,10 @@
     private bool _isLoading;
     private bool _isRequestingUserBotCode;
     private bool _isConfirmingUserBot;
-    private bool _userBotCodeRequested;
+    private bool isCodeInputDisabled = true;
+    private bool _showManualPinFallback;
     private bool _apiIdInvalid;
+    private string? _apiIdError;
     private bool isBotFatherHelpModalOpen;
     private bool isUserBotHelpModalOpen;
     private string? _telegramUiStatus;
@@ -506,7 +519,8 @@
         _chatId = _telegram?.ChatId;
         _userBotApiId = _telegram?.UserBotApiId?.ToString();
         _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_telegram?.UserBotPhone);
-        _userBotCodeRequested = false;
+        isCodeInputDisabled = true;
+        _showManualPinFallback = false;
         if (!response.Success)
         {
             _error = response.Data?.Descricao ?? response.ErrorMessage;
@@ -613,7 +627,23 @@
         }
     }
 
-    private bool CanConfirmUserBot => _userBotCodeRequested;
+    private bool CanConfirmUserBot => !isCodeInputDisabled;
+
+    private void EnableCodeInput()
+    {
+        isCodeInputDisabled = false;
+        _showManualPinFallback = false;
+    }
+
+    private void ForceEnableCodeInput() => EnableCodeInput();
+
+    private void RememberFormatFallback(string? message)
+    {
+        if (TelegramUserMonitorRules.IsFormatError(message))
+        {
+            _showManualPinFallback = true;
+        }
+    }
 
     private string UserBotBadgeClass =>
         _telegram?.HasUserBotSession == true
@@ -628,9 +658,20 @@
 
     private void OnApiIdInput(ChangeEventArgs args)
     {
-        _userBotApiId = TelegramUserMonitorRules.SanitizeApiIdInput(args.Value?.ToString());
-        _apiIdInvalid = !string.IsNullOrWhiteSpace(args.Value?.ToString())
-            && !TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _);
+        var raw = (args.Value?.ToString() ?? string.Empty).Trim();
+        _userBotApiId = raw.Length > 80 ? raw[..80] : raw;
+        _apiIdInvalid = false;
+        _apiIdError = null;
+        if (string.IsNullOrWhiteSpace(_userBotApiId))
+        {
+            return;
+        }
+
+        if (!TelegramUserMonitorRules.TryValidateApiIdField(_userBotApiId, out _, out var error))
+        {
+            _apiIdInvalid = true;
+            _apiIdError = error;
+        }
     }
 
     private void OnPhoneInput(ChangeEventArgs args) =>
@@ -651,11 +692,14 @@
         {
             ChatId = _chatId,
             UserBotApiId = apiId,
+            UserBotApiIdInput = _userBotApiId,
             UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
             UserBotPhone = _userBotPhone,
             UserBotVerificationCode = _userBotCode
         };
     }
+
+    private Task SolicitarCodigo() => RequestUserBotCodeAsync();
 
     private async Task RequestUserBotCodeAsync()
     {
@@ -663,17 +707,22 @@
         _ok = null;
         _okWarning = false;
         _tab = "telegram";
-        _userBotCodeRequested = false;
-        if (!TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _))
+        isCodeInputDisabled = true;
+        _showManualPinFallback = false;
+        if (!TelegramUserMonitorRules.TryValidateApiIdField(_userBotApiId, out _, out var apiIdError))
         {
             _apiIdInvalid = true;
-            await ShowToastAsync(TelegramUserMonitorRules.InvalidApiIdMessage, success: false);
+            _apiIdError = apiIdError;
+            RememberFormatFallback(apiIdError);
+            await ShowToastAsync(apiIdError, success: false);
             return;
         }
 
         if (!TelegramUserMonitorRules.TryNormalizeE164Phone(_userBotPhone, out _))
         {
-            await ShowToastAsync("Informe o telefone no formato internacional, por exemplo +5511981656947.", success: false);
+            var phoneError = "Informe o telefone no formato internacional, por exemplo +5511981656947.";
+            RememberFormatFallback(phoneError);
+            await ShowToastAsync(phoneError, success: false);
             return;
         }
 
@@ -686,20 +735,21 @@
                 && (response.StatusCode is null or 200);
             if (!accepted)
             {
-                _userBotCodeRequested = false;
-                await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível solicitar o código.", success: false);
+                var fail = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível solicitar o código.";
+                RememberFormatFallback(fail);
+                await ShowToastAsync(fail, success: false);
                 return;
             }
 
             _telegram = response.Data?.Data;
-            _userBotCodeRequested = _telegram?.HasUserBotSession != true;
+            EnableCodeInput();
             _ok = TelegramUserMonitorRules.CodeSentMessage;
             await ShowToastAsync(_ok, success: true);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao solicitar código do UserBot Telegram.");
-            _userBotCodeRequested = false;
+            RememberFormatFallback(ex.Message);
             await ShowToastAsync("Não foi possível solicitar o código.", success: false);
         }
         finally
@@ -738,7 +788,7 @@
             _telegram = response.Data?.Data;
             _userBotApiHash = string.Empty;
             _userBotCode = string.Empty;
-            _userBotCodeRequested = false;
+            isCodeInputDisabled = true;
             _ok = response.Data?.Descricao ?? "UserBot autenticado.";
             await ShowToastAsync(_ok, success: true);
         }

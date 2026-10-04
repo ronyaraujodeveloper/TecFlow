@@ -57,6 +57,8 @@ public class SaveTelegramIntegrationDto
 
     public int? UserBotApiId { get; set; }
 
+    public string? UserBotApiIdInput { get; set; }
+
     public string? UserBotApiHash { get; set; }
 
     public string? UserBotPhone { get; set; }

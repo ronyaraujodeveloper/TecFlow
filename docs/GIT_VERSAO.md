@@ -39,3 +39,4 @@
 [2026-10-04 11:51:44]fix(telegram): fallback TEMP para sessoes UserBot no IIS
 [2026-10-04 12:25:08]feat(telegram): login UserBot em duas etapas com modal de ajuda
 [2026-10-04 14:15:52]fix(telegram): valida api_id numerico e habilita PIN apos codigo 200
+[2026-10-04 14:45:05]fix(telegram): helpers UserBot, PIN manual e MakeAuth da sessao

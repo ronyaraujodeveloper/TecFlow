@@ -52,10 +52,29 @@ public class TelegramUserMonitorRulesTests
     }
 
     [Fact]
+    public void TryValidateApiIdField_ShouldRejectTokenAndChatId()
+    {
+        Assert.False(TelegramUserMonitorRules.TryValidateApiIdField("8743142006:AAHsecret", out _, out var tokenError));
+        Assert.Equal(TelegramUserMonitorRules.ApiIdLooksLikeTokenMessage, tokenError);
+        Assert.False(TelegramUserMonitorRules.TryValidateApiIdField("-1001234567890", out _, out var chatError));
+        Assert.Equal(TelegramUserMonitorRules.ApiIdLooksLikeChatIdMessage, chatError);
+        Assert.True(TelegramUserMonitorRules.TryValidateApiIdField("28471934", out var apiId, out _));
+        Assert.Equal(28471934, apiId);
+    }
+
+    [Fact]
     public void TryNormalizeVerificationPin_ShouldRequireFiveDigits()
     {
         Assert.True(TelegramUserMonitorRules.TryNormalizeVerificationPin("12345", out var pin));
         Assert.Equal("12345", pin);
         Assert.False(TelegramUserMonitorRules.TryNormalizeVerificationPin("1234", out _));
+    }
+
+    [Fact]
+    public void IsFormatError_ShouldDetectTokenAndE164Hints()
+    {
+        Assert.True(TelegramUserMonitorRules.IsFormatError(TelegramUserMonitorRules.ApiIdLooksLikeTokenMessage));
+        Assert.True(TelegramUserMonitorRules.IsFormatError("Informe o telefone no formato internacional, por exemplo +5511981656947."));
+        Assert.False(TelegramUserMonitorRules.IsFormatError("Não foi possível solicitar o código."));
     }
 }

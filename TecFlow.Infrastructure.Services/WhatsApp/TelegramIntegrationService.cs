@@ -159,10 +159,13 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         CancellationToken cancellationToken = default)
     {
         request ??= new SaveTelegramIntegrationDto();
-        if (request.UserBotApiId is not > 0)
+        var apiIdRaw = request.UserBotApiIdInput ?? request.UserBotApiId?.ToString();
+        if (!TelegramUserMonitorRules.TryValidateApiIdField(apiIdRaw, out var apiId, out var apiIdError))
         {
-            return Fail(TelegramUserMonitorRules.InvalidApiIdMessage);
+            return Fail(apiIdError);
         }
+
+        request.UserBotApiId = apiId;
 
         if (!TelegramUserMonitorRules.TryNormalizeE164Phone(request.UserBotPhone, out var phone))
         {

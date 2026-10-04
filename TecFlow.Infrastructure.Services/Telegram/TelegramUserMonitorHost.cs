@@ -402,7 +402,16 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
     {
         if (!_pendingLogins.TryGetValue(userId, out var client))
         {
-            throw new InvalidOperationException("Solicite o código antes de autenticar.");
+            if (_sessions.HasSession(userId))
+            {
+                return;
+            }
+
+            await ResumePendingLoginAsync(userId, cancellationToken);
+            if (!_pendingLogins.TryGetValue(userId, out client))
+            {
+                throw new InvalidOperationException("Solicite o código antes de autenticar.");
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -418,6 +427,26 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
 
         DisposePending(userId);
+    }
+
+    private async Task ResumePendingLoginAsync(int userId, CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var row = await context.TelegramIntegrations
+            .AsNoTracking()
+            .Where(item => item.UserId == userId && item.IsActive)
+            .OrderByDescending(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (row is null
+            || row.UserBotApiId is not > 0
+            || string.IsNullOrEmpty(row.UserBotApiHash)
+            || !TelegramUserMonitorRules.TryNormalizeE164Phone(row.UserBotPhone, out var phone))
+        {
+            throw new InvalidOperationException("Solicite o código antes de autenticar.");
+        }
+
+        await SendCodeAsync(userId, row.UserBotApiId.Value, row.UserBotApiHash, phone, cancellationToken);
     }
 
     private static Task<string?> SendCodeAsync(Client client, string phone) => client.Login(phone);

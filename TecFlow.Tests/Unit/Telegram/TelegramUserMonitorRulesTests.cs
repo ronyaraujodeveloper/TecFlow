@@ -19,7 +19,9 @@ public class TelegramUserMonitorRulesTests
     }
 
     [Theory]
-    [InlineData("https://bit.ly/abc123")]
+    [InlineData("https://meli.la/abc123")]
+    [InlineData("https://shope.ee/abc")]
+    [InlineData("https://magalu.me/abc")]
     [InlineData("https://t.me/ofertas/1")]
     [InlineData("https://s.shopee.com.br/abc")]
     [InlineData("https://www.pelando.com.br/d/abc")]
@@ -36,6 +38,14 @@ public class TelegramUserMonitorRulesTests
         var urls = TelegramUserMonitorRules.ExtractHttpUrls(
             "veja https://www.amazon.com.br/dp/B0TEST?tag=x&ref=y fim");
         Assert.Contains("https://www.amazon.com.br/dp/B0TEST?tag=x&ref=y", urls);
+    }
+
+    [Fact]
+    public void ExtractHttpUrls_ShouldAcceptBareMarketplaceHosts()
+    {
+        var urls = TelegramUserMonitorRules.ExtractHttpUrls("oferta shopee.com.br/produto-i.1.2 e meli.la/abc");
+        Assert.Contains("https://shopee.com.br/produto-i.1.2", urls);
+        Assert.Contains("https://meli.la/abc", urls);
     }
 
     [Fact]

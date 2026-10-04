@@ -30,7 +30,15 @@ public static class TelegramUserMonitorRules
         "t.co",
         "cutt.ly",
         "amzn.to",
-        "amzn.br"
+        "amzn.br",
+        "meli.la",
+        "mercadolivre.com",
+        "shope.ee",
+        "magalu.me",
+        "magazinevoce.com.br",
+        "a.co",
+        "link.amazon.com",
+        "link.amazon"
     ];
 
     private static readonly string[] DealHostTokens =
@@ -47,8 +55,13 @@ public static class TelegramUserMonitorRules
         "promobit",
         "casasbahia",
         "pontofrio",
-        "ponto"
+        "ponto",
+        "meli"
     ];
+
+    private static readonly Regex BareCommerceUrlRegex = new(
+        @"(?<![/@\w])((?:www\.)?(?:s\.shopee|shopee|mercadolivre|mercadolibre|amazon|amzn|magalu|magazineluiza|aliexpress|pelando|promobit|casasbahia|pontofrio|meli\.la|shope\.ee|magalu\.me|bit\.ly|amzn\.to)[-a-zA-Z0-9()@:%_\+.~#?&/=]*)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static IReadOnlyList<string> ExtractHttpUrls(string? text)
     {
@@ -60,16 +73,35 @@ public static class TelegramUserMonitorRules
         var urls = new List<string>();
         foreach (Match match in HttpUrlRegex.Matches(text))
         {
-            var url = match.Value.Trim().TrimEnd('.', ',', ';', ')', ']', '"', '\'');
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                && !urls.Contains(url, StringComparer.OrdinalIgnoreCase))
+            TryAddUrl(urls, match.Value);
+        }
+
+        foreach (Match match in BareCommerceUrlRegex.Matches(text))
+        {
+            var raw = match.Value.Trim().TrimEnd('.', ',', ';', ')', ']', '"', '\'');
+            if (!raw.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                urls.Add(url);
+                raw = "https://" + raw.TrimStart('/');
             }
+
+            TryAddUrl(urls, raw);
         }
 
         return urls;
+    }
+
+    private static void TryAddUrl(List<string> urls, string? candidate)
+    {
+        var url = candidate?.Trim().TrimEnd('.', ',', ';', ')', ']', '"', '\'');
+        if (string.IsNullOrWhiteSpace(url)
+            || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            || urls.Contains(url, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        urls.Add(url);
     }
 
     public static bool IsTrackedCommerceUrl(string? url, out MarketplaceType platform)

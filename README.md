@@ -772,7 +772,7 @@ Para equiparar a experiência ao agendador do WhatsApp:
 Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégios de Admin):
 1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no TecFlow para conectar uma conta de usuário do Telegram.
 2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
-3. [x] **Catch-up histórico paginado:** ao autenticar, `Messages_GetHistory` busca até **200** mensagens por canal/grupo (páginas de 100) e enfileira o que ainda não está em `GroupCapturedMessages`.
+3. [x] **Catch-up histórico paginado:** ao autenticar (e ao sincronizar grupos), `Messages_GetHistory` percorre os chats inscritos (até **200** msgs, páginas de 100) via `chats`/`ToInputPeer` e enfileira o que ainda não está em `GroupCapturedMessages`.
 4. [x] **Fila desacoplada:** `Channel<UserBotCapturedPayload>` recebe o update MTProto sem bloquear o `WTelegramClient`; um leitor persiste no SQL. `HostOptions` + `requestTimeout="20:00:00"` no IIS evitam derrubar o `IHostedService`.
 5. [x] **Extração de Ofertas:** regex HTTP ampla e filtro de marketplaces/encurtadores (Shopee, ML, Amazon, Magalu, AliExpress, Casas Bahia, Pelando, Promobit, `bit.ly`, `t.me`, `s.shopee`), salvando em `GroupCapturedMessages` com o canal de origem.
 6. [x] **Grupos monitorados sem teto fixo:** a API pagina ofertas (`skip`/`take` 50) e a tela carrega mais 50 até exibir todas do período.

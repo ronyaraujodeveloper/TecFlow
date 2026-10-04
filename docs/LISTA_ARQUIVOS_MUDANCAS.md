@@ -922,7 +922,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Conexoes.razor** — badges amarelo/azul no bloco UserBot e abre `UserBotHelpModal`.
 - [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
-- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto, catch-up paginado `Messages_GetHistory` (até 200 msgs) e fila `Channel` para `GroupCapturedMessages`.
+- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats.Values` + `GetHistory` paginado (200) e fila `Channel`; sync da tela dispara `CatchUpUserAsync`.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
 - [x] **GruposMonitorados.razor** — cards das ofertas de canais de terceiros, botão Clonar Oferta e “Carregar mais 50”.
 - [x] **MonitoredGroupsController.cs** / **MonitoredGroupService.cs** — listagem paginada (`skip`/`take`, sem `Take(120)`).

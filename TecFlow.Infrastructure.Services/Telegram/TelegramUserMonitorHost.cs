@@ -24,6 +24,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             SingleWriter = false,
             AllowSynchronousContinuations = false
         });
+    private readonly ConcurrentDictionary<int, SemaphoreSlim> _catchUpGates = new();
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly TelegramUserBotCodeStore _codes;
@@ -94,6 +95,19 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     row.UserId);
             }
         }
+    }
+
+    public async Task CatchUpUserAsync(int userId, CancellationToken cancellationToken)
+    {
+        if (!_slots.TryGetValue(userId, out var slot))
+        {
+            _logger.LogInformation(
+                "Catch-up ignorado: UserBot ainda não está autenticado. UserId={UserId}",
+                userId);
+            return;
+        }
+
+        await CatchUpAsync(userId, slot.Client, cancellationToken);
     }
 
     public async Task RunForeverAsync(CancellationToken stoppingToken)
@@ -243,108 +257,116 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
     private async Task CatchUpAsync(int userId, Client client, CancellationToken cancellationToken)
     {
-        Messages_DialogsBase dialogs;
+        var gate = _catchUpGates.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(TimeSpan.Zero, cancellationToken))
+        {
+            return;
+        }
+
         try
         {
-            dialogs = await client.Messages_GetAllDialogs();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Catch-up de diálogos falhou. UserId={UserId}", userId);
-            return;
-        }
-
-        if (dialogs is not Messages_Dialogs packedDialogs)
-        {
-            return;
-        }
-
-        var list = packedDialogs.dialogs;
-        var chats = packedDialogs.chats;
-        foreach (var dialog in list)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (dialog is not Dialog concrete)
-            {
-                continue;
-            }
-
-            ChatBase? chat = null;
-            if (concrete.peer is PeerChannel channelPeer)
-            {
-                chats.TryGetValue(channelPeer.channel_id, out chat);
-            }
-            else if (concrete.peer is PeerChat groupPeer)
-            {
-                chats.TryGetValue(groupPeer.chat_id, out chat);
-            }
-
-            if (chat is not TL.Channel and not Chat)
-            {
-                continue;
-            }
-
-            InputPeer inputPeer;
+            Messages_DialogsBase dialogs;
             try
             {
-                inputPeer = chat.ToInputPeer();
-            }
-            catch
-            {
-                continue;
-            }
-
-            var (chatId, title) = ResolvePeerFromChat(chat);
-            var offsetId = 0;
-            var totalFetched = 0;
-            try
-            {
-                while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var remaining = TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel - totalFetched;
-                    var pageSize = Math.Min(TelegramUserMonitorRules.HistoryCatchUpPageSize, remaining);
-                    var history = await client.Messages_GetHistory(
-                        inputPeer,
-                        offset_id: offsetId,
-                        limit: pageSize);
-                    var messages = history.Messages;
-                    if (messages is null || messages.Length == 0)
-                    {
-                        break;
-                    }
-
-                    foreach (var item in messages)
-                    {
-                        if (item is Message historic)
-                        {
-                            TryEnqueueFromMessage(userId, historic, chatId, title);
-                        }
-                    }
-
-                    offsetId = messages[^1].ID;
-                    totalFetched += messages.Length;
-                    if (messages.Length < pageSize)
-                    {
-                        break;
-                    }
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
-                }
+                dialogs = await client.Messages_GetAllDialogs();
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "GetHistory falhou. UserId={UserId} Chat={ChatId}", userId, chatId);
+                _logger.LogWarning(ex, "Catch-up de diálogos falhou. UserId={UserId}", userId);
+                return;
             }
 
-            try
+            if (dialogs is not Messages_Dialogs packedDialogs)
             {
+                _logger.LogWarning("Catch-up sem lista de diálogos. UserId={UserId}", userId);
+                return;
+            }
+
+            var channels = packedDialogs.chats.Values
+                .Where(item => item is TL.Channel or Chat)
+                .ToList();
+            var enqueued = 0;
+            _logger.LogInformation(
+                "Catch-up iniciando. UserId={UserId} Canais={Count}",
+                userId,
+                channels.Count);
+
+            foreach (var chat in channels)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                InputPeer inputPeer;
+                try
+                {
+                    inputPeer = chat.ToInputPeer();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "InputPeer indisponível no catch-up. UserId={UserId}", userId);
+                    continue;
+                }
+
+                var (chatId, title) = ResolvePeerFromChat(chat);
+                var offsetId = 0;
+                var totalFetched = 0;
+                try
+                {
+                    while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var remaining = TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel - totalFetched;
+                        var pageSize = Math.Min(TelegramUserMonitorRules.HistoryCatchUpPageSize, remaining);
+                        var history = await client.Messages_GetHistory(
+                            inputPeer,
+                            offset_id: offsetId,
+                            limit: pageSize);
+                        var messages = history.Messages;
+                        if (messages is null || messages.Length == 0)
+                        {
+                            break;
+                        }
+
+                        foreach (var item in messages)
+                        {
+                            if (item is Message historic)
+                            {
+                                TryEnqueueFromMessage(userId, historic, chatId, title);
+                                enqueued++;
+                            }
+                        }
+
+                        var oldestId = messages.Min(item => item.ID);
+                        if (oldestId <= 0 || oldestId == offsetId)
+                        {
+                            break;
+                        }
+
+                        offsetId = oldestId;
+                        totalFetched += messages.Length;
+                        if (messages.Length < pageSize)
+                        {
+                            break;
+                        }
+
+                        await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "GetHistory falhou. UserId={UserId} Chat={ChatId} Title={Title}", userId, chatId, title);
+                }
+
                 await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
+
+            _logger.LogInformation(
+                "Catch-up concluído. UserId={UserId} Canais={Count} MensagensVistas={Seen}",
+                userId,
+                channels.Count,
+                enqueued);
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 
@@ -364,6 +386,13 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 if (entity is MessageEntityTextUrl { url: { Length: > 0 } entityUrl })
                 {
                     urls.Add(entityUrl);
+                }
+                else if (entity is MessageEntityUrl urlEntity
+                    && urlEntity.length > 0
+                    && urlEntity.offset >= 0
+                    && urlEntity.offset + urlEntity.length <= text.Length)
+                {
+                    urls.Add(text.Substring(urlEntity.offset, urlEntity.length));
                 }
             }
         }
@@ -402,7 +431,9 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             mediaUrl = web.url;
         }
 
-        var receivedAt = message.Date == default ? DateTime.UtcNow : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
+        var receivedAt = message.Date == default
+            ? DateTime.UtcNow
+            : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
         _queue.Writer.TryWrite(new UserBotCapturedPayload(
             userId,
             chatId,

@@ -9,6 +9,7 @@ using TecFlow.Business.Service.PublicPages;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
+using TecFlow.Infrastructure.Services.Telegram;
 
 namespace TecFlow.Infrastructure.Services.Groups;
 
@@ -17,6 +18,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly AppDbContext _context;
     private readonly IWhatsAppBroadcastService _whatsAppBroadcasts;
     private readonly ITelegramBroadcastService _telegramBroadcasts;
+    private readonly TelegramUserMonitorHost _userBotHost;
     private readonly IOfferValidationService _validation;
     private readonly IAffiliateLinkGenerationService _generation;
     private readonly IMarketplaceAccountRepository _marketplaceAccounts;
@@ -27,6 +29,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         AppDbContext context,
         IWhatsAppBroadcastService whatsAppBroadcasts,
         ITelegramBroadcastService telegramBroadcasts,
+        TelegramUserMonitorHost userBotHost,
         IOfferValidationService validation,
         IAffiliateLinkGenerationService generation,
         IMarketplaceAccountRepository marketplaceAccounts,
@@ -36,6 +39,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _context = context;
         _whatsAppBroadcasts = whatsAppBroadcasts;
         _telegramBroadcasts = telegramBroadcasts;
+        _userBotHost = userBotHost;
         _validation = validation;
         _generation = generation;
         _marketplaceAccounts = marketplaceAccounts;
@@ -380,25 +384,49 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         ICollection<string> notes,
         CancellationToken cancellationToken)
     {
+        var botOk = false;
         try
         {
             var sync = await _telegramBroadcasts.SyncChannelsAsync(userId, cancellationToken);
             if (sync.Status)
             {
                 notes.Add("Telegram sincronizado.");
-                return true;
+                botOk = true;
             }
-
-            notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
-                ? "Telegram não sincronizou."
-                : $"Telegram: {sync.Descricao}");
-            return false;
+            else
+            {
+                notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
+                    ? "Telegram (Bot API) não sincronizou."
+                    : $"Telegram: {sync.Descricao}");
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do Telegram (Bot API). UserBot não interrompe esta etapa.");
             notes.Add($"Telegram: {ex.Message}");
-            return false;
+        }
+
+        try
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _userBotHost.CatchUpUserAsync(userId, CancellationToken.None);
+                }
+                catch (Exception catchUpEx)
+                {
+                    _logger.LogWarning(catchUpEx, "Catch-up UserBot em segundo plano falhou. UserId={UserId}", userId);
+                }
+            }, CancellationToken.None);
+            notes.Add("Varredura do histórico UserBot iniciada. As ofertas aparecem em instantes nesta tela.");
+            return true;
+        }
+        catch (Exception catchUpEx)
+        {
+            _logger.LogWarning(catchUpEx, "Catch-up UserBot falhou após sync. UserId={UserId}", userId);
+            notes.Add("A varredura do histórico UserBot falhou. Confira a sessão MTProto e sincronize de novo.");
+            return botOk;
         }
     }
 

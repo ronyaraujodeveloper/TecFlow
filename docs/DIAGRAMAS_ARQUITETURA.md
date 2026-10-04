@@ -151,7 +151,7 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   USERBOT[TelegramUserMonitorWorker] -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
-  USERBOT -->|LoginUserIfNeeded GetHistory paginado 200| QUEUE
+  USERBOT -->|Login ou Sync GetHistory chats.Values 200| QUEUE
   GMUI[GruposMonitorados] -->|GET skip take 50| MGAPI[MonitoredGroupsController]
   MGAPI -->|Count Skip Take| SQL
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI

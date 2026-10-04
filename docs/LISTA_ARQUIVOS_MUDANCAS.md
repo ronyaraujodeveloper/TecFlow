@@ -898,6 +898,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **NavMenu.razor** — `InteractiveServer` (prerender off) para o `@onclick` dos accordions funcionar; sem `EventCallback` do layout estático.
 - [x] **MainLayout.razor** / **app-interop.js** — hamburger e backdrop via `toggleSidebar`/`closeSidebar`.
 
+### Módulo 27 — Grupos monitorados
+
+- [x] **GroupCapturedMessage.cs** / **GroupOfferStatuses.cs** — persistência de ofertas capturadas.
+- [x] **GroupOfferCaptureService.cs** / **OfferValidationService.cs** / **MonitoredGroupService.cs**.
+- [x] **MonitoredGroupsController.cs** — listar, sincronizar, validar e clonar.
+- [x] **GruposMonitorados.razor** — `/integracoes/grupos/monitorados`.
+- [x] **WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** — captura em grupos.
+- [x] **WhatsAppAgendador.razor** — query `cloneTitle/cloneMessage/cloneImage/cloneLink`.
+- [x] **AddGroupCapturedMessages** — migration SQL Server `GroupCapturedMessages`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

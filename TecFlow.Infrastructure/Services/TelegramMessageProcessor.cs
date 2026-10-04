@@ -19,6 +19,7 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
     private readonly PlatformLinkResolver _platformLinkResolver;
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly ITelegramApiService _telegramApi;
+    private readonly IGroupOfferCaptureService _groupCapture;
     private readonly ILogger<TelegramMessageProcessor> _logger;
 
     public TelegramMessageProcessor(
@@ -27,6 +28,7 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
         PlatformLinkResolver platformLinkResolver,
         IAffiliateLinkGenerationService generationService,
         ITelegramApiService telegramApi,
+        IGroupOfferCaptureService groupCapture,
         ILogger<TelegramMessageProcessor> logger)
     {
         _context = context;
@@ -34,6 +36,7 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
         _platformLinkResolver = platformLinkResolver;
         _generationService = generationService;
         _telegramApi = telegramApi;
+        _groupCapture = groupCapture;
         _logger = logger;
     }
 
@@ -47,7 +50,9 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
         var token = timeout.Token;
 
         var incoming = TelegramBotRules.TryParseIncoming(payload);
-        if (incoming is null || TelegramBotRules.ShouldIgnore(incoming))
+        if (incoming is null
+            || incoming.FromBot
+            || string.IsNullOrWhiteSpace(incoming.ChatId))
         {
             return;
         }
@@ -73,6 +78,27 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
         }
 
         IntegrationOwnershipGuard.EnsureOwner(integration.UserId, currentUserId);
+
+        if (TelegramBotRules.ShouldCaptureGroup(incoming))
+        {
+            await _groupCapture.CaptureAsync(
+                new GroupOfferCaptureRequest
+                {
+                    UserId = currentUserId,
+                    Channel = "Telegram",
+                    GroupId = incoming.ChatId,
+                    GroupName = string.IsNullOrWhiteSpace(incoming.ChatTitle) ? incoming.ChatId : incoming.ChatTitle,
+                    ExternalMessageId = incoming.MessageId,
+                    RawText = incoming.Text,
+                    ReceivedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+        }
+
+        if (TelegramBotRules.ShouldIgnore(incoming))
+        {
+            return;
+        }
 
         var urls = TelegramBotRules.ExtractUrls(incoming.Text);
         if (urls.Count == 0)

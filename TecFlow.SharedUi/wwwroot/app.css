@@ -535,6 +535,11 @@ html, body {
     object-fit: cover;
 }
 
+.monitored-offer-card .product-image-preview-box--sm {
+    width: 72px;
+    height: 72px;
+}
+
 .conexoes-qr-modal {
     z-index: 1055;
 }

@@ -19,6 +19,7 @@ public sealed class WhatsAppMessageProcessor : IWhatsAppMessageProcessor
     private readonly PlatformLinkResolver _platformLinkResolver;
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly IEvolutionApiService _evolution;
+    private readonly IGroupOfferCaptureService _groupCapture;
     private readonly ILogger<WhatsAppMessageProcessor> _logger;
 
     public WhatsAppMessageProcessor(
@@ -27,6 +28,7 @@ public sealed class WhatsAppMessageProcessor : IWhatsAppMessageProcessor
         PlatformLinkResolver platformLinkResolver,
         IAffiliateLinkGenerationService generationService,
         IEvolutionApiService evolution,
+        IGroupOfferCaptureService groupCapture,
         ILogger<WhatsAppMessageProcessor> logger)
     {
         _context = context;
@@ -34,6 +36,7 @@ public sealed class WhatsAppMessageProcessor : IWhatsAppMessageProcessor
         _platformLinkResolver = platformLinkResolver;
         _generationService = generationService;
         _evolution = evolution;
+        _groupCapture = groupCapture;
         _logger = logger;
     }
 
@@ -66,6 +69,23 @@ public sealed class WhatsAppMessageProcessor : IWhatsAppMessageProcessor
         }
 
         IntegrationOwnershipGuard.EnsureOwner(session.UserId, currentUserId);
+
+        if (incoming.IsGroup)
+        {
+            await _groupCapture.CaptureAsync(
+                new GroupOfferCaptureRequest
+                {
+                    UserId = session.UserId,
+                    Channel = "WhatsApp",
+                    GroupId = incoming.RemoteJid,
+                    GroupName = incoming.GroupName ?? incoming.RemoteJid,
+                    ExternalMessageId = incoming.MessageId,
+                    RawText = incoming.Text,
+                    MediaUrl = incoming.ImageUrl,
+                    ReceivedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+        }
 
         if (!WhatsAppBotRules.ShouldHandleChat(
             session.EnableAutoConvertBot,

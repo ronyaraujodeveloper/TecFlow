@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
     public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
     public DbSet<TelegramIntegration> TelegramIntegrations { get; set; } = null!;
     public DbSet<TelegramBroadcastCampaign> TelegramBroadcastCampaigns { get; set; } = null!;
+    public DbSet<GroupCapturedMessage> GroupCapturedMessages { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -372,6 +373,24 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Status).HasMaxLength(32).IsRequired();
             entity.HasIndex(item => new { item.Status, item.ScheduledAt });
             entity.HasIndex(item => item.UserId);
+        });
+
+        modelBuilder.Entity<GroupCapturedMessage>(entity =>
+        {
+            entity.ToTable("GroupCapturedMessages");
+            entity.Property(item => item.Channel).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.GroupKey).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.GroupName).HasMaxLength(256).IsRequired();
+            entity.Property(item => item.ExternalMessageId).HasMaxLength(128);
+            entity.Property(item => item.MediaUrl).HasMaxLength(500);
+            entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
+            entity.Property(item => item.OriginalUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(item => item.ProductName).HasMaxLength(255);
+            entity.Property(item => item.PlatformName).HasMaxLength(64);
+            entity.Property(item => item.OfferStatus).HasMaxLength(32).IsRequired();
+            entity.HasIndex(item => new { item.UserId, item.ReceivedAt });
+            entity.HasIndex(item => new { item.UserId, item.GroupKey, item.ReceivedAt });
+            entity.HasIndex(item => new { item.UserId, item.Channel, item.ExternalMessageId, item.OriginalUrl });
         });
 
         modelBuilder.Entity<WhatsAppGroup>(entity =>

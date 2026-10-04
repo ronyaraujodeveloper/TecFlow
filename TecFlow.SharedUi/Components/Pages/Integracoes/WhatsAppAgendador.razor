@@ -10,6 +10,7 @@
 @using TecFlow.SharedUi.Models
 @using TecFlow.SharedUi.Services.Integrations
 @inject IWhatsAppIntegrationApiService WhatsAppApi
+@inject NavigationManager NavigationManager
 @inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
 
@@ -358,7 +359,58 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
+        ApplyCloneQuery();
         StartPolling();
+    }
+
+    private void ApplyCloneQuery()
+    {
+        var link = ReadQueryValue("cloneLink");
+        if (string.IsNullOrWhiteSpace(link))
+        {
+            return;
+        }
+
+        model.Reset();
+        model.LinkComissaoUrl = link;
+        var title = ReadQueryValue("cloneTitle");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            model.Titulo = title;
+        }
+
+        var message = ReadQueryValue("cloneMessage");
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            model.Mensagem = WhatsAppBroadcastRules.StripHttpUrls(message);
+        }
+
+        var image = ReadQueryValue("cloneImage");
+        if (!string.IsNullOrWhiteSpace(image))
+        {
+            model.ImageUrl = image;
+        }
+
+        DetectCommissionPlatform(model.LinkComissaoUrl);
+        _info = "Oferta clonada do grupo monitorado. Revise e agende o disparo.";
+    }
+
+    private string? ReadQueryValue(string key)
+    {
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2
+                || !Uri.UnescapeDataString(parts[0]).Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return Uri.UnescapeDataString(parts[1].Replace('+', ' '));
+        }
+
+        return null;
     }
 
     private void StartPolling()

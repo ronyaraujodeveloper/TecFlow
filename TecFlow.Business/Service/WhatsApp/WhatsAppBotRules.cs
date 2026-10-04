@@ -14,6 +14,12 @@ public sealed class WhatsAppIncomingMessage
     public string Text { get; set; } = string.Empty;
 
     public bool IsGroup { get; set; }
+
+    public string? ImageUrl { get; set; }
+
+    public string? MessageId { get; set; }
+
+    public string? GroupName { get; set; }
 }
 
 /// <summary>Regras do bot WhatsApp: MESSAGES_UPSERT, fromMe, URLs e escopo privado/grupo.</summary>
@@ -66,6 +72,7 @@ public static class WhatsAppBotRules
             ?? ReadString(data, "remoteJid")
             ?? string.Empty;
         var text = ReadMessageText(data);
+        var message = ReadElement(data, "message");
 
         return new WhatsAppIncomingMessage
         {
@@ -73,7 +80,11 @@ public static class WhatsAppBotRules
             RemoteJid = remoteJid.Trim(),
             FromMe = fromMe,
             Text = text,
-            IsGroup = remoteJid.Contains("@g.us", StringComparison.OrdinalIgnoreCase)
+            IsGroup = remoteJid.Contains("@g.us", StringComparison.OrdinalIgnoreCase),
+            ImageUrl = ReadString(ReadElement(message, "imageMessage"), "url")
+                ?? ReadString(data, "mediaUrl"),
+            MessageId = ReadString(key, "id"),
+            GroupName = ReadString(data, "pushName", "notifyName")
         };
     }
 

@@ -16,6 +16,12 @@ public sealed class TelegramIncomingMessage
     public bool FromBot { get; set; }
 
     public bool IsPrivate { get; set; }
+
+    public bool IsGroup { get; set; }
+
+    public string ChatTitle { get; set; } = string.Empty;
+
+    public string? MessageId { get; set; }
 }
 
 public static class TelegramBotRules
@@ -61,7 +67,10 @@ public static class TelegramBotRules
             ChatType = chatType,
             Text = text,
             FromBot = ReadBool(from, "is_bot"),
-            IsPrivate = chatType is "private"
+            IsPrivate = chatType is "private",
+            IsGroup = chatType is "group" or "supergroup" or "channel",
+            ChatTitle = ReadString(chat, "title") ?? string.Empty,
+            MessageId = ReadInt64(message, "message_id").ToString()
         };
     }
 
@@ -70,6 +79,12 @@ public static class TelegramBotRules
         || !message.IsPrivate
         || string.IsNullOrWhiteSpace(message.ChatId)
         || string.IsNullOrWhiteSpace(message.Text);
+
+    public static bool ShouldCaptureGroup(TelegramIncomingMessage message) =>
+        !message.FromBot
+        && message.IsGroup
+        && !string.IsNullOrWhiteSpace(message.ChatId)
+        && !string.IsNullOrWhiteSpace(message.Text);
 
     public static IReadOnlyList<string> ExtractUrls(string? text) =>
         WhatsAppBotRules.ExtractUrls(text);

@@ -25,3 +25,4 @@
 [2026-10-03 20:47:45]fix(ui): corrige toggle do accordion Proximos Desenvolvimentos
 [2026-10-03 20:59:53]fix(ui): accordion Proximos Desenvolvimentos via botao e StateHasChanged
 [2026-10-03 21:17:08]fix(ui): torna NavMenu InteractiveServer para abrir submenus
+[2026-10-03 21:56:11]feat(grupos): monitora e clona ofertas de grupos

@@ -124,6 +124,13 @@ flowchart LR
   WAS -->|WhatsAppIntegrations UserId InstanceName| SQL
   EVOWH[WhatsAppWebhookController] -->|X-Webhook-Secret + MESSAGES_UPSERT| WPROC[WhatsAppMessageProcessor]
   WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN
+  WPROC -->|GroupOfferCaptureService grupos| GCAP[GroupCapturedMessages]
+  GCAP --> SQL
+  MONUI[GruposMonitorados.razor] -->|listar validar clonar| MONAPI[MonitoredGroupsController]
+  MONAPI --> MONSVC[MonitoredGroupService]
+  MONSVC --> VAL[OfferValidationService]
+  MONSVC -->|GenerateAsync GroupClone| GEN
+  MONUI -->|clone query| WAAGEN
   WPROC -->|ShortAffiliateLinks Source=WhatsAppBot| SQL
   WPROC -->|EnsureOwner UserId vs tecflow-u{id}| WPROC
   WPROC -->|sendText 3s| EVO

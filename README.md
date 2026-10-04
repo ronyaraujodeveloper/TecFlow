@@ -670,10 +670,11 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 ### 🟢 26. 
 
 ### 🟢 27. criar tela voltada a administração de grupos já existente de outras pessoas que vamos copiar as promoções lha elistente
-- criar botão para sincronizar grupos no whatsapp ou telegran
-- quando for clicado em um dos grupos, mostrar lista de promoções e links que estão lá, conforme filtro
-- filtro, ultimas 10 horas, ultimas 24 horas, ultimos 2 dias
-- nessa lista de conteudo, deve aparecer imagem, nome do produto, valor, deixar apenas botão do link, para caso o afiliado quiser abrir para conferir
-- em algum momento, vamos converir se aguele preço ainda é valido, se ainda existe aquele anuncio
+- [x] Tela `/integracoes/grupos/monitorados`: sincronizar WA/Telegram, chips 10h/24h/2 dias, dropdown de grupo e cards com imagem, nome, preço e badges.
+- [x] Webhooks WhatsApp/Telegram gravam `GroupCapturedMessages` (texto, mídia, URL, preço e data).
+- [x] `OfferValidationService` confere HTTP + metadados (Ativo, Esgotado, Preço Alterado).
+- [x] **Clonar para Minha Campanha** gera o link de comissão e abre `/integracoes/whatsapp/agendador` com mensagem e imagem.
+
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

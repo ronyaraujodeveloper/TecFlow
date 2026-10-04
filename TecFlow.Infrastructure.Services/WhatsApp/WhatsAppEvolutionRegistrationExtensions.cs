@@ -33,6 +33,13 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<ITelegramMessageProcessor, TelegramMessageProcessor>();
         services.AddScoped<ITelegramIntegrationService, TelegramIntegrationService>();
         services.AddScoped<ITelegramBroadcastService, TelegramBroadcastService>();
+        services.AddScoped<IGroupOfferCaptureService, TecFlow.Infrastructure.Services.Groups.GroupOfferCaptureService>();
+        services.AddScoped<IMonitoredGroupService, TecFlow.Infrastructure.Services.Groups.MonitoredGroupService>();
+        services.AddHttpClient<IOfferValidationService, TecFlow.Infrastructure.Services.Groups.OfferValidationService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TecFlowOfferValidation/1.0");
+        });
         services.AddHttpClient<IEvolutionApiService, EvolutionApiService>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<EvolutionApiOptions>>().Value;

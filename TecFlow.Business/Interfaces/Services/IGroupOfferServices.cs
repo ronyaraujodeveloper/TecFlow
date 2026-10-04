@@ -1,0 +1,55 @@
+﻿using TecFlow.Business.Dto;
+using TecFlow.Core.Enums;
+
+namespace TecFlow.Business.Interfaces.Services;
+
+public sealed class GroupOfferCaptureRequest
+{
+    public int UserId { get; init; }
+
+    public string Channel { get; init; } = string.Empty;
+
+    public string GroupId { get; init; } = string.Empty;
+
+    public string GroupName { get; init; } = string.Empty;
+
+    public string? ExternalMessageId { get; init; }
+
+    public string RawText { get; init; } = string.Empty;
+
+    public string? MediaUrl { get; init; }
+
+    public DateTime ReceivedAt { get; init; } = DateTime.UtcNow;
+}
+
+public interface IGroupOfferCaptureService
+{
+    Task CaptureAsync(GroupOfferCaptureRequest request, CancellationToken cancellationToken = default);
+}
+
+public interface IOfferValidationService
+{
+    Task<(string Status, decimal? Price, string? ImageUrl, string? ProductName, MarketplaceType? Platform)>
+        ValidateAsync(string originalUrl, decimal? capturedPrice, CancellationToken cancellationToken = default);
+}
+
+public interface IMonitoredGroupService
+{
+    Task<MonitoredGroupsResponseDto> SyncAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<MonitoredGroupsResponseDto> ListAsync(
+        int userId,
+        int lookbackHours,
+        string? groupKey,
+        CancellationToken cancellationToken = default);
+
+    Task<MonitoredGroupsResponseDto> ValidateAsync(
+        int userId,
+        int offerId,
+        CancellationToken cancellationToken = default);
+
+    Task<MonitoredGroupsResponseDto> CloneAsync(
+        int userId,
+        int offerId,
+        CancellationToken cancellationToken = default);
+}

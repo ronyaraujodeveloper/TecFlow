@@ -917,7 +917,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramGroupPicker.razor** — chips com `GroupName` + Chat ID, busca e atalhos Selecionar Todos / Limpar.
 - [x] **AddTelegramGroupsAndMultiChat** — tabela `TelegramGroups` e `TargetChatIdsJson` nas campanhas.
 - [x] **AddTelegramUserBotCredentials** — `UserBotApiId`, `UserBotApiHash`, `UserBotPhone` em `TelegramIntegrations`.
-- [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — filtro de URLs Shopee, ML, Amazon, AliExpress e Magalu.
+- [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — filtro de URLs Shopee, ML, Amazon, AliExpress e Magalu; `api_id` numérico e PIN de 5 dígitos.
+- [x] **Conexoes.razor** — ApiId só numérico, PIN/Confirmar habilitados após Solicitar Código 200.
 - [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto (WTelegramClient) e grava `GroupCapturedMessages`.

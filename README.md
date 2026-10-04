@@ -787,7 +787,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
    - Disponibilizar link/botão "Saiba como obter o ApiId e ApiHash" abrindo modal explicativo sobre o `my.telegram.org`.
 
 2. [x] **Fluxo de Login em 2 Passos (Two-Step Phone Auth):**
-   - **Passo 1:** O usuário digita apenas o número no formato internacional (`+5511999999999`) e clica em "Solicitar Código".
+   - **Passo 1:** O usuário informa o `api_id` numérico, o `api_hash` e o telefone E.164 e clica em "Solicitar Código". PIN e "Confirmar e Autenticar" só habilitam após HTTP 200.
    - **Passo 2:** O backend solicita o login no Telegram, que envia um código numérico (5 dígitos) ao app do usuário. O campo "Código de verificação" é habilitado para que o usuário digite o código recebido e finalize a criação do arquivo de sessão `.session`.
 
 

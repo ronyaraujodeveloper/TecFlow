@@ -29,7 +29,11 @@ public static class TelegramUserMonitorRules
 
     public static string ResolveSessionFileName(int userId) => $"user-{userId}.session";
 
-    public const string CodeSentMessage = "Código de verificação enviado para o seu aplicativo do Telegram!";
+    public const string CodeSentMessage =
+        "Código enviado! Verifique as mensagens no seu aplicativo do Telegram e digite o PIN recebido";
+
+    public const string InvalidApiIdMessage =
+        "Informe o api_id numérico de my.telegram.org (ex: 28471934), e não o nome App Title";
 
     public const string ConnectedBadge = "Conectado ✅";
 
@@ -99,5 +103,23 @@ public static class TelegramUserMonitorRules
     {
         pin = SanitizePinInput(raw);
         return pin.Length == 5;
+    }
+
+    public static string SanitizeApiIdInput(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return new string(raw.Where(char.IsDigit).ToArray());
+    }
+
+    public static bool TryParseApiId(string? raw, out int apiId)
+    {
+        apiId = 0;
+        var digits = SanitizeApiIdInput(raw);
+        return int.TryParse(digits, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out apiId)
+            && apiId > 0;
     }
 }

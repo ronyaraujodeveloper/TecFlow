@@ -219,11 +219,18 @@
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold" for="cx-tg-api-id">ApiId</label>
                         <input id="cx-tg-api-id"
-                               class="form-control"
+                               class="form-control @(_apiIdInvalid ? "is-invalid" : string.Empty)"
+                               type="text"
                                inputmode="numeric"
-                               placeholder="123456"
+                               pattern="[0-9]*"
+                               maxlength="12"
+                               autocomplete="off"
+                               placeholder="28471934"
                                value="@_userBotApiId"
                                @oninput="OnApiIdInput" />
+                        <div class="form-text @(_apiIdInvalid ? "text-danger" : string.Empty)">
+                            @TelegramUserMonitorRules.InvalidApiIdMessage
+                        </div>
                     </div>
                     <div class="col-md-8">
                         <label class="form-label small fw-semibold" for="cx-tg-api-hash">ApiHash</label>
@@ -430,6 +437,7 @@
     private bool _isRequestingUserBotCode;
     private bool _isConfirmingUserBot;
     private bool _userBotCodeRequested;
+    private bool _apiIdInvalid;
     private bool isBotFatherHelpModalOpen;
     private bool isUserBotHelpModalOpen;
     private string? _telegramUiStatus;
@@ -498,7 +506,7 @@
         _chatId = _telegram?.ChatId;
         _userBotApiId = _telegram?.UserBotApiId?.ToString();
         _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_telegram?.UserBotPhone);
-        _userBotCodeRequested = _telegram?.UserBotAwaitingCode == true;
+        _userBotCodeRequested = false;
         if (!response.Success)
         {
             _error = response.Data?.Descricao ?? response.ErrorMessage;
@@ -605,8 +613,7 @@
         }
     }
 
-    private bool CanConfirmUserBot =>
-        _userBotCodeRequested || _telegram?.UserBotAwaitingCode == true;
+    private bool CanConfirmUserBot => _userBotCodeRequested;
 
     private string UserBotBadgeClass =>
         _telegram?.HasUserBotSession == true
@@ -621,8 +628,9 @@
 
     private void OnApiIdInput(ChangeEventArgs args)
     {
-        var raw = args.Value?.ToString() ?? string.Empty;
-        _userBotApiId = new string(raw.Where(char.IsDigit).ToArray());
+        _userBotApiId = TelegramUserMonitorRules.SanitizeApiIdInput(args.Value?.ToString());
+        _apiIdInvalid = !string.IsNullOrWhiteSpace(args.Value?.ToString())
+            && !TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _);
     }
 
     private void OnPhoneInput(ChangeEventArgs args) =>
@@ -655,6 +663,14 @@
         _ok = null;
         _okWarning = false;
         _tab = "telegram";
+        _userBotCodeRequested = false;
+        if (!TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _))
+        {
+            _apiIdInvalid = true;
+            await ShowToastAsync(TelegramUserMonitorRules.InvalidApiIdMessage, success: false);
+            return;
+        }
+
         if (!TelegramUserMonitorRules.TryNormalizeE164Phone(_userBotPhone, out _))
         {
             await ShowToastAsync("Informe o telefone no formato internacional, por exemplo +5511981656947.", success: false);
@@ -665,20 +681,25 @@
         try
         {
             var response = await TelegramApi.RequestUserBotCodeAsync(BuildUserBotRequest());
-            if (!response.Success)
+            var accepted = response.Success
+                && response.Data?.Status != false
+                && (response.StatusCode is null or 200);
+            if (!accepted)
             {
+                _userBotCodeRequested = false;
                 await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível solicitar o código.", success: false);
                 return;
             }
 
             _telegram = response.Data?.Data;
             _userBotCodeRequested = _telegram?.HasUserBotSession != true;
-            _ok = response.Data?.Descricao ?? TelegramUserMonitorRules.CodeSentMessage;
+            _ok = TelegramUserMonitorRules.CodeSentMessage;
             await ShowToastAsync(_ok, success: true);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao solicitar código do UserBot Telegram.");
+            _userBotCodeRequested = false;
             await ShowToastAsync("Não foi possível solicitar o código.", success: false);
         }
         finally

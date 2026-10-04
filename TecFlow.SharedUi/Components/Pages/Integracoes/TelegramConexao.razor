@@ -69,7 +69,17 @@
             <h3 class="h6 fw-semibold">UserBot (canais de terceiros)</h3>
             <div class="mb-2">
                 <label class="form-label small" for="tg-api-id">ApiId</label>
-                <input id="tg-api-id" class="form-control" inputmode="numeric" value="@_userBotApiId" @oninput="OnApiIdInput" />
+                <input id="tg-api-id"
+                       class="form-control"
+                       type="text"
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       maxlength="12"
+                       autocomplete="off"
+                       placeholder="28471934"
+                       value="@_userBotApiId"
+                       @oninput="OnApiIdInput" />
+                <div class="form-text">@TelegramUserMonitorRules.InvalidApiIdMessage</div>
             </div>
             <div class="mb-2">
                 <label class="form-label small" for="tg-api-hash">ApiHash</label>
@@ -120,7 +130,7 @@
         _botUsername = _session?.BotUsername;
         _userBotApiId = _session?.UserBotApiId?.ToString();
         _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_session?.UserBotPhone);
-        _userBotCodeRequested = _session?.UserBotAwaitingCode == true;
+        _userBotCodeRequested = false;
         _tokenInput = string.Empty;
         if (!response.Success)
         {
@@ -158,11 +168,8 @@
         }
     }
 
-    private void OnApiIdInput(ChangeEventArgs args)
-    {
-        var raw = args.Value?.ToString() ?? string.Empty;
-        _userBotApiId = new string(raw.Where(char.IsDigit).ToArray());
-    }
+    private void OnApiIdInput(ChangeEventArgs args) =>
+        _userBotApiId = TelegramUserMonitorRules.SanitizeApiIdInput(args.Value?.ToString());
 
     private void OnPhoneInput(ChangeEventArgs args) =>
         _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(args.Value?.ToString());
@@ -194,10 +201,20 @@
         _error = null;
         _ok = null;
         _isBusy = true;
+        _userBotCodeRequested = false;
         try
         {
+            if (!TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _))
+            {
+                _error = TelegramUserMonitorRules.InvalidApiIdMessage;
+                return;
+            }
+
             var response = await TelegramApi.RequestUserBotCodeAsync(BuildUserBotRequest());
-            if (!response.Success)
+            var accepted = response.Success
+                && response.Data?.Status != false
+                && (response.StatusCode is null or 200);
+            if (!accepted)
             {
                 _error = response.Data?.Descricao ?? response.ErrorMessage;
                 return;
@@ -205,7 +222,7 @@
 
             _session = response.Data?.Data;
             _userBotCodeRequested = _session?.HasUserBotSession != true;
-            _ok = response.Data?.Descricao;
+            _ok = TelegramUserMonitorRules.CodeSentMessage;
         }
         finally
         {

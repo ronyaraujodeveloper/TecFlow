@@ -44,6 +44,14 @@ public class TelegramUserMonitorRulesTests
         Assert.Equal(expected, TelegramUserMonitorRules.SanitizePinInput(raw));
 
     [Fact]
+    public void TryParseApiId_ShouldAcceptNumericId()
+    {
+        Assert.True(TelegramUserMonitorRules.TryParseApiId("28471934", out var apiId));
+        Assert.Equal(28471934, apiId);
+        Assert.False(TelegramUserMonitorRules.TryParseApiId("TecFlow Monitor", out _));
+    }
+
+    [Fact]
     public void TryNormalizeVerificationPin_ShouldRequireFiveDigits()
     {
         Assert.True(TelegramUserMonitorRules.TryNormalizeVerificationPin("12345", out var pin));

@@ -159,6 +159,11 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         CancellationToken cancellationToken = default)
     {
         request ??= new SaveTelegramIntegrationDto();
+        if (request.UserBotApiId is not > 0)
+        {
+            return Fail(TelegramUserMonitorRules.InvalidApiIdMessage);
+        }
+
         if (!TelegramUserMonitorRules.TryNormalizeE164Phone(request.UserBotPhone, out var phone))
         {
             return Fail("Informe o telefone no formato internacional, por exemplo +5511981656947.");
@@ -166,9 +171,14 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
 
         request.UserBotPhone = phone;
         var row = await ApplyFieldsAsync(userId, request, cancellationToken);
-        if (row.UserBotApiId is not > 0 || string.IsNullOrEmpty(row.UserBotApiHash))
+        if (row.UserBotApiId is not > 0)
         {
-            return Fail("Informe o ApiId e o ApiHash obtidos em my.telegram.org.");
+            return Fail(TelegramUserMonitorRules.InvalidApiIdMessage);
+        }
+
+        if (string.IsNullOrEmpty(row.UserBotApiHash))
+        {
+            return Fail("Informe o ApiHash obtido em my.telegram.org.");
         }
 
         await _context.SaveChangesAsync(cancellationToken);

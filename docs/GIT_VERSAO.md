@@ -32,3 +32,4 @@
 [2026-10-03 23:32:25]feat(ui): badge de plataforma nos agendadores
 [2026-10-03 23:45:14]feat(telegram): sincroniza canais e dispara em multi-select
 [2026-10-04 00:02:43]feat(telegram): chips com nome amigavel do canal
+[2026-10-04 00:19:08]fix(grupos): captura erro ao sincronizar grupos monitorados

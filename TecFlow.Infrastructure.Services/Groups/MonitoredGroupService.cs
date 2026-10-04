@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -15,36 +16,59 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 {
     private readonly AppDbContext _context;
     private readonly IWhatsAppBroadcastService _whatsAppBroadcasts;
+    private readonly ITelegramBroadcastService _telegramBroadcasts;
     private readonly IOfferValidationService _validation;
     private readonly IAffiliateLinkGenerationService _generation;
     private readonly IMarketplaceAccountRepository _marketplaceAccounts;
     private readonly PlatformLinkResolver _platformLinkResolver;
+    private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
         AppDbContext context,
         IWhatsAppBroadcastService whatsAppBroadcasts,
+        ITelegramBroadcastService telegramBroadcasts,
         IOfferValidationService validation,
         IAffiliateLinkGenerationService generation,
         IMarketplaceAccountRepository marketplaceAccounts,
-        PlatformLinkResolver platformLinkResolver)
+        PlatformLinkResolver platformLinkResolver,
+        ILogger<MonitoredGroupService> logger)
     {
         _context = context;
         _whatsAppBroadcasts = whatsAppBroadcasts;
+        _telegramBroadcasts = telegramBroadcasts;
         _validation = validation;
         _generation = generation;
         _marketplaceAccounts = marketplaceAccounts;
         _platformLinkResolver = platformLinkResolver;
+        _logger = logger;
     }
 
     public async Task<MonitoredGroupsResponseDto> SyncAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var sync = await _whatsAppBroadcasts.SyncGroupsAsync(userId, cancellationToken);
-        var list = await ListAsync(userId, 24, null, cancellationToken);
-        list.Status = sync.Status;
-        list.Descricao = sync.Status
-            ? "Grupos do WhatsApp sincronizados. Ofertas do Telegram entram pelo webhook dos canais monitorados."
-            : sync.Descricao;
-        return list;
+        try
+        {
+            var notes = new List<string>();
+            var whatsOk = await SyncWhatsAppIsolatedAsync(userId, notes, cancellationToken);
+            var telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
+
+            var list = await ListAsync(userId, 24, null, cancellationToken);
+            list.Status = whatsOk || telegramOk || notes.Count == 0;
+            list.Descricao = notes.Count == 0
+                ? "Grupos do WhatsApp e do Telegram sincronizados."
+                : string.Join(" ", notes);
+            return list;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados");
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Erro ao sincronizar grupos monitorados."
+                    : ex.Message
+            };
+        }
     }
 
     public async Task<MonitoredGroupsResponseDto> ListAsync(
@@ -56,26 +80,40 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
         var since = DateTime.UtcNow.AddHours(-hours);
 
-        var groups = await BuildGroupsAsync(userId, cancellationToken);
-        var query = _context.GroupCapturedMessages
-            .AsNoTracking()
-            .Where(item => item.UserId == userId && item.ReceivedAt >= since);
-        if (!string.IsNullOrWhiteSpace(groupKey))
+        try
         {
-            query = query.Where(item => item.GroupKey == groupKey);
+            var groups = await BuildGroupsAsync(userId, cancellationToken);
+            var query = _context.GroupCapturedMessages
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.ReceivedAt >= since);
+            if (!string.IsNullOrWhiteSpace(groupKey))
+            {
+                query = query.Where(item => item.GroupKey == groupKey);
+            }
+
+            var offers = await query
+                .OrderByDescending(item => item.ReceivedAt)
+                .Take(120)
+                .ToListAsync(cancellationToken);
+
+            return new MonitoredGroupsResponseDto
+            {
+                Status = true,
+                Groups = groups,
+                Offers = offers.Select(MapOffer).ToList()
+            };
         }
-
-        var offers = await query
-            .OrderByDescending(item => item.ReceivedAt)
-            .Take(120)
-            .ToListAsync(cancellationToken);
-
-        return new MonitoredGroupsResponseDto
+        catch (Exception ex)
         {
-            Status = true,
-            Groups = groups,
-            Offers = offers.Select(MapOffer).ToList()
-        };
+            _logger.LogError(ex, "Erro ao listar grupos monitorados");
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Erro ao listar grupos monitorados."
+                    : ex.Message
+            };
+        }
     }
 
     public async Task<MonitoredGroupsResponseDto> ValidateAsync(
@@ -211,6 +249,18 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             })
             .ToListAsync(cancellationToken);
 
+        var telegram = await _context.TelegramGroups
+            .AsNoTracking()
+            .Where(item => item.UserId == userId && item.IsActive)
+            .OrderBy(item => item.Name)
+            .Select(item => new MonitoredGroupDto
+            {
+                GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.TelegramChannel, item.ChatId),
+                Name = item.Name,
+                Channel = GroupOfferCaptureRules.TelegramChannel
+            })
+            .ToListAsync(cancellationToken);
+
         var captured = await _context.GroupCapturedMessages
             .AsNoTracking()
             .Where(item => item.UserId == userId)
@@ -227,11 +277,66 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             .ToList();
 
         return whats
+            .Concat(telegram)
             .Concat(capturedGroups)
             .GroupBy(item => item.GroupKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(item => item.Name)
             .ToList();
+    }
+
+    private async Task<bool> SyncWhatsAppIsolatedAsync(
+        int userId,
+        ICollection<string> notes,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sync = await _whatsAppBroadcasts.SyncGroupsAsync(userId, cancellationToken);
+            if (sync.Status)
+            {
+                notes.Add("WhatsApp sincronizado.");
+                return true;
+            }
+
+            notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
+                ? "WhatsApp não sincronizou."
+                : $"WhatsApp: {sync.Descricao}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do WhatsApp (Evolution API)");
+            notes.Add($"WhatsApp: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task<bool> SyncTelegramIsolatedAsync(
+        int userId,
+        ICollection<string> notes,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sync = await _telegramBroadcasts.SyncChannelsAsync(userId, cancellationToken);
+            if (sync.Status)
+            {
+                notes.Add("Telegram sincronizado.");
+                return true;
+            }
+
+            notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
+                ? "Telegram não sincronizou."
+                : $"Telegram: {sync.Descricao}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do Telegram");
+            notes.Add($"Telegram: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<string?> ConvertUrlAsync(int userId, string originalUrl, CancellationToken cancellationToken)

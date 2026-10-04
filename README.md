@@ -678,6 +678,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] Webhooks WhatsApp/Telegram gravam `GroupCapturedMessages` (texto, mídia, URL, preço e data).
 - [x] `OfferValidationService` confere HTTP + metadados (Ativo, Esgotado, Preço Alterado).
 - [x] **Clonar para Minha Campanha** gera o link de comissão e abre `/integracoes/whatsapp/agendador` com mensagem e imagem.
+- [x] Sync de grupos monitorados com try/catch, log do stack trace, UserId fallback 1 e falha isolada WhatsApp/Telegram.
 
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 

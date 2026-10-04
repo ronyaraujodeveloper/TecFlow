@@ -127,7 +127,9 @@ flowchart LR
   WPROC -->|GroupOfferCaptureService grupos| GCAP[GroupCapturedMessages]
   GCAP --> SQL
   MONUI[GruposMonitorados.razor] -->|listar validar clonar| MONAPI[MonitoredGroupsController]
-  MONAPI --> MONSVC[MonitoredGroupService]
+  MONAPI -->|UserId claims ou fallback 1| MONSVC[MonitoredGroupService]
+  MONSVC -->|try/catch isolado Evolution| WASYNC[WhatsAppBroadcastService SyncGroups]
+  MONSVC -->|try/catch isolado Telegram| TGSYNC[TelegramBroadcastService SyncChannels]
   MONSVC --> VAL[OfferValidationService]
   MONSVC -->|GenerateAsync GroupClone| GEN
   MONUI -->|clone query| WAAGEN

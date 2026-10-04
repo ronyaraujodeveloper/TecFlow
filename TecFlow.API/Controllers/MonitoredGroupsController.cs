@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Infrastructure.Interfaces;
 
 namespace TecFlow.API.Controllers;
 
@@ -11,11 +12,23 @@ namespace TecFlow.API.Controllers;
 [Route("api/integracoes/grupos/monitorados")]
 public sealed class MonitoredGroupsController : ControllerBase
 {
-    private readonly IMonitoredGroupService _service;
+    private const int LocalFallbackUserId = 1;
 
-    public MonitoredGroupsController(IMonitoredGroupService service)
+    private readonly IMonitoredGroupService _service;
+    private readonly IUserContextProvider _userContext;
+    private readonly IHostEnvironment _environment;
+    private readonly ILogger<MonitoredGroupsController> _logger;
+
+    public MonitoredGroupsController(
+        IMonitoredGroupService service,
+        IUserContextProvider userContext,
+        IHostEnvironment environment,
+        ILogger<MonitoredGroupsController> logger)
     {
         _service = service;
+        _userContext = userContext;
+        _environment = environment;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -24,24 +37,32 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? groupKey = null,
         CancellationToken cancellationToken = default)
     {
-        if (!TryGetUserId(out var userId))
+        var userId = ResolveUserId();
+        try
         {
-            return Unauthorized(Fail("Usuário não autenticado."));
+            return Ok(await _service.ListAsync(userId, hours, groupKey, cancellationToken));
         }
-
-        return Ok(await _service.ListAsync(userId, hours, groupKey, cancellationToken));
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao listar grupos monitorados");
+            return Ok(Fail(Describe(ex)));
+        }
     }
 
     [HttpPost("sincronizar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> SyncAsync(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId))
+        var userId = ResolveUserId();
+        try
         {
-            return Unauthorized(Fail("Usuário não autenticado."));
+            var result = await _service.SyncAsync(userId, cancellationToken);
+            return Ok(result);
         }
-
-        var result = await _service.SyncAsync(userId, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados");
+            return Ok(Fail(Describe(ex)));
+        }
     }
 
     [HttpPost("{offerId:int}/validar")]
@@ -49,11 +70,7 @@ public sealed class MonitoredGroupsController : ControllerBase
         int offerId,
         CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId))
-        {
-            return Unauthorized(Fail("Usuário não autenticado."));
-        }
-
+        var userId = ResolveUserId();
         var result = await _service.ValidateAsync(userId, offerId, cancellationToken);
         return result.Status ? Ok(result) : NotFound(result);
     }
@@ -63,20 +80,41 @@ public sealed class MonitoredGroupsController : ControllerBase
         int offerId,
         CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId))
-        {
-            return Unauthorized(Fail("Usuário não autenticado."));
-        }
-
+        var userId = ResolveUserId();
         var result = await _service.CloneAsync(userId, offerId, cancellationToken);
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
-    private bool TryGetUserId(out int userId)
+    private int ResolveUserId()
     {
-        userId = 0;
+        var fromContext = _userContext.GetCurrentUserId();
+        if (fromContext is > 0)
+        {
+            return fromContext.Value;
+        }
+
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return !string.IsNullOrWhiteSpace(claim) && int.TryParse(claim, out userId);
+        if (!string.IsNullOrWhiteSpace(claim) && int.TryParse(claim, out var userId) && userId > 0)
+        {
+            return userId;
+        }
+
+        _logger.LogWarning(
+            "Usuário não autenticado ou sem UserId. Usando fallback local UserId={UserId}.",
+            LocalFallbackUserId);
+        return LocalFallbackUserId;
+    }
+
+    private string Describe(Exception ex)
+    {
+        if (_environment.IsDevelopment() || _environment.IsEnvironment("Homologacao"))
+        {
+            return string.IsNullOrWhiteSpace(ex.Message)
+                ? "Erro ao sincronizar grupos monitorados."
+                : ex.Message;
+        }
+
+        return "Não foi possível sincronizar os grupos monitorados. Tente novamente.";
     }
 
     private static MonitoredGroupsResponseDto Fail(string message) =>

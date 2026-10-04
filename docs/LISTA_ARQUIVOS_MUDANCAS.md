@@ -905,7 +905,8 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **GroupCapturedMessage.cs** / **GroupOfferStatuses.cs** — persistência de ofertas capturadas.
 - [x] **GroupOfferCaptureService.cs** / **OfferValidationService.cs** / **MonitoredGroupService.cs**.
-- [x] **MonitoredGroupsController.cs** — listar, sincronizar, validar e clonar.
+- [x] **MonitoredGroupsController.cs** — listar, sincronizar, validar e clonar; try/catch + log + UserId fallback 1.
+- [x] **MonitoredGroupService.cs** — sync isolado WhatsApp/Telegram; lista inclui `TelegramGroups`.
 - [x] **GruposMonitorados.razor** — `/integracoes/grupos/monitorados`.
 - [x] **WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** — captura em grupos.
 - [x] **WhatsAppAgendador.razor** — query `cloneTitle/cloneMessage/cloneImage/cloneLink`.

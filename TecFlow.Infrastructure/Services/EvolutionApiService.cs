@@ -202,23 +202,31 @@ public sealed class EvolutionApiService : IEvolutionApiService
             return [];
         }
 
-        var owner = ownerPhoneOrJid;
-        if (string.IsNullOrWhiteSpace(owner))
+        try
         {
-            var state = await GetConnectionStateAsync(instanceName, cancellationToken);
-            owner = state.PhoneNumber;
-        }
+            var owner = ownerPhoneOrJid;
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                var state = await GetConnectionStateAsync(instanceName, cancellationToken);
+                owner = state.PhoneNumber;
+            }
 
-        using var response = await _httpClient.GetAsync(
-            $"group/fetchAllGroups/{Uri.EscapeDataString(instanceName)}?getParticipants=true",
-            cancellationToken);
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
+            using var response = await _httpClient.GetAsync(
+                $"group/fetchAllGroups/{Uri.EscapeDataString(instanceName)}?getParticipants=true",
+                cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                LogEvolutionHttpError("FetchUserGroupsAsync", instanceName, response.StatusCode, json);
+            }
+
+            return ParseGroups(json, owner);
+        }
+        catch (Exception ex)
         {
-            LogEvolutionHttpError("FetchUserGroupsAsync", instanceName, response.StatusCode, json);
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados da Evolution API. Instance={Instance}", instanceName);
+            return [];
         }
-
-        return ParseGroups(json, owner);
     }
 
     public async Task<bool> SendMediaMessageAsync(

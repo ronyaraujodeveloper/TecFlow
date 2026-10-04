@@ -200,6 +200,7 @@ O menu lateral do TecFlow deve seguir rigorosamente a seguinte estrutura hierár
    - Minha conta / Segurança
 - [x] Sidebar (`NavMenu.razor`) reorganizada nesta árvore, sem duplicar Minhas Lojas, com ícones e destaque do grupo/página ativos.
 - [x] Accordion “Próximos Desenvolvimentos”: `button` (não NavLink no cabeçalho), `isProximosOpen` + `ToggleProximosSubmenu()` com `StateHasChanged()`, subitens em `@if`.
+- [x] `NavMenu` em Interactive Server para os grupos abrirem no clique (layout estático não processava `@onclick`).
 
 ## 📱 Comportamento de Submenus Retrrateis (Accordion / Collapsible Nav)
 

@@ -1,4 +1,6 @@
-﻿@inject NavigationManager Navigation
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
 @implements IDisposable
 
 <nav class="portal-sidebar-nav" aria-label="Menu principal">
@@ -209,8 +211,6 @@
         "/account/security"
     ];
 
-    [Parameter] public EventCallback OnNavigate { get; set; }
-
     private bool _mensageriaOpen;
     private bool _whatsAppOpen;
     private bool _telegramOpen;
@@ -288,13 +288,29 @@
         _proximosRouteWhenOpened = CurrentPath();
     }
 
-    private void ToggleMensageria() => _mensageriaOpen = !_mensageriaOpen;
+    private void ToggleMensageria()
+    {
+        _mensageriaOpen = !_mensageriaOpen;
+        StateHasChanged();
+    }
 
-    private void ToggleWhatsApp() => _whatsAppOpen = !_whatsAppOpen;
+    private void ToggleWhatsApp()
+    {
+        _whatsAppOpen = !_whatsAppOpen;
+        StateHasChanged();
+    }
 
-    private void ToggleTelegram() => _telegramOpen = !_telegramOpen;
+    private void ToggleTelegram()
+    {
+        _telegramOpen = !_telegramOpen;
+        StateHasChanged();
+    }
 
-    private void ToggleIntegracoes() => _integracoesOpen = !_integracoesOpen;
+    private void ToggleIntegracoes()
+    {
+        _integracoesOpen = !_integracoesOpen;
+        StateHasChanged();
+    }
 
     private void ToggleProximosSubmenu()
     {
@@ -307,7 +323,16 @@
         StateHasChanged();
     }
 
-    private Task NotifyNavigate() => OnNavigate.InvokeAsync();
+    private async Task NotifyNavigate()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("tecFlowAppInterop.closeSidebar");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
 
     private bool IsMensageriaPath() => PathEqualsAny(MensageriaExactPaths);
 

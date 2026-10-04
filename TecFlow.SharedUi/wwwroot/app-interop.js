@@ -83,6 +83,35 @@
         }
     },
 
+    toggleSidebar: function () {
+        const sidebar = document.getElementById("portal-sidebar");
+        const backdrop = document.getElementById("portal-sidebar-backdrop");
+        if (!sidebar) {
+            return false;
+        }
+
+        const open = sidebar.classList.toggle("is-open");
+        if (backdrop) {
+            backdrop.classList.toggle("is-visible", open);
+        }
+
+        return open;
+    },
+
+    closeSidebar: function () {
+        const sidebar = document.getElementById("portal-sidebar");
+        const backdrop = document.getElementById("portal-sidebar-backdrop");
+        if (sidebar) {
+            sidebar.classList.remove("is-open");
+        }
+
+        if (backdrop) {
+            backdrop.classList.remove("is-visible");
+        }
+
+        return true;
+    },
+
     setPreference: function (key, value) {
         try {
             window.localStorage.setItem(key || "", value == null ? "" : String(value));

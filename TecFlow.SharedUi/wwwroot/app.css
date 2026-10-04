@@ -540,6 +540,7 @@ html, body {
 }
 
 .portal-sidebar-backdrop {
+    display: none;
     position: fixed;
     inset: 0;
     z-index: 1040;
@@ -547,6 +548,10 @@ html, body {
     padding: 0;
     background: rgba(15, 23, 42, 0.45);
     cursor: pointer;
+}
+
+.portal-sidebar-backdrop.is-visible {
+    display: block;
 }
 
 .portal-main {

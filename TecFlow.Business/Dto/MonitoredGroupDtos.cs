@@ -71,5 +71,11 @@ public class MonitoredGroupsResponseDto
 
     public List<GroupCapturedOfferDto> Offers { get; set; } = [];
 
+    public int TotalOffers { get; set; }
+
+    public int Skip { get; set; }
+
+    public int Take { get; set; }
+
     public CloneMonitoredOfferResultDto? Clone { get; set; }
 }

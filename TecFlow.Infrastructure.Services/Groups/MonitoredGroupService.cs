@@ -64,7 +64,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
             }
 
-            var list = await ListAsync(userId, 24, null, normalized, cancellationToken);
+            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
             list.Descricao = notes.Count == 0
                 ? "Grupos sincronizados."
@@ -89,11 +89,15 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         int lookbackHours,
         string? groupKey,
         string? channel,
+        int skip = 0,
+        int take = 50,
         CancellationToken cancellationToken = default)
     {
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
         var since = DateTime.UtcNow.AddHours(-hours);
         var normalized = GroupOfferCaptureRules.NormalizeChannel(channel);
+        var resolvedSkip = GroupOfferCaptureRules.ResolveOffersSkip(skip);
+        var resolvedTake = GroupOfferCaptureRules.ResolveOffersTake(take);
 
         try
         {
@@ -111,16 +115,21 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 query = query.Where(item => item.GroupKey == groupKey);
             }
 
+            var total = await query.CountAsync(cancellationToken);
             var offers = await query
                 .OrderByDescending(item => item.ReceivedAt)
-                .Take(120)
+                .Skip(resolvedSkip)
+                .Take(resolvedTake)
                 .ToListAsync(cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {
                 Status = true,
                 Groups = groups,
-                Offers = offers.Select(MapOffer).ToList()
+                Offers = offers.Select(MapOffer).ToList(),
+                TotalOffers = total,
+                Skip = resolvedSkip,
+                Take = resolvedTake
             };
         }
         catch (Exception ex)
@@ -177,6 +186,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             24,
             entity.GroupKey,
             channel ?? entity.Channel,
+            skip: 0,
+            take: GroupOfferCaptureRules.OffersPageSize,
             cancellationToken);
         list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
         return list;

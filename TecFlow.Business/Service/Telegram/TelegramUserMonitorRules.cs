@@ -8,7 +8,9 @@ public static class TelegramUserMonitorRules
 {
     public const string UserBotSource = "TelegramUserBot";
 
-    public const int HistoryCatchUpLimit = 30;
+    public const int HistoryCatchUpPageSize = 100;
+
+    public const int HistoryCatchUpMaxPerChannel = 200;
 
     public const string HttpUrlPattern =
         @"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";

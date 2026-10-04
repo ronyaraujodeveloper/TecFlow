@@ -129,6 +129,15 @@
                 </div>
             }
         </div>
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mt-3">
+            <p class="text-muted small mb-0">Exibindo @_offers.Count de @_totalOffers oferta(s) neste período.</p>
+            @if (_offers.Count < _totalOffers)
+            {
+                <button type="button" class="btn btn-outline-primary btn-sm btn-touch" disabled="@_isBusy" @onclick="LoadMoreAsync">
+                    @(_isBusy ? "Carregando..." : "Carregar mais 50 ofertas")
+                </button>
+            }
+        </div>
     }
 </div>
 
@@ -140,6 +149,8 @@
     private readonly List<MonitoredGroupDto> _groups = [];
     private readonly List<GroupCapturedOfferDto> _offers = [];
     private int _hours = 24;
+    private int _totalOffers;
+    private int _loadedSkip;
     private string _groupKey = string.Empty;
     private bool _isBusy;
     private string? _error;
@@ -206,7 +217,7 @@
         try
         {
             var result = await Api.SyncAsync(Channel);
-            Apply(result.Data, result.ErrorMessage);
+            Apply(result.Data, result.ErrorMessage, append: false, silent: false);
             if (result.Data is { Status: true })
             {
                 _info = string.IsNullOrWhiteSpace(result.Data.Descricao)
@@ -225,7 +236,7 @@
         }
     }
 
-    private async Task LoadAsync(bool silent = false)
+    private async Task LoadAsync(bool silent = false, bool append = false)
     {
         if (!silent)
         {
@@ -234,17 +245,20 @@
         }
         try
         {
+            var skip = append ? _loadedSkip : 0;
             var result = await Api.ListAsync(
                 _hours,
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
-                Channel);
+                Channel,
+                skip,
+                GroupOfferCaptureRules.OffersPageSize);
             if (result.Data is not null)
             {
-                Apply(result.Data, silent ? null : result.ErrorMessage);
+                Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);
             }
             else if (!silent)
             {
-                Apply(null, result.ErrorMessage);
+                Apply(null, result.ErrorMessage, append: false, silent: false);
             }
         }
         catch (Exception ex)
@@ -263,6 +277,8 @@
             }
         }
     }
+
+    private Task LoadMoreAsync() => LoadAsync(append: true);
 
     private void StartOfferRefresh()
     {
@@ -303,7 +319,7 @@
         try
         {
             var result = await Api.ValidateAsync(offerId, Channel);
-            Apply(result.Data, result.ErrorMessage);
+            Apply(result.Data, result.ErrorMessage, append: false, silent: false);
             _info = result.Data?.Descricao;
         }
         catch (Exception ex)
@@ -330,7 +346,7 @@
                 return;
             }
 
-            Apply(result.Data, result.ErrorMessage);
+            Apply(result.Data, result.ErrorMessage, append: false, silent: false);
             _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível clonar a oferta.";
         }
         catch (Exception ex)
@@ -357,21 +373,73 @@
         return string.Empty;
     }
 
-    private void Apply(MonitoredGroupsResponseDto? data, string? error)
+    private void Apply(MonitoredGroupsResponseDto? data, string? error, bool append, bool silent)
     {
-        _groups.Clear();
-        _offers.Clear();
         if (data is null)
         {
-            _error = error ?? "Resposta vazia da API.";
+            if (!silent)
+            {
+                _error = error ?? "Resposta vazia da API.";
+            }
+
             return;
         }
 
+        _groups.Clear();
         _groups.AddRange(data.Groups);
-        _offers.AddRange(data.Offers);
+        _totalOffers = data.TotalOffers;
+        if (!append)
+        {
+            if (silent)
+            {
+                MergeNewestOffers(data.Offers);
+            }
+            else
+            {
+                _offers.Clear();
+                _offers.AddRange(data.Offers);
+                _loadedSkip = data.Offers.Count;
+            }
+        }
+        else
+        {
+            foreach (var item in data.Offers)
+            {
+                if (_offers.All(existing => existing.Id != item.Id))
+                {
+                    _offers.Add(item);
+                }
+            }
+
+            _loadedSkip += data.Offers.Count;
+        }
+
         if (!data.Status)
         {
             _error = FirstNonEmpty(data.Descricao, error, "Não foi possível carregar os grupos monitorados.");
+        }
+    }
+
+    private void MergeNewestOffers(IReadOnlyList<GroupCapturedOfferDto> incoming)
+    {
+        foreach (var item in incoming.OrderByDescending(offer => offer.ReceivedAt))
+        {
+            var index = _offers.FindIndex(existing => existing.Id == item.Id);
+            if (index >= 0)
+            {
+                _offers[index] = item;
+                continue;
+            }
+
+            var insertAt = _offers.FindIndex(existing => existing.ReceivedAt < item.ReceivedAt);
+            if (insertAt < 0)
+            {
+                _offers.Add(item);
+            }
+            else
+            {
+                _offers.Insert(insertAt, item);
+            }
         }
     }
 }

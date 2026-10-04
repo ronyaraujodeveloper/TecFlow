@@ -295,17 +295,41 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             }
 
             var (chatId, title) = ResolvePeerFromChat(chat);
+            var offsetId = 0;
+            var totalFetched = 0;
             try
             {
-                var history = await client.Messages_GetHistory(
-                    inputPeer,
-                    limit: TelegramUserMonitorRules.HistoryCatchUpLimit);
-                foreach (var item in history.Messages)
+                while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel)
                 {
-                    if (item is Message historic)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var remaining = TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel - totalFetched;
+                    var pageSize = Math.Min(TelegramUserMonitorRules.HistoryCatchUpPageSize, remaining);
+                    var history = await client.Messages_GetHistory(
+                        inputPeer,
+                        offset_id: offsetId,
+                        limit: pageSize);
+                    var messages = history.Messages;
+                    if (messages is null || messages.Length == 0)
                     {
-                        TryEnqueueFromMessage(userId, historic, chatId, title);
+                        break;
                     }
+
+                    foreach (var item in messages)
+                    {
+                        if (item is Message historic)
+                        {
+                            TryEnqueueFromMessage(userId, historic, chatId, title);
+                        }
+                    }
+
+                    offsetId = messages[^1].ID;
+                    totalFetched += messages.Length;
+                    if (messages.Length < pageSize)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
                 }
             }
             catch (Exception ex)

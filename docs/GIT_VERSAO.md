@@ -41,3 +41,4 @@
 [2026-10-04 14:15:52]fix(telegram): valida api_id numerico e habilita PIN apos codigo 200
 [2026-10-04 14:45:05]fix(telegram): helpers UserBot, PIN manual e MakeAuth da sessao
 [2026-10-04 15:15:54]feat(telegram): catch-up e fila de captura userbot
+[2026-10-04 16:01:56]feat(telegram): catch-up paginado e lista de ofertas em 50

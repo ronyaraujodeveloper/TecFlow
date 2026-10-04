@@ -36,12 +36,14 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] int hours = 24,
         [FromQuery] string? groupKey = null,
         [FromQuery] string? channel = null,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 50,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var userId = ResolveUserId();
-            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, cancellationToken));
+            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, skip, take, cancellationToken));
         }
         catch (Exception ex)
         {

@@ -31,6 +31,19 @@ public class GroupOfferCaptureRulesTests
     public void ResolveLookbackHours_ShouldClampUnknownValues(int input, int expected) =>
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveLookbackHours(input));
 
+    [Theory]
+    [InlineData(0, 50)]
+    [InlineData(50, 50)]
+    [InlineData(100, 100)]
+    [InlineData(101, 50)]
+    [InlineData(-8, 50)]
+    public void ResolveOffersTake_ShouldDefaultToFifty(int input, int expected) =>
+        Assert.Equal(expected, GroupOfferCaptureRules.ResolveOffersTake(input));
+
+    [Fact]
+    public void ResolveOffersSkip_ShouldRejectNegative() =>
+        Assert.Equal(0, GroupOfferCaptureRules.ResolveOffersSkip(-10));
+
     [Fact]
     public void Telegram_ShouldCaptureGroupButIgnorePrivateConversionOnly()
     {

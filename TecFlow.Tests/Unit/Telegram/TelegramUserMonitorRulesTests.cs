@@ -48,6 +48,13 @@ public class TelegramUserMonitorRulesTests
     public void BuildChannelChatId_ShouldPrefixMinus100() =>
         Assert.Equal("-100123456789", TelegramUserMonitorRules.BuildChannelChatId(123456789));
 
+    [Fact]
+    public void HistoryCatchUp_ShouldPageUpToTwoHundredMessages()
+    {
+        Assert.Equal(100, TelegramUserMonitorRules.HistoryCatchUpPageSize);
+        Assert.Equal(200, TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel);
+    }
+
     [Theory]
     [InlineData("+5511981656947abcHASH", "+5511981656947")]
     [InlineData("55 11 98165-6947", "+5511981656947")]

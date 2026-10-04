@@ -45,6 +45,8 @@ public static class GroupOfferCaptureRules
     public static string BuildGroupKey(string channel, string groupId) =>
         $"{channel}:{groupId.Trim()}";
 
+    public const int OffersPageSize = 50;
+
     public static int ResolveLookbackHours(int hours) =>
         hours switch
         {
@@ -52,6 +54,11 @@ public static class GroupOfferCaptureRules
             48 => 48,
             _ => 24
         };
+
+    public static int ResolveOffersSkip(int skip) => Math.Max(0, skip);
+
+    public static int ResolveOffersTake(int take) =>
+        take is > 0 and <= 100 ? take : OffersPageSize;
 
     public static MarketplaceType? DetectPlatform(string? url)
     {

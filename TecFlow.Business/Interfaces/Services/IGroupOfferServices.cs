@@ -45,6 +45,8 @@ public interface IMonitoredGroupService
         int lookbackHours,
         string? groupKey,
         string? channel,
+        int skip = 0,
+        int take = 50,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> ValidateAsync(

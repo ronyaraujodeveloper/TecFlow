@@ -151,13 +151,15 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   USERBOT[TelegramUserMonitorWorker] -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
-  USERBOT -->|LoginUserIfNeeded Messages_GetHistory 30| QUEUE
+  USERBOT -->|LoginUserIfNeeded GetHistory paginado 200| QUEUE
+  GMUI[GruposMonitorados] -->|GET skip take 50| MGAPI[MonitoredGroupsController]
+  MGAPI -->|Count Skip Take| SQL
+  GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   USERBOT -->|session user-{id}.session| SESS[App_Data/telegram-sessions ou TEMP TecFlow]
   CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
   CXUI -->|modal UserBotHelpModal| HELP2[Tutorial my.telegram.org]
   GMUI[GruposMonitorados Telegram] -->|Clonar Oferta| TGAGEN
-  GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   GEN -->|og:image twitter:image itemprop ProductImageUrl| SQL

@@ -149,11 +149,13 @@ flowchart LR
   TGAGEN[TelegramAgendador.razor] -->|GetChat Title + SelectedChatIds| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
-  USERBOT[TelegramUserMonitorWorker] -->|WTelegramClient OnUpdates| GCAP[GroupOfferCaptureService]
+  USERBOT[TelegramUserMonitorWorker] -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
+  QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
+  USERBOT -->|LoginUserIfNeeded Messages_GetHistory 30| QUEUE
   USERBOT -->|session user-{id}.session| SESS[App_Data/telegram-sessions ou TEMP TecFlow]
   CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
-  CXUI -->|modal isUserBotHelpModalOpen| HELP2[Tutorial my.telegram.org]
+  CXUI -->|modal UserBotHelpModal| HELP2[Tutorial my.telegram.org]
   GMUI[GruposMonitorados Telegram] -->|Clonar Oferta| TGAGEN
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI

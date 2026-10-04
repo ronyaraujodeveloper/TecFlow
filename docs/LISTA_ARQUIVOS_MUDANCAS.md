@@ -141,10 +141,10 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **TecFlow.API/Controllers/AuthController.cs** — `GET /api/auth/status` e `GET /api/auth/providers/status` (alias); login, register, vincular/desvincular provedores.
 - [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/` em dev Kestrel; `http://localhost:5001/` no IIS Homologacao).
 - [x] **TecFlow.WebUi/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS).
-- [x] **TecFlow.API/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS backend).
+- [x] **TecFlow.API/web.config** — `stdoutLogEnabled="true"`, `requestTimeout="20:00:00"` para o UserBot contínuo no IIS.
 - [x] **Configurar-Logs-IIS.ps1** — cria `logs\` em `C:\inetpub\tecflow\api` e `webui`; `FullControl` para `IIS_IUSRS`, `DefaultAppPool` e app pools dedicados.
 - [x] **Liberar-Logs-WebUi.ps1** — cria `C:\inetpub\tecflow\webui\logs\` e concede `FullControl` a `IIS_IUSRS` / app pools.
-- [x] **TecFlow.API/Program.cs** — `AddJwtBearer` com `ValidAudience`/`ValidAudiences` = `TecFlowClient`.
+- [x] **TecFlow.API/Program.cs** — `AddJwtBearer` com `ValidAudience`/`ValidAudiences` = `TecFlowClient`; `HostOptions` ignora falha de BackgroundService.
 - [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — seção `Serilog.MinimumLevel` (Information em homolog).
 - [x] **TecFlow.WebUi/Program.cs** — Serilog Console + `logs/app-.txt`, `UseSerilogRequestLogging`, `Log.CloseAndFlush`.
 - [x] **TecFlow.WebUi/Logging/BlazorCircuitLoggingHandler.cs** — log de abertura/fechamento/reconexão de circuitos SignalR.
@@ -917,11 +917,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramGroupPicker.razor** — chips com `GroupName` + Chat ID, busca e atalhos Selecionar Todos / Limpar.
 - [x] **AddTelegramGroupsAndMultiChat** — tabela `TelegramGroups` e `TargetChatIdsJson` nas campanhas.
 - [x] **AddTelegramUserBotCredentials** — `UserBotApiId`, `UserBotApiHash`, `UserBotPhone` em `TelegramIntegrations`.
-- [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — filtro de URLs Shopee, ML, Amazon, AliExpress e Magalu; `api_id` numérico e PIN de 5 dígitos.
-- [x] **Conexoes.razor** — `isCodeInputDisabled` após Solicitar Código; fallback de PIN manual; helpers e bloqueio de Bot Token/Chat ID.
+- [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — regex HTTP ampla; filtro Shopee, ML, Amazon, AliExpress, Magalu, Casas Bahia, Pelando, Promobit e encurtadores; `api_id` numérico e PIN de 5 dígitos.
+- [x] **UserBotHelpModal.razor** — tutorial de 7 passos, badges Bot Token/Chat ID e Copiar exemplo.
+- [x] **Conexoes.razor** — badges amarelo/azul no bloco UserBot e abre `UserBotHelpModal`.
 - [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
-- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto (WTelegramClient) e grava `GroupCapturedMessages`.
+- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto, catch-up `Messages_GetHistory` (30 msgs) e fila `Channel` para `GroupCapturedMessages`.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
 - [x] **GruposMonitorados.razor** — cards das ofertas de canais de terceiros e botão Clonar Oferta.
 

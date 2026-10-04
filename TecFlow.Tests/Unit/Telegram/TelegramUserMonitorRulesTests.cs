@@ -11,10 +11,31 @@ public class TelegramUserMonitorRulesTests
     [InlineData("https://www.amazon.com.br/dp/B0TESTE", MarketplaceType.Amazon)]
     [InlineData("https://www.magazineluiza.com.br/p/abc/123", MarketplaceType.MagazineLuiza)]
     [InlineData("https://pt.aliexpress.com/item/100.html", MarketplaceType.AliExpress)]
+    [InlineData("https://www.casasbahia.com.br/produto/123", MarketplaceType.CasasBahia)]
     public void IsTrackedCommerceUrl_ShouldAcceptMarketplaces(string url, MarketplaceType expected)
     {
         Assert.True(TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out var platform));
         Assert.Equal(expected, platform);
+    }
+
+    [Theory]
+    [InlineData("https://bit.ly/abc123")]
+    [InlineData("https://t.me/ofertas/1")]
+    [InlineData("https://s.shopee.com.br/abc")]
+    [InlineData("https://www.pelando.com.br/d/abc")]
+    [InlineData("https://www.promobit.com.br/oferta/abc")]
+    [InlineData("https://www.casasbahia.com.br/produto/123")]
+    [InlineData("https://www.pontofrio.com.br/produto/123")]
+    [InlineData("https://amzn.to/xyz")]
+    public void IsTrackedCommerceUrl_ShouldAcceptShortenersAndDealPortals(string url) =>
+        Assert.True(TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _));
+
+    [Fact]
+    public void ExtractHttpUrls_ShouldCapturePathAndQuery()
+    {
+        var urls = TelegramUserMonitorRules.ExtractHttpUrls(
+            "veja https://www.amazon.com.br/dp/B0TEST?tag=x&ref=y fim");
+        Assert.Contains("https://www.amazon.com.br/dp/B0TEST?tag=x&ref=y", urls);
     }
 
     [Fact]

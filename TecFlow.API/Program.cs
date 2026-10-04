@@ -74,6 +74,11 @@ builder.Services.AddAffiliateLinkInfrastructureServices();
 builder.Services.AddAffiliateLinkStrategyServices();
 builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.Infrastructure.Services.Messaging.TecFlowMessagingRole.Publisher);
 builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.API", enableAspNetCoreInstrumentation: true);
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+    options.ShutdownTimeout = TimeSpan.FromMinutes(2);
+});
 builder.Services.AddHostedService<TecFlow.API.Workers.WhatsAppBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramUserMonitorWorker>();

@@ -1,5 +1,5 @@
-﻿using TecFlow.Business.Service.Groups;
-using TecFlow.Business.Service.WhatsApp;
+﻿using System.Text.RegularExpressions;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Service.Telegram;
@@ -8,21 +8,95 @@ public static class TelegramUserMonitorRules
 {
     public const string UserBotSource = "TelegramUserBot";
 
+    public const int HistoryCatchUpLimit = 30;
+
+    public const string HttpUrlPattern =
+        @"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";
+
+    private static readonly Regex HttpUrlRegex = new(
+        HttpUrlPattern,
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly string[] ShortenerHosts =
+    [
+        "bit.ly",
+        "t.me",
+        "telegram.me",
+        "s.shopee.com.br",
+        "s.shopee",
+        "tinyurl.com",
+        "t.co",
+        "cutt.ly",
+        "amzn.to",
+        "amzn.br"
+    ];
+
+    private static readonly string[] DealHostTokens =
+    [
+        "shopee",
+        "mercadolivre",
+        "mercadolibre",
+        "amazon",
+        "amzn",
+        "magalu",
+        "magazineluiza",
+        "aliexpress",
+        "pelando",
+        "promobit",
+        "casasbahia",
+        "pontofrio",
+        "ponto"
+    ];
+
+    public static IReadOnlyList<string> ExtractHttpUrls(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var urls = new List<string>();
+        foreach (Match match in HttpUrlRegex.Matches(text))
+        {
+            var url = match.Value.Trim().TrimEnd('.', ',', ';', ')', ']', '"', '\'');
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                && !urls.Contains(url, StringComparer.OrdinalIgnoreCase))
+            {
+                urls.Add(url);
+            }
+        }
+
+        return urls;
+    }
+
     public static bool IsTrackedCommerceUrl(string? url, out MarketplaceType platform)
     {
         platform = default;
-        var detected = GroupOfferCaptureRules.DetectPlatform(url);
-        if (detected is null)
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             return false;
         }
 
-        platform = detected.Value;
-        return platform is MarketplaceType.Shopee
+        var detected = GroupOfferCaptureRules.DetectPlatform(url);
+        if (detected is MarketplaceType.Shopee
             or MarketplaceType.MercadoLivre
             or MarketplaceType.Amazon
             or MarketplaceType.AliExpress
-            or MarketplaceType.MagazineLuiza;
+            or MarketplaceType.MagazineLuiza
+            or MarketplaceType.CasasBahia)
+        {
+            platform = detected.Value;
+            return true;
+        }
+
+        var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
+        if (ShortenerHosts.Any(item => host == item || host.EndsWith("." + item, StringComparison.Ordinal)))
+        {
+            return true;
+        }
+
+        return DealHostTokens.Any(token => host.Contains(token, StringComparison.Ordinal));
     }
 
     public static string BuildChannelChatId(long channelId) => "-100" + channelId.ToString(System.Globalization.CultureInfo.InvariantCulture);

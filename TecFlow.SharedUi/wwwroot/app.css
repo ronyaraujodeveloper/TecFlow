@@ -544,6 +544,14 @@ html, body {
     z-index: 1055;
 }
 
+.userbot-help-modal .userbot-help-steps li {
+    line-height: 1.45;
+}
+
+.userbot-field-hints .badge {
+    font-weight: 600;
+}
+
 .portal-sidebar-backdrop {
     display: none;
     position: fixed;

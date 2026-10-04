@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using System.Text.RegularExpressions;
+using TecFlow.Business.Service.Telegram;
 
 namespace TecFlow.Business.Service.WhatsApp;
 
@@ -27,10 +27,6 @@ public static class WhatsAppBotRules
 {
     public const string WhatsAppBotSource = "WhatsAppBot";
     public const int ReplyTimeoutMilliseconds = 2800;
-
-    private static readonly Regex UrlRegex = new(
-        @"https?://[^\s<>""']+",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static bool IsWhatsAppBotSource(string? source) =>
         string.Equals(source, WhatsAppBotSource, StringComparison.OrdinalIgnoreCase);
@@ -107,27 +103,8 @@ public static class WhatsAppBotRules
         return isGroup ? replyGroups : replyPrivate;
     }
 
-    public static IReadOnlyList<string> ExtractUrls(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        var urls = new List<string>();
-        foreach (Match match in UrlRegex.Matches(text))
-        {
-            var url = match.Value.Trim().TrimEnd('.', ',', ';', ')', ']', '"', '\'');
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                && !urls.Contains(url, StringComparer.OrdinalIgnoreCase))
-            {
-                urls.Add(url);
-            }
-        }
-
-        return urls;
-    }
+    public static IReadOnlyList<string> ExtractUrls(string? text) =>
+        TelegramUserMonitorRules.ExtractHttpUrls(text);
 
     public static string FormatConvertedReply(IEnumerable<string> convertedLinks)
     {

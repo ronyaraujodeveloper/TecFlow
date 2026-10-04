@@ -772,7 +772,9 @@ Para equiparar a experiência ao agendador do WhatsApp:
 Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégios de Admin):
 1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no TecFlow para conectar uma conta de usuário do Telegram.
 2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
-3. [x] **Extração de Ofertas:** Filtragem automática de mensagens com URLs de e-commerce, salvando na tabela `GroupCapturedMessages` com a indicação do canal de origem (ex: Pelando, PC DO FAFA).
+3. [x] **Catch-up histórico:** ao autenticar, `Messages_GetHistory` busca as últimas 30 mensagens de cada canal/grupo inscrito e enfileira o que ainda não está em `GroupCapturedMessages`.
+4. [x] **Fila desacoplada:** `Channel<UserBotCapturedPayload>` recebe o update MTProto sem bloquear o `WTelegramClient`; um leitor persiste no SQL. `HostOptions` + `requestTimeout="20:00:00"` no IIS evitam derrubar o `IHostedService`.
+5. [x] **Extração de Ofertas:** regex HTTP ampla e filtro de marketplaces/encurtadores (Shopee, ML, Amazon, Magalu, AliExpress, Casas Bahia, Pelando, Promobit, `bit.ly`, `t.me`, `s.shopee`), salvando em `GroupCapturedMessages` com o canal de origem.
 
 ## 🛠️ Permissões de Sistema de Arquivos (Telegram Sessions)
 
@@ -784,7 +786,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ## 🤖 UX e Manual do UserBot MTProto (Escuta de Canais de Terceiros)
 
 1. [x] **Modal de Instruções ("Como configurar o UserBot"):**
-   - Disponibilizar link/botão "Saiba como obter o ApiId e ApiHash" abrindo modal explicativo sobre o `my.telegram.org`.
+   - `UserBotHelpModal.razor` com 7 passos, alertas amarelo/azul, link `https://my.telegram.org` e botão Copiar exemplo (`28471934`).
 
 2. [x] **Fluxo de Login em 2 Passos (Two-Step Phone Auth):**
    - **Passo 1:** O usuário informa o `api_id` numérico, o `api_hash` e o telefone E.164 e clica em "Solicitar Código". PIN e "Confirmar e Autenticar" só habilitam após HTTP 200. Helpers no formulário; ApiId rejeita Bot Token (`:`) e Chat ID (`-100`).

@@ -1,0 +1,111 @@
+﻿@inject IJSRuntime Js
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block conexoes-qr-modal userbot-help-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="userbot-help-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="confirm-dialog-icon confirm-dialog-icon--info" aria-hidden="true">
+                            <i class="bi bi-broadcast-pin"></i>
+                        </span>
+                        <h2 class="modal-title h5 fw-bold mb-0" id="userbot-help-title">Configuração da Escuta de Canais (UserBot)</h2>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <div class="alert alert-warning py-2 px-3 small mb-3 d-flex flex-wrap align-items-start gap-2">
+                        <span class="badge text-bg-warning text-dark">Atenção</span>
+                        <span>
+                            No campo <strong>ApiId</strong> cole só o número (ex: <code>@ApiIdExample</code>).
+                            <strong>Não</strong> cole Bot Token (contém <code>:</code>) nem Chat ID (começa com <code>-100</code>).
+                        </span>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 small mb-3 d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge text-bg-info">Portal oficial</span>
+                        <a href="@TelegramApiPortalUrl" target="_blank" rel="noopener noreferrer">@TelegramApiPortalUrl</a>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="CopyApiIdExampleAsync">
+                            @(_copiedApiId ? "Exemplo copiado" : "Copiar exemplo")
+                        </button>
+                    </div>
+                    <ol class="small mb-0 ps-3 userbot-help-steps">
+                        <li class="mb-2">
+                            Acesse o site oficial do Telegram:
+                            <a href="@TelegramApiPortalUrl" target="_blank" rel="noopener noreferrer">@TelegramApiPortalUrl</a>.
+                        </li>
+                        <li class="mb-2">Faça login informando seu telefone e o código recebido no aplicativo.</li>
+                        <li class="mb-2">Clique em <strong>API development tools</strong>.</li>
+                        <li class="mb-2">
+                            Preencha "App title" (ex: TecFlow Monitor) e "Short name" (ex: tecflow) e clique em
+                            <strong>Create application</strong>.
+                        </li>
+                        <li class="mb-2">
+                            Copie os valores dos campos:
+                            <ul class="mt-2 mb-0">
+                                <li class="mb-1">
+                                    <strong>api_id</strong>: o código numérico (ex: <code>@ApiIdExample</code>).
+                                    <span class="badge text-bg-warning text-dark ms-1">Não use ChatID (-100...) nem Bot Token</span>
+                                </li>
+                                <li>
+                                    <strong>api_hash</strong>: o hash alfanumérico longo de 32 caracteres.
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">
+                            Informe seu telefone em formato internacional (ex: <code>@PhoneExample</code>) e clique em
+                            <strong>Solicitar Código</strong>.
+                        </li>
+                        <li class="mb-0">
+                            Verifique a mensagem do Telegram no seu celular, digite o PIN de 5 dígitos (ex: <code>@PinExample</code>)
+                            no campo "Código de verificação" e clique em <strong>Confirmar e Autenticar</strong>.
+                        </li>
+                    </ol>
+                </div>
+                <div class="modal-footer border-0 d-flex flex-wrap justify-content-between gap-2">
+                    <a class="btn btn-outline-info"
+                       href="@TelegramApiPortalUrl"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Abrir my.telegram.org
+                    </a>
+                    <button type="button" class="btn btn-primary" @onclick="CloseAsync">Entendi, fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseAsync"></div>
+}
+
+@code {
+    private const string TelegramApiPortalUrl = "https://my.telegram.org";
+    private const string ApiIdExample = "28471934";
+    private const string PhoneExample = "+5511981656947";
+    private const string PinExample = "34793";
+
+    private bool _copiedApiId;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private async Task CopyApiIdExampleAsync()
+    {
+        try
+        {
+            _copiedApiId = await Js.InvokeAsync<bool>("tecFlowClipboard.copyText", ApiIdExample);
+        }
+        catch
+        {
+            _copiedApiId = false;
+        }
+    }
+}

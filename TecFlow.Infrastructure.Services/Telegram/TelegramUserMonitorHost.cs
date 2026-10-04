@@ -1,11 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Telegram;
-using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
 using TL;
@@ -17,6 +17,13 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<int, UserBotSlot> _slots = new();
     private readonly ConcurrentDictionary<int, Client> _pendingLogins = new();
+    private readonly System.Threading.Channels.Channel<UserBotCapturedPayload> _queue = System.Threading.Channels.Channel.CreateUnbounded<UserBotCapturedPayload>(
+        new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false
+        });
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly TelegramUserBotCodeStore _codes;
@@ -89,6 +96,52 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
+    public async Task RunForeverAsync(CancellationToken stoppingToken)
+    {
+        var drain = DrainQueueAsync(CancellationToken.None);
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await ReconcileAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Ciclo do UserBot Telegram falhou. A sincronização de grupos via Bot API continua.");
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            _queue.Writer.TryComplete();
+            try
+            {
+                await drain.WaitAsync(TimeSpan.FromSeconds(15), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Fila de captura UserBot encerrada com aviso.");
+            }
+        }
+    }
+
     private void StartSlot(TelegramIntegration row, CancellationToken stoppingToken)
     {
         var userId = row.UserId;
@@ -142,6 +195,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         {
             await client.LoginUserIfNeeded();
             _logger.LogInformation("UserBot MTProto autenticado. UserId={UserId}", userId);
+            await CatchUpAsync(userId, client, cancellationToken);
             await Task.Delay(Timeout.Infinite, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -170,67 +224,13 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     UpdateNewMessage { message: Message chatMessage } => chatMessage,
                     _ => null
                 };
-                if (message is null || string.IsNullOrWhiteSpace(message.message) && message.media is null)
-                {
-                    continue;
-                }
-
-                var text = message.message ?? string.Empty;
-                var urls = TelegramBotRules.ExtractUrls(text).ToList();
-                if (message.entities is not null)
-                {
-                    foreach (var entity in message.entities)
-                    {
-                        if (entity is MessageEntityTextUrl { url: { Length: > 0 } entityUrl })
-                        {
-                            urls.Add(entityUrl);
-                        }
-                    }
-                }
-
-                string? pageTitle = null;
-                if (message.media is MessageMediaWebPage { webpage: WebPage page })
-                {
-                    pageTitle = page.title;
-                    if (!string.IsNullOrWhiteSpace(page.url))
-                    {
-                        urls.Add(page.url);
-                    }
-                }
-
-                var commerce = urls
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Where(url => TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _))
-                    .ToList();
-                if (commerce.Count == 0)
+                if (message is null)
                 {
                     continue;
                 }
 
                 var (chatId, title) = ResolvePeer(updates, message.peer_id);
-                var raw = string.IsNullOrWhiteSpace(pageTitle) ? text : pageTitle + Environment.NewLine + text;
-                foreach (var url in commerce)
-                {
-                    if (!raw.Contains(url, StringComparison.OrdinalIgnoreCase))
-                    {
-                        raw += Environment.NewLine + url;
-                    }
-                }
-
-                string? mediaUrl = null;
-                if (message.media is MessageMediaWebPage { webpage: WebPage web } && !string.IsNullOrWhiteSpace(web.url))
-                {
-                    mediaUrl = web.url;
-                }
-
-                await PersistAsync(
-                    userId,
-                    chatId,
-                    title,
-                    raw,
-                    message.id.ToString(),
-                    mediaUrl,
-                    cancellationToken: CancellationToken.None);
+                TryEnqueueFromMessage(userId, message, chatId, title);
             }
         }
         catch (Exception ex)
@@ -241,15 +241,195 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         await Task.CompletedTask;
     }
 
-    private async Task PersistAsync(
-        int userId,
-        string chatId,
-        string title,
-        string rawText,
-        string messageId,
-        string? mediaUrl,
-        CancellationToken cancellationToken)
+    private async Task CatchUpAsync(int userId, Client client, CancellationToken cancellationToken)
     {
+        Messages_DialogsBase dialogs;
+        try
+        {
+            dialogs = await client.Messages_GetAllDialogs();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Catch-up de diálogos falhou. UserId={UserId}", userId);
+            return;
+        }
+
+        if (dialogs is not Messages_Dialogs packedDialogs)
+        {
+            return;
+        }
+
+        var list = packedDialogs.dialogs;
+        var chats = packedDialogs.chats;
+        foreach (var dialog in list)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (dialog is not Dialog concrete)
+            {
+                continue;
+            }
+
+            ChatBase? chat = null;
+            if (concrete.peer is PeerChannel channelPeer)
+            {
+                chats.TryGetValue(channelPeer.channel_id, out chat);
+            }
+            else if (concrete.peer is PeerChat groupPeer)
+            {
+                chats.TryGetValue(groupPeer.chat_id, out chat);
+            }
+
+            if (chat is not TL.Channel and not Chat)
+            {
+                continue;
+            }
+
+            InputPeer inputPeer;
+            try
+            {
+                inputPeer = chat.ToInputPeer();
+            }
+            catch
+            {
+                continue;
+            }
+
+            var (chatId, title) = ResolvePeerFromChat(chat);
+            try
+            {
+                var history = await client.Messages_GetHistory(
+                    inputPeer,
+                    limit: TelegramUserMonitorRules.HistoryCatchUpLimit);
+                foreach (var item in history.Messages)
+                {
+                    if (item is Message historic)
+                    {
+                        TryEnqueueFromMessage(userId, historic, chatId, title);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "GetHistory falhou. UserId={UserId} Chat={ChatId}", userId, chatId);
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+        }
+    }
+
+    private void TryEnqueueFromMessage(int userId, Message message, string chatId, string title)
+    {
+        if (string.IsNullOrWhiteSpace(message.message) && message.media is null)
+        {
+            return;
+        }
+
+        var text = message.message ?? string.Empty;
+        var urls = TelegramUserMonitorRules.ExtractHttpUrls(text).ToList();
+        if (message.entities is not null)
+        {
+            foreach (var entity in message.entities)
+            {
+                if (entity is MessageEntityTextUrl { url: { Length: > 0 } entityUrl })
+                {
+                    urls.Add(entityUrl);
+                }
+            }
+        }
+
+        string? pageTitle = null;
+        if (message.media is MessageMediaWebPage { webpage: WebPage page })
+        {
+            pageTitle = page.title;
+            if (!string.IsNullOrWhiteSpace(page.url))
+            {
+                urls.Add(page.url);
+            }
+        }
+
+        var commerce = urls
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(url => TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _))
+            .ToList();
+        if (commerce.Count == 0)
+        {
+            return;
+        }
+
+        var raw = string.IsNullOrWhiteSpace(pageTitle) ? text : pageTitle + Environment.NewLine + text;
+        foreach (var url in commerce)
+        {
+            if (!raw.Contains(url, StringComparison.OrdinalIgnoreCase))
+            {
+                raw += Environment.NewLine + url;
+            }
+        }
+
+        string? mediaUrl = null;
+        if (message.media is MessageMediaWebPage { webpage: WebPage web } && !string.IsNullOrWhiteSpace(web.url))
+        {
+            mediaUrl = web.url;
+        }
+
+        var receivedAt = message.Date == default ? DateTime.UtcNow : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
+        _queue.Writer.TryWrite(new UserBotCapturedPayload(
+            userId,
+            chatId,
+            title,
+            raw,
+            message.id.ToString(),
+            mediaUrl,
+            receivedAt));
+    }
+
+    private async Task DrainQueueAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var payload in _queue.Reader.ReadAllAsync(cancellationToken))
+            {
+                try
+                {
+                    await PersistAsync(payload, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Persistência da captura UserBot falhou. UserId={UserId} Chat={ChatId}",
+                        payload.UserId,
+                        payload.ChatId);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Leitor da fila UserBot encerrou com erro.");
+        }
+    }
+
+    private async Task PersistAsync(UserBotCapturedPayload payload, CancellationToken cancellationToken)
+    {
+        var userId = payload.UserId;
+        var chatId = payload.ChatId;
+        var title = payload.Title;
+        var rawText = payload.RawText;
+        var messageId = payload.MessageId;
+        var mediaUrl = payload.MediaUrl;
         using var scope = _scopeFactory.CreateScope();
         var capture = scope.ServiceProvider.GetRequiredService<IGroupOfferCaptureService>();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -290,9 +470,26 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ExternalMessageId = messageId,
                 RawText = rawText,
                 MediaUrl = mediaUrl,
-                ReceivedAt = DateTime.UtcNow
+                ReceivedAt = payload.ReceivedAt
             },
             cancellationToken);
+    }
+
+    private static (string ChatId, string Title) ResolvePeerFromChat(ChatBase chat)
+    {
+        if (chat is TL.Channel channel)
+        {
+            var title = string.IsNullOrWhiteSpace(channel.title) ? "Canal Telegram" : channel.title;
+            return (TelegramUserMonitorRules.BuildChannelChatId(channel.id), title);
+        }
+
+        if (chat is Chat group)
+        {
+            var title = string.IsNullOrWhiteSpace(group.title) ? "Grupo Telegram" : group.title;
+            return ((-group.id).ToString(), title);
+        }
+
+        return ("0", "Telegram");
     }
 
     private static (string ChatId, string Title) ResolvePeer(UpdatesBase updates, Peer? peer)
@@ -304,7 +501,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             {
                 foreach (var chat in packed.chats.Values)
                 {
-                    if (chat is Channel channel && channel.id == channelPeer.channel_id)
+                    if (chat is TL.Channel channel && channel.id == channelPeer.channel_id)
                     {
                         title = string.IsNullOrWhiteSpace(channel.title) ? title : channel.title;
                         break;
@@ -473,6 +670,15 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             DisposePending(userId);
         }
     }
+
+    private sealed record UserBotCapturedPayload(
+        int UserId,
+        string ChatId,
+        string Title,
+        string RawText,
+        string MessageId,
+        string? MediaUrl,
+        DateTime ReceivedAt);
 
     private sealed record UserBotSlot(Client Client, CancellationTokenSource Cts, Task Loop);
 }

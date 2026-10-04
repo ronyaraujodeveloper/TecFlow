@@ -210,11 +210,18 @@
                         Saiba como obter
                     </button>
                 </div>
-                <p class="text-muted small mb-3">
+                <p class="text-muted small mb-2">
                     Opcional. Informe <code>api_id</code>, <code>api_hash</code> e o telefone da conta leitora.
                     Solicite o código e confirme o PIN de 5 dígitos. A sessão fica em
                     <code>App_Data/telegram-sessions</code> no servidor.
                 </p>
+                <div class="userbot-field-hints d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge text-bg-warning text-dark">Não cole Bot Token (:) no ApiId</span>
+                    <span class="badge text-bg-warning text-dark">Não cole Chat ID (-100)</span>
+                    <a class="badge text-bg-info text-decoration-none" href="https://my.telegram.org" target="_blank" rel="noopener noreferrer">
+                        Abrir my.telegram.org
+                    </a>
+                </div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold" for="cx-tg-api-id">ApiId</label>
@@ -392,38 +399,7 @@
     <div class="modal-backdrop fade show" @onclick="CloseBotFatherHelpModal"></div>
 }
 
-@if (isUserBotHelpModalOpen)
-{
-    <div class="modal fade show d-block conexoes-qr-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="userbot-help-title">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header border-0">
-                    <div class="d-flex align-items-start gap-3">
-                        <span class="confirm-dialog-icon confirm-dialog-icon--info" aria-hidden="true">
-                            <i class="bi bi-broadcast-pin"></i>
-                        </span>
-                        <h2 class="modal-title h5 fw-bold mb-0" id="userbot-help-title">Configuração da Escuta de Canais (UserBot)</h2>
-                    </div>
-                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseUserBotHelpModal"></button>
-                </div>
-                <div class="modal-body pt-0">
-                    <ol class="small mb-0 ps-3">
-                        <li class="mb-2">Acesse o site oficial do Telegram: <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer">https://my.telegram.org</a>.</li>
-                        <li class="mb-2">Digite seu número de telefone e insira o código recebido no aplicativo Telegram para fazer login.</li>
-                        <li class="mb-2">Clique na opção <strong>API development tools</strong>.</li>
-                        <li class="mb-2">Preencha "App title" (ex: TecFlow Monitor) e "Short name" (ex: tecflow) e clique em <strong>Create application</strong>.</li>
-                        <li class="mb-2">Copie os valores dos campos <strong>api_id</strong> (número) e <strong>api_hash</strong> e cole nesta tela.</li>
-                        <li class="mb-0">Informe seu número de telefone e clique em <strong>Solicitar Código</strong>. Insira o PIN de 5 dígitos recebido no seu Telegram para concluir a vinculação.</li>
-                    </ol>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-primary" @onclick="CloseUserBotHelpModal">Entendi, fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal-backdrop fade show" @onclick="CloseUserBotHelpModal"></div>
-}
+<UserBotHelpModal IsOpen="isUserBotHelpModalOpen" OnClose="CloseUserBotHelpModal" />
 
 @code {
     private string _tab = "whatsapp";

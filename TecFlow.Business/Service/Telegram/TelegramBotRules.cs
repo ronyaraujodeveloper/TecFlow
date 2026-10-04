@@ -159,7 +159,7 @@ public static class TelegramBotRules
         && !string.IsNullOrWhiteSpace(message.Text);
 
     public static IReadOnlyList<string> ExtractUrls(string? text) =>
-        WhatsAppBotRules.ExtractUrls(text);
+        TelegramUserMonitorRules.ExtractHttpUrls(text);
 
     public static string FormatConvertedReply(IEnumerable<string> convertedLinks) =>
         WhatsAppBotRules.FormatConvertedReply(convertedLinks);

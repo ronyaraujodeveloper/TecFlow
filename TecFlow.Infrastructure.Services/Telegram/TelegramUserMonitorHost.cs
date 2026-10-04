@@ -97,17 +97,25 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
-    public async Task CatchUpUserAsync(int userId, CancellationToken cancellationToken)
+    public async Task<UserBotCatchUpResult> CatchUpUserAsync(int userId, CancellationToken cancellationToken)
     {
-        if (!_slots.TryGetValue(userId, out var slot))
+        if (!_slots.TryGetValue(userId, out _))
         {
-            _logger.LogInformation(
-                "Catch-up ignorado: UserBot ainda não está autenticado. UserId={UserId}",
-                userId);
-            return;
+            await TryStartSlotFromDatabaseAsync(userId, cancellationToken);
         }
 
-        await CatchUpAsync(userId, slot.Client, cancellationToken);
+        if (!_slots.TryGetValue(userId, out var slot))
+        {
+            _logger.LogWarning(
+                "Catch-up ignorado: UserBot ainda não está autenticado. UserId={UserId} HasSession={HasSession}",
+                userId,
+                _sessions.HasSession(userId));
+            return UserBotCatchUpResult.Offline();
+        }
+
+        var result = await CatchUpAsync(userId, slot.Client, cancellationToken);
+        await WaitForQueueIdleAsync(cancellationToken);
+        return result;
     }
 
     public async Task RunForeverAsync(CancellationToken stoppingToken)
@@ -207,8 +215,6 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
     {
         try
         {
-            await client.LoginUserIfNeeded();
-            _logger.LogInformation("UserBot MTProto autenticado. UserId={UserId}", userId);
             await CatchUpAsync(userId, client, cancellationToken);
             await Task.Delay(Timeout.Infinite, cancellationToken);
         }
@@ -255,16 +261,32 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         await Task.CompletedTask;
     }
 
-    private async Task CatchUpAsync(int userId, Client client, CancellationToken cancellationToken)
+    private async Task<UserBotCatchUpResult> CatchUpAsync(int userId, Client client, CancellationToken cancellationToken)
     {
         var gate = _catchUpGates.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
-        if (!await gate.WaitAsync(TimeSpan.Zero, cancellationToken))
+        if (!await gate.WaitAsync(TimeSpan.FromMinutes(3), cancellationToken))
         {
-            return;
+            return UserBotCatchUpResult.Done(0, 0);
         }
 
         try
         {
+            if (client.User is null)
+            {
+                if (!_sessions.HasSession(userId))
+                {
+                    return UserBotCatchUpResult.Offline();
+                }
+
+                await client.LoginUserIfNeeded();
+                _logger.LogInformation("UserBot MTProto autenticado. UserId={UserId}", userId);
+            }
+
+            if (client.User is null)
+            {
+                return UserBotCatchUpResult.Offline();
+            }
+
             Messages_DialogsBase dialogs;
             try
             {
@@ -273,19 +295,12 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Catch-up de diálogos falhou. UserId={UserId}", userId);
-                return;
+                return UserBotCatchUpResult.Offline();
             }
 
-            if (dialogs is not Messages_Dialogs packedDialogs)
-            {
-                _logger.LogWarning("Catch-up sem lista de diálogos. UserId={UserId}", userId);
-                return;
-            }
-
-            var channels = packedDialogs.chats.Values
-                .Where(item => item is TL.Channel or Chat)
-                .ToList();
-            var enqueued = 0;
+            var channels = CollectHistoryChats(dialogs);
+            var persisted = 0;
+            var since = TelegramUserMonitorRules.HistoryCatchUpSinceUtc(DateTime.UtcNow);
             _logger.LogInformation(
                 "Catch-up iniciando. UserId={UserId} Canais={Count}",
                 userId,
@@ -308,17 +323,20 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 var (chatId, title) = ResolvePeerFromChat(chat);
                 var offsetId = 0;
                 var totalFetched = 0;
+                var reachedOld = false;
                 try
                 {
-                    while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel)
+                    while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel && !reachedOld)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var remaining = TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel - totalFetched;
                         var pageSize = Math.Min(TelegramUserMonitorRules.HistoryCatchUpPageSize, remaining);
-                        var history = await client.Messages_GetHistory(
+                        var history = await GetHistoryWithFloodRetryAsync(
+                            client,
                             inputPeer,
-                            offset_id: offsetId,
-                            limit: pageSize);
+                            offsetId,
+                            pageSize,
+                            cancellationToken);
                         var messages = history.Messages;
                         if (messages is null || messages.Length == 0)
                         {
@@ -327,11 +345,27 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
                         foreach (var item in messages)
                         {
-                            if (item is Message historic)
+                            if (item is not Message historic)
                             {
-                                TryEnqueueFromMessage(userId, historic, chatId, title);
-                                enqueued++;
+                                continue;
                             }
+
+                            var receivedAt = historic.Date == default
+                                ? DateTime.UtcNow
+                                : DateTime.SpecifyKind(historic.Date, DateTimeKind.Utc);
+                            if (!TelegramUserMonitorRules.IsWithinCatchUpWindow(receivedAt, since))
+                            {
+                                reachedOld = true;
+                                continue;
+                            }
+
+                            if (!TryCreatePayload(userId, historic, chatId, title, out var payload) || payload is null)
+                            {
+                                continue;
+                            }
+
+                            await PersistAsync(payload, cancellationToken);
+                            persisted++;
                         }
 
                         var oldestId = messages.Min(item => item.ID);
@@ -347,7 +381,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                             break;
                         }
 
-                        await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+                        await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
                     }
                 }
                 catch (Exception ex)
@@ -355,14 +389,15 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     _logger.LogWarning(ex, "GetHistory falhou. UserId={UserId} Chat={ChatId} Title={Title}", userId, chatId, title);
                 }
 
-                await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
             }
 
             _logger.LogInformation(
-                "Catch-up concluído. UserId={UserId} Canais={Count} MensagensVistas={Seen}",
+                "Catch-up concluído. UserId={UserId} Canais={Count} Persistidas={Persisted}",
                 userId,
                 channels.Count,
-                enqueued);
+                persisted);
+            return UserBotCatchUpResult.Done(channels.Count, persisted);
         }
         finally
         {
@@ -372,9 +407,23 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
     private void TryEnqueueFromMessage(int userId, Message message, string chatId, string title)
     {
-        if (string.IsNullOrWhiteSpace(message.message) && message.media is null)
+        if (TryCreatePayload(userId, message, chatId, title, out var payload) && payload is not null)
         {
-            return;
+            _queue.Writer.TryWrite(payload);
+        }
+    }
+
+    private static bool TryCreatePayload(
+        int userId,
+        Message message,
+        string chatId,
+        string title,
+        out UserBotCapturedPayload? payload)
+    {
+        payload = null;
+        if (string.IsNullOrWhiteSpace(message.message) && message.media is null && message.reply_markup is null)
+        {
+            return false;
         }
 
         var text = message.message ?? string.Empty;
@@ -397,6 +446,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             }
         }
 
+        CollectMarkupUrls(message, urls);
+
         string? pageTitle = null;
         if (message.media is MessageMediaWebPage { webpage: WebPage page })
         {
@@ -407,17 +458,19 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             }
         }
 
-        var commerce = urls
+        var offerUrls = urls
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(url => TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _))
+            .Where(url => TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _)
+                || Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             .ToList();
-        if (commerce.Count == 0)
+        if (offerUrls.Count == 0)
         {
-            return;
+            return false;
         }
 
         var raw = string.IsNullOrWhiteSpace(pageTitle) ? text : pageTitle + Environment.NewLine + text;
-        foreach (var url in commerce)
+        foreach (var url in offerUrls)
         {
             if (!raw.Contains(url, StringComparison.OrdinalIgnoreCase))
             {
@@ -434,14 +487,129 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         var receivedAt = message.Date == default
             ? DateTime.UtcNow
             : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
-        _queue.Writer.TryWrite(new UserBotCapturedPayload(
+        payload = new UserBotCapturedPayload(
             userId,
             chatId,
             title,
             raw,
             message.id.ToString(),
             mediaUrl,
-            receivedAt));
+            receivedAt);
+        return true;
+    }
+
+    private static void CollectMarkupUrls(Message message, List<string> urls)
+    {
+        if (message.reply_markup is not ReplyInlineMarkup inline || inline.rows is null)
+        {
+            return;
+        }
+
+        foreach (var row in inline.rows)
+        {
+            if (row.buttons is null)
+            {
+                continue;
+            }
+
+            foreach (var button in row.buttons)
+            {
+                switch (button)
+                {
+                    case KeyboardInlineButton { type: InlineButtonTypeUrl { url.Length: > 0 } urlType }:
+                        urls.Add(urlType.url);
+                        break;
+                    case KeyboardInlineButton { type: InlineButtonTypeUrlAuth { url.Length: > 0 } authType }:
+                        urls.Add(authType.url);
+                        break;
+                }
+            }
+        }
+    }
+
+    private async Task TryStartSlotFromDatabaseAsync(int userId, CancellationToken cancellationToken)
+    {
+        if (!_sessions.HasSession(userId) || _slots.ContainsKey(userId) || _pendingLogins.ContainsKey(userId))
+        {
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var row = await context.TelegramIntegrations
+            .AsNoTracking()
+            .Where(item => item.UserId == userId
+                && item.IsActive
+                && item.UserBotApiId > 0
+                && item.UserBotApiHash != null
+                && item.UserBotApiHash != "")
+            .OrderByDescending(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (row is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StartSlot(row, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Não foi possível religar o UserBot no sync. UserId={UserId}", userId);
+        }
+    }
+
+    private static async Task<Messages_MessagesBase> GetHistoryWithFloodRetryAsync(
+        Client client,
+        InputPeer inputPeer,
+        int offsetId,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                return await client.Messages_GetHistory(
+                    inputPeer,
+                    offset_id: offsetId,
+                    limit: pageSize);
+            }
+            catch (Exception ex) when (TryGetFloodWaitSeconds(ex, out var seconds) && attempt < 3)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(seconds, 1, 90)), cancellationToken);
+            }
+        }
+
+        return await client.Messages_GetHistory(inputPeer, offset_id: offsetId, limit: pageSize);
+    }
+
+    private static bool TryGetFloodWaitSeconds(Exception ex, out int seconds)
+    {
+        seconds = 0;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            ex.Message ?? string.Empty,
+            @"FLOOD_WAIT[_:]?(\d+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success && int.TryParse(match.Groups[1].Value, out seconds);
+    }
+
+    private async Task WaitForQueueIdleAsync(CancellationToken cancellationToken)
+    {
+        var idleRounds = 0;
+        while (idleRounds < 8 && !cancellationToken.IsCancellationRequested)
+        {
+            if (_queue.Reader.TryPeek(out _))
+            {
+                idleRounds = 0;
+                await Task.Delay(80, cancellationToken);
+                continue;
+            }
+
+            idleRounds++;
+            await Task.Delay(80, cancellationToken);
+        }
     }
 
     private async Task DrainQueueAsync(CancellationToken cancellationToken)
@@ -528,6 +696,46 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ReceivedAt = payload.ReceivedAt
             },
             cancellationToken);
+    }
+
+    private static List<ChatBase> CollectHistoryChats(Messages_DialogsBase dialogs)
+    {
+        var channels = new List<ChatBase>();
+        var seen = new HashSet<long>();
+        if (dialogs is Messages_Dialogs full)
+        {
+            AddChats(channels, seen, full.chats?.Values);
+        }
+        else if (dialogs is Messages_DialogsSlice slice)
+        {
+            AddChats(channels, seen, slice.chats?.Values);
+        }
+
+        foreach (var dialog in dialogs.Dialogs ?? [])
+        {
+            if (dialogs.UserOrChat(dialog.Peer) is ChatBase chat && (chat is TL.Channel or Chat) && seen.Add(chat.ID))
+            {
+                channels.Add(chat);
+            }
+        }
+
+        return channels;
+    }
+
+    private static void AddChats(List<ChatBase> channels, HashSet<long> seen, IEnumerable<ChatBase>? chats)
+    {
+        if (chats is null)
+        {
+            return;
+        }
+
+        foreach (var chat in chats)
+        {
+            if (chat is TL.Channel or Chat && seen.Add(chat.ID))
+            {
+                channels.Add(chat);
+            }
+        }
     }
 
     private static (string ChatId, string Title) ResolvePeerFromChat(ChatBase chat)

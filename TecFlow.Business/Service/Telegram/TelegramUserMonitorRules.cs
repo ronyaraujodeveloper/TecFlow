@@ -10,7 +10,12 @@ public static class TelegramUserMonitorRules
 
     public const int HistoryCatchUpPageSize = 100;
 
-    public const int HistoryCatchUpMaxPerChannel = 200;
+    public const int HistoryCatchUpMaxPerChannel = 1500;
+
+    public const int HistoryCatchUpLookbackHours = 48;
+
+    public const string UserBotOfflineSyncMessage =
+        "UserBot desconectado. A sessão MTProto não está ativa — autentique ApiId/ApiHash e o PIN em Conexões (Telegram) e sincronize de novo.";
 
     public const string HttpUrlPattern =
         @"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";
@@ -38,7 +43,11 @@ public static class TelegramUserMonitorRules
         "magazinevoce.com.br",
         "a.co",
         "link.amazon.com",
-        "link.amazon"
+        "link.amazon",
+        "shp.ee",
+        "br.shp.ee",
+        "kb.um",
+        "kabum.me"
     ];
 
     private static readonly string[] DealHostTokens =
@@ -56,7 +65,12 @@ public static class TelegramUserMonitorRules
         "casasbahia",
         "pontofrio",
         "ponto",
-        "meli"
+        "meli",
+        "kabum",
+        "americanas",
+        "shoptime",
+        "extra",
+        "netshoes"
     ];
 
     private static readonly Regex BareCommerceUrlRegex = new(
@@ -118,7 +132,8 @@ public static class TelegramUserMonitorRules
             or MarketplaceType.Amazon
             or MarketplaceType.AliExpress
             or MarketplaceType.MagazineLuiza
-            or MarketplaceType.CasasBahia)
+            or MarketplaceType.CasasBahia
+            or MarketplaceType.Kabum)
         {
             platform = detected.Value;
             return true;
@@ -132,6 +147,12 @@ public static class TelegramUserMonitorRules
 
         return DealHostTokens.Any(token => host.Contains(token, StringComparison.Ordinal));
     }
+
+    public static DateTime HistoryCatchUpSinceUtc(DateTime utcNow) =>
+        utcNow.AddHours(-HistoryCatchUpLookbackHours);
+
+    public static bool IsWithinCatchUpWindow(DateTime messageUtc, DateTime sinceUtc) =>
+        messageUtc == default || messageUtc >= sinceUtc;
 
     public static string BuildChannelChatId(long channelId) => "-100" + channelId.ToString(System.Globalization.CultureInfo.InvariantCulture);
 

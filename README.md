@@ -687,6 +687,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] Sync de grupos monitorados com try/catch, log do stack trace, UserId fallback 1 e falha isolada WhatsApp/Telegram.
 - [x] `IUserContextProvider` registrado no DI da API (corrige 500 na tela de grupos monitorados).
 - [x] HTTP 401 na listagem/sync não força `NavigateTo("/")`; o menu e a tela permanecem e o login sem JWT segue via `HttpService`.
+- [x] Sincronizar Telegram aguarda o catch-up UserBot (48h / 1500 msgs) e avisa se a sessão MTProto estiver offline.
 
 ### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
 [ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
@@ -773,16 +774,16 @@ Para equiparar a experiência ao agendador do WhatsApp:
 Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégios de Admin):
 1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no TecFlow para conectar uma conta de usuário do Telegram.
 2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
-3. [x] **Catch-up histórico paginado:** ao autenticar (e ao sincronizar grupos), `Messages_GetHistory` percorre os chats inscritos (até **200** msgs, páginas de 100) via `chats`/`ToInputPeer` e enfileira o que ainda não está em `GroupCapturedMessages`.
+3. [x] **Catch-up histórico paginado:** o botão *Sincronizar* **aguarda** `Messages_GetHistory` nos chats (`Dialogs` ou `DialogsSlice`, até **1500** msgs/canal ou **48h**) via `ToInputPeer`, persiste links (texto, entidade e botão) e só então recarrega a lista.
 4. [x] **Fila desacoplada:** `Channel<UserBotCapturedPayload>` recebe o update MTProto sem bloquear o `WTelegramClient`; um leitor persiste no SQL. `HostOptions` + `requestTimeout="20:00:00"` no IIS evitam derrubar o `IHostedService`.
-5. [x] **Extração de Ofertas:** regex HTTP ampla e filtro de marketplaces/encurtadores (Shopee, ML, Amazon, Magalu, AliExpress, Casas Bahia, Pelando, Promobit, `bit.ly`, `t.me`, `s.shopee`), salvando em `GroupCapturedMessages` com o canal de origem.
+5. [x] **Extração de Ofertas:** regex HTTP ampla, Kabum/`shp.ee` e URLs de botão inline, salvando em `GroupCapturedMessages` com o canal de origem.
 6. [x] **Grupos monitorados sem teto fixo:** a API pagina ofertas (`skip`/`take` 50) e a tela carrega mais 50 até exibir todas do período.
 
 ## 🛠️ Permissões de Sistema de Arquivos (Telegram Sessions)
 
 O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/escrita na pasta local de sessões:
-- **Diretório:** `App_Data/telegram-sessions/`
-- **Permissão do IIS:** O grupo `IIS_IUSRS` e a identidade do `AppPool` devem possuir permissão explícita de **Leitura, Gravatura e Modificação** na pasta raiz da API para evitar exceções do tipo `UnauthorizedAccessException`.
+- **Diretório:** `C:\ProgramData\TecFlow\telegram-sessions` (fora do publish IIS; o wipe de `inetpub` não apaga o `.session`).
+- **Permissão do IIS:** `IIS_IUSRS` e o `TecFlowApiPool` com **FullControl** nessa pasta (`Configurar-Logs-IIS.ps1`).
 - [x] **Fallback TEMP:** se a criação da pasta falhar, a sessão vai para `%TEMP%\TecFlow\telegram-sessions` e a sincronização de canais via Bot Token segue independente.
 
 ## 🤖 UX e Manual do UserBot MTProto (Escuta de Canais de Terceiros)

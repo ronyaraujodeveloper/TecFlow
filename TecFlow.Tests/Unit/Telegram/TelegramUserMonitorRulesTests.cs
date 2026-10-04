@@ -29,6 +29,8 @@ public class TelegramUserMonitorRulesTests
     [InlineData("https://www.casasbahia.com.br/produto/123")]
     [InlineData("https://www.pontofrio.com.br/produto/123")]
     [InlineData("https://amzn.to/xyz")]
+    [InlineData("https://br.shp.ee/abc")]
+    [InlineData("https://www.kabum.com.br/produto/123")]
     public void IsTrackedCommerceUrl_ShouldAcceptShortenersAndDealPortals(string url) =>
         Assert.True(TelegramUserMonitorRules.IsTrackedCommerceUrl(url, out _));
 
@@ -59,10 +61,15 @@ public class TelegramUserMonitorRulesTests
         Assert.Equal("-100123456789", TelegramUserMonitorRules.BuildChannelChatId(123456789));
 
     [Fact]
-    public void HistoryCatchUp_ShouldPageUpToTwoHundredMessages()
+    public void HistoryCatchUp_ShouldPageRecentHistoryBeyondTwoHundred()
     {
         Assert.Equal(100, TelegramUserMonitorRules.HistoryCatchUpPageSize);
-        Assert.Equal(200, TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel);
+        Assert.Equal(1500, TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel);
+        Assert.Equal(48, TelegramUserMonitorRules.HistoryCatchUpLookbackHours);
+        var now = new DateTime(2026, 10, 4, 20, 0, 0, DateTimeKind.Utc);
+        var since = TelegramUserMonitorRules.HistoryCatchUpSinceUtc(now);
+        Assert.True(TelegramUserMonitorRules.IsWithinCatchUpWindow(now.AddHours(-10), since));
+        Assert.False(TelegramUserMonitorRules.IsWithinCatchUpWindow(now.AddHours(-72), since));
     }
 
     [Theory]

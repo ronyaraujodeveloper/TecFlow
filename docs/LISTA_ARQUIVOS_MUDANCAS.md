@@ -920,9 +920,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — regex HTTP ampla; filtro Shopee, ML, Amazon, AliExpress, Magalu, Casas Bahia, Pelando, Promobit e encurtadores; `api_id` numérico e PIN de 5 dígitos.
 - [x] **UserBotHelpModal.razor** — tutorial de 7 passos, badges Bot Token/Chat ID e Copiar exemplo.
 - [x] **Conexoes.razor** — badges amarelo/azul no bloco UserBot e abre `UserBotHelpModal`.
-- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
+- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `C:\ProgramData\TecFlow\telegram-sessions` (sobrevive ao publish IIS; fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
-- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats.Values` + `GetHistory` paginado (200) e fila `Channel`; sync da tela dispara `CatchUpUserAsync`.
+- [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats` (Dialogs/Slice) + `GetHistory` (1500/48h), botões inline e persistência no sync; sessão em `ProgramData`.
+- [x] **UserBotCatchUpResult.cs** — resultado do catch-up (offline vs persistidas) para o botão Sincronizar.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
 - [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50”; 401 mostra alerta de sessão sem sair da rota.
 - [x] **MonitoredGroupsController.cs** / **MonitoredGroupService.cs** — listagem paginada (`skip`/`take`, sem `Take(120)`).

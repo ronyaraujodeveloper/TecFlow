@@ -46,6 +46,7 @@ public sealed class TelegramUserBotSessionStore
             }
 
             _resolvedFolder = EnsureWritableDirectory();
+            TryMigrateLegacySessions(_resolvedFolder);
             return _resolvedFolder;
         }
     }
@@ -83,8 +84,21 @@ public sealed class TelegramUserBotSessionStore
             return _options.UserBotSessionFolder;
         }
 
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        return Path.Combine(baseDir, "App_Data", "telegram-sessions");
+        var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        if (string.IsNullOrWhiteSpace(common))
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "telegram-sessions");
+        }
+
+        if (!string.IsNullOrWhiteSpace(_options.UserBotSessionFolder))
+        {
+            var relative = _options.UserBotSessionFolder
+                .Replace('/', Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+            return Path.Combine(common, "TecFlow", relative);
+        }
+
+        return Path.Combine(common, "TecFlow", "telegram-sessions");
     }
 
     private bool TryCreateDirectory(string sessionsPath)
@@ -107,6 +121,31 @@ public sealed class TelegramUserBotSessionStore
         {
             _logger.LogError(ex, "Sem permissão de escrita na pasta de sessões: {Path}", sessionsPath);
             return false;
+        }
+    }
+
+    private void TryMigrateLegacySessions(string destination)
+    {
+        try
+        {
+            var legacy = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "telegram-sessions");
+            if (!Directory.Exists(legacy) || string.Equals(legacy, destination, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            foreach (var file in Directory.GetFiles(legacy, "user-*.session"))
+            {
+                var target = Path.Combine(destination, Path.GetFileName(file));
+                if (!File.Exists(target))
+                {
+                    File.Copy(file, target, overwrite: false);
+                }
+            }
+        }
+        catch (Exception ex) when (IsAccessFailure(ex))
+        {
+            _logger.LogWarning(ex, "Não foi possível migrar sessões UserBot antigas de App_Data.");
         }
     }
 

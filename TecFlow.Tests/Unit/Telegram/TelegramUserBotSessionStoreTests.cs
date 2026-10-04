@@ -18,6 +18,7 @@ public class TelegramUserBotSessionStoreTests
 
         Assert.True(Directory.Exists(directory));
         Assert.Contains("telegram-sessions", directory, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("inetpub", directory, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(
             Path.Combine(directory, "user-7.session"),
             store.GetSessionPath(7));

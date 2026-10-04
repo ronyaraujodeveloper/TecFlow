@@ -88,6 +88,10 @@ foreach ($site in $sites) {
         $sessionsPath = Join-Path $site.PublishPath "App_Data\telegram-sessions"
         Write-Host "`n[$($site.Label)] $sessionsPath" -ForegroundColor Yellow
         Set-TecFlowLogFolderPermissions -LogsPath $sessionsPath -AppPoolNames @($site.AppPool)
+
+        $durableSessions = "C:\ProgramData\TecFlow\telegram-sessions"
+        Write-Host "`n[$($site.Label)] $durableSessions" -ForegroundColor Yellow
+        Set-TecFlowLogFolderPermissions -LogsPath $durableSessions -AppPoolNames @($site.AppPool)
     }
 }
 

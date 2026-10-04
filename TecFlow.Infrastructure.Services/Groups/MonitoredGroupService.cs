@@ -6,6 +6,7 @@ using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.PublicPages;
+using TecFlow.Business.Service.Telegram;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
@@ -408,19 +409,11 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
         try
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _userBotHost.CatchUpUserAsync(userId, CancellationToken.None);
-                }
-                catch (Exception catchUpEx)
-                {
-                    _logger.LogWarning(catchUpEx, "Catch-up UserBot em segundo plano falhou. UserId={UserId}", userId);
-                }
-            }, CancellationToken.None);
-            notes.Add("Varredura do histórico UserBot iniciada. As ofertas aparecem em instantes nesta tela.");
-            return true;
+            var catchUp = await _userBotHost.CatchUpUserAsync(userId, cancellationToken);
+            notes.Add(string.IsNullOrWhiteSpace(catchUp.Message)
+                ? "Varredura do histórico UserBot concluída."
+                : catchUp.Message);
+            return botOk || catchUp.UserBotReady || catchUp.Persisted > 0;
         }
         catch (Exception catchUpEx)
         {

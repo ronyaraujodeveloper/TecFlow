@@ -45,3 +45,4 @@
 [2026-10-04 18:12:59]fix(telegram): varre historico real dos canais no catch-up
 [2026-10-04 18:32:39]fix(auth): trata 401 da API sem mascarar como CORS
 [2026-10-04 18:49:09]fix(ui): restaura menu e login apos 401
+[2026-10-04 19:22:02]fix(telegram): sync aguarda historico UserBot e preserva sessao

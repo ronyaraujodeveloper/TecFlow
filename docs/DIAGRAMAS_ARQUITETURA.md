@@ -151,11 +151,12 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   USERBOT[TelegramUserMonitorWorker] -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
-  USERBOT -->|Login ou Sync GetHistory chats.Values 200| QUEUE
+  GMUI[GruposMonitorados] -->|POST sync aguarda CatchUp 48h/1500| USERBOT
+  USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
+  USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI[GruposMonitorados] -->|GET skip take 50| MGAPI[MonitoredGroupsController]
   MGAPI -->|Count Skip Take| SQL
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI
-  USERBOT -->|session user-{id}.session| SESS[App_Data/telegram-sessions ou TEMP TecFlow]
   CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
   CXUI -->|modal UserBotHelpModal| HELP2[Tutorial my.telegram.org]

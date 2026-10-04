@@ -27,7 +27,9 @@ public sealed class TelegramUserMonitorWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Ciclo do UserBot Telegram falhou.");
+                _logger.LogWarning(
+                    ex,
+                    "Ciclo do UserBot Telegram falhou. A sincronização de grupos via Bot API continua.");
             }
 
             try

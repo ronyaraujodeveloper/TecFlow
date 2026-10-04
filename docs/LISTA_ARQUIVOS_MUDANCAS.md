@@ -918,7 +918,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **AddTelegramGroupsAndMultiChat** — tabela `TelegramGroups` e `TargetChatIdsJson` nas campanhas.
 - [x] **AddTelegramUserBotCredentials** — `UserBotApiId`, `UserBotApiHash`, `UserBotPhone` em `TelegramIntegrations`.
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — filtro de URLs Shopee, ML, Amazon, AliExpress e Magalu.
-- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` e código de verificação.
+- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
+- [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto (WTelegramClient) e grava `GroupCapturedMessages`.
 - [x] **Conexoes.razor** / **TelegramConexao.razor** — campos opcionais ApiId/ApiHash e sessão UserBot.
 - [x] **GruposMonitorados.razor** — cards das ofertas de canais de terceiros e botão Clonar Oferta.

@@ -83,6 +83,12 @@ foreach ($site in $sites) {
     $logsPath = Join-Path $site.PublishPath "logs"
     Write-Host "`n[$($site.Label)] $logsPath" -ForegroundColor Yellow
     Set-TecFlowLogFolderPermissions -LogsPath $logsPath -AppPoolNames @($site.AppPool)
+
+    if ($site.Label -eq "TecFlow.API") {
+        $sessionsPath = Join-Path $site.PublishPath "App_Data\telegram-sessions"
+        Write-Host "`n[$($site.Label)] $sessionsPath" -ForegroundColor Yellow
+        Set-TecFlowLogFolderPermissions -LogsPath $sessionsPath -AppPoolNames @($site.AppPool)
+    }
 }
 
 Write-Host "`nLogs IIS configurados com sucesso." -ForegroundColor Cyan

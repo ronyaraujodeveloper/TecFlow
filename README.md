@@ -768,5 +768,11 @@ Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégi
 2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
 3. [x] **Extração de Ofertas:** Filtragem automática de mensagens com URLs de e-commerce, salvando na tabela `GroupCapturedMessages` com a indicação do canal de origem (ex: Pelando, PC DO FAFA).
 
+## 🛠️ Permissões de Sistema de Arquivos (Telegram Sessions)
+
+O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/escrita na pasta local de sessões:
+- **Diretório:** `App_Data/telegram-sessions/`
+- **Permissão do IIS:** O grupo `IIS_IUSRS` e a identidade do `AppPool` devem possuir permissão explícita de **Leitura, Gravatura e Modificação** na pasta raiz da API para evitar exceções do tipo `UnauthorizedAccessException`.
+- [x] **Fallback TEMP:** se a criação da pasta falhar, a sessão vai para `%TEMP%\TecFlow\telegram-sessions` e a sincronização de canais via Bot Token segue independente.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

@@ -385,7 +385,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do Telegram");
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do Telegram (Bot API). UserBot não interrompe esta etapa.");
             notes.Add($"Telegram: {ex.Message}");
             return false;
         }

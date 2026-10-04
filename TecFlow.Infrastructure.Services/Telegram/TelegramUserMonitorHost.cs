@@ -62,7 +62,24 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 continue;
             }
 
-            StartSlot(row, cancellationToken);
+            try
+            {
+                StartSlot(row, cancellationToken);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                _logger.LogError(
+                    ex,
+                    "UserBot ignorado por falha de sessão/arquivo. A sincronização Bot API segue. UserId={UserId}",
+                    row.UserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "UserBot não iniciado. A sincronização de canais via Bot Token segue. UserId={UserId}",
+                    row.UserId);
+            }
         }
     }
 
@@ -72,7 +89,20 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         var apiId = row.UserBotApiId!.Value;
         var apiHash = row.UserBotApiHash!;
         var phone = row.UserBotPhone ?? string.Empty;
-        var sessionPath = _sessions.GetSessionPath(userId);
+        string sessionPath;
+        try
+        {
+            sessionPath = _sessions.GetSessionPath(userId);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            _logger.LogError(
+                ex,
+                "Sem permissão para a pasta de sessões do UserBot. UserId={UserId}",
+                userId);
+            return;
+        }
+
         var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         Client? client = null;
         try

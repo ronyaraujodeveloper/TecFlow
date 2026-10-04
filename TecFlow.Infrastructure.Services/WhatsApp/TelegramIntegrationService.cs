@@ -233,7 +233,15 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         var status = TelegramBotRules.ResolveUiStatus(row.IsActive, hasToken, hasUsername, hasChatId, webhookRegistered);
         var connected = status is TelegramBotRules.ConnectedLabel or TelegramBotRules.DispatchModeLabel;
         var hasUserBotHash = !string.IsNullOrEmpty(row.UserBotApiHash);
-        var hasSession = _userBotSessions.HasSession(row.UserId);
+        var hasSession = false;
+        try
+        {
+            hasSession = _userBotSessions.HasSession(row.UserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao ler a sessão UserBot. UserId={UserId}", row.UserId);
+        }
         return new TelegramIntegrationDto
         {
             Id = row.Id,

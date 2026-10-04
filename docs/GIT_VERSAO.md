@@ -36,3 +36,4 @@
 [2026-10-04 10:30:14]fix(grupos): registra IUserContextProvider e evita falso sucesso no sync
 [2026-10-04 10:52:41]feat(grupos): separa grupos monitorados no menu WhatsApp e Telegram
 [2026-10-04 11:35:31]feat(telegram): escuta userbot mtproto de canais de terceiros
+[2026-10-04 11:51:44]fix(telegram): fallback TEMP para sessoes UserBot no IIS

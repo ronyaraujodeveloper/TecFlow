@@ -33,4 +33,9 @@ public interface ITelegramApiService
         string imageUrl,
         string? caption,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<TelegramGroupDto>> FetchAdminChatsAsync(
+        string botToken,
+        IEnumerable<string>? seedChatIds,
+        CancellationToken cancellationToken = default);
 }

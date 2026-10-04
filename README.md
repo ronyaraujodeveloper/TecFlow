@@ -705,6 +705,14 @@ Nas páginas de agendamento (`/integracoes/whatsapp/agendador` e `/integracoes/t
   - **WhatsApp:** Badge com fundo verde (`#25D366`), ícone do WhatsApp e texto "WhatsApp".
   - **Telegram:** Badge com fundo azul (`#0088cc`), ícone do Telegram e texto "Telegram".
 - [x] **Identificação Visual Instantânea:** O componente deve alternar automaticamente as cores e ícones conforme a rota atual do Blazor.
+- [x] Agendador Telegram alinhado ao WhatsApp: **Sincronizar Meus Canais do Telegram**, multi-select de canais e disparo com intervalo.
+
+## 🤖 Sincronização de Grupos/Canais no Agendador Telegram
+
+Para equiparar a experiência ao agendador do WhatsApp:
+1. **Botão de Sincronização:** Adicionar o botão "Sincronizar Meus Canais/Grupos do Telegram" no topo do agendador (`/integracoes/telegram/agendador`).
+2. **Consulta via API:** Ao clicar, o sistema deve invocar `GetUpdates` ou consultar os chats gerenciados pelo BotToken ativo e salvar em `TelegramGroups`.
+3. **Componente Multi-Select:** Substituir o disparo fixo em Chat ID único por um seletor múltiplo com chips de grupos/canais disponíveis, permitindo disparar para um ou mais canais simultaneamente no mesmo agendamento.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

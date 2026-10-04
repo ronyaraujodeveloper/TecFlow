@@ -144,7 +144,7 @@ flowchart LR
   TGIC --> TGIS[TelegramIntegrationService]
   TGIS -->|GetMeAsync 401 aborta| TGAPI
   TGIS -->|try SetWebhookAsync catch log localhost| DISPATCH[Persiste credenciais + Modo Disparo]
-  TGAGEN[TelegramAgendador.razor badge Telegram] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
+  TGAGEN[TelegramAgendador.razor] -->|sync canais + multi-select| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI

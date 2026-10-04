@@ -1,10 +1,32 @@
-﻿using TecFlow.Core.Entities;
+﻿using TecFlow.Business.Service.WhatsApp;
+using TecFlow.Core.Entities;
 
 namespace TecFlow.Business.Service.Telegram;
 
 public static class TelegramBroadcastRules
 {
     public const string CommissionTag = "[LINK_COMISSAO]";
+
+    public static int ClampIntervalSeconds(int intervalSeconds) =>
+        WhatsAppBroadcastRules.ClampIntervalSeconds(intervalSeconds);
+
+    public static string SerializeChatIds(IEnumerable<string>? chatIds) =>
+        WhatsAppBroadcastRules.SerializeJids(chatIds);
+
+    public static IReadOnlyList<string> DeserializeChatIds(string? json) =>
+        WhatsAppBroadcastRules.DeserializeJids(json);
+
+    public static IReadOnlyList<string> ResolveChatIds(string? json, string? legacyChatId)
+    {
+        var ids = DeserializeChatIds(json).ToList();
+        if (ids.Count > 0)
+        {
+            return ids;
+        }
+
+        var legacy = (legacyChatId ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(legacy) ? [] : [legacy];
+    }
 
     public static string ApplyCommissionTag(string? message, string? commissionLink)
     {

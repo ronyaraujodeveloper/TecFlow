@@ -30,3 +30,4 @@
 [2026-10-03 23:03:12]feat(telegram): salva conexao quando webhook local falha
 [2026-10-03 23:18:32]fix(telegram): captura falha do SetWebhook sem abortar conexao
 [2026-10-03 23:32:25]feat(ui): badge de plataforma nos agendadores
+[2026-10-03 23:45:14]feat(telegram): sincroniza canais e dispara em multi-select

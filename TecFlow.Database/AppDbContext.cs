@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
     public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
     public DbSet<TelegramIntegration> TelegramIntegrations { get; set; } = null!;
     public DbSet<TelegramBroadcastCampaign> TelegramBroadcastCampaigns { get; set; } = null!;
+    public DbSet<TelegramGroup> TelegramGroups { get; set; } = null!;
     public DbSet<GroupCapturedMessage> GroupCapturedMessages { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
@@ -370,9 +371,20 @@ public class AppDbContext : DbContext
             entity.Property(item => item.MessageText).IsRequired();
             entity.Property(item => item.ImageUrl).HasMaxLength(512);
             entity.Property(item => item.TargetChatId).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.TargetChatIdsJson).IsRequired();
+            entity.Property(item => item.IntervalSeconds).HasDefaultValue(30);
             entity.Property(item => item.Status).HasMaxLength(32).IsRequired();
             entity.HasIndex(item => new { item.Status, item.ScheduledAt });
             entity.HasIndex(item => item.UserId);
+        });
+
+        modelBuilder.Entity<TelegramGroup>(entity =>
+        {
+            entity.ToTable("TelegramGroups");
+            entity.Property(item => item.ChatId).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.Name).HasMaxLength(256).IsRequired();
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => new { item.UserId, item.ChatId }).IsUnique();
         });
 
         modelBuilder.Entity<GroupCapturedMessage>(entity =>

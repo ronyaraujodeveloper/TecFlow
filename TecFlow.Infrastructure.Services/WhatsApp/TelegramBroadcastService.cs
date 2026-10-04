@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Core.Entities;
@@ -30,6 +31,12 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         CancellationToken cancellationToken = default)
     {
         var integration = await LoadOwnedIntegrationAsync(userId, cancellationToken);
+        var names = await LoadChannelNamesAsync(userId, cancellationToken);
+        var groups = await _context.TelegramGroups
+            .Where(item => item.UserId == userId && item.IsActive)
+            .OrderByDescending(item => item.IsAdmin)
+            .ThenBy(item => item.Name)
+            .ToListAsync(cancellationToken);
         var campaigns = await _context.TelegramBroadcastCampaigns
             .Where(item => item.UserId == userId)
             .OrderByDescending(item => item.ScheduledAt)
@@ -38,8 +45,97 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
             .ToListAsync(cancellationToken);
 
         return Ok(
-            campaigns.Select(MapCampaign).ToList(),
+            campaigns.Select(item => MapCampaign(item, names)).ToList(),
+            groups.Select(MapGroup).ToList(),
             defaultChatId: integration?.ChatId);
+    }
+
+    public async Task<TelegramBroadcastResponseDto> SyncChannelsAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        var integration = await LoadOwnedIntegrationAsync(userId, cancellationToken);
+        if (integration is null || string.IsNullOrWhiteSpace(integration.Token))
+        {
+            return Fail("Conecte o bot do Telegram antes de sincronizar canais.");
+        }
+
+        var seeds = new List<string>();
+        if (!string.IsNullOrWhiteSpace(integration.ChatId))
+        {
+            seeds.Add(integration.ChatId);
+        }
+
+        var existing = await _context.TelegramGroups
+            .Where(item => item.UserId == userId)
+            .ToListAsync(cancellationToken);
+        seeds.AddRange(existing.Select(item => item.ChatId));
+
+        var captured = await _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId && item.Channel == GroupOfferCaptureRules.TelegramChannel)
+            .Select(item => item.GroupKey)
+            .ToListAsync(cancellationToken);
+        foreach (var key in captured)
+        {
+            var chatId = key.Contains(':', StringComparison.Ordinal)
+                ? key[(key.IndexOf(':') + 1)..]
+                : key;
+            if (!string.IsNullOrWhiteSpace(chatId))
+            {
+                seeds.Add(chatId.Trim());
+            }
+        }
+
+        var remote = await _telegramApi.FetchAdminChatsAsync(integration.Token, seeds, cancellationToken);
+        foreach (var item in remote)
+        {
+            var row = existing.FirstOrDefault(group =>
+                string.Equals(group.ChatId, item.ChatId, StringComparison.OrdinalIgnoreCase));
+            if (row is null)
+            {
+                row = new TelegramGroup { UserId = userId, ChatId = item.ChatId };
+                await _context.TelegramGroups.AddAsync(row, cancellationToken);
+                existing.Add(row);
+            }
+
+            row.Name = string.IsNullOrWhiteSpace(item.Name) ? item.ChatId : item.Name.Trim();
+            row.ParticipantCount = item.ParticipantCount;
+            row.IsAdmin = item.IsAdmin;
+            row.IsActive = true;
+            row.Touch();
+        }
+
+        if (remote.Count == 0 && !string.IsNullOrWhiteSpace(integration.ChatId))
+        {
+            var chatId = integration.ChatId.Trim();
+            var row = existing.FirstOrDefault(group =>
+                string.Equals(group.ChatId, chatId, StringComparison.OrdinalIgnoreCase));
+            if (row is null)
+            {
+                row = new TelegramGroup
+                {
+                    UserId = userId,
+                    ChatId = chatId,
+                    Name = chatId,
+                    IsAdmin = true,
+                    IsActive = true
+                };
+                await _context.TelegramGroups.AddAsync(row, cancellationToken);
+            }
+            else
+            {
+                row.IsActive = true;
+                row.Touch();
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        var listed = await ListCampaignsAsync(userId, cancellationToken);
+        listed.Descricao = listed.Groups.Count == 0
+            ? "Nenhum canal encontrado. Envie uma mensagem no canal ou informe o Chat ID na conexão."
+            : $"{listed.Groups.Count} canal(is) sincronizado(s).";
+        return listed;
     }
 
     public async Task<TelegramBroadcastResponseDto> ScheduleAsync(
@@ -56,9 +152,9 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
 
         var title = (request.Title ?? string.Empty).Trim();
         var message = (request.MessageText ?? string.Empty).Trim();
-        var chatId = string.IsNullOrWhiteSpace(request.TargetChatId)
-            ? integration.ChatId
-            : request.TargetChatId.Trim();
+        var chatIds = TelegramBroadcastRules.ResolveChatIds(
+            TelegramBroadcastRules.SerializeChatIds(request.TargetChatIds),
+            request.TargetChatId ?? integration.ChatId);
         if (title.Length is < 3 or > 128)
         {
             return Fail("Informe um título entre 3 e 128 caracteres.");
@@ -69,9 +165,9 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
             return Fail("Informe o texto da oferta.");
         }
 
-        if (string.IsNullOrWhiteSpace(chatId))
+        if (chatIds.Count == 0)
         {
-            return Fail("Informe o ChatId do canal ou grupo.");
+            return Fail("Selecione ao menos um canal ou grupo.");
         }
 
         var scheduledAt = request.ScheduledAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -86,8 +182,10 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
             Title = title,
             MessageText = message,
             ImageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim(),
-            TargetChatId = chatId,
+            TargetChatId = chatIds[0],
+            TargetChatIdsJson = TelegramBroadcastRules.SerializeChatIds(chatIds),
             ScheduledAt = scheduledAt,
+            IntervalSeconds = TelegramBroadcastRules.ClampIntervalSeconds(request.IntervalSeconds),
             Status = TelegramBroadcastStatuses.Pending
         };
         await _context.TelegramBroadcastCampaigns.AddAsync(campaign, cancellationToken);
@@ -148,29 +246,45 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
             .Select(link => link.AffiliateUrl)
             .FirstOrDefaultAsync(cancellationToken);
         var text = TelegramBroadcastRules.ApplyCommissionTag(campaign.MessageText, commissionLink);
+        var chatIds = TelegramBroadcastRules.ResolveChatIds(campaign.TargetChatIdsJson, campaign.TargetChatId);
+        var interval = TimeSpan.FromSeconds(TelegramBroadcastRules.ClampIntervalSeconds(campaign.IntervalSeconds));
+        var sent = 0;
 
-        var ok = false;
-        try
+        for (var index = 0; index < chatIds.Count; index++)
         {
-            ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
-                ? await _telegramApi.SendTextMessageAsync(
-                    integration.Token,
-                    campaign.TargetChatId,
-                    text,
-                    cancellationToken)
-                : await _telegramApi.SendPhotoMessageAsync(
-                    integration.Token,
-                    campaign.TargetChatId,
-                    campaign.ImageUrl,
-                    text,
-                    cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Falha no disparo Telegram. CampaignId={CampaignId}", campaign.Id);
+            cancellationToken.ThrowIfCancellationRequested();
+            var chatId = chatIds[index];
+            try
+            {
+                var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
+                    ? await _telegramApi.SendTextMessageAsync(
+                        integration.Token,
+                        chatId,
+                        text,
+                        cancellationToken)
+                    : await _telegramApi.SendPhotoMessageAsync(
+                        integration.Token,
+                        chatId,
+                        campaign.ImageUrl,
+                        text,
+                        cancellationToken);
+                if (ok)
+                {
+                    sent++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha no disparo Telegram. CampaignId={CampaignId} ChatId={ChatId}", campaign.Id, chatId);
+            }
+
+            if (index < chatIds.Count - 1)
+            {
+                await Task.Delay(interval, cancellationToken);
+            }
         }
 
-        campaign.Status = ok ? TelegramBroadcastStatuses.Completed : TelegramBroadcastStatuses.Failed;
+        campaign.Status = sent > 0 ? TelegramBroadcastStatuses.Completed : TelegramBroadcastStatuses.Failed;
         campaign.Touch();
         await _context.SaveChangesAsync(cancellationToken);
     }
@@ -193,28 +307,74 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         return integration;
     }
 
-    private static TelegramBroadcastCampaignDto MapCampaign(TelegramBroadcastCampaign campaign) =>
+    private async Task<Dictionary<string, string>> LoadChannelNamesAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var groups = await _context.TelegramGroups
+            .AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new { item.ChatId, item.Name })
+            .ToListAsync(cancellationToken);
+
+        return groups
+            .GroupBy(item => item.ChatId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Name,
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static TelegramGroupDto MapGroup(TelegramGroup group) =>
         new()
+        {
+            Id = group.Id,
+            ChatId = group.ChatId,
+            Name = group.Name,
+            ParticipantCount = group.ParticipantCount,
+            IsAdmin = group.IsAdmin,
+            IsActive = group.IsActive
+        };
+
+    private static TelegramBroadcastCampaignDto MapCampaign(
+        TelegramBroadcastCampaign campaign,
+        IReadOnlyDictionary<string, string>? names = null)
+    {
+        var chatIds = TelegramBroadcastRules.ResolveChatIds(campaign.TargetChatIdsJson, campaign.TargetChatId);
+        return new TelegramBroadcastCampaignDto
         {
             Id = campaign.Id,
             Title = campaign.Title,
             MessageText = campaign.MessageText,
             ImageUrl = campaign.ImageUrl,
-            TargetChatId = campaign.TargetChatId,
+            TargetChatId = chatIds.Count > 0 ? chatIds[0] : campaign.TargetChatId,
+            TargetChatIds = chatIds.ToList(),
+            TargetChatNames = chatIds
+                .Select(id =>
+                    names is not null
+                    && names.TryGetValue(id, out var name)
+                    && !string.IsNullOrWhiteSpace(name)
+                        ? name
+                        : id)
+                .ToList(),
             ScheduledAt = campaign.ScheduledAt,
+            IntervalSeconds = campaign.IntervalSeconds,
             Status = campaign.Status,
             UiStatusLabel = TelegramBroadcastRules.ToUiStatus(campaign.Status),
             CreatedAt = campaign.CreatedAt
         };
+    }
 
     private static TelegramBroadcastResponseDto Ok(
         List<TelegramBroadcastCampaignDto> campaigns,
+        List<TelegramGroupDto>? groups = null,
         string? defaultChatId = null) =>
         new()
         {
             Status = true,
             Descricao = "OK",
             Campaigns = campaigns,
+            Groups = groups ?? [],
             DefaultChatId = defaultChatId
         };
 

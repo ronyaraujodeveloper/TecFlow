@@ -22,7 +22,12 @@ public class TelegramBroadcastCampaign : BaseEntity
     [MaxLength(64)]
     public string TargetChatId { get; set; } = string.Empty;
 
+    [Required]
+    public string TargetChatIdsJson { get; set; } = "[]";
+
     public DateTime ScheduledAt { get; set; } = DateTime.UtcNow;
+
+    public int IntervalSeconds { get; set; } = TelegramBroadcastStatuses.DefaultIntervalSeconds;
 
     [Required]
     [MaxLength(32)]
@@ -35,4 +40,8 @@ public static class TelegramBroadcastStatuses
     public const string Processing = "Processing";
     public const string Completed = "Completed";
     public const string Failed = "Failed";
+
+    public const int MinIntervalSeconds = 15;
+    public const int MaxIntervalSeconds = 180;
+    public const int DefaultIntervalSeconds = 30;
 }

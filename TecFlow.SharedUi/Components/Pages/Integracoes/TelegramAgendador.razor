@@ -22,10 +22,15 @@
                 </span>
             </div>
             <p class="text-muted small mb-0">
-                Monte a oferta e agende a publicação no ChatId cadastrado. Escolha um link de comissão na busca abaixo.
+                Sincronize os canais, escolha os destinos e agende a oferta com intervalo anti-bloqueio.
             </p>
         </div>
-        <a href="/integracoes/telegram" class="btn btn-outline-secondary btn-touch">Conexão</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/integracoes/conexoes?telegram=1" class="btn btn-outline-secondary btn-touch">Conexão</a>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="SincronizarCanaisTelegramAsync">
+                @(_isBusy ? "Sincronizando..." : "Sincronizar Meus Canais do Telegram")
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_error))
@@ -63,10 +68,32 @@
                     <input id="tg-when" type="datetime-local" class="form-control" value="@_scheduledLocal" @oninput="e => _scheduledLocal = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold" for="tg-chat">ChatId do canal/grupo</label>
-                    <input id="tg-chat" class="form-control" value="@_chatId" @oninput="e => _chatId = e.Value?.ToString() ?? string.Empty" />
+                    <label class="form-label fw-semibold" for="tg-interval">Intervalo entre canais</label>
+                    <select id="tg-interval" class="form-select" value="@_intervalSeconds" @onchange="OnIntervalChanged">
+                        <option value="15">15 segundos</option>
+                        <option value="30">30 segundos</option>
+                        <option value="45">45 segundos</option>
+                        <option value="60">60 segundos</option>
+                    </select>
                 </div>
             </div>
+
+            @if (_pickerGroups.Count == 0)
+            {
+                <p class="text-muted small">Nenhum canal sincronizado. Conecte o Telegram e clique em sincronizar.</p>
+            }
+            else
+            {
+                <WhatsAppGroupPicker @key="_pickerEpoch"
+                                     Title="Canais e grupos"
+                                     SearchPlaceholder="Busque e selecione os canais..."
+                                     CountLabel="canal(is) selecionado(s)"
+                                     AdminOnlyLabel="Exibir apenas canais em que o bot é Admin"
+                                     Groups="_pickerGroups"
+                                     Campaigns="_pickerCampaigns"
+                                     SelectedJids="_selectedChatIds" />
+            }
+
             <button type="button" class="btn btn-success" disabled="@_isBusy" @onclick="ScheduleAsync">
                 Agendar publicação
             </button>
@@ -82,7 +109,7 @@
                             <th>Título</th>
                             <th>Status</th>
                             <th>Agendado</th>
-                            <th>ChatId</th>
+                            <th>Canais</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,7 +125,13 @@
                                 <td>@item.Title</td>
                                 <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
                                 <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                <td class="small font-monospace">@item.TargetChatId</td>
+                                <td class="small">
+                                    @item.TargetChatIds.Count @(item.TargetChatIds.Count == 1 ? "canal" : "canais")
+                                    @if (item.TargetChatNames.Count > 0)
+                                    {
+                                        <span class="text-muted">— @string.Join(", ", item.TargetChatNames.Take(3))</span>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -110,26 +143,90 @@
 
 @code {
     private readonly List<TelegramBroadcastCampaignDto> _campaigns = [];
+    private readonly List<WhatsAppGroupDto> _pickerGroups = [];
+    private readonly List<WhatsAppBroadcastCampaignDto> _pickerCampaigns = [];
+    private readonly HashSet<string> _selectedChatIds = new(StringComparer.OrdinalIgnoreCase);
     private CommissionLinkPicker? _linkPicker;
     private string _title = string.Empty;
     private string _message = string.Empty;
     private string _imageUrl = string.Empty;
-    private string _chatId = string.Empty;
     private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+    private int _intervalSeconds = TelegramBroadcastStatuses.DefaultIntervalSeconds;
+    private int _pickerEpoch;
     private bool _isBusy;
     private string? _error;
     private string? _info;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
+    private void ApplyPayload(TelegramBroadcastResponseDto? data)
+    {
+        _campaigns.Clear();
+        _campaigns.AddRange(data?.Campaigns ?? []);
+        _pickerGroups.Clear();
+        _pickerGroups.AddRange((data?.Groups ?? []).Select(item => new WhatsAppGroupDto
+        {
+            Id = item.Id,
+            Jid = item.ChatId,
+            Name = item.Name,
+            ParticipantCount = item.ParticipantCount,
+            IsAdmin = item.IsAdmin,
+            IsActive = item.IsActive
+        }));
+        _pickerCampaigns.Clear();
+        _pickerCampaigns.AddRange(_campaigns.Select(item => new WhatsAppBroadcastCampaignDto
+        {
+            Id = item.Id,
+            Title = item.Title,
+            TargetGroupJids = item.TargetChatIds
+        }));
+        _pickerEpoch++;
+    }
+
     private async Task LoadAsync()
     {
         var response = await TelegramApi.ListCampaignsAsync();
-        _campaigns.Clear();
-        _campaigns.AddRange(response.Data?.Campaigns ?? []);
-        if (string.IsNullOrWhiteSpace(_chatId))
+        ApplyPayload(response.Data);
+        if (!string.IsNullOrWhiteSpace(response.Data?.DefaultChatId)
+            && _selectedChatIds.Count == 0)
         {
-            _chatId = response.Data?.DefaultChatId ?? string.Empty;
+            _selectedChatIds.Add(response.Data.DefaultChatId);
+        }
+    }
+
+    private async Task SincronizarCanaisTelegramAsync()
+    {
+        _error = null;
+        _info = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.SyncChannelsAsync();
+            if (!response.Success || response.Data is null || !response.Data.Status)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível sincronizar os canais.";
+                return;
+            }
+
+            ApplyPayload(response.Data);
+            _info = response.Data.Descricao;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao sincronizar canais do Telegram.");
+            _error = "Não foi possível sincronizar os canais do Telegram.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void OnIntervalChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var seconds))
+        {
+            _intervalSeconds = seconds;
         }
     }
 
@@ -151,8 +248,9 @@
                 Title = _title,
                 MessageText = _message,
                 ImageUrl = _imageUrl,
-                TargetChatId = _chatId,
-                ScheduledAt = when
+                TargetChatIds = _selectedChatIds.ToList(),
+                ScheduledAt = when,
+                IntervalSeconds = _intervalSeconds
             });
             if (!response.Success || response.Data is null || !response.Data.Status)
             {
@@ -161,8 +259,7 @@
             }
 
             _info = response.Data.Descricao ?? "Publicação agendada com sucesso.";
-            _campaigns.Clear();
-            _campaigns.AddRange(response.Data.Campaigns);
+            ApplyPayload(response.Data);
             await ResetFormAsync();
         }
         finally
@@ -187,12 +284,11 @@
 
     private async Task ResetFormAsync()
     {
-        var chatId = _chatId;
         _title = string.Empty;
         _message = string.Empty;
         _imageUrl = string.Empty;
         _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
-        _chatId = chatId;
+        _intervalSeconds = TelegramBroadcastStatuses.DefaultIntervalSeconds;
         if (_linkPicker is not null)
         {
             await _linkPicker.ResetAsync();

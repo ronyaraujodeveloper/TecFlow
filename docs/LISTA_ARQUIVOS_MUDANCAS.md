@@ -910,6 +910,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** — captura em grupos.
 - [x] **WhatsAppAgendador.razor** — query `cloneTitle/cloneMessage/cloneImage/cloneLink`.
 - [x] **WhatsAppAgendador.razor** / **TelegramAgendador.razor** — badge oficial (ícone + nome) ao lado de “Disparo para grupos”.
+- [x] **TelegramGroup.cs** / **TelegramBroadcastService.cs** — sync `GetUpdates`/`GetChat`, multi-select e disparo com intervalo.
+- [x] **AddTelegramGroupsAndMultiChat** — tabela `TelegramGroups` e `TargetChatIdsJson` nas campanhas.
 - [x] **AddGroupCapturedMessages** — migration SQL Server `GroupCapturedMessages`.
 
 ---

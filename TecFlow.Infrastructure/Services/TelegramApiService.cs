@@ -2,6 +2,7 @@
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Telegram;
@@ -141,6 +142,105 @@ public sealed class TelegramApiService : ITelegramApiService
             _logger.LogWarning(ex, "Falha no SendPhotoAsync. ChatId={ChatId}", chatId);
             return await SendTextMessageAsync(botToken, chatId, caption ?? string.Empty, cancellationToken);
         }
+    }
+
+    public async Task<IReadOnlyList<TelegramGroupDto>> FetchAdminChatsAsync(
+        string botToken,
+        IEnumerable<string>? seedChatIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var seed in seedChatIds ?? [])
+        {
+            var trimmed = (seed ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(trimmed))
+            {
+                ids.Add(trimmed);
+            }
+        }
+
+        var client = CreateClient(botToken);
+        try
+        {
+            var updates = await client.GetUpdatesAsync(
+                offset: 0,
+                limit: 100,
+                timeout: 0,
+                cancellationToken: cancellationToken);
+            foreach (var update in updates)
+            {
+                var chat = update.Message?.Chat
+                    ?? update.ChannelPost?.Chat
+                    ?? update.EditedMessage?.Chat
+                    ?? update.MyChatMember?.Chat
+                    ?? update.ChatMember?.Chat;
+                if (chat is null)
+                {
+                    continue;
+                }
+
+                if (chat.Type is ChatType.Group or ChatType.Supergroup or ChatType.Channel)
+                {
+                    ids.Add(chat.Id.ToString());
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetUpdates indisponível para listar canais (webhook ativo ou localhost).");
+        }
+
+        var result = new List<TelegramGroupDto>();
+        foreach (var chatId in ids)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var chat = await client.GetChatAsync(chatId, cancellationToken);
+                if (chat.Type is not (ChatType.Group or ChatType.Supergroup or ChatType.Channel))
+                {
+                    continue;
+                }
+
+                var isAdmin = false;
+                var members = 0;
+                try
+                {
+                    var me = await client.GetMeAsync(cancellationToken);
+                    var member = await client.GetChatMemberAsync(chat.Id, me.Id, cancellationToken);
+                    isAdmin = member.Status is ChatMemberStatus.Administrator or ChatMemberStatus.Creator;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Não foi possível confirmar admin no chat {ChatId}.", chatId);
+                }
+
+                try
+                {
+                    members = await client.GetChatMemberCountAsync(chat.Id, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Não foi possível contar membros do chat {ChatId}.", chatId);
+                }
+
+                var name = string.IsNullOrWhiteSpace(chat.Title) ? chatId : chat.Title.Trim();
+                result.Add(new TelegramGroupDto
+                {
+                    ChatId = chat.Id.ToString(),
+                    Name = name,
+                    ParticipantCount = members,
+                    IsAdmin = isAdmin,
+                    IsActive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha no GetChat do Telegram. ChatId={ChatId}", chatId);
+            }
+        }
+
+        return result;
     }
 
     private static TelegramBotClient CreateClient(string botToken) =>

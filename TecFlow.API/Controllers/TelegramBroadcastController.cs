@@ -29,6 +29,18 @@ public sealed class TelegramBroadcastController : ControllerBase
         return Ok(await _broadcasts.ListCampaignsAsync(userId, cancellationToken));
     }
 
+    [HttpPost("canais/sincronizar")]
+    public async Task<ActionResult<TelegramBroadcastResponseDto>> SyncChannelsAsync(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(Fail("Usuário não autenticado."));
+        }
+
+        var result = await _broadcasts.SyncChannelsAsync(userId, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("campanhas")]
     public async Task<ActionResult<TelegramBroadcastResponseDto>> ScheduleAsync(
         [FromBody] TelegramScheduleCampaignDto request,

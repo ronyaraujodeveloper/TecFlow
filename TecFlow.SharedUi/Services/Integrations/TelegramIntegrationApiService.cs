@@ -19,6 +19,8 @@ public interface ITelegramIntegrationApiService
 
     Task<ApiResult<TelegramBroadcastResponseDto>> ListCampaignsAsync(CancellationToken cancellationToken = default);
 
+    Task<ApiResult<TelegramBroadcastResponseDto>> SyncChannelsAsync(CancellationToken cancellationToken = default);
+
     Task<ApiResult<TelegramBroadcastResponseDto>> ScheduleCampaignAsync(
         TelegramScheduleCampaignDto request,
         CancellationToken cancellationToken = default);
@@ -66,6 +68,15 @@ public sealed class TelegramIntegrationApiService : ITelegramIntegrationApiServi
     public Task<ApiResult<TelegramBroadcastResponseDto>> ListCampaignsAsync(
         CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<TelegramBroadcastResponseDto>($"{Path}/campanhas", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<TelegramBroadcastResponseDto>> SyncChannelsAsync(CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Sincronizando canais do Telegram...");
+        return _httpService.PostAsync<object, TelegramBroadcastResponseDto>(
+            $"{Path}/canais/sincronizar",
+            new { },
+            cancellationToken);
+    }
 
     public Task<ApiResult<TelegramBroadcastResponseDto>> ScheduleCampaignAsync(
         TelegramScheduleCampaignDto request,

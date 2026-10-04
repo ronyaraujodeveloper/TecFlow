@@ -26,6 +26,8 @@ public class TelegramIntegrationDto
 
     public bool IsConnected { get; set; }
 
+    public bool WebhookRegistered { get; set; }
+
     public string UiStatusLabel { get; set; } = "Desconectado";
 }
 

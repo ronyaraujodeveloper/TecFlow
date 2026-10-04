@@ -30,10 +30,13 @@ public static class TelegramBotRules
     public const string TelegramBotSource = "TelegramBot";
     public const int ReplyTimeoutMilliseconds = 1800;
     public const string ConnectedLabel = "Conectado ✅";
+    public const string DispatchModeLabel = "Conectado (Modo Disparo)";
     public const string DisconnectedLabel = "Desconectado";
     public const string AwaitingChannelMessageLabel = "Aguardando mensagem no canal...";
     public const string MissingTokenMessage = "Por favor, informe a token válida emitida pelo @BotFather.";
-    public const string InvalidTokenMessage = "Token do Telegram inválida ou não reconhecida";
+    public const string InvalidTokenMessage = "Token do Telegram inválida";
+    public const string DispatchModeSavedMessage =
+        "Conexão salva! O webhook para escuta automática não pôde ser ativado em ambiente local, mas os disparos agendados para o Chat ID informado funcionarão normalmente.";
 
     public static bool IsTelegramBotSource(string? source) =>
         string.Equals(source, TelegramBotSource, StringComparison.OrdinalIgnoreCase);
@@ -60,6 +63,46 @@ public static class TelegramBotRules
         }
 
         return trimmed.Length > 0;
+    }
+
+    public static bool IsWebhookRegistered(string? sessionData)
+    {
+        if (string.IsNullOrWhiteSpace(sessionData))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(sessionData);
+            var root = document.RootElement;
+            if (root.TryGetProperty("webhookRegistered", out var registered))
+            {
+                return registered.ValueKind == JsonValueKind.True;
+            }
+
+            return root.TryGetProperty("webhookUrl", out var url)
+                && !string.IsNullOrWhiteSpace(url.GetString());
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    public static string ResolveUiStatus(bool isActive, bool hasToken, bool hasBotUsername, bool hasChatId, bool webhookRegistered)
+    {
+        if (!isActive || !hasToken || !hasBotUsername)
+        {
+            return DisconnectedLabel;
+        }
+
+        if (webhookRegistered)
+        {
+            return ConnectedLabel;
+        }
+
+        return hasChatId ? DispatchModeLabel : DisconnectedLabel;
     }
 
     public static TelegramIncomingMessage? TryParseIncoming(JsonElement payload)

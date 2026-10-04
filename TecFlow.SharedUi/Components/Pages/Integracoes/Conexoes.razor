@@ -36,11 +36,11 @@
     }
     @if (!string.IsNullOrWhiteSpace(_ok))
     {
-        <div class="alert alert-success py-2 small" role="status">@_ok</div>
+        <div class="alert @(_okWarning ? "alert-warning" : "alert-success") py-2 small" role="status">@_ok</div>
     }
     @if (!string.IsNullOrWhiteSpace(_toastMessage))
     {
-        <div class="toast show campaign-toast @(_toastSuccess ? "text-bg-success" : "text-bg-danger")" role="status" aria-live="polite">
+        <div class="toast show campaign-toast @ToastClass" role="status" aria-live="polite">
             <div class="toast-body">@_toastMessage</div>
         </div>
     }
@@ -173,12 +173,16 @@
                     <div class="form-text">Armazenado: @MaskOrDash(_telegram?.TokenMasked)</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="cx-tg-chat">Chat ID do Canal</label>
+                    <label class="form-label small fw-semibold" for="cx-tg-chat">
+                        Chat ID do Canal
+                        <span class="text-muted fw-normal">(Preenchimento manual ou via detecção)</span>
+                    </label>
                     <input id="cx-tg-chat"
                            class="form-control"
-                           placeholder="-100..."
-                           title="ID numérico do canal ou grupo de destino"
+                           placeholder="-100707440297"
+                           title="ID numérico do canal ou grupo de destino. Canais e grupos iniciam com -100."
                            @bind="_chatId" />
+                    <div class="form-text">IDs de canais e grupos iniciam com <code>-100</code>.</div>
                 </div>
                 <button type="button"
                         class="btn btn-primary w-100 mb-4"
@@ -302,8 +306,10 @@
     private string? _chatId;
     private string? _error;
     private string? _ok;
+    private bool _okWarning;
     private string? _toastMessage;
     private bool _toastSuccess;
+    private bool _toastWarning;
     private bool _isBusy;
     private bool _isLoading;
     private bool isBotFatherHelpModalOpen;
@@ -324,11 +330,18 @@
         ?? TelegramBotRules.DisconnectedLabel;
 
     private string TelegramBadgeClass =>
-        string.Equals(TelegramStatusText, TelegramBotRules.AwaitingChannelMessageLabel, StringComparison.Ordinal)
-            ? "text-bg-warning"
-            : _telegram?.IsConnected == true
-                ? "text-bg-success"
-                : "text-bg-secondary";
+        string.Equals(TelegramStatusText, TelegramBotRules.DispatchModeLabel, StringComparison.Ordinal)
+            ? "text-bg-info"
+            : string.Equals(TelegramStatusText, TelegramBotRules.AwaitingChannelMessageLabel, StringComparison.Ordinal)
+                ? "text-bg-warning"
+                : _telegram?.IsConnected == true
+                    ? "text-bg-success"
+                    : "text-bg-secondary";
+
+    private string ToastClass =>
+        _toastWarning ? "text-bg-warning"
+        : _toastSuccess ? "text-bg-success"
+        : "text-bg-danger";
 
     private string WhatsAppBadgeClass =>
         _whatsApp?.IsConnected == true
@@ -424,6 +437,7 @@
     {
         _error = null;
         _ok = null;
+        _okWarning = false;
         _tab = "telegram";
         if (TelegramBotRules.IsPlaceholderToken(_tokenInput))
         {
@@ -447,21 +461,14 @@
             }
 
             _telegram = response.Data?.Data;
-            _telegramUiStatus = TelegramBotRules.AwaitingChannelMessageLabel;
-            if (_telegram is not null)
-            {
-                _telegram.UiStatusLabel = TelegramBotRules.AwaitingChannelMessageLabel;
-            }
-
-            var username = string.IsNullOrWhiteSpace(_telegram?.BotUsername)
-                ? string.Empty
-                : "@" + _telegram.BotUsername.TrimStart('@');
-            var success = string.IsNullOrWhiteSpace(username)
-                ? (response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel)
-                : $"{TelegramBotRules.ConnectedLabel} {username}";
-            _ok = success;
+            _telegramUiStatus = _telegram?.UiStatusLabel;
+            var description = response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel;
+            var dispatchMode = _telegram?.WebhookRegistered != true
+                || string.Equals(description, TelegramBotRules.DispatchModeSavedMessage, StringComparison.Ordinal);
+            _ok = description;
+            _okWarning = dispatchMode;
             _tokenInput = string.Empty;
-            await ShowToastAsync(success, success: true);
+            await ShowToastAsync(description, success: true, warning: dispatchMode);
         }
         catch (Exception ex)
         {
@@ -476,10 +483,11 @@
         }
     }
 
-    private async Task ShowToastAsync(string message, bool success)
+    private async Task ShowToastAsync(string message, bool success, bool warning = false)
     {
         _toastMessage = message;
         _toastSuccess = success;
+        _toastWarning = warning;
         if (!success)
         {
             _error = message;

@@ -142,7 +142,8 @@ flowchart LR
   CXUI[Conexoes.razor aba Telegram] -->|valida placeholder + POST conectar| TGIC
   CXUI -->|modal isBotFatherHelpModalOpen| HELP[Tutorial BotFather]
   TGIC --> TGIS[TelegramIntegrationService]
-  TGIS -->|GetMeAsync 400/401| TGAPI
+  TGIS -->|GetMeAsync 401 aborta| TGAPI
+  TGIS -->|SetWebhookAsync falha localhost| DISPATCH[Salva Conectado Modo Disparo]
   TGAGEN[TelegramAgendador.razor] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS

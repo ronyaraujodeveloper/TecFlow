@@ -76,11 +76,9 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         {
             identity = await _telegramApi.ValidateBotTokenAsync(row.Token, cancellationToken);
         }
-        catch (Exception ex)
+        catch
         {
-            return Fail(string.IsNullOrWhiteSpace(ex.Message)
-                ? TelegramBotRules.InvalidTokenMessage
-                : ex.Message);
+            return Fail(TelegramBotRules.InvalidTokenMessage);
         }
 
         if (identity is null)
@@ -88,26 +86,32 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             return Fail(TelegramBotRules.InvalidTokenMessage);
         }
 
-        if (string.IsNullOrWhiteSpace(_webhookOptions.Secret))
-        {
-            return Fail("Integrations:Webhook:Secret não configurado para registrar o webhook.");
-        }
-
         var webhookUrl = _telegramOptions.BuildUserWebhookUrl(userId);
-        var registered = await _telegramApi.RegisterWebhookAsync(
-            row.Token,
-            webhookUrl,
-            _webhookOptions.Secret,
-            cancellationToken);
-        if (!registered)
+        var webhookRegistered = false;
+        try
         {
-            return Fail("Não foi possível registrar o webhook no Telegram. Verifique a URL pública da API.");
+            if (!string.IsNullOrWhiteSpace(_webhookOptions.Secret) && !string.IsNullOrWhiteSpace(webhookUrl))
+            {
+                webhookRegistered = await _telegramApi.RegisterWebhookAsync(
+                    row.Token,
+                    webhookUrl,
+                    _webhookOptions.Secret,
+                    cancellationToken);
+            }
+        }
+        catch
+        {
+            webhookRegistered = false;
         }
 
         row.BotUsername = string.IsNullOrWhiteSpace(identity.Username)
             ? row.BotUsername
             : identity.Username.Trim().TrimStart('@');
-        row.ApiKey = _webhookOptions.Secret;
+        if (!string.IsNullOrWhiteSpace(_webhookOptions.Secret))
+        {
+            row.ApiKey = _webhookOptions.Secret;
+        }
+
         row.IsActive = true;
         row.SessionData = System.Text.Json.JsonSerializer.Serialize(new
         {
@@ -115,11 +119,20 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             bot = row.BotUsername,
             chatId = row.ChatId,
             webhookUrl,
+            webhookRegistered,
+            mode = webhookRegistered ? "listen" : "dispatch",
             connectedAt = DateTime.UtcNow
         });
         row.Touch();
         await _context.SaveChangesAsync(cancellationToken);
-        return Ok(Map(row), TelegramBotRules.ConnectedLabel);
+
+        var mapped = Map(row);
+        if (webhookRegistered)
+        {
+            return Ok(mapped, TelegramBotRules.ConnectedLabel);
+        }
+
+        return Ok(mapped, TelegramBotRules.DispatchModeSavedMessage);
     }
 
     private async Task<TelegramIntegration> ApplyFieldsAsync(
@@ -177,9 +190,12 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
     private static TelegramIntegrationDto Map(TelegramIntegration row)
     {
         IntegrationOwnershipGuard.EnsureOwner(row.UserId, row.UserId);
-        var connected = !string.IsNullOrEmpty(row.Token)
-            && row.IsActive
-            && !string.IsNullOrWhiteSpace(row.BotUsername);
+        var webhookRegistered = TelegramBotRules.IsWebhookRegistered(row.SessionData);
+        var hasToken = !string.IsNullOrEmpty(row.Token);
+        var hasUsername = !string.IsNullOrWhiteSpace(row.BotUsername);
+        var hasChatId = !string.IsNullOrWhiteSpace(row.ChatId);
+        var status = TelegramBotRules.ResolveUiStatus(row.IsActive, hasToken, hasUsername, hasChatId, webhookRegistered);
+        var connected = status is TelegramBotRules.ConnectedLabel or TelegramBotRules.DispatchModeLabel;
         return new TelegramIntegrationDto
         {
             Id = row.Id,
@@ -187,14 +203,15 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             ChatId = row.ChatId,
             BotUsername = row.BotUsername,
             IsActive = row.IsActive,
-            HasToken = !string.IsNullOrEmpty(row.Token),
+            HasToken = hasToken,
             TokenMasked = SecretMasking.Mask(row.Token),
             HasApiKey = !string.IsNullOrEmpty(row.ApiKey),
             ApiKeyMasked = SecretMasking.Mask(row.ApiKey),
             HasSessionData = !string.IsNullOrEmpty(row.SessionData),
             SessionDataMasked = SecretMasking.Mask(row.SessionData),
             IsConnected = connected,
-            UiStatusLabel = connected ? TelegramBotRules.ConnectedLabel : TelegramBotRules.DisconnectedLabel
+            WebhookRegistered = webhookRegistered,
+            UiStatusLabel = status
         };
     }
 

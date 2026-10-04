@@ -57,6 +57,25 @@ public class TelegramBotRulesTests
         Assert.False(TelegramBotRules.IsPlaceholderToken("8743142006:AAHdemo"));
 
     [Fact]
+    public void ResolveUiStatus_ShouldUseDispatchModeWhenWebhookFailsAndChatIdExists()
+    {
+        Assert.Equal(
+            TelegramBotRules.DispatchModeLabel,
+            TelegramBotRules.ResolveUiStatus(true, true, true, true, webhookRegistered: false));
+        Assert.Equal(
+            TelegramBotRules.ConnectedLabel,
+            TelegramBotRules.ResolveUiStatus(true, true, true, true, webhookRegistered: true));
+    }
+
+    [Fact]
+    public void IsWebhookRegistered_ShouldReadFlagAndLegacyUrl()
+    {
+        Assert.False(TelegramBotRules.IsWebhookRegistered("""{"webhookRegistered":false}"""));
+        Assert.True(TelegramBotRules.IsWebhookRegistered("""{"webhookRegistered":true}"""));
+        Assert.True(TelegramBotRules.IsWebhookRegistered("""{"webhookUrl":"https://api.tecflow.local/hook"}"""));
+    }
+
+    [Fact]
     public void FormatConvertedReply_ShouldListCommissionLinks()
     {
         var text = TelegramBotRules.FormatConvertedReply(["https://tecflow.local/a"]);

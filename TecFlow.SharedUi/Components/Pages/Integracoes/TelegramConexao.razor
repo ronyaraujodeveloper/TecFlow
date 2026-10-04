@@ -62,9 +62,31 @@
                 <dt class="col-4 text-muted">SessionData</dt>
                 <dd class="col-8 font-monospace mb-0">@(string.IsNullOrEmpty(_session?.SessionDataMasked) ? "—" : _session.SessionDataMasked)</dd>
             </dl>
-            <button type="button" class="btn btn-primary w-100" disabled="@_isBusy" @onclick="ConnectAsync">
+            <button type="button" class="btn btn-primary w-100 mb-3" disabled="@_isBusy" @onclick="ConnectAsync">
                 @(_isBusy ? "Validando..." : "Conectar Telegram")
             </button>
+
+            <h3 class="h6 fw-semibold">UserBot (canais de terceiros)</h3>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-api-id">ApiId</label>
+                <input id="tg-api-id" class="form-control" @bind="_userBotApiId" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-api-hash">ApiHash</label>
+                <input id="tg-api-hash" class="form-control" type="password" autocomplete="off" placeholder="@SecretMasking.MaskedValue" @bind="_userBotApiHash" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-phone">Telefone</label>
+                <input id="tg-phone" class="form-control" placeholder="+55..." @bind="_userBotPhone" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small" for="tg-code">Código de verificação</label>
+                <input id="tg-code" class="form-control" @bind="_userBotCode" />
+            </div>
+            <button type="button" class="btn btn-outline-primary w-100" disabled="@_isBusy" @onclick="SaveUserBotAsync">
+                Salvar UserBot
+            </button>
+            <div class="form-text">Status: @(_session?.UserBotStatusLabel ?? "Inativo")</div>
         </div>
     </section>
 </div>
@@ -74,6 +96,10 @@
     private string _tokenInput = string.Empty;
     private string? _chatId;
     private string? _botUsername;
+    private string? _userBotApiId;
+    private string? _userBotApiHash;
+    private string? _userBotPhone;
+    private string? _userBotCode;
     private string? _error;
     private string? _ok;
     private bool _isBusy;
@@ -86,6 +112,8 @@
         _session = response.Data?.Data;
         _chatId = _session?.ChatId;
         _botUsername = _session?.BotUsername;
+        _userBotApiId = _session?.UserBotApiId?.ToString();
+        _userBotPhone = _session?.UserBotPhone;
         _tokenInput = string.Empty;
         if (!response.Success)
         {
@@ -116,6 +144,45 @@
             _ok = response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel;
             _botUsername = _session?.BotUsername;
             _tokenInput = string.Empty;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task SaveUserBotAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            int? apiId = null;
+            if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+            {
+                apiId = parsed;
+            }
+
+            var response = await TelegramApi.SaveAsync(new SaveTelegramIntegrationDto
+            {
+                ChatId = _chatId,
+                BotUsername = _botUsername,
+                UserBotApiId = apiId,
+                UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
+                UserBotPhone = _userBotPhone,
+                UserBotVerificationCode = _userBotCode
+            });
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _session = response.Data?.Data;
+            _ok = response.Data?.Descricao;
+            _userBotApiHash = string.Empty;
+            _userBotCode = string.Empty;
         }
         finally
         {

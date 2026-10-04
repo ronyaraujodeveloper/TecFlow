@@ -149,6 +149,11 @@ flowchart LR
   TGAGEN[TelegramAgendador.razor] -->|GetChat Title + SelectedChatIds| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
+  USERBOT[TelegramUserMonitorWorker] -->|WTelegramClient OnUpdates| GCAP[GroupOfferCaptureService]
+  USERBOT -->|session user-{id}.session| SESS[App_Data/telegram-sessions]
+  CXUI -->|ApiId ApiHash UserBotPhone| USERBOT
+  GMUI[GruposMonitorados Telegram] -->|Clonar Oferta| TGAGEN
+  GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   GEN -->|og:image twitter:image itemprop ProductImageUrl| SQL

@@ -54,7 +54,11 @@ public sealed class UniversalLinkResolverEngine
         ("mercadolibre.com", MarketplaceType.MercadoLivre),
         ("meli.la", MarketplaceType.MercadoLivre),
         ("casasbahia.com.br", MarketplaceType.CasasBahia),
-        ("tiktok.com", MarketplaceType.TikTokShop)
+        ("tiktok.com", MarketplaceType.TikTokShop),
+        ("aliexpress.com", MarketplaceType.AliExpress),
+        ("pt.aliexpress.com", MarketplaceType.AliExpress),
+        ("a.aliexpress.com", MarketplaceType.AliExpress),
+        ("s.click.aliexpress.com", MarketplaceType.AliExpress)
     ];
 
     private static readonly HashSet<string> CommissionAndTrackingKeys = new(StringComparer.OrdinalIgnoreCase)

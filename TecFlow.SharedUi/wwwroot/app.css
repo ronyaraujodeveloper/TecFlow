@@ -1019,6 +1019,11 @@ html, body {
     color: #fff;
 }
 
+.marketplace-platform-badge--aliexpress {
+    background: #E62E04;
+    color: #fff;
+}
+
 .badge-magalu,
 .marketplace-platform-badge--magalu {
     background: var(--brand-magalu);

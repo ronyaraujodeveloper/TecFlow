@@ -9,6 +9,7 @@ using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
+using TecFlow.Infrastructure.Services.Telegram;
 
 namespace TecFlow.Infrastructure.Services.WhatsApp;
 
@@ -18,6 +19,8 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
     private readonly ITelegramApiService _telegramApi;
     private readonly TelegramBotOptions _telegramOptions;
     private readonly WebhookSecurityOptions _webhookOptions;
+    private readonly TelegramUserBotSessionStore _userBotSessions;
+    private readonly TelegramUserBotCodeStore _userBotCodes;
     private readonly ILogger<TelegramIntegrationService> _logger;
 
     public TelegramIntegrationService(
@@ -25,12 +28,16 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         ITelegramApiService telegramApi,
         IOptions<TelegramBotOptions> telegramOptions,
         IOptions<WebhookSecurityOptions> webhookOptions,
+        TelegramUserBotSessionStore userBotSessions,
+        TelegramUserBotCodeStore userBotCodes,
         ILogger<TelegramIntegrationService> logger)
     {
         _context = context;
         _telegramApi = telegramApi;
         _telegramOptions = telegramOptions.Value;
         _webhookOptions = webhookOptions.Value;
+        _userBotSessions = userBotSessions;
+        _userBotCodes = userBotCodes;
         _logger = logger;
     }
 
@@ -50,7 +57,10 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         request ??= new SaveTelegramIntegrationDto();
         var row = await ApplyFieldsAsync(userId, request, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        return Ok(Map(row), "Integração Telegram salva.");
+        var userBotHint = row.UserBotApiId > 0 && !string.IsNullOrEmpty(row.UserBotApiHash)
+            ? " UserBot MTProto configurado para escuta de canais."
+            : string.Empty;
+        return Ok(Map(row), "Integração Telegram salva." + userBotHint);
     }
 
     public async Task<TelegramIntegrationResponseDto> ConnectAsync(
@@ -160,6 +170,27 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         row.BotUsername = string.IsNullOrWhiteSpace(request.BotUsername)
             ? row.BotUsername
             : request.BotUsername.Trim().TrimStart('@');
+        if (request.UserBotApiId is > 0)
+        {
+            row.UserBotApiId = request.UserBotApiId;
+        }
+
+        if (!IsMaskedOrEmpty(request.UserBotApiHash))
+        {
+            row.UserBotApiHash = request.UserBotApiHash!.Trim();
+        }
+
+        if (!IsMaskedOrEmpty(request.UserBotPhone))
+        {
+            row.UserBotPhone = request.UserBotPhone!.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.UserBotVerificationCode)
+            && !IsMaskedOrEmpty(request.UserBotVerificationCode))
+        {
+            _userBotCodes.Set(userId, request.UserBotVerificationCode);
+        }
+
         row.IsActive = true;
         row.Touch();
         return row;
@@ -192,7 +223,7 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
     private static bool IsMaskedOrEmpty(string? value) =>
         string.IsNullOrWhiteSpace(value) || value == SecretMasking.MaskedValue;
 
-    private static TelegramIntegrationDto Map(TelegramIntegration row)
+    private TelegramIntegrationDto Map(TelegramIntegration row)
     {
         IntegrationOwnershipGuard.EnsureOwner(row.UserId, row.UserId);
         var webhookRegistered = TelegramBotRules.IsWebhookRegistered(row.SessionData);
@@ -201,6 +232,8 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         var hasChatId = !string.IsNullOrWhiteSpace(row.ChatId);
         var status = TelegramBotRules.ResolveUiStatus(row.IsActive, hasToken, hasUsername, hasChatId, webhookRegistered);
         var connected = status is TelegramBotRules.ConnectedLabel or TelegramBotRules.DispatchModeLabel;
+        var hasUserBotHash = !string.IsNullOrEmpty(row.UserBotApiHash);
+        var hasSession = _userBotSessions.HasSession(row.UserId);
         return new TelegramIntegrationDto
         {
             Id = row.Id,
@@ -214,6 +247,16 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             ApiKeyMasked = SecretMasking.Mask(row.ApiKey),
             HasSessionData = !string.IsNullOrEmpty(row.SessionData),
             SessionDataMasked = SecretMasking.Mask(row.SessionData),
+            UserBotApiId = row.UserBotApiId,
+            HasUserBotApiHash = hasUserBotHash,
+            UserBotApiHashMasked = SecretMasking.Mask(row.UserBotApiHash),
+            UserBotPhone = row.UserBotPhone,
+            HasUserBotSession = hasSession,
+            UserBotStatusLabel = hasSession
+                ? "Escuta pronta"
+                : row.UserBotApiId > 0 && hasUserBotHash
+                    ? "Aguardando sessão"
+                    : "Inativo",
             IsConnected = connected,
             WebhookRegistered = webhookRegistered,
             UiStatusLabel = status

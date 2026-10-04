@@ -6,6 +6,8 @@ public class TelegramBotOptions
 
     public string WebhookBaseUrl { get; set; } = "http://localhost:5001";
 
+    public string UserBotSessionFolder { get; set; } = "App_Data/telegram-sessions";
+
     public string BuildUserWebhookUrl(int userId)
     {
         var baseUrl = string.IsNullOrWhiteSpace(WebhookBaseUrl)

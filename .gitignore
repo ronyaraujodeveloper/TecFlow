@@ -4,3 +4,4 @@ obj/
 artifacts/
 *.user
 *.suo
+App_Data/telegram-sessions/

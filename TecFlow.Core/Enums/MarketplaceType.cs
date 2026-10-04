@@ -8,5 +8,6 @@ public enum MarketplaceType
     Amazon = 4,
     MagazineLuiza = 5,
     Kabum = 6,
-    CasasBahia = 7
+    CasasBahia = 7,
+    AliExpress = 8
 }

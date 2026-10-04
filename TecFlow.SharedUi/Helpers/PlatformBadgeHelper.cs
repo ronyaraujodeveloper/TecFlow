@@ -15,6 +15,7 @@ public static class PlatformBadgeHelper
         MarketplaceType.TikTokShop => "marketplace-platform-badge--tiktok",
         MarketplaceType.Kabum => "marketplace-platform-badge--kabum",
         MarketplaceType.CasasBahia => "marketplace-platform-badge--casasbahia",
+        MarketplaceType.AliExpress => "marketplace-platform-badge--aliexpress",
         _ => ResolveAliasClass(platform.ToString()) ?? DefaultBadgeClass
     };
 
@@ -53,6 +54,7 @@ public static class PlatformBadgeHelper
         MarketplaceType.TikTokShop => "#000000",
         MarketplaceType.Kabum => "#FF6500",
         MarketplaceType.CasasBahia => "#E30613",
+        MarketplaceType.AliExpress => "#E62E04",
         _ => GetPlatformColor(platform.ToString())
     };
 
@@ -98,6 +100,7 @@ public static class PlatformBadgeHelper
                 "kabum" => MarketplaceType.Kabum,
                 "amazon" => MarketplaceType.Amazon,
                 "shopee" => MarketplaceType.Shopee,
+                "aliexpress" => MarketplaceType.AliExpress,
                 _ => default
             };
             return platform != default || key is "shopee";

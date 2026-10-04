@@ -715,6 +715,16 @@ Opção de envio direto do item recomendado para o Agendador de Grupos (WhatsApp
 - [ ] **29.3. Biblioteca Evergreen & Reciclador de Ofertas Campeãs:** Repositório de produtos com alto histórico de vendas para preenchimento automático de intervalos sem postagens.
 - [ ] **29.4. Moldura Dinâmica e Mídia Rica (Vídeos sem Marca d'Água):** Aplicação de molduras promocionais personalizadas nas imagens e suporte a download de vídeos do produto para envio direto.
 
+## 🛡️ Fase 29: Validação Pré-Disparo e Saúde de Agendamentos (Pre-Flight Check)
+
+- [ ] **29.1. Validação de Integridade Pré-Envio (Pre-Flight Worker):**
+  - Checagem automática de preço, cupom ativo e disponibilidade de estoque minutos antes da execução de cada agendamento.
+  - Pausa automática de disparos caso o preço tenha subido, o cupom expirado ou o produto esgotado.
+
+- [ ] **29.2. Central de Notificações e Reagendamento:**
+  - Alerta visual no painel do TecFlow com a justificativa da pausa (ex: "Cancelado: Preço alterado de R$ 49 para R$ 89").
+  - Opção de recálculo com o menor preço encontrado em lojas concorrentes do usuário (Substituição Inteligente de Link).
+
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 
 1. **Validação e Feedbacks do Botão:**
@@ -750,6 +760,13 @@ Para equiparar a experiência ao agendador do WhatsApp:
 2. [x] **Consulta via API:** Ao clicar, o sistema deve invocar `GetUpdates` ou consultar os chats gerenciados pelo BotToken ativo e salvar em `TelegramGroups`.
 3. [x] **Nome amigável:** `GetChatAsync` grava `chat.Title` (ex: *achadinhos*) em `TelegramGroups.Name`/`GroupName`.
 4. [x] **Componente Multi-Select:** chips com nome + Chat ID, busca em tempo real, Selecionar Todos / Limpar Seleção e `SelectedChatIds`.
+
+## 🕵️ Monitoramento de Canais de Terceiros como Membro Leitor (UserBot MTProto)
+
+Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégios de Admin):
+1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no TecFlow para conectar uma conta de usuário do Telegram.
+2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
+3. [x] **Extração de Ofertas:** Filtragem automática de mensagens com URLs de e-commerce, salvando na tabela `GroupCapturedMessages` com a indicação do canal de origem (ex: Pelando, PC DO FAFA).
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

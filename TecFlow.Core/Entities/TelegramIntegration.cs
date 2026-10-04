@@ -14,6 +14,13 @@ public class TelegramIntegration : BaseEntity
 
     public string? SessionData { get; set; }
 
+    public int? UserBotApiId { get; set; }
+
+    public string? UserBotApiHash { get; set; }
+
+    [MaxLength(32)]
+    public string? UserBotPhone { get; set; }
+
     [MaxLength(64)]
     public string? ChatId { get; set; }
 

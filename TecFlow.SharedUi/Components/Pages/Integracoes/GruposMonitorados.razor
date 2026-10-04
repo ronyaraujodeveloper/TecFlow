@@ -12,6 +12,7 @@
 @inject IMonitoredGroupsApiService Api
 @inject NavigationManager Navigation
 @inject ILogger<GruposMonitorados> Logger
+@implements IAsyncDisposable
 
 <PageTitle>Grupos monitorados @ChannelLabel — TecFlow</PageTitle>
 
@@ -27,6 +28,10 @@
             </div>
             <p class="text-muted small mb-0">
                 Sincronize os grupos do @ChannelLabel, filtre as ofertas capturadas e clone o link de comissão para o agendador.
+                @if (IsTelegram)
+                {
+                    <span> A escuta UserBot (ApiId/ApiHash) captura canais de terceiros como Pelando e PC do Fafa.</span>
+                }
             </p>
         </div>
         <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="SyncAsync">
@@ -69,7 +74,7 @@
         <div class="alert alert-light border">
             @if (_groups.Count > 0)
             {
-                <span>@_groups.Count grupo(s) do @ChannelLabel. Nenhuma oferta com link neste período — as mensagens capturadas pelos webhooks aparecem aqui.</span>
+                <span>@_groups.Count grupo(s) do @ChannelLabel. Nenhuma oferta com link neste período — webhooks e o UserBot MTProto gravam as mensagens aqui.</span>
             }
             else
             {
@@ -116,7 +121,7 @@
                                     Verificar anúncio
                                 </button>
                                 <button type="button" class="btn btn-primary btn-sm" disabled="@_isBusy" @onclick="() => CloneAsync(item.Id)">
-                                    Clonar para Minha Campanha
+                                    @(IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha")
                                 </button>
                             </div>
                         </div>
@@ -139,6 +144,7 @@
     private bool _isBusy;
     private string? _error;
     private string? _info;
+    private CancellationTokenSource? _refreshCts;
 
     private bool IsTelegram => CurrentPath().Equals(TelegramPath, StringComparison.OrdinalIgnoreCase);
 
@@ -157,6 +163,10 @@
         }
 
         await LoadAsync();
+        if (IsTelegram)
+        {
+            StartOfferRefresh();
+        }
     }
 
     private string CurrentPath()
@@ -215,26 +225,74 @@
         }
     }
 
-    private async Task LoadAsync()
+    private async Task LoadAsync(bool silent = false)
     {
-        _isBusy = true;
-        _error = null;
+        if (!silent)
+        {
+            _isBusy = true;
+            _error = null;
+        }
         try
         {
             var result = await Api.ListAsync(
                 _hours,
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
                 Channel);
-            Apply(result.Data, result.ErrorMessage);
+            if (result.Data is not null)
+            {
+                Apply(result.Data, silent ? null : result.ErrorMessage);
+            }
+            else if (!silent)
+            {
+                Apply(null, result.ErrorMessage);
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao listar ofertas monitoradas.");
-            _error = "Não foi possível carregar as ofertas.";
+            if (!silent)
+            {
+                _error = "Não foi possível carregar as ofertas.";
+            }
         }
         finally
         {
-            _isBusy = false;
+            if (!silent)
+            {
+                _isBusy = false;
+            }
+        }
+    }
+
+    private void StartOfferRefresh()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        _ = RefreshOffersLoopAsync(_refreshCts.Token);
+    }
+
+    private async Task RefreshOffersLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await LoadAsync(silent: true);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_refreshCts is not null)
+        {
+            await _refreshCts.CancelAsync();
+            _refreshCts.Dispose();
         }
     }
 

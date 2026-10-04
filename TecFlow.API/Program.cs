@@ -76,6 +76,7 @@ builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.In
 builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.API", enableAspNetCoreInstrumentation: true);
 builder.Services.AddHostedService<TecFlow.API.Workers.WhatsAppBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramBroadcastWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.TelegramUserMonitorWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]

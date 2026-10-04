@@ -39,5 +39,6 @@
     <PackageReference Include="FirebaseAdmin" Version="3.2.0" />
     <PackageReference Include="MassTransit" Version="8.3.4" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
+    <PackageReference Include="WTelegramClient" Version="4.4.9" />
   </ItemGroup>
 </Project>

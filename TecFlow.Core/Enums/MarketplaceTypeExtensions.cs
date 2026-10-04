@@ -20,6 +20,7 @@ public static class MarketplaceTypeExtensions
         MarketplaceType.MagazineLuiza => "Magazine Luiza",
         MarketplaceType.Kabum => "Kabum!",
         MarketplaceType.CasasBahia => "Casas Bahia",
+        MarketplaceType.AliExpress => "AliExpress",
         _ => platform.ToString()
     };
 
@@ -57,6 +58,7 @@ public static class MarketplaceTypeExtensions
         MarketplaceType.Kabum => "kabum",
         MarketplaceType.Amazon => "amazon",
         MarketplaceType.Shopee => "shopee",
+        MarketplaceType.AliExpress => "aliexpress",
         _ => CompactKey(platform.ToString())
     };
 
@@ -108,6 +110,12 @@ public static class MarketplaceTypeExtensions
         if (compact.Contains("shopee", StringComparison.Ordinal))
         {
             key = "shopee";
+            return true;
+        }
+
+        if (compact.Contains("aliexpress", StringComparison.Ordinal))
+        {
+            key = "aliexpress";
             return true;
         }
 

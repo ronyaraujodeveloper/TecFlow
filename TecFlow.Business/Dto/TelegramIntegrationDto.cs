@@ -24,6 +24,18 @@ public class TelegramIntegrationDto
 
     public string SessionDataMasked { get; set; } = string.Empty;
 
+    public int? UserBotApiId { get; set; }
+
+    public bool HasUserBotApiHash { get; set; }
+
+    public string UserBotApiHashMasked { get; set; } = string.Empty;
+
+    public string? UserBotPhone { get; set; }
+
+    public bool HasUserBotSession { get; set; }
+
+    public string UserBotStatusLabel { get; set; } = "Inativo";
+
     public bool IsConnected { get; set; }
 
     public bool WebhookRegistered { get; set; }
@@ -40,6 +52,14 @@ public class SaveTelegramIntegrationDto
     public string? ChatId { get; set; }
 
     public string? BotUsername { get; set; }
+
+    public int? UserBotApiId { get; set; }
+
+    public string? UserBotApiHash { get; set; }
+
+    public string? UserBotPhone { get; set; }
+
+    public string? UserBotVerificationCode { get; set; }
 }
 
 public class TelegramIntegrationResponseDto : ResponseDto

@@ -358,6 +358,8 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Token).HasColumnType("nvarchar(max)");
             entity.Property(item => item.ApiKey).HasColumnType("nvarchar(max)");
             entity.Property(item => item.SessionData).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.UserBotApiHash).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.UserBotPhone).HasMaxLength(32);
             entity.Property(item => item.ChatId).HasMaxLength(64);
             entity.Property(item => item.BotUsername).HasMaxLength(128);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
@@ -606,5 +608,6 @@ public class AppDbContext : DbContext
         telegram.Property(item => item.Token).HasConversion(encryptedNullableString);
         telegram.Property(item => item.ApiKey).HasConversion(encryptedNullableString);
         telegram.Property(item => item.SessionData).HasConversion(encryptedNullableString);
+        telegram.Property(item => item.UserBotApiHash).HasConversion(encryptedNullableString);
     }
 }

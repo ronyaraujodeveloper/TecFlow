@@ -73,6 +73,11 @@ public sealed class MarketplaceTypeJsonConverter : JsonConverter<MarketplaceType
             {
                 return MarketplaceType.Shopee;
             }
+
+            if (raw.Contains("aliexpress", StringComparison.OrdinalIgnoreCase))
+            {
+                return MarketplaceType.AliExpress;
+            }
         }
 
         if (reader.TokenType is JsonTokenType.Null or JsonTokenType.None)

@@ -200,6 +200,60 @@
                     }
                 </button>
 
+                <h3 class="h6 fw-semibold mb-2">Escuta de canais (UserBot MTProto)</h3>
+                <p class="text-muted small mb-3">
+                    Opcional. Informe <code>api_id</code> e <code>api_hash</code> de
+                    <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer">my.telegram.org</a>
+                    para ouvir canais como membro leitor. A sessão fica em
+                    <code>App_Data/telegram-sessions</code> no servidor.
+                </p>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold" for="cx-tg-api-id">ApiId</label>
+                        <input id="cx-tg-api-id"
+                               class="form-control"
+                               inputmode="numeric"
+                               placeholder="123456"
+                               @bind="_userBotApiId" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold" for="cx-tg-api-hash">ApiHash</label>
+                        <input id="cx-tg-api-hash"
+                               class="form-control"
+                               type="password"
+                               autocomplete="off"
+                               placeholder="@SecretMasking.MaskedValue"
+                               @bind="_userBotApiHash" />
+                        <div class="form-text">Armazenado: @MaskOrDash(_telegram?.UserBotApiHashMasked)</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="cx-tg-phone">Telefone da conta leitora</label>
+                        <input id="cx-tg-phone"
+                               class="form-control"
+                               placeholder="+5511999999999"
+                               @bind="_userBotPhone" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="cx-tg-code">Código de verificação</label>
+                        <input id="cx-tg-code"
+                               class="form-control"
+                               autocomplete="one-time-code"
+                               placeholder="Somente se o Telegram enviar SMS/app"
+                               @bind="_userBotCode" />
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            disabled="@_isSavingUserBot"
+                            @onclick="SaveUserBotAsync">
+                        @(_isSavingUserBot ? "Salvando..." : "Salvar UserBot")
+                    </button>
+                    <span class="badge @(_telegram?.HasUserBotSession == true ? "text-bg-success" : "text-bg-secondary")">
+                        @(_telegram?.UserBotStatusLabel ?? "Inativo")
+                    </span>
+                </div>
+
                 <h3 class="h6 fw-semibold mb-2">Segurança</h3>
                 <dl class="row small mb-0">
                     <dt class="col-sm-4 text-muted">ApiKey</dt>
@@ -304,6 +358,10 @@
     private bool _qrModalVisible;
     private string _tokenInput = string.Empty;
     private string? _chatId;
+    private string? _userBotApiId;
+    private string? _userBotApiHash;
+    private string? _userBotPhone;
+    private string? _userBotCode;
     private string? _error;
     private string? _ok;
     private bool _okWarning;
@@ -312,6 +370,7 @@
     private bool _toastWarning;
     private bool _isBusy;
     private bool _isLoading;
+    private bool _isSavingUserBot;
     private bool isBotFatherHelpModalOpen;
     private string? _telegramUiStatus;
     private CancellationTokenSource? _pollCts;
@@ -377,6 +436,8 @@
         var response = await TelegramApi.GetMineAsync();
         _telegram = response.Data?.Data;
         _chatId = _telegram?.ChatId;
+        _userBotApiId = _telegram?.UserBotApiId?.ToString();
+        _userBotPhone = _telegram?.UserBotPhone;
         if (!response.Success)
         {
             _error = response.Data?.Descricao ?? response.ErrorMessage;
@@ -480,6 +541,52 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task SaveUserBotAsync()
+    {
+        _error = null;
+        _ok = null;
+        _okWarning = false;
+        _tab = "telegram";
+        _isSavingUserBot = true;
+        try
+        {
+            int? apiId = null;
+            if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+            {
+                apiId = parsed;
+            }
+
+            var response = await TelegramApi.SaveAsync(new SaveTelegramIntegrationDto
+            {
+                ChatId = _chatId,
+                UserBotApiId = apiId,
+                UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
+                UserBotPhone = _userBotPhone,
+                UserBotVerificationCode = _userBotCode
+            });
+            if (!response.Success)
+            {
+                await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível salvar o UserBot.", success: false);
+                return;
+            }
+
+            _telegram = response.Data?.Data;
+            _userBotApiHash = string.Empty;
+            _userBotCode = string.Empty;
+            _ok = response.Data?.Descricao ?? "UserBot salvo.";
+            await ShowToastAsync(_ok, success: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar credenciais do UserBot Telegram.");
+            await ShowToastAsync("Não foi possível salvar o UserBot.", success: false);
+        }
+        finally
+        {
+            _isSavingUserBot = false;
         }
     }
 

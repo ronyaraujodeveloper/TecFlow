@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Telegram;
@@ -17,17 +18,20 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
     private readonly ITelegramApiService _telegramApi;
     private readonly TelegramBotOptions _telegramOptions;
     private readonly WebhookSecurityOptions _webhookOptions;
+    private readonly ILogger<TelegramIntegrationService> _logger;
 
     public TelegramIntegrationService(
         AppDbContext context,
         ITelegramApiService telegramApi,
         IOptions<TelegramBotOptions> telegramOptions,
-        IOptions<WebhookSecurityOptions> webhookOptions)
+        IOptions<WebhookSecurityOptions> webhookOptions,
+        ILogger<TelegramIntegrationService> logger)
     {
         _context = context;
         _telegramApi = telegramApi;
         _telegramOptions = telegramOptions.Value;
         _webhookOptions = webhookOptions.Value;
+        _logger = logger;
     }
 
     public async Task<TelegramIntegrationResponseDto> GetMineAsync(
@@ -87,23 +91,23 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
         }
 
         var webhookUrl = _telegramOptions.BuildUserWebhookUrl(userId);
-        var webhookRegistered = false;
+        var webhookRegistrado = false;
         try
         {
-            if (!string.IsNullOrWhiteSpace(_webhookOptions.Secret) && !string.IsNullOrWhiteSpace(webhookUrl))
-            {
-                webhookRegistered = await _telegramApi.RegisterWebhookAsync(
-                    row.Token,
-                    webhookUrl,
-                    _webhookOptions.Secret,
-                    cancellationToken);
-            }
+            webhookRegistrado = await _telegramApi.SetWebhookAsync(
+                row.Token,
+                webhookUrl,
+                _webhookOptions.Secret,
+                cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
-            webhookRegistered = false;
+            _logger.LogWarning(
+                ex,
+                "Não foi possível registrar o webhook do Telegram (provavelmente ambiente localhost). Prosseguindo com fallback de Chat ID manual.");
         }
 
+        row.Token = row.Token!.Trim();
         row.BotUsername = string.IsNullOrWhiteSpace(identity.Username)
             ? row.BotUsername
             : identity.Username.Trim().TrimStart('@');
@@ -119,20 +123,21 @@ public sealed class TelegramIntegrationService : ITelegramIntegrationService
             bot = row.BotUsername,
             chatId = row.ChatId,
             webhookUrl,
-            webhookRegistered,
-            mode = webhookRegistered ? "listen" : "dispatch",
+            webhookRegistered = webhookRegistrado,
+            status = webhookRegistrado ? TelegramBotRules.ConnectedLabel : TelegramBotRules.DispatchModeLabel,
+            mode = webhookRegistrado ? "listen" : "dispatch",
             connectedAt = DateTime.UtcNow
         });
         row.Touch();
         await _context.SaveChangesAsync(cancellationToken);
 
         var mapped = Map(row);
-        if (webhookRegistered)
+        if (!webhookRegistrado)
         {
-            return Ok(mapped, TelegramBotRules.ConnectedLabel);
+            return Ok(mapped, TelegramBotRules.DispatchModeSavedMessage);
         }
 
-        return Ok(mapped, TelegramBotRules.DispatchModeSavedMessage);
+        return Ok(mapped, TelegramBotRules.ConnectedWebhookMessage);
     }
 
     private async Task<TelegramIntegration> ApplyFieldsAsync(

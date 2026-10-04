@@ -37,6 +37,7 @@ public static class TelegramBotRules
     public const string InvalidTokenMessage = "Token do Telegram inválida";
     public const string DispatchModeSavedMessage =
         "Conexão salva! O webhook para escuta automática não pôde ser ativado em ambiente local, mas os disparos agendados para o Chat ID informado funcionarão normalmente.";
+    public const string ConnectedWebhookMessage = "Bot e Webhook conectados com sucesso!";
 
     public static bool IsTelegramBotSource(string? source) =>
         string.Equals(source, TelegramBotSource, StringComparison.OrdinalIgnoreCase);

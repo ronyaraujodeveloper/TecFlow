@@ -632,7 +632,7 @@ Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escu
   - `TelegramApiService.ValidateBotTokenAsync` (`GetMeAsync`) + `RegisterWebhookAsync` (`SetWebhookAsync` com secret do `X-Webhook-Secret`).
   - Status **Conectado ✅** após webhook `POST /api/v1/integrations/telegram/webhook/{userId}`.
   - `/integracoes/conexoes` (aba Telegram): valida Bot Token vazio/`*****`, spinner, toasts e modal **Saiba onde obter o código**.
-  - Webhook tolerante: `SetWebhookAsync` falho + Chat ID manual → `Conectado (Modo Disparo)`; sucesso → `Conectado ✅`.
+  - Webhook tolerante: `SetWebhookAsync` em try/catch com log de localhost; credenciais persistidas; falha → `Conectado (Modo Disparo)` + aviso; sucesso → *Bot e Webhook conectados com sucesso!*.
 - [x] 22.2. Conversão Automática em Chats:**
   - Webhook processa mensagens privadas, extrai URLs, converte com `PlatformLinkResolver` e loja ativa do `UserId`, responde em até 2s (`SendTextMessageAsync`) e grava `ShortAffiliateLinks.Source=TelegramBot`.
 - [x] 22.3. Agendamento e Disparo Automático:**
@@ -669,7 +669,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] Agendador WhatsApp preenche `model.ImageUrl` ao selecionar o produto no autocomplete.
 - [x] `ProductImagePreview`: thumbnail 96×96, placeholder “Sem imagem” (`onerror`) e botão Remover Imagem.
 
-### 🟢 25. 
+### 🟢 25. Todo o botão salvar, deletar, pesquisar ter um modal load até terminar o processo
 
 ### 🟢 26. 
 
@@ -691,6 +691,12 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
    - [x] Ao lado do campo Bot Token, incluir o botão/link **"Saiba onde obter o código"**.
    - [x] Ao clicar, exibe um modal estilizado do TecFlow com o passo a passo ilustrado de como criar o robô no `@BotFather` e copiar o token gerado.
 
+## 🤖 Resiliência e Fallback na Conexão do Telegram
+
+Para garantir o funcionamento contínuo em ambientes de Desenvolvimento (Localhost) e Produção:
+1. **Fallback de Webhook em Localhost:** Caso a API do Telegram recuse o registro do Webhook (`SetWebhookAsync`) por ausência de uma URL pública HTTPS, o sistema **não bloqueia a conexão**.
+2. **Disparo Garantido via Chat ID:** O registro é salvo na base de dados com status ativo, e o sistema utiliza o **Chat ID do Canal** informado manualmente (ex: `-100707440297`) para realizar o envio das campanhas agendadas.
+3. **Feedback Amigável:** A interface exibe o aviso: *"Conexão salva! O webhook para escuta automática não pôde ser ativado em ambiente local, mas os disparos agendados para o Chat ID informado funcionarão normalmente."*
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

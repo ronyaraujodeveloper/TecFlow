@@ -846,6 +846,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Conexoes.razor** — rota `/integracoes/conexoes` mantida.
 - [x] **Conexoes.razor** — botão Validar e Conectar Bot com `_isLoading`/spinner, recusa token vazio/`*****` e modal BotFather.
 - [x] **TelegramIntegrationService.cs** — webhook tolerante: salva **Conectado (Modo Disparo)** se `SetWebhookAsync` falhar e houver Chat ID.
+- [x] **TelegramApiService.SetWebhookAsync** — relança falha do Telegram; o serviço captura, loga e persiste as credenciais.
 - [x] **MinhasPaginasPublicas.razor** — `_isLoading` + try/catch em `OnInitializedAsync` para não ficar em branco sem registros.
 
 ### Resiliência Evolution API

@@ -14,6 +14,13 @@ public interface ITelegramApiService
         string secretToken,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Registra o webhook e relança falhas do Telegram (localhost/HTTP) para o caller tratar.</summary>
+    Task<bool> SetWebhookAsync(
+        string botToken,
+        string webhookUrl,
+        string secretToken,
+        CancellationToken cancellationToken = default);
+
     Task<bool> SendTextMessageAsync(
         string botToken,
         string chatId,

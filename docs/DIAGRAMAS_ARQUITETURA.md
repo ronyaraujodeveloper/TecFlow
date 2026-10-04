@@ -143,7 +143,7 @@ flowchart LR
   CXUI -->|modal isBotFatherHelpModalOpen| HELP[Tutorial BotFather]
   TGIC --> TGIS[TelegramIntegrationService]
   TGIS -->|GetMeAsync 401 aborta| TGAPI
-  TGIS -->|SetWebhookAsync falha localhost| DISPATCH[Salva Conectado Modo Disparo]
+  TGIS -->|try SetWebhookAsync catch log localhost| DISPATCH[Persiste credenciais + Modo Disparo]
   TGAGEN[TelegramAgendador.razor] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS

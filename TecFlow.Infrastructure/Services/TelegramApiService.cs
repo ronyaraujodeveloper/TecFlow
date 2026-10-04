@@ -55,25 +55,34 @@ public sealed class TelegramApiService : ITelegramApiService
         string secretToken,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(botToken) || string.IsNullOrWhiteSpace(webhookUrl))
-        {
-            return false;
-        }
-
         try
         {
-            var client = CreateClient(botToken);
-            await client.SetWebhookAsync(
-                url: webhookUrl,
-                secretToken: secretToken,
-                cancellationToken: cancellationToken);
-            return true;
+            return await SetWebhookAsync(botToken, webhookUrl, secretToken, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha no SetWebhookAsync. Url={Url}", webhookUrl);
             return false;
         }
+    }
+
+    public async Task<bool> SetWebhookAsync(
+        string botToken,
+        string webhookUrl,
+        string secretToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(botToken) || string.IsNullOrWhiteSpace(webhookUrl))
+        {
+            throw new InvalidOperationException("Token ou URL do webhook do Telegram ausente.");
+        }
+
+        var client = CreateClient(botToken);
+        await client.SetWebhookAsync(
+            url: webhookUrl,
+            secretToken: secretToken,
+            cancellationToken: cancellationToken);
+        return true;
     }
 
     public async Task<bool> SendTextMessageAsync(

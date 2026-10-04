@@ -17,7 +17,7 @@ public class HttpServiceAuthStatusTests
 
         var http = new HttpService(
             new NamedClientFactory(handler),
-            new StaticTokenProvider(null),
+            new StaticTokenProvider("jwt"),
             NullLogger<HttpService>.Instance);
 
         var result = await http.GetAsync<IntegracaoLojaResponseDto>("api/integracoes/lojas");
@@ -26,6 +26,41 @@ public class HttpServiceAuthStatusTests
         Assert.Equal(401, result.StatusCode);
         Assert.Equal("Usuário não autenticado.", result.ErrorMessage);
         Assert.Equal("UNAUTHORIZED", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldExplainExpiredSession_WhenUnauthorizedBodyIsEmpty()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse(string.Empty, HttpStatusCode.Unauthorized);
+        var http = new HttpService(
+            new NamedClientFactory(handler),
+            new StaticTokenProvider("jwt"),
+            NullLogger<HttpService>.Instance);
+
+        var result = await http.GetAsync<IntegracaoLojaResponseDto>("api/integracoes/grupos/monitorados");
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal("Sessão expirada ou não autenticada. Entre novamente no TecFlow.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldFailWithoutCallingApi_WhenAccessTokenIsMissing()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse(
+            """{"message":"nao deve chegar aqui"}""",
+            HttpStatusCode.OK);
+        var http = new HttpService(
+            new NamedClientFactory(handler),
+            new StaticTokenProvider(null),
+            NullLogger<HttpService>.Instance);
+
+        var result = await http.GetAsync<IntegracaoLojaResponseDto>("api/integracoes/lojas");
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal("UNAUTHORIZED", result.ErrorCode);
+        Assert.Equal("Sessão expirada ou não autenticada. Entre novamente no TecFlow.", result.ErrorMessage);
     }
 
     [Fact]

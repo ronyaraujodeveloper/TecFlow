@@ -70,11 +70,16 @@ public class HttpService : IHttpService
             using var request = new HttpRequestMessage(method, relativeUrl);
 
             var accessToken = await ResolveAccessTokenAsync(cancellationToken);
-            if (!string.IsNullOrWhiteSpace(accessToken))
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
-                request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
+                return ApiResult<TResponse>.Fail(
+                    "Sessão expirada ou não autenticada. Entre novamente no TecFlow.",
+                    401,
+                    "UNAUTHORIZED");
             }
+
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Trim());
 
             if (body is not null)
             {
@@ -249,8 +254,15 @@ public class HttpService : IHttpService
         return trimmed.StartsWith('{') || trimmed.StartsWith('[');
     }
 
-    internal static string FormatIisConnectionError(HttpStatusCode? statusCode) =>
-        $"Erro de Conexão no IIS (HTTP {statusCode}): Verifique se a API na porta 5001 está online e com CORS liberado.";
+    internal static string FormatIisConnectionError(HttpStatusCode? statusCode)
+    {
+        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return "Sessão expirada ou não autenticada. Entre novamente no TecFlow.";
+        }
+
+        return $"Erro de Conexão no IIS (HTTP {statusCode}): Verifique se a API na porta 5001 está online e com CORS liberado.";
+    }
 
     internal static string FormatIisError(string? content)
     {

@@ -112,6 +112,21 @@ builder.Services.AddAuthentication(options =>
         NameClaimType = ClaimTypes.NameIdentifier,
         RoleClaimType = ClaimTypes.Role
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json; charset=utf-8";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = false,
+                descricao = "Sessão expirada ou não autenticada. Entre novamente no TecFlow.",
+                errorCode = "UNAUTHORIZED"
+            });
+        }
+    };
 });
 
 var app = builder.Build();

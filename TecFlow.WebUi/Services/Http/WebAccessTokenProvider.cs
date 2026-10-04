@@ -33,17 +33,11 @@ public class WebAccessTokenProvider : IAccessTokenProvider
 
     public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        var token = GetAccessToken();
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            return token;
-        }
-
         var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
         _authCookieService.SyncSessionFromPrincipal(state.User);
         return FirstNonEmpty(
-            _sessionState.AccessToken,
             ReadAccessToken(state.User),
+            _sessionState.AccessToken,
             ReadAccessToken(_httpContextAccessor.HttpContext?.User));
     }
 

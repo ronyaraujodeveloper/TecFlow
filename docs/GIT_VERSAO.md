@@ -43,3 +43,4 @@
 [2026-10-04 15:15:54]feat(telegram): catch-up e fila de captura userbot
 [2026-10-04 16:01:56]feat(telegram): catch-up paginado e lista de ofertas em 50
 [2026-10-04 18:12:59]fix(telegram): varre historico real dos canais no catch-up
+[2026-10-04 18:32:39]fix(auth): trata 401 da API sem mascarar como CORS

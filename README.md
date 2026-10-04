@@ -698,5 +698,13 @@ Para garantir o funcionamento contínuo em ambientes de Desenvolvimento (Localho
 2. **Disparo Garantido via Chat ID:** O registro é salvo na base de dados com status ativo, e o sistema utiliza o **Chat ID do Canal** informado manualmente (ex: `-100707440297`) para realizar o envio das campanhas agendadas.
 3. **Feedback Amigável:** A interface exibe o aviso: *"Conexão salva! O webhook para escuta automática não pôde ser ativado em ambiente local, mas os disparos agendados para o Chat ID informado funcionarão normalmente."*
 
+## 🏷️ Identificação Visual Dinâmica nas Telas de Agendamento
+
+Nas páginas de agendamento (`/integracoes/whatsapp/agendador` e `/integracoes/telegram/agendador`):
+- [x] **Cabeçalho Dinâmico:** O título principal "Disparo para grupos" deve ser acompanhado imediatamente por um badge/ícone oficial representando a rede ativa:
+  - **WhatsApp:** Badge com fundo verde (`#25D366`), ícone do WhatsApp e texto "WhatsApp".
+  - **Telegram:** Badge com fundo azul (`#0088cc`), ícone do Telegram e texto "Telegram".
+- [x] **Identificação Visual Instantânea:** O componente deve alternar automaticamente as cores e ícones conforme a rota atual do Blazor.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

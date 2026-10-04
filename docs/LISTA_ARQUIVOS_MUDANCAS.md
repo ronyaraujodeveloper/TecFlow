@@ -909,6 +909,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **GruposMonitorados.razor** — `/integracoes/grupos/monitorados`.
 - [x] **WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** — captura em grupos.
 - [x] **WhatsAppAgendador.razor** — query `cloneTitle/cloneMessage/cloneImage/cloneLink`.
+- [x] **WhatsAppAgendador.razor** / **TelegramAgendador.razor** — badge oficial (ícone + nome) ao lado de “Disparo para grupos”.
 - [x] **AddGroupCapturedMessages** — migration SQL Server `GroupCapturedMessages`.
 
 ---

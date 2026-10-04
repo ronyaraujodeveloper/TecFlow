@@ -144,7 +144,7 @@ flowchart LR
   TGIC --> TGIS[TelegramIntegrationService]
   TGIS -->|GetMeAsync 401 aborta| TGAPI
   TGIS -->|try SetWebhookAsync catch log localhost| DISPATCH[Persiste credenciais + Modo Disparo]
-  TGAGEN[TelegramAgendador.razor] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
+  TGAGEN[TelegramAgendador.razor badge Telegram] -->|agenda canal/grupo| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
@@ -152,7 +152,7 @@ flowchart LR
   GEN -->|og:image twitter:image itemprop ProductImageUrl| SQL
   UI[GeradorLinks + ProductImagePreview] -->|PUT metadata ProductImageUrl| AFFAPI[AffiliateLinksController]
   AFFAPI -->|UpdateProductMetadataAsync| SLS[ShortLinkService]
-  WAAGEN[WhatsAppAgendador.razor] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
+  WAAGEN[WhatsAppAgendador.razor badge WhatsApp] -->|ComposeDispatchMessage copy + URL| WABC[WhatsAppBroadcastController]
   WAAGEN -->|CommissionLinkPicker ProductImageUrl -> model.ImageUrl| HIST[AffiliateLinksController historico]
   WAAGEN -->|ProductImagePreview 96px Remover Imagem| WABC
   WAAGEN -->|WhatsAppGroupPicker MultiSelect| WABC

@@ -8,6 +8,7 @@ using TecFlow.Database;
 using TecFlow.Database.Data;
 using TecFlow.Database.MultiTenancy;
 using TecFlow.Infrastructure.Data;
+using TecFlow.Infrastructure.Interfaces;
 using TecFlow.Infrastructure.Security;
 using TecFlow.Infrastructure.Services.Repositories;
 using TecFlow.Infrastructure.Services.Security;
@@ -70,6 +71,7 @@ namespace TecFlow.Infrastructure.Services
             }
 
             services.AddHttpContextAccessor();
+            services.AddScoped<IUserContextProvider, UserContextProvider>();
             services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 
             services.AddDbContext<AppDbContext>(options =>

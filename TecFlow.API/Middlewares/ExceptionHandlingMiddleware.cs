@@ -125,7 +125,7 @@ public sealed class ExceptionHandlingMiddleware
 
     private string GetSafeDetail(int statusCode, Exception exception)
     {
-        if (_env.IsDevelopment())
+        if (_env.IsDevelopment() || _env.IsEnvironment("Homologacao"))
         {
             return exception.Message;
         }

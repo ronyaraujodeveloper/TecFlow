@@ -679,6 +679,14 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] `OfferValidationService` confere HTTP + metadados (Ativo, Esgotado, Preço Alterado).
 - [x] **Clonar para Minha Campanha** gera o link de comissão e abre `/integracoes/whatsapp/agendador` com mensagem e imagem.
 - [x] Sync de grupos monitorados com try/catch, log do stack trace, UserId fallback 1 e falha isolada WhatsApp/Telegram.
+- [x] `IUserContextProvider` registrado no DI da API (corrige 500 na tela de grupos monitorados).
+
+### 🧠 Fase 28: Motor de Inteligência de Ofertas e Tendências (Radar & Mining Bot)
+
+- [ ] **28.1. Garimpo de Preços e Cupons:** Worker para identificação de quedas bruscas de preço em relação à média histórica e acúmulo de cupons de desconto (Shopee, ML, Amazon).
+- [ ] **28.2. Radar de Tendências e Viralização:** Algoritmo de Social Listening para detectar produtos em alta velocidade de vendas e vídeos virais no TikTok/Reels.
+- [ ] **28.3. Feed Recomendador por Nicho:** Interface com curadoria personalizada por categoria, faixa de preço, comissão mínima e score de atratividade.
+- [ ] **28.4. Auto-Agendamento (Piloto Automático):** Integração com o Agendador para converter e postar automaticamente as melhores ofertas garimpadas no perfil do afiliado.
 
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 

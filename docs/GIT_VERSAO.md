@@ -33,3 +33,4 @@
 [2026-10-03 23:45:14]feat(telegram): sincroniza canais e dispara em multi-select
 [2026-10-04 00:02:43]feat(telegram): chips com nome amigavel do canal
 [2026-10-04 00:19:08]fix(grupos): captura erro ao sincronizar grupos monitorados
+[2026-10-04 10:30:14]fix(grupos): registra IUserContextProvider e evita falso sucesso no sync

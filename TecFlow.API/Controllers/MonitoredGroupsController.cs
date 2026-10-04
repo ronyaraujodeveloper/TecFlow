@@ -37,9 +37,9 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? groupKey = null,
         CancellationToken cancellationToken = default)
     {
-        var userId = ResolveUserId();
         try
         {
+            var userId = ResolveUserId();
             return Ok(await _service.ListAsync(userId, hours, groupKey, cancellationToken));
         }
         catch (Exception ex)
@@ -52,9 +52,9 @@ public sealed class MonitoredGroupsController : ControllerBase
     [HttpPost("sincronizar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> SyncAsync(CancellationToken cancellationToken)
     {
-        var userId = ResolveUserId();
         try
         {
+            var userId = ResolveUserId();
             var result = await _service.SyncAsync(userId, cancellationToken);
             return Ok(result);
         }

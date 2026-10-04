@@ -58,7 +58,16 @@
 
     @if (_offers.Count == 0)
     {
-        <div class="alert alert-light border">Nenhuma oferta capturada neste período. Sincronize os grupos e aguarde mensagens com links.</div>
+        <div class="alert alert-light border">
+            @if (_groups.Count > 0)
+            {
+                <span>@_groups.Count grupo(s) sincronizado(s). Nenhuma oferta com link neste período — as mensagens capturadas pelos webhooks aparecem aqui.</span>
+            }
+            else
+            {
+                <span>Nenhum grupo listado. Sincronize WhatsApp/Telegram e aguarde mensagens com links.</span>
+            }
+        </div>
     }
     else
     {
@@ -148,11 +157,17 @@
     {
         _isBusy = true;
         _error = null;
+        _info = null;
         try
         {
             var result = await Api.SyncAsync();
             Apply(result.Data, result.ErrorMessage);
-            _info = result.Data?.Descricao ?? "Sincronização concluída.";
+            if (result.Data is { Status: true })
+            {
+                _info = string.IsNullOrWhiteSpace(result.Data.Descricao)
+                    ? "Sincronização concluída."
+                    : result.Data.Descricao;
+            }
         }
         catch (Exception ex)
         {
@@ -233,6 +248,19 @@
         }
     }
 
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
     private void Apply(MonitoredGroupsResponseDto? data, string? error)
     {
         _groups.Clear();
@@ -245,9 +273,9 @@
 
         _groups.AddRange(data.Groups);
         _offers.AddRange(data.Offers);
-        if (!data.Status && !string.IsNullOrWhiteSpace(data.Descricao))
+        if (!data.Status)
         {
-            _error = data.Descricao;
+            _error = FirstNonEmpty(data.Descricao, error, "Não foi possível carregar os grupos monitorados.");
         }
     }
 }

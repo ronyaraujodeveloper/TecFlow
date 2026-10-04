@@ -15,4 +15,14 @@ public interface ITelegramIntegrationService
         int userId,
         SaveTelegramIntegrationDto request,
         CancellationToken cancellationToken = default);
+
+    Task<TelegramIntegrationResponseDto> RequestUserBotCodeAsync(
+        int userId,
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default);
+
+    Task<TelegramIntegrationResponseDto> ConfirmUserBotAsync(
+        int userId,
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default);
 }

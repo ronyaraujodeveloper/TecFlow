@@ -26,4 +26,28 @@ public class TelegramUserMonitorRulesTests
     [Fact]
     public void BuildChannelChatId_ShouldPrefixMinus100() =>
         Assert.Equal("-100123456789", TelegramUserMonitorRules.BuildChannelChatId(123456789));
+
+    [Theory]
+    [InlineData("+5511981656947abcHASH", "+5511981656947")]
+    [InlineData("55 11 98165-6947", "+5511981656947")]
+    public void SanitizePhoneInput_ShouldKeepE164Digits(string raw, string expected) =>
+        Assert.Equal(expected, TelegramUserMonitorRules.SanitizePhoneInput(raw));
+
+    [Fact]
+    public void TryNormalizeE164Phone_ShouldRejectShortNumbers() =>
+        Assert.False(TelegramUserMonitorRules.TryNormalizeE164Phone("+55119", out _));
+
+    [Theory]
+    [InlineData("12a34b5", "12345")]
+    [InlineData("123456789", "12345")]
+    public void SanitizePinInput_ShouldKeepFiveDigits(string raw, string expected) =>
+        Assert.Equal(expected, TelegramUserMonitorRules.SanitizePinInput(raw));
+
+    [Fact]
+    public void TryNormalizeVerificationPin_ShouldRequireFiveDigits()
+    {
+        Assert.True(TelegramUserMonitorRules.TryNormalizeVerificationPin("12345", out var pin));
+        Assert.Equal("12345", pin);
+        Assert.False(TelegramUserMonitorRules.TryNormalizeVerificationPin("1234", out _));
+    }
 }

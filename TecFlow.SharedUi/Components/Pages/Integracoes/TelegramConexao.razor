@@ -69,23 +69,28 @@
             <h3 class="h6 fw-semibold">UserBot (canais de terceiros)</h3>
             <div class="mb-2">
                 <label class="form-label small" for="tg-api-id">ApiId</label>
-                <input id="tg-api-id" class="form-control" @bind="_userBotApiId" />
+                <input id="tg-api-id" class="form-control" inputmode="numeric" value="@_userBotApiId" @oninput="OnApiIdInput" />
             </div>
             <div class="mb-2">
                 <label class="form-label small" for="tg-api-hash">ApiHash</label>
                 <input id="tg-api-hash" class="form-control" type="password" autocomplete="off" placeholder="@SecretMasking.MaskedValue" @bind="_userBotApiHash" />
             </div>
             <div class="mb-2">
-                <label class="form-label small" for="tg-phone">Telefone</label>
-                <input id="tg-phone" class="form-control" placeholder="+55..." @bind="_userBotPhone" />
+                <label class="form-label small" for="tg-phone">Telefone da conta leitora</label>
+                <input id="tg-phone" class="form-control" inputmode="tel" maxlength="16" placeholder="+5511981656947" value="@_userBotPhone" @oninput="OnPhoneInput" />
             </div>
             <div class="mb-3">
                 <label class="form-label small" for="tg-code">Código de verificação</label>
-                <input id="tg-code" class="form-control" @bind="_userBotCode" />
+                <input id="tg-code" class="form-control" inputmode="numeric" maxlength="5" placeholder="12345" disabled="@(!_userBotCodeRequested)" value="@_userBotCode" @oninput="OnPinInput" />
             </div>
-            <button type="button" class="btn btn-outline-primary w-100" disabled="@_isBusy" @onclick="SaveUserBotAsync">
-                Salvar UserBot
-            </button>
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-outline-primary" disabled="@_isBusy" @onclick="RequestUserBotCodeAsync">
+                    Solicitar Código
+                </button>
+                <button type="button" class="btn btn-primary" disabled="@(!_userBotCodeRequested || _isBusy)" @onclick="ConfirmUserBotAsync">
+                    Confirmar e Autenticar
+                </button>
+            </div>
             <div class="form-text">Status: @(_session?.UserBotStatusLabel ?? "Inativo")</div>
         </div>
     </section>
@@ -100,6 +105,7 @@
     private string? _userBotApiHash;
     private string? _userBotPhone;
     private string? _userBotCode;
+    private bool _userBotCodeRequested;
     private string? _error;
     private string? _ok;
     private bool _isBusy;
@@ -113,7 +119,8 @@
         _chatId = _session?.ChatId;
         _botUsername = _session?.BotUsername;
         _userBotApiId = _session?.UserBotApiId?.ToString();
-        _userBotPhone = _session?.UserBotPhone;
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_session?.UserBotPhone);
+        _userBotCodeRequested = _session?.UserBotAwaitingCode == true;
         _tokenInput = string.Empty;
         if (!response.Success)
         {
@@ -151,28 +158,69 @@
         }
     }
 
-    private async Task SaveUserBotAsync()
+    private void OnApiIdInput(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString() ?? string.Empty;
+        _userBotApiId = new string(raw.Where(char.IsDigit).ToArray());
+    }
+
+    private void OnPhoneInput(ChangeEventArgs args) =>
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(args.Value?.ToString());
+
+    private void OnPinInput(ChangeEventArgs args) =>
+        _userBotCode = TelegramUserMonitorRules.SanitizePinInput(args.Value?.ToString());
+
+    private SaveTelegramIntegrationDto BuildUserBotRequest()
+    {
+        int? apiId = null;
+        if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+        {
+            apiId = parsed;
+        }
+
+        return new SaveTelegramIntegrationDto
+        {
+            ChatId = _chatId,
+            BotUsername = _botUsername,
+            UserBotApiId = apiId,
+            UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
+            UserBotPhone = _userBotPhone,
+            UserBotVerificationCode = _userBotCode
+        };
+    }
+
+    private async Task RequestUserBotCodeAsync()
     {
         _error = null;
         _ok = null;
         _isBusy = true;
         try
         {
-            int? apiId = null;
-            if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+            var response = await TelegramApi.RequestUserBotCodeAsync(BuildUserBotRequest());
+            if (!response.Success)
             {
-                apiId = parsed;
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
             }
 
-            var response = await TelegramApi.SaveAsync(new SaveTelegramIntegrationDto
-            {
-                ChatId = _chatId,
-                BotUsername = _botUsername,
-                UserBotApiId = apiId,
-                UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
-                UserBotPhone = _userBotPhone,
-                UserBotVerificationCode = _userBotCode
-            });
+            _session = response.Data?.Data;
+            _userBotCodeRequested = _session?.HasUserBotSession != true;
+            _ok = response.Data?.Descricao;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ConfirmUserBotAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.ConfirmUserBotAsync(BuildUserBotRequest());
             if (!response.Success)
             {
                 _error = response.Data?.Descricao ?? response.ErrorMessage;
@@ -183,6 +231,7 @@
             _ok = response.Data?.Descricao;
             _userBotApiHash = string.Empty;
             _userBotCode = string.Empty;
+            _userBotCodeRequested = false;
         }
         finally
         {

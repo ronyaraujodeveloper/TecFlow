@@ -921,7 +921,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `App_Data/telegram-sessions` (fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — escuta MTProto (WTelegramClient) e grava `GroupCapturedMessages`.
-- [x] **Conexoes.razor** / **TelegramConexao.razor** — campos opcionais ApiId/ApiHash e sessão UserBot.
+- [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
 - [x] **GruposMonitorados.razor** — cards das ofertas de canais de terceiros e botão Clonar Oferta.
 
 ---

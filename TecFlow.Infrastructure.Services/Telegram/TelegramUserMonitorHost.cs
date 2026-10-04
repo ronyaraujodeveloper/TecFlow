@@ -16,6 +16,7 @@ namespace TecFlow.Infrastructure.Services.Telegram;
 public sealed class TelegramUserMonitorHost : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<int, UserBotSlot> _slots = new();
+    private readonly ConcurrentDictionary<int, Client> _pendingLogins = new();
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly TelegramUserBotCodeStore _codes;
@@ -57,7 +58,12 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_slots.ContainsKey(row.UserId))
+            if (_slots.ContainsKey(row.UserId) || _pendingLogins.ContainsKey(row.UserId))
+            {
+                continue;
+            }
+
+            if (!_sessions.HasSession(row.UserId))
             {
                 continue;
             }
@@ -350,11 +356,92 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         slot.Cts.Dispose();
     }
 
+    public bool IsAwaitingVerification(int userId) => _pendingLogins.ContainsKey(userId);
+
+    public async Task SendCodeAsync(int userId, int apiId, string apiHash, string phone, CancellationToken cancellationToken)
+    {
+        await StopSlotAsync(userId);
+        DisposePending(userId);
+        var sessionPath = _sessions.GetSessionPath(userId);
+        var client = new Client(what => what switch
+        {
+            "api_id" => apiId.ToString(),
+            "api_hash" => apiHash,
+            "session_pathname" => sessionPath,
+            _ => null
+        });
+        Client? owned = client;
+        try
+        {
+            var step = await SendCodeAsync(client, phone);
+            if (string.Equals(step, "phone_number", StringComparison.OrdinalIgnoreCase))
+            {
+                step = await SendCodeAsync(client, phone);
+            }
+
+            if (client.User is not null)
+            {
+                return;
+            }
+
+            if (!string.Equals(step, "verification_code", StringComparison.OrdinalIgnoreCase) && step is not null)
+            {
+                throw new InvalidOperationException("Não foi possível solicitar o código. Confira ApiId, ApiHash e o telefone.");
+            }
+
+            _pendingLogins[userId] = client;
+            owned = null;
+        }
+        finally
+        {
+            owned?.Dispose();
+        }
+    }
+
+    public async Task MakeAuthAsync(int userId, string code, CancellationToken cancellationToken)
+    {
+        if (!_pendingLogins.TryGetValue(userId, out var client))
+        {
+            throw new InvalidOperationException("Solicite o código antes de autenticar.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var step = await MakeAuthAsync(client, code);
+        if (string.Equals(step, "password", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Esta conta exige senha 2FA do Telegram. Use uma conta sem senha de nuvem.");
+        }
+
+        if (client.User is null)
+        {
+            throw new InvalidOperationException("Código inválido. Informe o PIN de 5 dígitos recebido no Telegram.");
+        }
+
+        DisposePending(userId);
+    }
+
+    private static Task<string?> SendCodeAsync(Client client, string phone) => client.Login(phone);
+
+    private static Task<string?> MakeAuthAsync(Client client, string code) => client.Login(code);
+
+    private void DisposePending(int userId)
+    {
+        if (_pendingLogins.TryRemove(userId, out var client))
+        {
+            client.Dispose();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         foreach (var userId in _slots.Keys.ToList())
         {
             await StopSlotAsync(userId);
+        }
+
+        foreach (var userId in _pendingLogins.Keys.ToList())
+        {
+            DisposePending(userId);
         }
     }
 

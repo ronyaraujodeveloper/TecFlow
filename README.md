@@ -151,6 +151,12 @@ Ao carregar um agendamento para edição na tela de disparo:
 - **Ajuste Apenas para Agendamentos Retroativos:** Caso a data/hora original já tenha passado (`DataAgendada <= DateTime.Now`), ajuste automaticamente o campo para **10 minutos à frente** do horário atual (`DateTime.Now.AddMinutes(10)`).
 - **Feedback:** Exiba um aviso informativo apenas quando o ajuste de +10 minutos for aplicado.
 
+## 🔐 Autenticação da Telegram Client API (UserBot MTProto)
+
+1. **Obtenção de Credenciais:** As chaves `App API ID` e `App API Hash` devem ser geradas gratuitamente pelo usuário no portal oficial `https://my.telegram.org`.
+2. **First-Time Auth (Login por Código):** Na primeira execução, o serviço solicita o código de autenticação via SMS/App do Telegram para gerar o arquivo de sessão local (`.session`).
+3. **Persistência de Sessão:** Após o primeiro login efetuado com sucesso, a conexão permanece ativa por tempo indeterminado sem necessidade de novos logins.
+
 ## 🛠️ Diagnóstico e Boas Práticas para Ações de Tabela (Blazor Modais)
 
 Para evitar que botões de ação em listas/tabelas fiquem inativos após refatorações:
@@ -774,5 +780,18 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - **Diretório:** `App_Data/telegram-sessions/`
 - **Permissão do IIS:** O grupo `IIS_IUSRS` e a identidade do `AppPool` devem possuir permissão explícita de **Leitura, Gravatura e Modificação** na pasta raiz da API para evitar exceções do tipo `UnauthorizedAccessException`.
 - [x] **Fallback TEMP:** se a criação da pasta falhar, a sessão vai para `%TEMP%\TecFlow\telegram-sessions` e a sincronização de canais via Bot Token segue independente.
+
+## 🤖 UX e Manual do UserBot MTProto (Escuta de Canais de Terceiros)
+
+1. [x] **Modal de Instruções ("Como configurar o UserBot"):**
+   - Disponibilizar link/botão "Saiba como obter o ApiId e ApiHash" abrindo modal explicativo sobre o `my.telegram.org`.
+
+2. [x] **Fluxo de Login em 2 Passos (Two-Step Phone Auth):**
+   - **Passo 1:** O usuário digita apenas o número no formato internacional (`+5511999999999`) e clica em "Solicitar Código".
+   - **Passo 2:** O backend solicita o login no Telegram, que envia um código numérico (5 dígitos) ao app do usuário. O campo "Código de verificação" é habilitado para que o usuário digite o código recebido e finalize a criação do arquivo de sessão `.session`.
+
+
+
+   
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

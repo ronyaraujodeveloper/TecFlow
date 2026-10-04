@@ -34,6 +34,8 @@ public class TelegramIntegrationDto
 
     public bool HasUserBotSession { get; set; }
 
+    public bool UserBotAwaitingCode { get; set; }
+
     public string UserBotStatusLabel { get; set; } = "Inativo";
 
     public bool IsConnected { get; set; }

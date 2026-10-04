@@ -151,7 +151,9 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   USERBOT[TelegramUserMonitorWorker] -->|WTelegramClient OnUpdates| GCAP[GroupOfferCaptureService]
   USERBOT -->|session user-{id}.session| SESS[App_Data/telegram-sessions ou TEMP TecFlow]
-  CXUI -->|ApiId ApiHash UserBotPhone| USERBOT
+  CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
+  CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
+  CXUI -->|modal isUserBotHelpModalOpen| HELP2[Tutorial my.telegram.org]
   GMUI[GruposMonitorados Telegram] -->|Clonar Oferta| TGAGEN
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI

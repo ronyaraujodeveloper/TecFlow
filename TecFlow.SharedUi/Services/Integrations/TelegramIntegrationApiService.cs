@@ -17,6 +17,14 @@ public interface ITelegramIntegrationApiService
         SaveTelegramIntegrationDto request,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResult<TelegramIntegrationResponseDto>> RequestUserBotCodeAsync(
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResult<TelegramIntegrationResponseDto>> ConfirmUserBotAsync(
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResult<TelegramBroadcastResponseDto>> ListCampaignsAsync(CancellationToken cancellationToken = default);
 
     Task<ApiResult<TelegramBroadcastResponseDto>> SyncChannelsAsync(CancellationToken cancellationToken = default);
@@ -61,6 +69,28 @@ public sealed class TelegramIntegrationApiService : ITelegramIntegrationApiServi
         using var _ = _loadingService.BeginScope("Conectando Telegram...");
         return _httpService.PostAsync<SaveTelegramIntegrationDto, TelegramIntegrationResponseDto>(
             $"{Path}/conectar",
+            request,
+            cancellationToken);
+    }
+
+    public Task<ApiResult<TelegramIntegrationResponseDto>> RequestUserBotCodeAsync(
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Solicitando código do Telegram...");
+        return _httpService.PostAsync<SaveTelegramIntegrationDto, TelegramIntegrationResponseDto>(
+            $"{Path}/userbot/solicitar-codigo",
+            request,
+            cancellationToken);
+    }
+
+    public Task<ApiResult<TelegramIntegrationResponseDto>> ConfirmUserBotAsync(
+        SaveTelegramIntegrationDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Autenticando UserBot...");
+        return _httpService.PostAsync<SaveTelegramIntegrationDto, TelegramIntegrationResponseDto>(
+            $"{Path}/userbot/confirmar",
             request,
             cancellationToken);
     }

@@ -200,11 +200,19 @@
                     }
                 </button>
 
-                <h3 class="h6 fw-semibold mb-2">Escuta de canais (UserBot MTProto)</h3>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <h3 class="h6 fw-semibold mb-0">Escuta de canais (UserBot MTProto)</h3>
+                    <button type="button"
+                            class="btn btn-link btn-sm p-0 text-decoration-none"
+                            title="Abre o passo a passo de ApiId e ApiHash"
+                            @onclick="OpenUserBotHelpModal">
+                        <i class="bi bi-question-circle me-1" aria-hidden="true"></i>
+                        Saiba como obter
+                    </button>
+                </div>
                 <p class="text-muted small mb-3">
-                    Opcional. Informe <code>api_id</code> e <code>api_hash</code> de
-                    <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer">my.telegram.org</a>
-                    para ouvir canais como membro leitor. A sessão fica em
+                    Opcional. Informe <code>api_id</code>, <code>api_hash</code> e o telefone da conta leitora.
+                    Solicite o código e confirme o PIN de 5 dígitos. A sessão fica em
                     <code>App_Data/telegram-sessions</code> no servidor.
                 </p>
                 <div class="row g-3 mb-3">
@@ -214,7 +222,8 @@
                                class="form-control"
                                inputmode="numeric"
                                placeholder="123456"
-                               @bind="_userBotApiId" />
+                               value="@_userBotApiId"
+                               @oninput="OnApiIdInput" />
                     </div>
                     <div class="col-md-8">
                         <label class="form-label small fw-semibold" for="cx-tg-api-hash">ApiHash</label>
@@ -230,26 +239,41 @@
                         <label class="form-label small fw-semibold" for="cx-tg-phone">Telefone da conta leitora</label>
                         <input id="cx-tg-phone"
                                class="form-control"
-                               placeholder="+5511999999999"
-                               @bind="_userBotPhone" />
+                               inputmode="tel"
+                               maxlength="16"
+                               placeholder="+5511981656947"
+                               autocomplete="tel"
+                               value="@_userBotPhone"
+                               @oninput="OnPhoneInput" />
+                        <div class="form-text">Somente formato internacional E.164.</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold" for="cx-tg-code">Código de verificação</label>
                         <input id="cx-tg-code"
                                class="form-control"
+                               inputmode="numeric"
+                               maxlength="5"
                                autocomplete="one-time-code"
-                               placeholder="Somente se o Telegram enviar SMS/app"
-                               @bind="_userBotCode" />
+                               placeholder="12345"
+                               disabled="@(!CanConfirmUserBot)"
+                               value="@_userBotCode"
+                               @oninput="OnPinInput" />
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
                     <button type="button"
                             class="btn btn-outline-primary"
-                            disabled="@_isSavingUserBot"
-                            @onclick="SaveUserBotAsync">
-                        @(_isSavingUserBot ? "Salvando..." : "Salvar UserBot")
+                            disabled="@_isRequestingUserBotCode"
+                            @onclick="RequestUserBotCodeAsync">
+                        @(_isRequestingUserBotCode ? "Enviando..." : "Solicitar Código")
                     </button>
-                    <span class="badge @(_telegram?.HasUserBotSession == true ? "text-bg-success" : "text-bg-secondary")">
+                    <button type="button"
+                            class="btn btn-primary"
+                            disabled="@(!CanConfirmUserBot || _isConfirmingUserBot)"
+                            @onclick="ConfirmUserBotAsync">
+                        @(_isConfirmingUserBot ? "Autenticando..." : "Confirmar e Autenticar")
+                    </button>
+                    <span class="badge @UserBotBadgeClass">
                         @(_telegram?.UserBotStatusLabel ?? "Inativo")
                     </span>
                 </div>
@@ -350,6 +374,39 @@
     <div class="modal-backdrop fade show" @onclick="CloseBotFatherHelpModal"></div>
 }
 
+@if (isUserBotHelpModalOpen)
+{
+    <div class="modal fade show d-block conexoes-qr-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="userbot-help-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="confirm-dialog-icon confirm-dialog-icon--info" aria-hidden="true">
+                            <i class="bi bi-broadcast-pin"></i>
+                        </span>
+                        <h2 class="modal-title h5 fw-bold mb-0" id="userbot-help-title">Configuração da Escuta de Canais (UserBot)</h2>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseUserBotHelpModal"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <ol class="small mb-0 ps-3">
+                        <li class="mb-2">Acesse o site oficial do Telegram: <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer">https://my.telegram.org</a>.</li>
+                        <li class="mb-2">Digite seu número de telefone e insira o código recebido no aplicativo Telegram para fazer login.</li>
+                        <li class="mb-2">Clique na opção <strong>API development tools</strong>.</li>
+                        <li class="mb-2">Preencha "App title" (ex: TecFlow Monitor) e "Short name" (ex: tecflow) e clique em <strong>Create application</strong>.</li>
+                        <li class="mb-2">Copie os valores dos campos <strong>api_id</strong> (número) e <strong>api_hash</strong> e cole nesta tela.</li>
+                        <li class="mb-0">Informe seu número de telefone e clique em <strong>Solicitar Código</strong>. Insira o PIN de 5 dígitos recebido no seu Telegram para concluir a vinculação.</li>
+                    </ol>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary" @onclick="CloseUserBotHelpModal">Entendi, fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseUserBotHelpModal"></div>
+}
+
 @code {
     private string _tab = "whatsapp";
     private WhatsAppIntegrationDto? _whatsApp;
@@ -370,8 +427,11 @@
     private bool _toastWarning;
     private bool _isBusy;
     private bool _isLoading;
-    private bool _isSavingUserBot;
+    private bool _isRequestingUserBotCode;
+    private bool _isConfirmingUserBot;
+    private bool _userBotCodeRequested;
     private bool isBotFatherHelpModalOpen;
+    private bool isUserBotHelpModalOpen;
     private string? _telegramUiStatus;
     private CancellationTokenSource? _pollCts;
     private CancellationTokenSource? _toastCts;
@@ -437,7 +497,8 @@
         _telegram = response.Data?.Data;
         _chatId = _telegram?.ChatId;
         _userBotApiId = _telegram?.UserBotApiId?.ToString();
-        _userBotPhone = _telegram?.UserBotPhone;
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_telegram?.UserBotPhone);
+        _userBotCodeRequested = _telegram?.UserBotAwaitingCode == true;
         if (!response.Success)
         {
             _error = response.Data?.Descricao ?? response.ErrorMessage;
@@ -544,49 +605,130 @@
         }
     }
 
-    private async Task SaveUserBotAsync()
+    private bool CanConfirmUserBot =>
+        _userBotCodeRequested || _telegram?.UserBotAwaitingCode == true;
+
+    private string UserBotBadgeClass =>
+        _telegram?.HasUserBotSession == true
+            ? "text-bg-success"
+            : CanConfirmUserBot
+                ? "text-bg-warning"
+                : "text-bg-secondary";
+
+    private void OpenUserBotHelpModal() => isUserBotHelpModalOpen = true;
+
+    private void CloseUserBotHelpModal() => isUserBotHelpModalOpen = false;
+
+    private void OnApiIdInput(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString() ?? string.Empty;
+        _userBotApiId = new string(raw.Where(char.IsDigit).ToArray());
+    }
+
+    private void OnPhoneInput(ChangeEventArgs args) =>
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(args.Value?.ToString());
+
+    private void OnPinInput(ChangeEventArgs args) =>
+        _userBotCode = TelegramUserMonitorRules.SanitizePinInput(args.Value?.ToString());
+
+    private SaveTelegramIntegrationDto BuildUserBotRequest()
+    {
+        int? apiId = null;
+        if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+        {
+            apiId = parsed;
+        }
+
+        return new SaveTelegramIntegrationDto
+        {
+            ChatId = _chatId,
+            UserBotApiId = apiId,
+            UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
+            UserBotPhone = _userBotPhone,
+            UserBotVerificationCode = _userBotCode
+        };
+    }
+
+    private async Task RequestUserBotCodeAsync()
     {
         _error = null;
         _ok = null;
         _okWarning = false;
         _tab = "telegram";
-        _isSavingUserBot = true;
+        if (!TelegramUserMonitorRules.TryNormalizeE164Phone(_userBotPhone, out _))
+        {
+            await ShowToastAsync("Informe o telefone no formato internacional, por exemplo +5511981656947.", success: false);
+            return;
+        }
+
+        _isRequestingUserBotCode = true;
         try
         {
-            int? apiId = null;
-            if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
-            {
-                apiId = parsed;
-            }
-
-            var response = await TelegramApi.SaveAsync(new SaveTelegramIntegrationDto
-            {
-                ChatId = _chatId,
-                UserBotApiId = apiId,
-                UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
-                UserBotPhone = _userBotPhone,
-                UserBotVerificationCode = _userBotCode
-            });
+            var response = await TelegramApi.RequestUserBotCodeAsync(BuildUserBotRequest());
             if (!response.Success)
             {
-                await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível salvar o UserBot.", success: false);
+                await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível solicitar o código.", success: false);
+                return;
+            }
+
+            _telegram = response.Data?.Data;
+            _userBotCodeRequested = _telegram?.HasUserBotSession != true;
+            _ok = response.Data?.Descricao ?? TelegramUserMonitorRules.CodeSentMessage;
+            await ShowToastAsync(_ok, success: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao solicitar código do UserBot Telegram.");
+            await ShowToastAsync("Não foi possível solicitar o código.", success: false);
+        }
+        finally
+        {
+            _isRequestingUserBotCode = false;
+        }
+    }
+
+    private async Task ConfirmUserBotAsync()
+    {
+        _error = null;
+        _ok = null;
+        _okWarning = false;
+        _tab = "telegram";
+        if (!CanConfirmUserBot)
+        {
+            return;
+        }
+
+        if (!TelegramUserMonitorRules.TryNormalizeVerificationPin(_userBotCode, out _))
+        {
+            await ShowToastAsync("Informe o PIN de 5 dígitos recebido no Telegram.", success: false);
+            return;
+        }
+
+        _isConfirmingUserBot = true;
+        try
+        {
+            var response = await TelegramApi.ConfirmUserBotAsync(BuildUserBotRequest());
+            if (!response.Success)
+            {
+                await ShowToastAsync(response.Data?.Descricao ?? response.ErrorMessage ?? "Não foi possível autenticar o UserBot.", success: false);
                 return;
             }
 
             _telegram = response.Data?.Data;
             _userBotApiHash = string.Empty;
             _userBotCode = string.Empty;
-            _ok = response.Data?.Descricao ?? "UserBot salvo.";
+            _userBotCodeRequested = false;
+            _ok = response.Data?.Descricao ?? "UserBot autenticado.";
             await ShowToastAsync(_ok, success: true);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Falha ao salvar credenciais do UserBot Telegram.");
-            await ShowToastAsync("Não foi possível salvar o UserBot.", success: false);
+            Logger.LogError(ex, "Falha ao autenticar o UserBot Telegram.");
+            await ShowToastAsync("Não foi possível autenticar o UserBot.", success: false);
         }
         finally
         {
-            _isSavingUserBot = false;
+            _isConfirmingUserBot = false;
         }
     }
 

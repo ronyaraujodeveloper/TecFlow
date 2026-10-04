@@ -6,6 +6,7 @@
 @using TecFlow.SharedUi.Components.Integrations
 @using TecFlow.SharedUi.Services.Integrations
 @inject ITelegramIntegrationApiService TelegramApi
+@inject NavigationManager NavigationManager
 @inject IJSRuntime Js
 @inject ILogger<TelegramAgendador> Logger
 
@@ -150,7 +151,66 @@
     private string? _error;
     private string? _info;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        ApplyCloneQuery();
+    }
+
+    private void ApplyCloneQuery()
+    {
+        var link = ReadQueryValue("cloneLink");
+        var title = ReadQueryValue("cloneTitle");
+        var message = ReadQueryValue("cloneMessage");
+        var image = ReadQueryValue("cloneImage");
+        if (string.IsNullOrWhiteSpace(link)
+            && string.IsNullOrWhiteSpace(title)
+            && string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _title = title;
+        }
+
+        var body = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
+        if (!string.IsNullOrWhiteSpace(link)
+            && !body.Contains(link, StringComparison.OrdinalIgnoreCase))
+        {
+            body = string.IsNullOrWhiteSpace(body) ? link : body + Environment.NewLine + link;
+        }
+
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            _message = body;
+        }
+
+        if (!string.IsNullOrWhiteSpace(image))
+        {
+            _imageUrl = image;
+        }
+
+        _info = "Oferta clonada do grupo monitorado. Revise e agende o disparo.";
+    }
+
+    private string? ReadQueryValue(string key)
+    {
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 0 || !parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return parts.Length > 1 ? Uri.UnescapeDataString(parts[1].Replace('+', ' ')) : string.Empty;
+        }
+
+        return null;
+    }
 
     private void ApplyPayload(TelegramBroadcastResponseDto? data)
     {

@@ -908,7 +908,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupsController.cs** — listar, sincronizar, validar e clonar; try/catch + log + UserId fallback 1.
 - [x] **InfrastructureDataServiceRegistrationExtensions.cs** — `IUserContextProvider` / `UserContextProvider` no DI.
 - [x] **MonitoredGroupService.cs** — sync isolado WhatsApp/Telegram; lista inclui `TelegramGroups`.
-- [x] **GruposMonitorados.razor** — `/integracoes/grupos/monitorados`; não exibe sucesso se a API falhar.
+- [x] **GruposMonitorados.razor** — `/integracoes/whatsapp/grupos/monitorados` e `/integracoes/telegram/grupos/monitorados`; legado redireciona ao WhatsApp.
+- [x] **NavMenu.razor** — Grupos monitorados no submenu WhatsApp e no submenu Telegram.
 - [x] **WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** — captura em grupos.
 - [x] **WhatsAppAgendador.razor** — query `cloneTitle/cloneMessage/cloneImage/cloneLink`.
 - [x] **WhatsAppAgendador.razor** / **TelegramAgendador.razor** — badge oficial (ícone + nome) ao lado de “Disparo para grupos”.

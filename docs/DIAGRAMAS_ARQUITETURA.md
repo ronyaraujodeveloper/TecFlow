@@ -126,7 +126,7 @@ flowchart LR
   WPROC -->|regex URL + PlatformLinkResolver + loja ativa| GEN
   WPROC -->|GroupOfferCaptureService grupos| GCAP[GroupCapturedMessages]
   GCAP --> SQL
-  MONUI[GruposMonitorados.razor] -->|listar validar clonar| MONAPI[MonitoredGroupsController]
+  MONUI[GruposMonitorados.razor WA/TG] -->|channel WhatsApp ou Telegram| MONAPI[MonitoredGroupsController]
   MONAPI -->|IUserContextProvider DI + fallback 1| MONSVC[MonitoredGroupService]
   MONSVC -->|try/catch isolado Evolution| WASYNC[WhatsAppBroadcastService SyncGroups]
   MONSVC -->|try/catch isolado Telegram| TGSYNC[TelegramBroadcastService SyncChannels]

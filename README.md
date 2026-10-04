@@ -674,19 +674,46 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 ### 🟢 26. 
 
 ### 🟢 27. criar tela voltada a administração de grupos já existente de outras pessoas que vamos copiar as promoções lha elistente
-- [x] Tela `/integracoes/grupos/monitorados`: sincronizar WA/Telegram, chips 10h/24h/2 dias, dropdown de grupo e cards com imagem, nome, preço e badges.
+- [x] Tela WhatsApp `/integracoes/whatsapp/grupos/monitorados` e Telegram `/integracoes/telegram/grupos/monitorados` (submenu de cada canal).
 - [x] Webhooks WhatsApp/Telegram gravam `GroupCapturedMessages` (texto, mídia, URL, preço e data).
 - [x] `OfferValidationService` confere HTTP + metadados (Ativo, Esgotado, Preço Alterado).
 - [x] **Clonar para Minha Campanha** gera o link de comissão e abre `/integracoes/whatsapp/agendador` com mensagem e imagem.
 - [x] Sync de grupos monitorados com try/catch, log do stack trace, UserId fallback 1 e falha isolada WhatsApp/Telegram.
 - [x] `IUserContextProvider` registrado no DI da API (corrige 500 na tela de grupos monitorados).
 
-### 🧠 Fase 28: Motor de Inteligência de Ofertas e Tendências (Radar & Mining Bot)
+### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
+[ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
 
-- [ ] **28.1. Garimpo de Preços e Cupons:** Worker para identificação de quedas bruscas de preço em relação à média histórica e acúmulo de cupons de desconto (Shopee, ML, Amazon).
-- [ ] **28.2. Radar de Tendências e Viralização:** Algoritmo de Social Listening para detectar produtos em alta velocidade de vendas e vídeos virais no TikTok/Reels.
-- [ ] **28.3. Feed Recomendador por Nicho:** Interface com curadoria personalizada por categoria, faixa de preço, comissão mínima e score de atratividade.
-- [ ] **28.4. Auto-Agendamento (Piloto Automático):** Integração com o Agendador para converter e postar automaticamente as melhores ofertas garimpadas no perfil do afiliado.
+Interface no perfil para cadastro dos nichos/categorias de interesse, faixa de ticket médio desejada e porcentagem de comissão mínima.
+
+Filtro para restrição de buscas apenas nas plataformas onde o usuário possui integração ativa no TecFlow (Shopee, Mercado Livre, Amazon, TikTok Shop).
+
+[ ] 28.2. Arbitragem de Preços e Cupons em Tempo Real (Gerador):
+
+Disparo de busca cruzada paralela em segundo plano no momento em que o usuário converte qualquer URL.
+
+Varredura de cupons ativos e identificação de menor valor nas demais contas conectadas do usuário.
+
+Exibição de card dinâmico no Gerador de Links com o link alternativo convertido, valor com desconto e código do cupom encontrado.
+
+[ ] 28.3. Garimpo Automático, Tendências e Social Listening (Worker 24/7):
+
+Worker em background para monitoramento de quedas bruscas de preço em relação à média histórica.
+
+Algoritmo para identificação de produtos com picos de vendas recentes (Movers & Shakers) e vídeos em tendência no TikTok/Reels dentro dos nichos cadastrados.
+
+[ ] 28.4. Feed Recomendador e Piloto Automático (Auto-Agendamento):
+
+Painel "Radar de Ofertas" com curadoria personalizada e Score de atratividade da promoção.
+
+Opção de envio direto do item recomendado para o Agendador de Grupos (WhatsApp / Telegram) ou disparo no modo Piloto Automático.
+
+## 🚀 Fase 29: Validação Inteligente e Atribuição de Vendas (Diferenciais Exclusivos)
+
+- [ ] **29.1. Monitor de Saúde do Cupom e Estoque:** Worker para checar validade de cupons e preços ativos pós-disparo, emitindo alertas de esgotamento.
+- [ ] **29.2. Rastreamento por SubID (Mapeamento de Lucro por Grupo):** Injeção automática de parâmetros de origem por canal para relatórios de conversão e comissão por grupo.
+- [ ] **29.3. Biblioteca Evergreen & Reciclador de Ofertas Campeãs:** Repositório de produtos com alto histórico de vendas para preenchimento automático de intervalos sem postagens.
+- [ ] **29.4. Moldura Dinâmica e Mídia Rica (Vídeos sem Marca d'Água):** Aplicação de molduras promocionais personalizadas nas imagens e suporte a download de vídeos do produto para envio direto.
 
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 

@@ -35,21 +35,27 @@ public interface IOfferValidationService
 
 public interface IMonitoredGroupService
 {
-    Task<MonitoredGroupsResponseDto> SyncAsync(int userId, CancellationToken cancellationToken = default);
+    Task<MonitoredGroupsResponseDto> SyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> ListAsync(
         int userId,
         int lookbackHours,
         string? groupKey,
+        string? channel,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> ValidateAsync(
         int userId,
         int offerId,
+        string? channel,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> CloneAsync(
         int userId,
         int offerId,
+        string? channel,
         CancellationToken cancellationToken = default);
 }

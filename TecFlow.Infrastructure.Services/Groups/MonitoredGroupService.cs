@@ -43,18 +43,31 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _logger = logger;
     }
 
-    public async Task<MonitoredGroupsResponseDto> SyncAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<MonitoredGroupsResponseDto> SyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var notes = new List<string>();
-            var whatsOk = await SyncWhatsAppIsolatedAsync(userId, notes, cancellationToken);
-            var telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
+            var normalized = GroupOfferCaptureRules.NormalizeChannel(channel);
+            var whatsOk = false;
+            var telegramOk = false;
+            if (normalized is null || normalized == GroupOfferCaptureRules.WhatsAppChannel)
+            {
+                whatsOk = await SyncWhatsAppIsolatedAsync(userId, notes, cancellationToken);
+            }
 
-            var list = await ListAsync(userId, 24, null, cancellationToken);
+            if (normalized is null || normalized == GroupOfferCaptureRules.TelegramChannel)
+            {
+                telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
+            }
+
+            var list = await ListAsync(userId, 24, null, normalized, cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
             list.Descricao = notes.Count == 0
-                ? "Grupos do WhatsApp e do Telegram sincronizados."
+                ? "Grupos sincronizados."
                 : string.Join(" ", notes);
             return list;
         }
@@ -75,17 +88,24 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         int userId,
         int lookbackHours,
         string? groupKey,
+        string? channel,
         CancellationToken cancellationToken = default)
     {
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
         var since = DateTime.UtcNow.AddHours(-hours);
+        var normalized = GroupOfferCaptureRules.NormalizeChannel(channel);
 
         try
         {
-            var groups = await BuildGroupsAsync(userId, cancellationToken);
+            var groups = await BuildGroupsAsync(userId, normalized, cancellationToken);
             var query = _context.GroupCapturedMessages
                 .AsNoTracking()
                 .Where(item => item.UserId == userId && item.ReceivedAt >= since);
+            if (normalized is not null)
+            {
+                query = query.Where(item => item.Channel == normalized);
+            }
+
             if (!string.IsNullOrWhiteSpace(groupKey))
             {
                 query = query.Where(item => item.GroupKey == groupKey);
@@ -119,6 +139,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     public async Task<MonitoredGroupsResponseDto> ValidateAsync(
         int userId,
         int offerId,
+        string? channel,
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.GroupCapturedMessages
@@ -151,7 +172,12 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         entity.Touch();
         await _context.SaveChangesAsync(cancellationToken);
 
-        var list = await ListAsync(userId, 24, entity.GroupKey, cancellationToken);
+        var list = await ListAsync(
+            userId,
+            24,
+            entity.GroupKey,
+            channel ?? entity.Channel,
+            cancellationToken);
         list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
         return list;
     }
@@ -159,6 +185,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     public async Task<MonitoredGroupsResponseDto> CloneAsync(
         int userId,
         int offerId,
+        string? channel,
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.GroupCapturedMessages
@@ -212,8 +239,15 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         }
 
         var image = entity.ProductImageUrl;
+        var targetChannel = GroupOfferCaptureRules.NormalizeChannel(channel)
+            ?? GroupOfferCaptureRules.NormalizeChannel(entity.Channel)
+            ?? GroupOfferCaptureRules.WhatsAppChannel;
+        var scheduler = targetChannel == GroupOfferCaptureRules.TelegramChannel
+            ? "/integracoes/telegram/agendador"
+            : "/integracoes/whatsapp/agendador";
         var redirect =
-            "/integracoes/whatsapp/agendador?cloneTitle=" + Uri.EscapeDataString(title)
+            scheduler
+            + "?cloneTitle=" + Uri.EscapeDataString(title)
             + "&cloneMessage=" + Uri.EscapeDataString(message)
             + "&cloneLink=" + Uri.EscapeDataString(affiliateUrl)
             + (string.IsNullOrWhiteSpace(image) ? string.Empty : "&cloneImage=" + Uri.EscapeDataString(image));
@@ -221,7 +255,9 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         return new MonitoredGroupsResponseDto
         {
             Status = true,
-            Descricao = "Link convertido. Abrindo o agendador WhatsApp.",
+            Descricao = targetChannel == GroupOfferCaptureRules.TelegramChannel
+                ? "Link convertido. Abrindo o agendador Telegram."
+                : "Link convertido. Abrindo o agendador WhatsApp.",
             Clone = new CloneMonitoredOfferResultDto
             {
                 Status = true,
@@ -235,35 +271,51 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         };
     }
 
-    private async Task<List<MonitoredGroupDto>> BuildGroupsAsync(int userId, CancellationToken cancellationToken)
+    private async Task<List<MonitoredGroupDto>> BuildGroupsAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken)
     {
-        var whats = await _context.WhatsAppGroups
-            .AsNoTracking()
-            .Where(item => item.UserId == userId && item.IsActive)
-            .OrderBy(item => item.Name)
-            .Select(item => new MonitoredGroupDto
-            {
-                GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.WhatsAppChannel, item.Jid),
-                Name = item.Name,
-                Channel = GroupOfferCaptureRules.WhatsAppChannel
-            })
-            .ToListAsync(cancellationToken);
+        var includeWhatsApp = channel is null || channel == GroupOfferCaptureRules.WhatsAppChannel;
+        var includeTelegram = channel is null || channel == GroupOfferCaptureRules.TelegramChannel;
 
-        var telegram = await _context.TelegramGroups
-            .AsNoTracking()
-            .Where(item => item.UserId == userId && item.IsActive)
-            .OrderBy(item => item.Name)
-            .Select(item => new MonitoredGroupDto
-            {
-                GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.TelegramChannel, item.ChatId),
-                Name = item.Name,
-                Channel = GroupOfferCaptureRules.TelegramChannel
-            })
-            .ToListAsync(cancellationToken);
+        var whats = includeWhatsApp
+            ? await _context.WhatsAppGroups
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.IsActive)
+                .OrderBy(item => item.Name)
+                .Select(item => new MonitoredGroupDto
+                {
+                    GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.WhatsAppChannel, item.Jid),
+                    Name = item.Name,
+                    Channel = GroupOfferCaptureRules.WhatsAppChannel
+                })
+                .ToListAsync(cancellationToken)
+            : [];
 
-        var captured = await _context.GroupCapturedMessages
+        var telegram = includeTelegram
+            ? await _context.TelegramGroups
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.IsActive)
+                .OrderBy(item => item.Name)
+                .Select(item => new MonitoredGroupDto
+                {
+                    GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.TelegramChannel, item.ChatId),
+                    Name = item.Name,
+                    Channel = GroupOfferCaptureRules.TelegramChannel
+                })
+                .ToListAsync(cancellationToken)
+            : [];
+
+        var capturedQuery = _context.GroupCapturedMessages
             .AsNoTracking()
-            .Where(item => item.UserId == userId)
+            .Where(item => item.UserId == userId);
+        if (channel is not null)
+        {
+            capturedQuery = capturedQuery.Where(item => item.Channel == channel);
+        }
+
+        var captured = await capturedQuery
             .Select(item => new { item.GroupKey, item.GroupName, item.Channel })
             .ToListAsync(cancellationToken);
         var capturedGroups = captured

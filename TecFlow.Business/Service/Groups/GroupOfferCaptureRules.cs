@@ -9,6 +9,39 @@ public static class GroupOfferCaptureRules
     public const string WhatsAppChannel = "WhatsApp";
     public const string TelegramChannel = "Telegram";
 
+    public static string? NormalizeChannel(string? channel)
+    {
+        if (string.IsNullOrWhiteSpace(channel))
+        {
+            return null;
+        }
+
+        if (channel.Contains("telegram", StringComparison.OrdinalIgnoreCase)
+            || channel.Equals("tg", StringComparison.OrdinalIgnoreCase))
+        {
+            return TelegramChannel;
+        }
+
+        if (channel.Contains("whats", StringComparison.OrdinalIgnoreCase)
+            || channel.Equals("wa", StringComparison.OrdinalIgnoreCase))
+        {
+            return WhatsAppChannel;
+        }
+
+        return null;
+    }
+
+    public static bool MatchesChannel(string? value, string? channel)
+    {
+        var expected = NormalizeChannel(channel);
+        if (expected is null)
+        {
+            return true;
+        }
+
+        return string.Equals(NormalizeChannel(value) ?? value, expected, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string BuildGroupKey(string channel, string groupId) =>
         $"{channel}:{groupId.Trim()}";
 

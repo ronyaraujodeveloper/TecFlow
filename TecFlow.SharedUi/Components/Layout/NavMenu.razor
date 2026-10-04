@@ -25,10 +25,6 @@
                         <i class="bi bi-calendar-week portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Agendador de Grupos</span>
                     </a>
-                    <a href="/integracoes/grupos/monitorados" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/grupos/monitorados")" @onclick="NotifyNavigate">
-                        <i class="bi bi-eye portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">Grupos monitorados</span>
-                    </a>
                     <a href="/integracoes/bot-conversor" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/bot-conversor")" @onclick="NotifyNavigate">
                         <i class="bi bi-robot portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Bot de Conversão</span>
@@ -51,6 +47,10 @@
                         <i class="bi bi-send portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Agendador WhatsApp</span>
                     </a>
+                    <a href="/integracoes/whatsapp/grupos/monitorados" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/whatsapp/grupos/monitorados", alsoExact: WhatsAppMonitoredAliasPaths)" @onclick="NotifyNavigate">
+                        <i class="bi bi-eye portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Grupos monitorados</span>
+                    </a>
                 }
             </div>
 
@@ -68,6 +68,10 @@
                     <a href="/integracoes/telegram/agendador" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram/agendador")" @onclick="NotifyNavigate">
                         <i class="bi bi-send portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Agendador Telegram</span>
+                    </a>
+                    <a href="/integracoes/telegram/grupos/monitorados" class="portal-nav-link portal-nav-sublink @GetActiveClass("/integracoes/telegram/grupos/monitorados")" @onclick="NotifyNavigate">
+                        <i class="bi bi-eye portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Grupos monitorados</span>
                     </a>
                 }
             </div>
@@ -184,11 +188,16 @@
 
     private static readonly string[] ConexaoLegacyPaths = ["/integracoes/whatsapp", "/integracoes/telegram"];
 
+    private static readonly string[] WhatsAppMonitoredAliasPaths =
+    [
+        "/integracoes/whatsapp/grupos/monitorados",
+        "/integracoes/grupos/monitorados"
+    ];
+
     private static readonly string[] MensageriaExactPaths =
     [
         "/integracoes/conexoes",
         "/integracoes/agendador",
-        "/integracoes/grupos/monitorados",
         "/integracoes/bot-conversor",
         "/integracoes/whatsapp",
         "/integracoes/telegram"
@@ -341,9 +350,18 @@
 
     private bool IsMensageriaPath() => PathEqualsAny(MensageriaExactPaths);
 
-    private bool IsWhatsAppPath() => CurrentPath().Equals("/integracoes/whatsapp/agendador", StringComparison.OrdinalIgnoreCase);
+    private bool IsWhatsAppPath() => PathEqualsAny(
+    [
+        "/integracoes/whatsapp/agendador",
+        "/integracoes/whatsapp/grupos/monitorados",
+        "/integracoes/grupos/monitorados"
+    ]);
 
-    private bool IsTelegramPath() => CurrentPath().Equals("/integracoes/telegram/agendador", StringComparison.OrdinalIgnoreCase);
+    private bool IsTelegramPath() => PathEqualsAny(
+    [
+        "/integracoes/telegram/agendador",
+        "/integracoes/telegram/grupos/monitorados"
+    ]);
 
     private bool IsIntegracoesPath() => PathEqualsAny(IntegracoesExactPaths);
 

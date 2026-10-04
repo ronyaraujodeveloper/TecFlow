@@ -35,12 +35,13 @@ public sealed class MonitoredGroupsController : ControllerBase
     public async Task<ActionResult<MonitoredGroupsResponseDto>> ListAsync(
         [FromQuery] int hours = 24,
         [FromQuery] string? groupKey = null,
+        [FromQuery] string? channel = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var userId = ResolveUserId();
-            return Ok(await _service.ListAsync(userId, hours, groupKey, cancellationToken));
+            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, cancellationToken));
         }
         catch (Exception ex)
         {
@@ -50,12 +51,14 @@ public sealed class MonitoredGroupsController : ControllerBase
     }
 
     [HttpPost("sincronizar")]
-    public async Task<ActionResult<MonitoredGroupsResponseDto>> SyncAsync(CancellationToken cancellationToken)
+    public async Task<ActionResult<MonitoredGroupsResponseDto>> SyncAsync(
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var userId = ResolveUserId();
-            var result = await _service.SyncAsync(userId, cancellationToken);
+            var result = await _service.SyncAsync(userId, channel, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
@@ -68,20 +71,22 @@ public sealed class MonitoredGroupsController : ControllerBase
     [HttpPost("{offerId:int}/validar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,
-        CancellationToken cancellationToken)
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
     {
         var userId = ResolveUserId();
-        var result = await _service.ValidateAsync(userId, offerId, cancellationToken);
+        var result = await _service.ValidateAsync(userId, offerId, channel, cancellationToken);
         return result.Status ? Ok(result) : NotFound(result);
     }
 
     [HttpPost("{offerId:int}/clonar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> CloneAsync(
         int offerId,
-        CancellationToken cancellationToken)
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
     {
         var userId = ResolveUserId();
-        var result = await _service.CloneAsync(userId, offerId, cancellationToken);
+        var result = await _service.CloneAsync(userId, offerId, channel, cancellationToken);
         return result.Status ? Ok(result) : BadRequest(result);
     }
 

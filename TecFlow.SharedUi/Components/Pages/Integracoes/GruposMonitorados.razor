@@ -1,8 +1,10 @@
-﻿@page "/integracoes/grupos/monitorados"
+﻿@page "/integracoes/whatsapp/grupos/monitorados"
+@page "/integracoes/telegram/grupos/monitorados"
+@page "/integracoes/grupos/monitorados"
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
-@using TecFlow.Core.Enums
+@using TecFlow.Business.Service.Groups
 @using TecFlow.Business.Service.LinkStrategies
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Helpers
@@ -11,18 +13,24 @@
 @inject NavigationManager Navigation
 @inject ILogger<GruposMonitorados> Logger
 
-<PageTitle>Grupos monitorados — TecFlow</PageTitle>
+<PageTitle>Grupos monitorados @ChannelLabel — TecFlow</PageTitle>
 
 <div class="dashboard-page">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold mb-1">Administração de grupos monitorados</h1>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                <h1 class="h3 fw-bold mb-0">Grupos monitorados</h1>
+                <span class="badge rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2 text-white" style="background-color: @(IsTelegram ? "#0088cc" : "#25D366");">
+                    <i class="bi @(IsTelegram ? "bi-telegram" : "bi-whatsapp")" aria-hidden="true"></i>
+                    <span>@ChannelLabel</span>
+                </span>
+            </div>
             <p class="text-muted small mb-0">
-                Sincronize grupos, filtre as ofertas capturadas e clone o link de comissão para o agendador WhatsApp.
+                Sincronize os grupos do @ChannelLabel, filtre as ofertas capturadas e clone o link de comissão para o agendador.
             </p>
         </div>
         <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="SyncAsync">
-            @(_isBusy ? "Sincronizando..." : "Sincronizar Grupos (WhatsApp / Telegram)")
+            @(_isBusy ? "Sincronizando..." : $"Sincronizar grupos do {ChannelLabel}")
         </button>
     </div>
 
@@ -50,7 +58,7 @@
                 <option value="">Todos os grupos</option>
                 @foreach (var group in _groups)
                 {
-                    <option value="@group.GroupKey">@group.Name (@group.Channel)</option>
+                    <option value="@group.GroupKey">@group.Name</option>
                 }
             </select>
         </div>
@@ -61,11 +69,11 @@
         <div class="alert alert-light border">
             @if (_groups.Count > 0)
             {
-                <span>@_groups.Count grupo(s) sincronizado(s). Nenhuma oferta com link neste período — as mensagens capturadas pelos webhooks aparecem aqui.</span>
+                <span>@_groups.Count grupo(s) do @ChannelLabel. Nenhuma oferta com link neste período — as mensagens capturadas pelos webhooks aparecem aqui.</span>
             }
             else
             {
-                <span>Nenhum grupo listado. Sincronize WhatsApp/Telegram e aguarde mensagens com links.</span>
+                <span>Nenhum grupo do @ChannelLabel listado. Sincronize e aguarde mensagens com links.</span>
             }
         </div>
     }
@@ -120,6 +128,10 @@
 </div>
 
 @code {
+    private const string WhatsAppPath = "/integracoes/whatsapp/grupos/monitorados";
+    private const string TelegramPath = "/integracoes/telegram/grupos/monitorados";
+    private const string LegacyPath = "/integracoes/grupos/monitorados";
+
     private readonly List<MonitoredGroupDto> _groups = [];
     private readonly List<GroupCapturedOfferDto> _offers = [];
     private int _hours = 24;
@@ -128,7 +140,30 @@
     private string? _error;
     private string? _info;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    private bool IsTelegram => CurrentPath().Equals(TelegramPath, StringComparison.OrdinalIgnoreCase);
+
+    private string Channel => IsTelegram
+        ? GroupOfferCaptureRules.TelegramChannel
+        : GroupOfferCaptureRules.WhatsAppChannel;
+
+    private string ChannelLabel => IsTelegram ? "Telegram" : "WhatsApp";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentPath().Equals(LegacyPath, StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo(WhatsAppPath, replace: true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private string CurrentPath()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
+    }
 
     private string ChipClass(int hours) =>
         _hours == hours ? "btn-primary" : "btn-outline-secondary";
@@ -160,7 +195,7 @@
         _info = null;
         try
         {
-            var result = await Api.SyncAsync();
+            var result = await Api.SyncAsync(Channel);
             Apply(result.Data, result.ErrorMessage);
             if (result.Data is { Status: true })
             {
@@ -186,7 +221,10 @@
         _error = null;
         try
         {
-            var result = await Api.ListAsync(_hours, string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey);
+            var result = await Api.ListAsync(
+                _hours,
+                string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
+                Channel);
             Apply(result.Data, result.ErrorMessage);
         }
         catch (Exception ex)
@@ -206,7 +244,7 @@
         _error = null;
         try
         {
-            var result = await Api.ValidateAsync(offerId);
+            var result = await Api.ValidateAsync(offerId, Channel);
             Apply(result.Data, result.ErrorMessage);
             _info = result.Data?.Descricao;
         }
@@ -227,7 +265,7 @@
         _error = null;
         try
         {
-            var result = await Api.CloneAsync(offerId);
+            var result = await Api.CloneAsync(offerId, Channel);
             if (!string.IsNullOrWhiteSpace(result.Data?.Clone?.RedirectUrl))
             {
                 Navigation.NavigateTo(result.Data.Clone.RedirectUrl);

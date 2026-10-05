@@ -40,6 +40,7 @@ public static class TelegramBroadcastStatuses
     public const string Processing = "Processing";
     public const string Completed = "Completed";
     public const string Failed = "Failed";
+    public const string Paused = "Paused";
 
     public const int MinIntervalSeconds = 15;
     public const int MaxIntervalSeconds = 180;

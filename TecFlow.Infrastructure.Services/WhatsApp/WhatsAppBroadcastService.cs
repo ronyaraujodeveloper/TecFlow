@@ -14,17 +14,20 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
     private readonly AppDbContext _context;
     private readonly IEvolutionApiService _evolution;
     private readonly IWhatsAppBroadcastJobCoordinator _jobs;
+    private readonly IPreFlightService _preFlight;
     private readonly ILogger<WhatsAppBroadcastService> _logger;
 
     public WhatsAppBroadcastService(
         AppDbContext context,
         IEvolutionApiService evolution,
         IWhatsAppBroadcastJobCoordinator jobs,
+        IPreFlightService preFlight,
         ILogger<WhatsAppBroadcastService> logger)
     {
         _context = context;
         _evolution = evolution;
         _jobs = jobs;
+        _preFlight = preFlight;
         _logger = logger;
     }
 
@@ -296,6 +299,11 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         foreach (var campaign in due)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!await _preFlight.EnsureReadyAsync("WhatsApp", campaign.Id, cancellationToken))
+            {
+                continue;
+            }
+
             await ProcessOneAsync(campaign, cancellationToken);
         }
     }
@@ -365,15 +373,16 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
                 }
 
                 var jid = jids[index];
+                var stamped = TecFlow.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "WhatsApp", jid);
                 try
                 {
                     var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
-                        ? await _evolution.SendTextMessageAsync(instanceName, jid, text, jobToken)
+                        ? await _evolution.SendTextMessageAsync(instanceName, jid, stamped, jobToken)
                         : await _evolution.SendMediaMessageAsync(
                             instanceName,
                             jid,
                             campaign.ImageUrl,
-                            text,
+                            stamped,
                             jobToken);
                     if (ok)
                     {
@@ -494,7 +503,7 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
             IntervalSeconds = campaign.IntervalSeconds,
             Status = campaign.Status,
             UiStatusLabel = WhatsAppBroadcastRules.ToUiStatus(campaign.Status),
-            CanEdit = campaign.Status == WhatsAppBroadcastStatuses.Pending,
+            CanEdit = campaign.Status is WhatsAppBroadcastStatuses.Pending or WhatsAppBroadcastStatuses.Paused,
             CanDelete = campaign.Status is WhatsAppBroadcastStatuses.Pending
                 or WhatsAppBroadcastStatuses.Failed
                 or WhatsAppBroadcastStatuses.Processing,

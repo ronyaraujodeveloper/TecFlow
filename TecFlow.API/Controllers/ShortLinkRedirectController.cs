@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Radar;
 
 namespace TecFlow.API.Controllers;
 
@@ -53,8 +54,18 @@ public class ShortLinkRedirectController : ControllerBase
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var userAgent = Request.Headers.UserAgent.ToString();
         var referrer = Request.Headers.Referer.ToString();
+        var pairs = Request.Query.Select(item =>
+            new KeyValuePair<string, string>(item.Key, item.Value.ToString()));
+        var tracking = OfferAttributionRules.ReadTracking(OfferAttributionRules.HttpRequestQuery.FromPairs(pairs));
 
-        _telemetryService.EnqueueClickLog(link.AffiliateLinkId, ipAddress, userAgent, referrer);
+        _telemetryService.EnqueueClickLog(
+            link.AffiliateLinkId,
+            ipAddress,
+            userAgent,
+            referrer,
+            tracking.SourceChannel,
+            tracking.SourceGroup,
+            tracking.SubId);
 
         return Redirect(link.DestinationUrl);
     }

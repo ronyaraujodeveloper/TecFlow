@@ -37,8 +37,12 @@ public static class LinkClickLogFactory
         MarketplaceType platformType,
         string? ipAddress,
         string? userAgent,
-        string? referrerUrl) =>
-        Create(
+        string? referrerUrl,
+        string? sourceChannel = null,
+        string? sourceGroup = null,
+        string? subId = null)
+    {
+        var log = Create(
             affiliateLinkId,
             tenantId,
             shopId,
@@ -49,6 +53,11 @@ public static class LinkClickLogFactory
             ipAddress,
             userAgent,
             referrerUrl);
+        log.SourceChannel = sourceChannel;
+        log.SourceGroup = sourceGroup;
+        log.SubId = subId;
+        return log;
+    }
 
     public static LinkClickLog Create(
         Guid affiliateLinkId,

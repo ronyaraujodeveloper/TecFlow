@@ -91,6 +91,7 @@ public class WhatsAppBroadcastRulesTests
         Assert.Equal("Enviando", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Processing));
         Assert.Equal("Concluída", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Completed));
         Assert.Equal("Falhou", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Failed));
+        Assert.Equal("Pausada", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Paused));
         Assert.Equal("Cancelado", WhatsAppBroadcastRules.ToUiStatus(WhatsAppBroadcastStatuses.Cancelled));
     }
 

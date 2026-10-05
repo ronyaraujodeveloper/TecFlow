@@ -1,0 +1,125 @@
+﻿@page "/saude/agendamentos"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Radar
+@inject IPreFlightApiService Api
+@inject ILogger<SaudeAgendamentos> Logger
+
+<PageTitle>Saúde de agendamentos — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <h1 class="h3 fw-bold mb-2">Pre-flight e reagendamento</h1>
+    <p class="text-muted small mb-4">Disparos pausados minutos antes do envio quando o preço sobe, o cupom some ou o produto esgota.</p>
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-info py-2 small">@_info</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (_items.Count == 0)
+    {
+        <div class="alert alert-light border">Nenhuma pausa de pre-flight no momento.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Canal</th>
+                        <th>Campanha</th>
+                        <th>Motivo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td>
+                                @if (item.IsResolved)
+                                {
+                                    <span class="badge text-bg-success">Resolvido</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Pausado</span>
+                                }
+                            </td>
+                            <td>@item.Channel</td>
+                            <td>@(item.CampaignTitle ?? $"#{item.CampaignId}")</td>
+                            <td>@item.Message</td>
+                            <td>
+                                @if (!item.IsResolved)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@_busy" @onclick="() => SubstituteAsync(item.Id)">
+                                        Substituir pelo menor preço
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<PreFlightNotificationDto> _items = [];
+    private string? _info;
+    private string? _error;
+    private bool _busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var result = await Api.ListAsync();
+            Apply(result.Data);
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar pre-flight.");
+            _error = "Não foi possível carregar as pausas de agendamento.";
+        }
+    }
+
+    private async Task SubstituteAsync(int id)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.SubstituteAsync(id);
+            if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+            }
+
+            Apply(result.Data);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void Apply(PreFlightNotificationResponseDto? data)
+    {
+        _items.Clear();
+        if (data?.Items is { Count: > 0 })
+        {
+            _items.AddRange(data.Items);
+        }
+
+        _info = data?.Descricao;
+    }
+}

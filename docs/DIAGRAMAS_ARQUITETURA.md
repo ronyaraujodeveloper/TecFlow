@@ -169,6 +169,15 @@ flowchart LR
   MINE[OfferMiningWorker] -->|quedas movers trends 10min| RADAR
   RADUI[RadarOfertas] -->|score + agendar/piloto| AGEND[WhatsApp/Telegram Agendador]
   PERF[RadarPerfil] -->|nichos ticket comissao| PROF[(AffiliateMiningProfiles)]
+  DISP[Disparo WA/TG] -->|StampMessage tf_src tf_grp| SHORT[ShortLinkRedirect]
+  SHORT -->|SubId SourceGroup| CLICK[(LinkClickLog)]
+  HEALTH[OfferIntelligenceWorker] -->|pos-disparo ValidateAsync| ALERT[(OfferHealthAlerts)]
+  EVER[EvergreenLibrary] -->|recicla intervalo vazio| CAMP[WhatsAppBroadcastCampaigns]
+  MIDIA[EstudioMidia] -->|moldura ImageSharp + og:video| UP[wwwroot/uploads/frames videos]
+  PRE[PreFlightWorker] -->|15min ValidateAsync| PAUSE[Paused WA/TG]
+  PRE --> HOLD[(PreFlightNotifications)]
+  SAUDE[SaudeAgendamentos] -->|menor preco concorrente| HOLD
+  SAUDE -->|ReplaceFirstUrl Pending| CAMP
   RESOLV -->|URL canônica| CONV[AffiliateLinkConverterService]
   CONV -->|GenerateAsync + SourceGroup| GLHIST[ShortAffiliateLinks /gerador-links]
   CONV -->|toast + Agendar Disparo| TGAGEN

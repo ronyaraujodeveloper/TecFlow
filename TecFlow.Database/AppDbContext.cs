@@ -60,6 +60,9 @@ public class AppDbContext : DbContext
     public DbSet<AffiliateMiningProfile> AffiliateMiningProfiles { get; set; } = null!;
     public DbSet<ProductPriceSnapshot> ProductPriceSnapshots { get; set; } = null!;
     public DbSet<OfferRadarItem> OfferRadarItems { get; set; } = null!;
+    public DbSet<OfferHealthAlert> OfferHealthAlerts { get; set; } = null!;
+    public DbSet<EvergreenOffer> EvergreenOffers { get; set; } = null!;
+    public DbSet<PreFlightNotification> PreFlightNotifications { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -446,6 +449,42 @@ public class AppDbContext : DbContext
             entity.HasIndex(item => new { item.UserId, item.OriginalUrl, item.ReceivedAt });
         });
 
+        modelBuilder.Entity<OfferHealthAlert>(entity =>
+        {
+            entity.ToTable("OfferHealthAlerts");
+            entity.Property(item => item.Channel).HasMaxLength(16);
+            entity.Property(item => item.ProductUrl).HasMaxLength(1000);
+            entity.Property(item => item.CouponCode).HasMaxLength(32);
+            entity.Property(item => item.AlertType).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Message).HasMaxLength(500).IsRequired();
+            entity.HasIndex(item => new { item.UserId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<EvergreenOffer>(entity =>
+        {
+            entity.ToTable("EvergreenOffers");
+            entity.Property(item => item.ProductName).HasMaxLength(255).IsRequired();
+            entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
+            entity.Property(item => item.AffiliateUrl).HasMaxLength(2048).IsRequired();
+            entity.Property(item => item.OriginalUrl).HasMaxLength(1000);
+            entity.Property(item => item.PlatformName).HasMaxLength(64);
+            entity.HasIndex(item => new { item.UserId, item.ChampionScore });
+        });
+
+        modelBuilder.Entity<PreFlightNotification>(entity =>
+        {
+            entity.ToTable("PreFlightNotifications");
+            entity.Property(item => item.Channel).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.CampaignTitle).HasMaxLength(128);
+            entity.Property(item => item.ProductUrl).HasMaxLength(1000);
+            entity.Property(item => item.CouponCode).HasMaxLength(32);
+            entity.Property(item => item.AlertType).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Message).HasMaxLength(500).IsRequired();
+            entity.Property(item => item.SubstituteUrl).HasMaxLength(2048);
+            entity.Property(item => item.SubstituteName).HasMaxLength(255);
+            entity.HasIndex(item => new { item.UserId, item.IsResolved, item.CreatedAt });
+        });
+
         modelBuilder.Entity<WhatsAppGroup>(entity =>
         {
             entity.ToTable("WhatsAppGroups");
@@ -475,6 +514,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(log => log.CreatedAt);
             entity.HasIndex(log => log.TenantId);
             entity.Property(log => log.EventKind).HasMaxLength(32).IsRequired();
+            entity.Property(log => log.SourceChannel).HasMaxLength(16);
+            entity.Property(log => log.SourceGroup).HasMaxLength(160);
+            entity.Property(log => log.SubId).HasMaxLength(64);
             entity.Property(log => log.Platform).HasMaxLength(32).IsRequired();
             entity.Property(log => log.ShopId).HasMaxLength(128).IsRequired();
             entity.HasOne(log => log.AffiliateLink)

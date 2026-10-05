@@ -60,6 +60,15 @@ public class LinkClickLog
     [MaxLength(2048)]
     public string? ReferrerUrl { get; set; }
 
+    [MaxLength(16)]
+    public string? SourceChannel { get; set; }
+
+    [MaxLength(160)]
+    public string? SourceGroup { get; set; }
+
+    [MaxLength(64)]
+    public string? SubId { get; set; }
+
     public ShortAffiliateLink? AffiliateLink { get; set; }
 
     public static string PlatformName(MarketplaceType platformType) => platformType switch

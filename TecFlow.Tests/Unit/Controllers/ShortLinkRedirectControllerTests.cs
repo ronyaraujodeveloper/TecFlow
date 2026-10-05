@@ -45,7 +45,16 @@ public class ShortLinkRedirectControllerTests
 
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("https://shopee.com.br/produto", redirect.Url);
-        telemetry.Verify(s => s.EnqueueClickLog(linkId, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
+        telemetry.Verify(
+            s => s.EnqueueClickLog(
+                linkId,
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>()),
+            Times.Once);
     }
 
     [Fact]
@@ -70,7 +79,16 @@ public class ShortLinkRedirectControllerTests
         var result = await controller.RedirectLegacyAsync("abc1234", CancellationToken.None);
 
         Assert.IsType<RedirectResult>(result);
-        telemetry.Verify(s => s.EnqueueClickLog(linkId, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
+        telemetry.Verify(
+            s => s.EnqueueClickLog(
+                linkId,
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>()),
+            Times.Once);
     }
 
     private static ShortLinkRedirectController CreateController(

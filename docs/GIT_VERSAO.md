@@ -50,3 +50,4 @@
 [2026-10-04 21:55:28]feat(ui): filtra feed monitorado e descarta ofertas
 [2026-10-04 22:39:22]fix(telegram): extrai midia e valida esgotado
 [2026-10-04 23:06:33]feat(radar): mineracao, arbitragem e piloto automatico
+[2026-10-04 23:53:18]feat(ofertas): saude, atribuicao, evergreen e pre-flight

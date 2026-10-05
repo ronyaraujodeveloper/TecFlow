@@ -1,0 +1,80 @@
+﻿@page "/estudio-midia"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferIntelligenceApiService Api
+
+<PageTitle>Estúdio de mídia — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <h1 class="h3 fw-bold mb-2">Moldura dinâmica e mídia rica</h1>
+    <p class="text-muted small mb-4">Aplica faixa promocional na imagem e baixa o vídeo da página do produto, sem marca d'água do feed.</p>
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <label class="form-label fw-semibold">URL da imagem</label>
+            <input class="form-control mb-3" @bind="_imageUrl" placeholder="https://..." />
+            <label class="form-label fw-semibold">URL da página do produto</label>
+            <input class="form-control mb-3" @bind="_pageUrl" placeholder="https://shopee.com.br/..." />
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="FrameAsync">Aplicar moldura</button>
+                <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="VideoAsync">Baixar vídeo</button>
+            </div>
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert @(_ok ? "alert-success" : "alert-danger") py-2 small">@_message</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_framed))
+    {
+        <img src="@_framed" alt="Imagem com moldura" class="img-fluid rounded shadow-sm mb-3" style="max-height: 280px;" />
+        <p class="small"><a href="@_framed" target="_blank" rel="noopener">Abrir imagem emoldurada</a></p>
+    }
+    @if (!string.IsNullOrWhiteSpace(_video))
+    {
+        <p class="small"><a href="@_video" target="_blank" rel="noopener">Baixar / abrir vídeo</a></p>
+    }
+</div>
+
+@code {
+    private string? _imageUrl;
+    private string? _pageUrl;
+    private string? _framed;
+    private string? _video;
+    private string? _message;
+    private bool _ok;
+    private bool _busy;
+
+    private async Task FrameAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.ApplyFrameAsync(new OfferMediaRequestDto { ImageUrl = _imageUrl, PageUrl = _pageUrl });
+            _ok = result.Data?.Status == true;
+            _message = result.Data?.Descricao ?? result.ErrorMessage;
+            _framed = result.Data?.FramedImageUrl;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task VideoAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.ExtractVideoAsync(new OfferMediaRequestDto { PageUrl = _pageUrl, ImageUrl = _imageUrl });
+            _ok = result.Data?.Status == true;
+            _message = result.Data?.Descricao ?? result.ErrorMessage;
+            _video = result.Data?.VideoUrl;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

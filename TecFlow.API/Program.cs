@@ -83,6 +83,8 @@ builder.Services.AddHostedService<TecFlow.API.Workers.WhatsAppBroadcastWorker>()
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramUserMonitorWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.OfferMiningWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.OfferIntelligenceWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.PreFlightWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]

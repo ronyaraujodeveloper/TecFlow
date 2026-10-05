@@ -36,6 +36,7 @@ public static class WhatsAppBroadcastStatuses
     public const string Processing = "Processing";
     public const string Completed = "Completed";
     public const string Failed = "Failed";
+    public const string Paused = "Paused";
     public const string Cancelled = "Cancelled";
 
     public const int MinIntervalSeconds = 15;

@@ -1,0 +1,72 @@
+﻿@page "/saude/ofertas"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferIntelligenceApiService Api
+@inject ILogger<SaudeOfertas> Logger
+
+<PageTitle>Saúde de cupom e estoque — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <h1 class="h3 fw-bold mb-2">Saúde de cupom e estoque</h1>
+    <p class="text-muted small mb-4">Alertas gerados após o disparo quando o anúncio some, o preço muda ou o cupom some da página.</p>
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (_alerts.Count == 0)
+    {
+        <div class="alert alert-light border">Nenhum alerta pós-disparo no momento.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Canal</th>
+                        <th>Mensagem</th>
+                        <th>Cupom</th>
+                        <th>Quando</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _alerts)
+                    {
+                        <tr>
+                            <td><span class="badge text-bg-danger">@item.AlertType</span></td>
+                            <td>@item.Channel</td>
+                            <td>@item.Message</td>
+                            <td>@(item.CouponCode ?? "—")</td>
+                            <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<OfferHealthAlertDto> _alerts = [];
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await Api.ListHealthAsync();
+            if (result.Data?.Alerts is { Count: > 0 })
+            {
+                _alerts.AddRange(result.Data.Alerts);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar alertas de saúde.");
+            _error = "Não foi possível carregar os alertas.";
+        }
+    }
+}

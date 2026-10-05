@@ -70,6 +70,16 @@ public interface ILinkClickTelemetryService
         string? ipAddress,
         string? userAgent,
         string? referrerUrl);
+
+    void EnqueueClickLog(
+        Guid affiliateLinkId,
+        string? ipAddress,
+        string? userAgent,
+        string? referrerUrl,
+        string? sourceChannel,
+        string? sourceGroup,
+        string? subId) =>
+        EnqueueClickLog(affiliateLinkId, ipAddress, userAgent, referrerUrl);
 }
 
 public interface IAffiliateLinkHistoryService

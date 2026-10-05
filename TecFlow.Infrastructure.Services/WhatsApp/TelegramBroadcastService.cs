@@ -14,15 +14,18 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
 {
     private readonly AppDbContext _context;
     private readonly ITelegramApiService _telegramApi;
+    private readonly IPreFlightService _preFlight;
     private readonly ILogger<TelegramBroadcastService> _logger;
 
     public TelegramBroadcastService(
         AppDbContext context,
         ITelegramApiService telegramApi,
+        IPreFlightService preFlight,
         ILogger<TelegramBroadcastService> logger)
     {
         _context = context;
         _telegramApi = telegramApi;
+        _preFlight = preFlight;
         _logger = logger;
     }
 
@@ -213,6 +216,11 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         foreach (var campaign in due)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!await _preFlight.EnsureReadyAsync("Telegram", campaign.Id, cancellationToken))
+            {
+                continue;
+            }
+
             await ProcessOneAsync(campaign, cancellationToken);
         }
     }
@@ -257,19 +265,20 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var chatId = chatIds[index];
+            var stamped = TecFlow.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "Telegram", chatId);
             try
             {
                 var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)
                     ? await _telegramApi.SendTextMessageAsync(
                         integration.Token,
                         chatId,
-                        text,
+                        stamped,
                         cancellationToken)
                     : await _telegramApi.SendPhotoMessageAsync(
                         integration.Token,
                         chatId,
                         campaign.ImageUrl,
-                        text,
+                        stamped,
                         cancellationToken);
                 if (ok)
                 {

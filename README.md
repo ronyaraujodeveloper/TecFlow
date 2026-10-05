@@ -703,20 +703,20 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 
 ## 🚀 Fase 29: Validação Inteligente e Atribuição de Vendas (Diferenciais Exclusivos)
 
-- [ ] **29.1. Monitor de Saúde do Cupom e Estoque:** Worker para checar validade de cupons e preços ativos pós-disparo, emitindo alertas de esgotamento.
-- [ ] **29.2. Rastreamento por SubID (Mapeamento de Lucro por Grupo):** Injeção automática de parâmetros de origem por canal para relatórios de conversão e comissão por grupo.
-- [ ] **29.3. Biblioteca Evergreen & Reciclador de Ofertas Campeãs:** Repositório de produtos com alto histórico de vendas para preenchimento automático de intervalos sem postagens.
-- [ ] **29.4. Moldura Dinâmica e Mídia Rica (Vídeos sem Marca d'Água):** Aplicação de molduras promocionais personalizadas nas imagens e suporte a download de vídeos do produto para envio direto.
+- [x] **29.1. Monitor de Saúde do Cupom e Estoque:** `OfferIntelligenceWorker` valida anúncios após o disparo e grava alertas em `/saude/ofertas`.
+- [x] **29.2. Rastreamento por SubID (Mapeamento de Lucro por Grupo):** o disparo injeta `tf_src`/`tf_grp`/`sub_id`; o clique no encurtador alimenta `/atribuicao/grupos`.
+- [x] **29.3. Biblioteca Evergreen & Reciclador de Ofertas Campeãs:** ranking por cliques e reciclagem automática em intervalos vazios (`/biblioteca-evergreen`).
+- [x] **29.4. Moldura Dinâmica e Mídia Rica (Vídeos sem Marca d'Água):** estúdio em `/estudio-midia` aplica faixa promocional e baixa `og:video`.
 
 ## 🛡️ Fase 30: Validação Pré-Disparo e Saúde de Agendamentos (Pre-Flight Check)
 
-- [ ] **30.1. Validação de Integridade Pré-Envio (Pre-Flight Worker):**
-  - Checagem automática de preço, cupom ativo e disponibilidade de estoque minutos antes da execução de cada agendamento.
-  - Pausa automática de disparos caso o preço tenha subido, o cupom expirado ou o produto esgotado.
+- [x] **30.1. Validação de Integridade Pré-Envio (Pre-Flight Worker):**
+  - `PreFlightWorker` inspeciona agendamentos nos 15 minutos finais; o disparo WhatsApp/Telegram só segue se `EnsureReadyAsync` passar.
+  - Pausa automática (`Paused`) quando o preço sobe, o cupom some da página ou o produto esgota.
 
-- [ ] **30.2. Central de Notificações e Reagendamento:**
-  - Alerta visual no painel do TecFlow com a justificativa da pausa (ex: "Cancelado: Preço alterado de R$ 49 para R$ 89").
-  - Opção de recálculo com o menor preço encontrado em lojas concorrentes do usuário (Substituição Inteligente de Link).
+- [x] **30.2. Central de Notificações e Reagendamento:**
+  - Painel `/saude/agendamentos` com o motivo da pausa (ex: "Cancelado: Preço alterado de R$ 49 para R$ 89").
+  - Botão de substituição pelo menor preço nas lojas concorrentes, recolocando o disparo na fila.
 
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 

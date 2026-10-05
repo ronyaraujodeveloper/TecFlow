@@ -63,6 +63,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITelegramIntegrationApiService, TelegramIntegrationApiService>();
         services.AddScoped<IMonitoredGroupsApiService, MonitoredGroupsApiService>();
         services.AddScoped<IOfferRadarApiService, OfferRadarApiService>();
+        services.AddScoped<IOfferIntelligenceApiService, OfferIntelligenceApiService>();
+        services.AddScoped<IPreFlightApiService, PreFlightApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

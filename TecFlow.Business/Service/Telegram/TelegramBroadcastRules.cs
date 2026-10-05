@@ -58,6 +58,7 @@ public static class TelegramBroadcastRules
             TelegramBroadcastStatuses.Processing => "Enviando",
             TelegramBroadcastStatuses.Completed => "Concluída",
             TelegramBroadcastStatuses.Failed => "Falhou",
+            TelegramBroadcastStatuses.Paused => "Pausada",
             _ => "Agendada"
         };
 }

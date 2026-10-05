@@ -103,6 +103,26 @@
                         <i class="bi bi-sliders portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Perfil de mineração</span>
                     </a>
+                    <a href="/saude/ofertas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/saude/ofertas")" @onclick="NotifyNavigate">
+                        <i class="bi bi-heart-pulse portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Saúde de ofertas</span>
+                    </a>
+                    <a href="/atribuicao/grupos" class="portal-nav-link portal-nav-sublink @GetActiveClass("/atribuicao/grupos")" @onclick="NotifyNavigate">
+                        <i class="bi bi-pie-chart portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Lucro por grupo</span>
+                    </a>
+                    <a href="/biblioteca-evergreen" class="portal-nav-link portal-nav-sublink @GetActiveClass("/biblioteca-evergreen")" @onclick="NotifyNavigate">
+                        <i class="bi bi-recycle portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Biblioteca Evergreen</span>
+                    </a>
+                    <a href="/estudio-midia" class="portal-nav-link portal-nav-sublink @GetActiveClass("/estudio-midia")" @onclick="NotifyNavigate">
+                        <i class="bi bi-image portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Estúdio de mídia</span>
+                    </a>
+                    <a href="/saude/agendamentos" class="portal-nav-link portal-nav-sublink @GetActiveClass("/saude/agendamentos")" @onclick="NotifyNavigate">
+                        <i class="bi bi-shield-check portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Saúde de agendamentos</span>
+                    </a>
                     <a href="/minhas-paginas-publicas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
                         <i class="bi bi-globe2 portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Minhas Páginas Públicas</span>
@@ -221,6 +241,11 @@
         "/comissao/gerar",
         "/radar-ofertas",
         "/radar/perfil",
+        "/saude/ofertas",
+        "/atribuicao/grupos",
+        "/biblioteca-evergreen",
+        "/estudio-midia",
+        "/saude/agendamentos",
         "/minhas-paginas-publicas"
     ];
 

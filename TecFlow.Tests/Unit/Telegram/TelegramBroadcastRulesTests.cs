@@ -36,5 +36,6 @@ public class TelegramBroadcastRulesTests
     {
         Assert.Equal("Agendada", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Pending));
         Assert.Equal("Concluída", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Completed));
+        Assert.Equal("Pausada", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Paused));
     }
 }

@@ -953,6 +953,21 @@ API / Orquestrador / Worker / WebUi
 - [x] **RadarPerfil.razor** / **RadarOfertas.razor** / **GeradorLinks.razor** — UI de mineração, feed e cards de menor preço.
 - [x] **AddOfferRadarMining** — tabelas `AffiliateMiningProfiles`, `ProductPriceSnapshots` e `OfferRadarItems`.
 
+### Módulo 29 — Saúde, SubID, Evergreen e mídia
+
+- [x] **OfferHealthAlert.cs** / **EvergreenOffer.cs** / **AddOfferIntelligencePhase29** — alertas pós-disparo, campeãs e colunas `SourceChannel`/`SourceGroup`/`SubId` em `LinkClickLog`.
+- [x] **OfferAttributionRules.cs** / **OfferAttributionRulesTests.cs** — injeção `tf_src`/`tf_grp`/`sub_id`.
+- [x] **OfferHealthService.cs** / **GroupAttributionService.cs** / **EvergreenLibraryService.cs** / **OfferMediaStudio.cs**.
+- [x] **OfferIntelligenceWorker.cs** / **OfferIntelligenceController.cs**.
+- [x] **SaudeOfertas.razor** / **AtribuicaoGrupos.razor** / **BibliotecaEvergreen.razor** / **EstudioMidia.razor**.
+
+### Módulo 30 — Pre-flight e saúde de agendamentos
+
+- [x] **PreFlightNotification.cs** / **AddPreFlightPhase30** — pausas pré-envio e justificativas.
+- [x] **PreFlightRules.cs** / **PreFlightRulesTests.cs** — janela de 15 min, alta de preço e troca de URL.
+- [x] **PreFlightService.cs** / **PreFlightWorker.cs** / **PreFlightController.cs**.
+- [x] **SaudeAgendamentos.razor** — central de notificações e substituição inteligente de link.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

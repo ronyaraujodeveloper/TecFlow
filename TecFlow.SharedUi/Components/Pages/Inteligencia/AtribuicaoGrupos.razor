@@ -1,0 +1,61 @@
+﻿@page "/atribuicao/grupos"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferIntelligenceApiService Api
+
+<PageTitle>Lucro por grupo (SubID) — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <h1 class="h3 fw-bold mb-2">Mapeamento de lucro por grupo</h1>
+    <p class="text-muted small mb-4">Cliques rastreados pelo SubID injetado em cada disparo (canal + grupo).</p>
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-info py-2 small">@_info</div>
+    }
+    @if (_rows.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Canal</th>
+                        <th>Grupo</th>
+                        <th>SubID</th>
+                        <th>Cliques</th>
+                        <th>Links</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        <tr>
+                            <td>@row.Channel</td>
+                            <td class="text-break">@row.GroupKey</td>
+                            <td><code>@row.SubId</code></td>
+                            <td>@row.Clicks</td>
+                            <td>@row.Links</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<GroupAttributionRowDto> _rows = [];
+    private string? _info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Api.ListAttributionAsync();
+        if (result.Data?.Rows is { Count: > 0 })
+        {
+            _rows.AddRange(result.Data.Rows);
+        }
+
+        _info = result.Data?.Descricao;
+    }
+}

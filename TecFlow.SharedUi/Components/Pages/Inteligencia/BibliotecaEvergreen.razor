@@ -1,0 +1,113 @@
+﻿@page "/biblioteca-evergreen"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferIntelligenceApiService Api
+@inject ILogger<BibliotecaEvergreen> Logger
+
+<PageTitle>Biblioteca Evergreen — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Biblioteca Evergreen</h1>
+            <p class="text-muted small mb-0">Ofertas campeãs para preencher intervalos sem postagens.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="RefreshAsync">Atualizar ranking</button>
+            <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="RecycleAsync">Reciclar no agendador</button>
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small">@_info</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    <div class="row g-3">
+        @foreach (var item in _items)
+        {
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h6">@item.ProductName</h2>
+                        <p class="small mb-1">Cliques @item.ClickCount · Score @item.ChampionScore</p>
+                        @if (item.IsChampion)
+                        {
+                            <span class="badge text-bg-success">Campeã</span>
+                        }
+                    </div>
+                </article>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly List<EvergreenOfferDto> _items = [];
+    private bool _busy;
+    private string? _info;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var result = await Api.ListEvergreenAsync();
+        _items.Clear();
+        if (result.Data?.Items is { Count: > 0 })
+        {
+            _items.AddRange(result.Data.Items);
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.RefreshEvergreenAsync();
+            Apply(result.Data);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RecycleAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.RecycleEvergreenAsync();
+            if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+            }
+            else
+            {
+                Apply(result.Data);
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void Apply(EvergreenLibraryResponseDto? data)
+    {
+        _items.Clear();
+        if (data?.Items is { Count: > 0 })
+        {
+            _items.AddRange(data.Items);
+        }
+
+        _info = data?.Descricao;
+    }
+}

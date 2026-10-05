@@ -480,16 +480,29 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
         Guid affiliateLinkId,
         string? ipAddress,
         string? userAgent,
-        string? referrerUrl)
+        string? referrerUrl) =>
+        EnqueueClickLog(affiliateLinkId, ipAddress, userAgent, referrerUrl, null, null, null);
+
+    public void EnqueueClickLog(
+        Guid affiliateLinkId,
+        string? ipAddress,
+        string? userAgent,
+        string? referrerUrl,
+        string? sourceChannel,
+        string? sourceGroup,
+        string? subId)
     {
-        _ = PersistClickLogAsync(affiliateLinkId, ipAddress, userAgent, referrerUrl);
+        _ = PersistClickLogAsync(affiliateLinkId, ipAddress, userAgent, referrerUrl, sourceChannel, sourceGroup, subId);
     }
 
     private async Task PersistClickLogAsync(
         Guid affiliateLinkId,
         string? ipAddress,
         string? userAgent,
-        string? referrerUrl)
+        string? referrerUrl,
+        string? sourceChannel,
+        string? sourceGroup,
+        string? subId)
     {
         try
         {
@@ -527,7 +540,10 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
                 link.PlatformType,
                 ipAddress,
                 userAgent,
-                referrerUrl);
+                referrerUrl,
+                sourceChannel,
+                sourceGroup,
+                subId);
 
             await repository.AddAsync(log);
         }

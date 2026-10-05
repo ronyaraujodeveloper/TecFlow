@@ -42,6 +42,15 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IOfferRadarService, TecFlow.Infrastructure.Services.Radar.OfferRadarService>();
         services.AddScoped<IOfferMiningEngine, TecFlow.Infrastructure.Services.Radar.OfferMiningEngine>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Radar.OfferMiningHost>();
+        services.AddScoped<IOfferHealthService, TecFlow.Infrastructure.Services.Radar.OfferHealthService>();
+        services.AddScoped<IGroupAttributionService, TecFlow.Infrastructure.Services.Radar.GroupAttributionService>();
+        services.AddScoped<IEvergreenLibraryService, TecFlow.Infrastructure.Services.Radar.EvergreenLibraryService>();
+        services.AddScoped<IOfferMediaStudio, TecFlow.Infrastructure.Services.Radar.OfferMediaStudio>();
+        services.AddSingleton<IOfferIntelligenceEngine, TecFlow.Infrastructure.Services.Radar.OfferIntelligenceEngine>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Radar.OfferIntelligenceHost>();
+        services.AddScoped<IPreFlightService, TecFlow.Infrastructure.Services.Radar.PreFlightService>();
+        services.AddSingleton<IPreFlightEngine, TecFlow.Infrastructure.Services.Radar.PreFlightEngine>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Radar.PreFlightHost>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotCodeStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotSessionStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserMonitorHost>();

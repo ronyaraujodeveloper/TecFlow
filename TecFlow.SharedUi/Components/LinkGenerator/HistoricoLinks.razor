@@ -137,6 +137,10 @@
                             {
                                 <h3 class="h6 fw-semibold mb-1 text-break">@item.ProductName</h3>
                             }
+                            @if (!string.IsNullOrWhiteSpace(item.SourceGroup))
+                            {
+                                <p class="text-muted small mb-1">Grupo: @item.SourceGroup</p>
+                            }
                             else
                             {
                                 <input type="text"

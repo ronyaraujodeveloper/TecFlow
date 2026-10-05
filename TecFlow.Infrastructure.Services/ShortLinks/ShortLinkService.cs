@@ -100,7 +100,8 @@ public sealed class ShortLinkService : IShortLinkService
         string? customNickname,
         CancellationToken cancellationToken = default,
         ProductMetadataDto? productMetadata = null,
-        string? source = null)
+        string? source = null,
+        string? sourceGroup = null)
     {
         if (string.IsNullOrWhiteSpace(destinationUrl))
         {
@@ -138,6 +139,14 @@ public sealed class ShortLinkService : IShortLinkService
             {
                 existing.Source = source;
             }
+
+            if (!string.IsNullOrWhiteSpace(sourceGroup))
+            {
+                existing.SourceGroup = sourceGroup.Trim().Length <= 256
+                    ? sourceGroup.Trim()
+                    : sourceGroup.Trim()[..256];
+            }
+
             existing.IsActive = true;
             existing.Touch();
             entity = existing;
@@ -162,6 +171,9 @@ public sealed class ShortLinkService : IShortLinkService
                 TenantId = tenantId,
                 CustomNickname = customNickname?.Trim(),
                 Source = string.IsNullOrWhiteSpace(source) ? PublicConverterRules.GeradorSource : source,
+                SourceGroup = string.IsNullOrWhiteSpace(sourceGroup)
+                    ? null
+                    : (sourceGroup.Trim().Length <= 256 ? sourceGroup.Trim() : sourceGroup.Trim()[..256]),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };

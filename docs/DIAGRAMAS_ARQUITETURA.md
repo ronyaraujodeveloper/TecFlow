@@ -160,7 +160,10 @@ flowchart LR
   CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
   CXUI -->|modal UserBotHelpModal| HELP2[Tutorial my.telegram.org]
-  GMUI[GruposMonitorados Telegram] -->|Clonar Oferta| TGAGEN
+  GMUI[GruposMonitorados Telegram] -->|Clonar Oferta HEAD/GET| RESOLV[IUrlResolverService]
+  RESOLV -->|URL canônica| CONV[AffiliateLinkConverterService]
+  CONV -->|GenerateAsync + SourceGroup| GLHIST[ShortAffiliateLinks /gerador-links]
+  CONV -->|toast + Agendar Disparo| TGAGEN
   TGBS -->|TelegramBroadcastCampaigns SendPhoto/SendText| TGAPI
   ENC[DataEncryptionService AES-256] -->|Token ApiKey SessionData| SQL
   GEN -->|og:image twitter:image itemprop ProductImageUrl| SQL

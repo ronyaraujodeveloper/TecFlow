@@ -1,11 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
-using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
-using TecFlow.Business.Service.PublicPages;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
@@ -21,9 +19,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly ITelegramBroadcastService _telegramBroadcasts;
     private readonly TelegramUserMonitorHost _userBotHost;
     private readonly IOfferValidationService _validation;
-    private readonly IAffiliateLinkGenerationService _generation;
-    private readonly IMarketplaceAccountRepository _marketplaceAccounts;
-    private readonly PlatformLinkResolver _platformLinkResolver;
+    private readonly IAffiliateLinkConverterService _converter;
     private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
@@ -32,9 +28,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         ITelegramBroadcastService telegramBroadcasts,
         TelegramUserMonitorHost userBotHost,
         IOfferValidationService validation,
-        IAffiliateLinkGenerationService generation,
-        IMarketplaceAccountRepository marketplaceAccounts,
-        PlatformLinkResolver platformLinkResolver,
+        IAffiliateLinkConverterService converter,
         ILogger<MonitoredGroupService> logger)
     {
         _context = context;
@@ -42,9 +36,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _telegramBroadcasts = telegramBroadcasts;
         _userBotHost = userBotHost;
         _validation = validation;
-        _generation = generation;
-        _marketplaceAccounts = marketplaceAccounts;
-        _platformLinkResolver = platformLinkResolver;
+        _converter = converter;
         _logger = logger;
     }
 
@@ -237,24 +229,32 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             };
         }
 
-        var affiliateUrl = await ConvertUrlAsync(userId, entity.OriginalUrl, cancellationToken);
-        if (string.IsNullOrWhiteSpace(affiliateUrl))
+        var converted = await _converter.ConvertAsync(
+            userId,
+            entity.OriginalUrl,
+            entity.GroupName,
+            cancellationToken);
+        if (!converted.Status || converted.Data is null || string.IsNullOrWhiteSpace(converted.Data.AffiliateUrl))
         {
             return new MonitoredGroupsResponseDto
             {
                 Status = false,
-                Descricao = "Não foi possível converter o link. Cadastre uma loja ativa da mesma plataforma."
+                Descricao = string.IsNullOrWhiteSpace(converted.Descricao)
+                    ? CloneOfferRules.MissingStoreMessage
+                    : converted.Descricao
             };
         }
 
-        var title = string.IsNullOrWhiteSpace(entity.ProductName) ? "Oferta clonada" : entity.ProductName!;
+        var title = FirstNonEmpty(converted.Data.Title, entity.ProductName) ?? "Oferta clonada";
+        var price = converted.Data.Price ?? entity.ValidatedPrice ?? entity.ExtractedPrice;
         var message = title;
-        if (entity.ValidatedPrice is > 0 || entity.ExtractedPrice is > 0)
+        if (price is > 0)
         {
-            message += " por " + ProductMetadataHtmlParser.FormatBrl(entity.ValidatedPrice ?? entity.ExtractedPrice);
+            message += " por " + ProductMetadataHtmlParser.FormatBrl(price);
         }
 
-        var image = entity.ProductImageUrl;
+        var image = FirstNonEmpty(converted.Data.ImageUrl, entity.ProductImageUrl);
+        var affiliateUrl = converted.Data.AffiliateUrl;
         var targetChannel = GroupOfferCaptureRules.NormalizeChannel(channel)
             ?? GroupOfferCaptureRules.NormalizeChannel(entity.Channel)
             ?? GroupOfferCaptureRules.WhatsAppChannel;
@@ -271,9 +271,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         return new MonitoredGroupsResponseDto
         {
             Status = true,
-            Descricao = targetChannel == GroupOfferCaptureRules.TelegramChannel
-                ? "Link convertido. Abrindo o agendador Telegram."
-                : "Link convertido. Abrindo o agendador WhatsApp.",
+            Descricao = CloneOfferRules.SuccessToast,
             Clone = new CloneMonitoredOfferResultDto
             {
                 Status = true,
@@ -423,40 +421,6 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         }
     }
 
-    private async Task<string?> ConvertUrlAsync(int userId, string originalUrl, CancellationToken cancellationToken)
-    {
-        var (_, resolvedUrl) = await _platformLinkResolver.ResolveFromInputAsync(originalUrl, cancellationToken);
-        if (!UrlUnshortenerService.TryDetectMarketplace(resolvedUrl, out var platform)
-            && !UniversalLinkResolverEngine.TryMapDomainToPlatform(resolvedUrl, out platform))
-        {
-            return null;
-        }
-
-        var accounts = await _marketplaceAccounts.ListByUserIdAsync(userId.ToString(), cancellationToken);
-        var account = PublicConverterRules.FirstActiveForPlatform(accounts, platform);
-        if (account is null)
-        {
-            return null;
-        }
-
-        var request = new GerarLinkAfiliadoDto
-        {
-            OriginalUrl = originalUrl,
-            StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(account.Id),
-            StoreIds = [IntegracaoLojaScopeHelper.EncodeStoreScope(account.Id)],
-            TenantId = account.TenantId,
-            ShopId = account.ShopId,
-            Source = "GroupClone"
-        };
-
-        var result = await _generation.GenerateAsync(request, userId, cancellationToken);
-        if (!result.Success && !result.HasConvertedLink)
-        {
-            return null;
-        }
-
-        return FirstNonEmpty(result.AffiliateUrl, result.ResolvedShortUrl, result.ConvertedUrl);
-    }
 
     private static GroupCapturedOfferDto MapOffer(GroupCapturedMessage item) =>
         new()

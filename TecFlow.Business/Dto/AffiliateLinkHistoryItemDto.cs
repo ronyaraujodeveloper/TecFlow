@@ -36,6 +36,8 @@ public class AffiliateLinkHistoryItemDto
 
     public string? Source { get; set; }
 
+    public string? SourceGroup { get; set; }
+
     public bool IsFromPublicPage { get; set; }
 
     public bool IsFromWhatsAppBot { get; set; }
@@ -69,6 +71,7 @@ public class ShortAffiliateLinkDto : AffiliateLinkHistoryItemDto
             ProductImageUrl = item.ProductImageUrl,
             LinkGroupId = item.LinkGroupId,
             Source = item.Source,
+            SourceGroup = item.SourceGroup,
             IsFromPublicPage = item.IsFromPublicPage,
             IsFromWhatsAppBot = item.IsFromWhatsAppBot,
             IsFromTelegramBot = item.IsFromTelegramBot,

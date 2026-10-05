@@ -116,7 +116,8 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                     request.CustomNickname,
                     cancellationToken,
                     productMetadata,
-                    request.Source);
+                    request.Source,
+                    request.SourceGroup);
 
                 await _telemetryService.RecordGenerationAsync(
                     created.AffiliateLinkId,

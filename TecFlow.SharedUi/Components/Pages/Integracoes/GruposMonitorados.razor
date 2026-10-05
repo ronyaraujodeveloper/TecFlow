@@ -47,6 +47,12 @@
     {
         <div class="alert alert-success py-2 small" role="status">@_info</div>
     }
+    @if (!string.IsNullOrWhiteSpace(_toastMessage))
+    {
+        <div class="toast show campaign-toast @(_toastSuccess ? "text-bg-success" : "text-bg-danger")" role="status" aria-live="polite">
+            <div class="toast-body">@_toastMessage</div>
+        </div>
+    }
 
     <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
         <div>
@@ -123,6 +129,12 @@
                                 <button type="button" class="btn btn-primary btn-sm" disabled="@_isBusy" @onclick="() => CloneAsync(item.Id)">
                                     @(IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha")
                                 </button>
+                                @if (IsTelegram && _clonedOfferId == item.Id && !string.IsNullOrWhiteSpace(_scheduleUrl))
+                                {
+                                    <a class="btn btn-success btn-sm" href="@_scheduleUrl">
+                                        @CloneOfferRules.ScheduleActionLabel
+                                    </a>
+                                }
                             </div>
                         </div>
                     </article>
@@ -155,6 +167,10 @@
     private bool _isBusy;
     private string? _error;
     private string? _info;
+    private string? _toastMessage;
+    private bool _toastSuccess;
+    private string? _scheduleUrl;
+    private int? _clonedOfferId;
     private CancellationTokenSource? _refreshCts;
 
     private bool IsTelegram => CurrentPath().Equals(TelegramPath, StringComparison.OrdinalIgnoreCase);
@@ -337,27 +353,49 @@
     {
         _isBusy = true;
         _error = null;
+        _toastMessage = null;
         try
         {
             var result = await Api.CloneAsync(offerId, Channel);
-            if (!string.IsNullOrWhiteSpace(result.Data?.Clone?.RedirectUrl))
+            if (result.Data is { Status: true, Clone.AffiliateUrl: { Length: > 0 } })
             {
-                Navigation.NavigateTo(result.Data.Clone.RedirectUrl);
+                Apply(result.Data, null, append: false, silent: false);
+                _clonedOfferId = offerId;
+                _scheduleUrl = result.Data.Clone.RedirectUrl;
+                _info = result.Data.Descricao;
+                await ShowToastAsync(CloneOfferRules.SuccessToast, success: true);
+                if (!IsTelegram && !string.IsNullOrWhiteSpace(result.Data.Clone.RedirectUrl))
+                {
+                    Navigation.NavigateTo(result.Data.Clone.RedirectUrl);
+                }
+
                 return;
             }
 
             Apply(result.Data, result.ErrorMessage, append: false, silent: false);
             _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível clonar a oferta.";
+            await ShowToastAsync(_error, success: false);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao clonar oferta {OfferId}.", offerId);
             _error = "Não foi possível converter o link de comissão.";
+            await ShowToastAsync(_error, success: false);
         }
         finally
         {
             _isBusy = false;
         }
+    }
+
+    private async Task ShowToastAsync(string message, bool success)
+    {
+        _toastMessage = message;
+        _toastSuccess = success;
+        StateHasChanged();
+        await Task.Delay(4500);
+        _toastMessage = null;
+        StateHasChanged();
     }
 
     private static string FirstNonEmpty(params string?[] values)

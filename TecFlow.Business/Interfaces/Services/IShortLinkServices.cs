@@ -33,7 +33,8 @@ public interface IShortLinkService
         string? customNickname,
         CancellationToken cancellationToken = default,
         ProductMetadataDto? productMetadata = null,
-        string? source = null);
+        string? source = null,
+        string? sourceGroup = null);
 
     Task DeactivateUnselectedAccountsAsync(
         Guid linkGroupId,

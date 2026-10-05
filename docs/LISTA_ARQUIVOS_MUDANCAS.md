@@ -917,6 +917,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramGroupPicker.razor** — chips com `GroupName` + Chat ID, busca e atalhos Selecionar Todos / Limpar.
 - [x] **AddTelegramGroupsAndMultiChat** — tabela `TelegramGroups` e `TargetChatIdsJson` nas campanhas.
 - [x] **AddTelegramUserBotCredentials** — `UserBotApiId`, `UserBotApiHash`, `UserBotPhone` em `TelegramIntegrations`.
+- [x] **AddSourceGroupToShortAffiliateLinks** — coluna `SourceGroup` no histórico de `/gerador-links`.
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — regex HTTP ampla; filtro Shopee, ML, Amazon, AliExpress, Magalu, Casas Bahia, Pelando, Promobit e encurtadores; `api_id` numérico e PIN de 5 dígitos.
 - [x] **UserBotHelpModal.razor** — tutorial de 7 passos, badges Bot Token/Chat ID e Copiar exemplo.
 - [x] **Conexoes.razor** — badges amarelo/azul no bloco UserBot e abre `UserBotHelpModal`.
@@ -925,7 +926,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats` (Dialogs/Slice) + `GetHistory` (1500/48h), botões inline e persistência no sync; sessão em `ProgramData`.
 - [x] **UserBotCatchUpResult.cs** — resultado do catch-up (offline vs persistidas) para o botão Sincronizar.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
-- [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50”; 401 mostra alerta de sessão sem sair da rota.
+- [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50”; Clonar Oferta com toast e atalho Agendar Disparo.
+- [x] **IUrlResolverService.cs** / **UrlResolverService.cs** — HEAD/GET com `AllowAutoRedirect` até a URL canônica da loja.
+- [x] **IAffiliateLinkConverterService.cs** / **AffiliateLinkConverterService.cs** — conversão de comissão + título/preço/imagem.
+- [x] **CloneOfferRules.cs** / **UrlResolverDto.cs** / **AffiliateLinkConverterDto.cs** — mensagens e envelopes do clone.
+- [x] **UrlResolverServiceTests.cs** / **AffiliateLinkConverterServiceTests.cs** — HEAD até Shopee e persistência com SourceGroup.
 - [x] **MonitoredGroupsController.cs** / **MonitoredGroupService.cs** — listagem paginada (`skip`/`take`, sem `Take(120)`).
 
 ---

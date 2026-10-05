@@ -61,6 +61,10 @@ public class ShortAffiliateLink : BaseEntity, ITenantScopedEntity
     [MaxLength(32)]
     public string? Source { get; set; }
 
+    /// <summary>Grupo/canal de origem quando o link veio de clonagem (histórico /gerador-links).</summary>
+    [MaxLength(256)]
+    public string? SourceGroup { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     /// <summary>Alias de <see cref="ShortCode"/> para o contrato mobile/offline.</summary>

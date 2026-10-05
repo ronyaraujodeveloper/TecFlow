@@ -39,4 +39,7 @@ public class GerarLinkAfiliadoDto
 
     /// <summary>Origem da conversão: Gerador (painel) ou PublicPage.</summary>
     public string? Source { get; set; }
+
+    /// <summary>Canal/grupo de origem da oferta clonada (ex: Pelando Promoções).</summary>
+    public string? SourceGroup { get; set; }
 }

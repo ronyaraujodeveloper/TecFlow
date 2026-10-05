@@ -304,6 +304,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(link => link.LinkGroupId);
             entity.Property(link => link.AffiliateUrl).HasMaxLength(2048);
             entity.Property(link => link.Source).HasMaxLength(32);
+            entity.Property(link => link.SourceGroup).HasMaxLength(256);
             entity.HasOne<MarketplaceAccount>()
                 .WithMany()
                 .HasForeignKey(link => link.MarketplaceAccountId)

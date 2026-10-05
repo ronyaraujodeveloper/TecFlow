@@ -688,6 +688,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] `IUserContextProvider` registrado no DI da API (corrige 500 na tela de grupos monitorados).
 - [x] HTTP 401 na listagem/sync não força `NavigateTo("/")`; o menu e a tela permanecem e o login sem JWT segue via `HttpService`.
 - [x] Sincronizar Telegram aguarda o catch-up UserBot (48h / 1500 msgs) e avisa se a sessão MTProto estiver offline.
+- [x] Clonar Oferta desencurta HEAD/GET, converte comissão, grava no histórico de `/gerador-links` (`SourceGroup`) e oferece Agendar Disparo.
 
 ### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
 [ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
@@ -795,7 +796,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
    - **Passo 1:** O usuário informa o `api_id` numérico, o `api_hash` e o telefone E.164 e clica em "Solicitar Código". PIN e "Confirmar e Autenticar" só habilitam após HTTP 200. Helpers no formulário; ApiId rejeita Bot Token (`:`) e Chat ID (`-100`).
    - **Passo 2:** Após `SolicitarCodigo()` com sucesso, `isCodeInputDisabled` fica `false`. Em erro de formato, o usuário pode habilitar o PIN manualmente. **Confirmar e Autenticar** chama `MakeAuthAsync` e grava o `.session`.
 
+## 🧬 Motor de Clonagem e Desencurtamento de Links (Clone & Convert Engine)
 
+- [x] **Desencurtador e Follow Redirects em Background:**
+  - `IUrlResolverService` resolve o link capturado com HEAD/GET (`AllowAutoRedirect`) até a URL canônica da loja.
+- [x] **Conversão Dinâmica por Conta de Afiliado:**
+  - `AffiliateLinkConverterService` troca a tag de terceiro pela comissão do usuário logado e extrai título, preço e imagem.
+- [x] **Integração Grupos Monitorados -> Gerador de Links (`/gerador-links`):**
+  - Clonar Oferta grava `ShortAffiliateLinks` (histórico) com `OriginalUrl`, `AffiliateUrl`, metadados e `SourceGroup`; toast de sucesso e atalho **Agendar Disparo**.
 
    
 ---

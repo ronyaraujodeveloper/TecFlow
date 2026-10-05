@@ -28,11 +28,21 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
             })
             .ConfigureHttpClient(ConfigureExpansionClient);
 
+        services.AddHttpClient(IntegrationHttpClientNames.UrlResolver)
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 10
+            })
+            .ConfigureHttpClient(ConfigureExpansionClient);
+
         services.AddHttpClient(IntegrationHttpClientNames.ProductMetadata)
             .ConfigurePrimaryHttpMessageHandler(ProductMetadataService.CreateShopeeCookieHandler)
             .ConfigureHttpClient(ConfigureAntiBotBrowserClient);
 
         services.AddScoped<IUrlExpansionService, UrlExpansionService>();
+        services.AddScoped<IUrlResolverService, UrlResolverService>();
+        services.AddScoped<IAffiliateLinkConverterService, AffiliateLinkConverterService>();
         services.AddScoped<IProductMetadataService, ProductMetadataService>();
         services.AddScoped<IShopeeService, ShopeeService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();

@@ -968,6 +968,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **PreFlightService.cs** / **PreFlightWorker.cs** / **PreFlightController.cs**.
 - [x] **SaudeAgendamentos.razor** — central de notificações e substituição inteligente de link.
 
+### Módulo 31 — Pipeline de imagens capturadas
+
+- [x] **ProductImageStorageRules.cs** / **ProductImageStorageRulesTests.cs** — pasta `{tenant}/{yyyy}/{MM}` e nome `{messageId}_{guid8}.jpg`.
+- [x] **OfferProductMediaStore.cs** — grava caminho relativo em `GroupCapturedMessages.ProductImageUrl`.
+- [x] **ProductImageCleanupService.cs** / **ProductImageCleanupWorker.cs** — expurgo diário após 15 dias.
+- [x] **GruposMonitorados.razor** — `<img src="@item.ProductImageUrl">` com placeholder se a foto foi expurgada.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

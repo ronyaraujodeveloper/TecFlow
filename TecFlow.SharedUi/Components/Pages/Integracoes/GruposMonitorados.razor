@@ -108,7 +108,12 @@
                                 <div class="product-image-preview-box product-image-preview-box--sm">
                                     @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
                                     {
-                                        <img src="@item.ProductImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                        <img src="@item.ProductImageUrl"
+                                             alt=""
+                                             class="product-image-preview-img"
+                                             loading="lazy"
+                                             onerror="this.classList.add('d-none'); var ph = this.nextElementSibling; if (ph) { ph.classList.remove('d-none'); }" />
+                                        <span class="product-image-preview-placeholder d-none">Sem imagem</span>
                                     }
                                     else
                                     {

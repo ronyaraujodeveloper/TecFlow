@@ -153,7 +153,8 @@ flowchart LR
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
   GMUI[GruposMonitorados] -->|POST sync aguarda CatchUp 48h/1500| USERBOT
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
-  USERBOT -->|DownloadFileAsync MessageMediaPhoto| MEDIA[wwwroot/uploads/products]
+  USERBOT -->|DownloadFileAsync MessageMediaPhoto| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
+  PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI[GruposMonitorados] -->|GET skip take 50 ignored| MGAPI[MonitoredGroupsController]

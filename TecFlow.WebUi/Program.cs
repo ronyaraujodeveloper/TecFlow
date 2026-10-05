@@ -35,6 +35,7 @@ app.UseSerilogRequestLogging();
 
 // wwwroot, _content (RCL) e *.styles.css devem ser atendidos antes de auth/rotas Blazor.
 app.UseStaticFiles();
+app.UseTecFlowProductUploads();
 
 if (!app.Environment.IsDevelopment())
 {

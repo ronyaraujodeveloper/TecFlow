@@ -8,3 +8,8 @@ public interface IOfferProductMediaStore
         byte[] photoBytes,
         CancellationToken cancellationToken = default);
 }
+
+public interface IProductImageCleanupService
+{
+    Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default);
+}

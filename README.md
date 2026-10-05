@@ -806,6 +806,15 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Verificação de redirecionamento e expurgo automático de links que retornam erros conhecidos da Shopee/Mercado Livre (ex: "loja falhou ao carregar").
 - [x] **Parser Inteligente de Título e Preço (Regex + Fallback HTML):**
   - Normalização de captura de valores (`R$`, `R$ `, `,00`) e fallback para as meta tags do e-commerce caso o texto do canal venha formatado de forma atípica.
+
+  ## 🖼️ Gerenciamento e Ciclo de Vida de Imagens Capturadas (Media Pipeline)
+
+- [x] **Armazenamento Segregado por Tenant/Data:**
+  - Fotos do UserBot em `wwwroot/uploads/products/{TenantId}/{Ano}/{Mes}/` com nome `{messageId}_{guid8}.jpg` e caminho relativo em `GroupCapturedMessages.ProductImageUrl`.
+- [x] **Rotina de Limpeza Automática (ProductImageCleanupWorker):**
+  - Worker diário apaga `.jpg` com mais de 15 dias em `uploads/products/` e zera `ProductImageUrl`.
+- [ ] **Disparo de Mídia Nativa nos Canais:**
+  - Envio do arquivo de imagem físico armazenado em disco para as APIs de envio (WhatsApp/Telegram) ao agendar ou clonar ofertas.
    
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

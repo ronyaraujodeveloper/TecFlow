@@ -85,6 +85,7 @@ builder.Services.AddHostedService<TecFlow.API.Workers.TelegramUserMonitorWorker>
 builder.Services.AddHostedService<TecFlow.API.Workers.OfferMiningWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.OfferIntelligenceWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.PreFlightWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.ProductImageCleanupWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]

@@ -35,6 +35,8 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<ITelegramBroadcastService, TelegramBroadcastService>();
         services.AddScoped<IGroupOfferCaptureService, TecFlow.Infrastructure.Services.Groups.GroupOfferCaptureService>();
         services.AddScoped<IOfferProductMediaStore, TecFlow.Infrastructure.Services.Groups.OfferProductMediaStore>();
+        services.AddScoped<IProductImageCleanupService, TecFlow.Infrastructure.Services.Groups.ProductImageCleanupService>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Groups.ProductImageCleanupHost>();
         services.AddScoped<IGroupCapturedMessagesService, TecFlow.Infrastructure.Services.Groups.GroupCapturedMessagesService>();
         services.AddScoped<IMonitoredGroupService, TecFlow.Infrastructure.Services.Groups.MonitoredGroupService>();
         services.AddScoped<IAffiliateMiningProfileService, TecFlow.Infrastructure.Services.Radar.AffiliateMiningProfileService>();

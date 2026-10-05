@@ -95,6 +95,14 @@
                         <i class="bi bi-link-45deg portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Gerador de Links</span>
                     </a>
+                    <a href="/radar-ofertas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/radar-ofertas")" @onclick="NotifyNavigate">
+                        <i class="bi bi-broadcast portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Radar de Ofertas</span>
+                    </a>
+                    <a href="/radar/perfil" class="portal-nav-link portal-nav-sublink @GetActiveClass("/radar/perfil")" @onclick="NotifyNavigate">
+                        <i class="bi bi-sliders portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Perfil de mineração</span>
+                    </a>
                     <a href="/minhas-paginas-publicas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
                         <i class="bi bi-globe2 portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Minhas Páginas Públicas</span>
@@ -211,6 +219,8 @@
         "/integracoes/lojas",
         "/gerador-links",
         "/comissao/gerar",
+        "/radar-ofertas",
+        "/radar/perfil",
         "/minhas-paginas-publicas"
     ];
 

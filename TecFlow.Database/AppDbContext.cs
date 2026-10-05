@@ -57,6 +57,9 @@ public class AppDbContext : DbContext
     public DbSet<TelegramBroadcastCampaign> TelegramBroadcastCampaigns { get; set; } = null!;
     public DbSet<TelegramGroup> TelegramGroups { get; set; } = null!;
     public DbSet<GroupCapturedMessage> GroupCapturedMessages { get; set; } = null!;
+    public DbSet<AffiliateMiningProfile> AffiliateMiningProfiles { get; set; } = null!;
+    public DbSet<ProductPriceSnapshot> ProductPriceSnapshots { get; set; } = null!;
+    public DbSet<OfferRadarItem> OfferRadarItems { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -411,6 +414,36 @@ public class AppDbContext : DbContext
             entity.HasIndex(item => new { item.UserId, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.GroupKey, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.Channel, item.ExternalMessageId, item.OriginalUrl });
+        });
+
+        modelBuilder.Entity<AffiliateMiningProfile>(entity =>
+        {
+            entity.ToTable("AffiliateMiningProfiles");
+            entity.Property(item => item.NichesCsv).HasMaxLength(1000);
+            entity.Property(item => item.AutoPilotChannel).HasMaxLength(16);
+            entity.HasIndex(item => item.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductPriceSnapshot>(entity =>
+        {
+            entity.ToTable("ProductPriceSnapshots");
+            entity.Property(item => item.ProductKey).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.SourceUrl).HasMaxLength(1000);
+            entity.HasIndex(item => new { item.UserId, item.ProductKey, item.CapturedAt });
+        });
+
+        modelBuilder.Entity<OfferRadarItem>(entity =>
+        {
+            entity.ToTable("OfferRadarItems");
+            entity.Property(item => item.ProductName).HasMaxLength(255).IsRequired();
+            entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
+            entity.Property(item => item.OriginalUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(item => item.AffiliateUrl).HasMaxLength(2048);
+            entity.Property(item => item.PlatformName).HasMaxLength(64);
+            entity.Property(item => item.CouponCode).HasMaxLength(32);
+            entity.Property(item => item.Source).HasMaxLength(32).IsRequired();
+            entity.HasIndex(item => new { item.UserId, item.AttractivenessScore, item.ReceivedAt });
+            entity.HasIndex(item => new { item.UserId, item.OriginalUrl, item.ReceivedAt });
         });
 
         modelBuilder.Entity<WhatsAppGroup>(entity =>

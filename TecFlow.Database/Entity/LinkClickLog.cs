@@ -11,6 +11,7 @@ public class LinkClickLog
 {
     public const string EventKindGeneration = "Generation";
     public const string EventKindClick = "Click";
+    public const string EventKindArbitrage = "Arbitrage";
 
     [Key]
     public int Id { get; set; }

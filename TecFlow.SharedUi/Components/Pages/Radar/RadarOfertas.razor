@@ -1,0 +1,173 @@
+﻿@page "/radar-ofertas"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
+@using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferRadarApiService Api
+@inject NavigationManager Navigation
+@inject ILogger<RadarOfertas> Logger
+
+<PageTitle>Radar de Ofertas — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Radar de Ofertas</h1>
+            <p class="text-muted small mb-0">
+                Curadoria com score de atratividade, quedas de preço e tendências dos nichos cadastrados.
+            </p>
+        </div>
+        <a href="/radar/perfil" class="btn btn-outline-secondary btn-touch">Perfil de mineração</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small">@_info</div>
+    }
+
+    @if (_items.Count == 0)
+    {
+        <div class="alert alert-light border">
+            Nenhuma oferta no radar ainda. Converta um link no Gerador ou aguarde o worker de mineração.
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var item in _items)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex gap-3 mb-3">
+                                <div class="product-image-preview-box product-image-preview-box--sm">
+                                    @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
+                                    {
+                                        <img src="@item.ProductImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="product-image-preview-placeholder">Sem imagem</span>
+                                    }
+                                </div>
+                                <div class="min-w-0">
+                                    <h2 class="h6 fw-semibold mb-1 text-break">@item.ProductName</h2>
+                                    <p class="fw-bold mb-1">@ProductMetadataHtmlParser.FormatBrl(item.Price)</p>
+                                    @if (item.ComparedPrice is > 0)
+                                    {
+                                        <p class="text-muted small mb-0">Média @ProductMetadataHtmlParser.FormatBrl(item.ComparedPrice)</p>
+                                    }
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformName)">
+                                    @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)
+                                </span>
+                                <span class="badge text-bg-primary">Score @item.AttractivenessScore</span>
+                                <span class="badge text-bg-secondary">@item.SourceLabel</span>
+                                @if (!string.IsNullOrWhiteSpace(item.CouponCode))
+                                {
+                                    <span class="badge text-bg-success">Cupom @item.CouponCode</span>
+                                }
+                                @if (item.IsAutoQueued)
+                                {
+                                    <span class="badge text-bg-info">Piloto</span>
+                                }
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="() => ScheduleWhatsAppAsync(item.Id)">
+                                    Enviar ao Agendador WhatsApp
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => ScheduleTelegramAsync(item.Id)">
+                                    Enviar ao Agendador Telegram
+                                </button>
+                                <button type="button" class="btn btn-outline-success" disabled="@_busy" @onclick="() => AutoPilotAsync(item.Id)">
+                                    Piloto automático
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<OfferRadarItemDto> _items = [];
+    private bool _busy;
+    private string? _error;
+    private string? _info;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var result = await Api.ListAsync();
+            _items.Clear();
+            if (result.Data?.Items is { Count: > 0 })
+            {
+                _items.AddRange(result.Data.Items);
+            }
+            else if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar o radar.");
+            _error = "Não foi possível carregar o radar.";
+        }
+    }
+
+    private Task ScheduleWhatsAppAsync(int id) => ScheduleAsync(id, "WhatsApp");
+
+    private Task ScheduleTelegramAsync(int id) => ScheduleAsync(id, "Telegram");
+
+    private async Task ScheduleAsync(int id, string channel)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.ScheduleAsync(id, channel);
+            if (!string.IsNullOrWhiteSpace(result.Data?.ScheduleUrl))
+            {
+                Navigation.NavigateTo(result.Data.ScheduleUrl);
+                return;
+            }
+
+            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível abrir o agendador.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task AutoPilotAsync(int id)
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            var result = await Api.QueueAutoPilotAsync(id);
+            _info = result.Data?.Descricao ?? "Item na fila do piloto automático.";
+            await LoadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

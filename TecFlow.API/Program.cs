@@ -82,6 +82,7 @@ builder.Services.Configure<HostOptions>(options =>
 builder.Services.AddHostedService<TecFlow.API.Workers.WhatsAppBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramBroadcastWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TelegramUserMonitorWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.OfferMiningWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]

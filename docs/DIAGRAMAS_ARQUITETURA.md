@@ -164,6 +164,11 @@ flowchart LR
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT
   CXUI -->|modal UserBotHelpModal| HELP2[Tutorial my.telegram.org]
   GMUI[GruposMonitorados Telegram] -->|Clonar Oferta HEAD/GET| RESOLV[IUrlResolverService]
+  GENUI[GeradorLinks] -->|POST api/radar/arbitragem| ARB[ProductArbitrageService]
+  ARB -->|Task.WhenAll converter + cupom| RADAR[(OfferRadarItems)]
+  MINE[OfferMiningWorker] -->|quedas movers trends 10min| RADAR
+  RADUI[RadarOfertas] -->|score + agendar/piloto| AGEND[WhatsApp/Telegram Agendador]
+  PERF[RadarPerfil] -->|nichos ticket comissao| PROF[(AffiliateMiningProfiles)]
   RESOLV -->|URL canônica| CONV[AffiliateLinkConverterService]
   CONV -->|GenerateAsync + SourceGroup| GLHIST[ShortAffiliateLinks /gerador-links]
   CONV -->|toast + Agendar Disparo| TGAGEN

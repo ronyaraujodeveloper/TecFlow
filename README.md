@@ -692,31 +692,14 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] Feed Telegram filtra lojas ativas + URL de produto; Sem interesse / Restaurar; ações do card em grid 2x2.
 
 ### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
-[ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
-
-Interface no perfil para cadastro dos nichos/categorias de interesse, faixa de ticket médio desejada e porcentagem de comissão mínima.
-
-Filtro para restrição de buscas apenas nas plataformas onde o usuário possui integração ativa no TecFlow (Shopee, Mercado Livre, Amazon, TikTok Shop).
-
-[ ] 28.2. Arbitragem de Preços e Cupons em Tempo Real (Gerador):
-
-Disparo de busca cruzada paralela em segundo plano no momento em que o usuário converte qualquer URL.
-
-Varredura de cupons ativos e identificação de menor valor nas demais contas conectadas do usuário.
-
-Exibição de card dinâmico no Gerador de Links com o link alternativo convertido, valor com desconto e código do cupom encontrado.
-
-[ ] 28.3. Garimpo Automático, Tendências e Social Listening (Worker 24/7):
-
-Worker em background para monitoramento de quedas bruscas de preço em relação à média histórica.
-
-Algoritmo para identificação de produtos com picos de vendas recentes (Movers & Shakers) e vídeos em tendência no TikTok/Reels dentro dos nichos cadastrados.
-
-[ ] 28.4. Feed Recomendador e Piloto Automático (Auto-Agendamento):
-
-Painel "Radar de Ofertas" com curadoria personalizada e Score de atratividade da promoção.
-
-Opção de envio direto do item recomendado para o Agendador de Grupos (WhatsApp / Telegram) ou disparo no modo Piloto Automático.
+- [x] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
+  - Tela `/radar/perfil` com nichos, ticket médio, comissão mínima e restrição às lojas ativas (Shopee, Mercado Livre, Amazon, TikTok Shop).
+- [x] 28.2. Arbitragem de Preços e Cupons em Tempo Real (Gerador):
+  - Após converter URL, busca cruzada em segundo plano e cards com menor preço, cupom e link convertido.
+- [x] 28.3. Garimpo Automático, Tendências e Social Listening (Worker 24/7):
+  - `OfferMiningWorker` monitora quedas vs média histórica, movers e menções TikTok/Reels.
+- [x] 28.4. Feed Recomendador e Piloto Automático (Auto-Agendamento):
+  - Painel `/radar-ofertas` com score, envio ao agendador WhatsApp/Telegram e fila do piloto automático.
 
 ## 🚀 Fase 29: Validação Inteligente e Atribuição de Vendas (Diferenciais Exclusivos)
 
@@ -725,13 +708,13 @@ Opção de envio direto do item recomendado para o Agendador de Grupos (WhatsApp
 - [ ] **29.3. Biblioteca Evergreen & Reciclador de Ofertas Campeãs:** Repositório de produtos com alto histórico de vendas para preenchimento automático de intervalos sem postagens.
 - [ ] **29.4. Moldura Dinâmica e Mídia Rica (Vídeos sem Marca d'Água):** Aplicação de molduras promocionais personalizadas nas imagens e suporte a download de vídeos do produto para envio direto.
 
-## 🛡️ Fase 29: Validação Pré-Disparo e Saúde de Agendamentos (Pre-Flight Check)
+## 🛡️ Fase 30: Validação Pré-Disparo e Saúde de Agendamentos (Pre-Flight Check)
 
-- [ ] **29.1. Validação de Integridade Pré-Envio (Pre-Flight Worker):**
+- [ ] **30.1. Validação de Integridade Pré-Envio (Pre-Flight Worker):**
   - Checagem automática de preço, cupom ativo e disponibilidade de estoque minutos antes da execução de cada agendamento.
   - Pausa automática de disparos caso o preço tenha subido, o cupom expirado ou o produto esgotado.
 
-- [ ] **29.2. Central de Notificações e Reagendamento:**
+- [ ] **30.2. Central de Notificações e Reagendamento:**
   - Alerta visual no painel do TecFlow com a justificativa da pausa (ex: "Cancelado: Preço alterado de R$ 49 para R$ 89").
   - Opção de recálculo com o menor preço encontrado em lojas concorrentes do usuário (Substituição Inteligente de Link).
 

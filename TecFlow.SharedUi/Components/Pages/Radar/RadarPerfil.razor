@@ -1,0 +1,179 @@
+﻿@page "/radar/perfil"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.Radar
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfferRadarApiService Api
+@inject ILogger<RadarPerfil> Logger
+
+<PageTitle>Perfil de mineração — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Perfil de mineração</h1>
+            <p class="text-muted small mb-0">
+                Defina nichos, ticket médio e comissão mínima. O radar busca só nas lojas ativas (Shopee, Mercado Livre, Amazon e TikTok Shop).
+            </p>
+        </div>
+        <a href="/radar-ofertas" class="btn btn-outline-primary btn-touch">Abrir Radar de Ofertas</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small">@_info</div>
+    }
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="niches">Nichos / categorias</label>
+                <input id="niches" class="form-control" value="@_niches" @oninput="e => _niches = e.Value?.ToString() ?? string.Empty" />
+                <p class="form-text mb-0">Separe por vírgula. Ex.: eletrônicos, casa, beleza</p>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="min-ticket">Ticket mínimo (R$)</label>
+                    <input id="min-ticket" class="form-control" inputmode="decimal" value="@_minTicket" @oninput="e => _minTicket = e.Value?.ToString()" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="max-ticket">Ticket máximo (R$)</label>
+                    <input id="max-ticket" class="form-control" inputmode="decimal" value="@_maxTicket" @oninput="e => _maxTicket = e.Value?.ToString()" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="min-commission">Comissão mínima (%)</label>
+                    <input id="min-commission" class="form-control" inputmode="decimal" value="@_minCommission" @oninput="e => _minCommission = e.Value?.ToString()" />
+                </div>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="restrict-stores" checked="@_restrict" @onchange="e => _restrict = (bool)(e.Value ?? true)" />
+                <label class="form-check-label" for="restrict-stores">Buscar apenas nas plataformas com integração ativa</label>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="autopilot" checked="@_autoPilot" @onchange="e => _autoPilot = (bool)(e.Value ?? false)" />
+                <label class="form-check-label" for="autopilot">Ativar piloto automático no Radar</label>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold" for="channel">Canal do piloto</label>
+                <select id="channel" class="form-select" value="@_channel" @onchange="OnChannelChanged">
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Telegram">Telegram</option>
+                </select>
+            </div>
+            @if (_activePlatforms.Count > 0)
+            {
+                <p class="small text-muted">Lojas ativas: @string.Join(", ", _activePlatforms)</p>
+            }
+            else
+            {
+                <p class="small text-warning">Nenhuma loja ativa. Conecte Shopee, Mercado Livre, Amazon ou TikTok Shop em Minhas Lojas.</p>
+            }
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_busy" @onclick="SaveAsync">
+                @(_busy ? "Salvando..." : "Salvar perfil")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _niches = string.Join(", ", AffiliateMiningRules.DefaultNiches);
+    private string? _minTicket;
+    private string? _maxTicket;
+    private string? _minCommission = "5";
+    private bool _restrict = true;
+    private bool _autoPilot;
+    private string _channel = "WhatsApp";
+    private readonly List<string> _activePlatforms = [];
+    private bool _busy;
+    private string? _error;
+    private string? _info;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private void OnChannelChanged(ChangeEventArgs e) =>
+        _channel = string.IsNullOrWhiteSpace(e.Value?.ToString()) ? "WhatsApp" : e.Value.ToString()!;
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var result = await Api.GetProfileAsync();
+            var profile = result.Data?.Profile;
+            if (profile is null)
+            {
+                _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível carregar o perfil.";
+                return;
+            }
+
+            _niches = string.Join(", ", profile.Niches);
+            _minTicket = profile.MinTicket?.ToString("0.##");
+            _maxTicket = profile.MaxTicket?.ToString("0.##");
+            _minCommission = profile.MinCommissionPercent.ToString("0.##");
+            _restrict = profile.RestrictToActiveStores;
+            _autoPilot = profile.AutoPilotEnabled;
+            _channel = profile.AutoPilotChannel;
+            _activePlatforms.Clear();
+            _activePlatforms.AddRange(profile.ActivePlatforms);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar perfil de mineração.");
+            _error = "Não foi possível carregar o perfil.";
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            var request = new AffiliateMiningProfileDto
+            {
+                Niches = AffiliateMiningRules.ParseNiches(_niches).ToList(),
+                MinTicket = ParseDecimal(_minTicket),
+                MaxTicket = ParseDecimal(_maxTicket),
+                MinCommissionPercent = ParseDecimal(_minCommission) ?? 5,
+                RestrictToActiveStores = _restrict,
+                AutoPilotEnabled = _autoPilot,
+                AutoPilotChannel = _channel
+            };
+            var result = await Api.SaveProfileAsync(request);
+            if (result.Data is { Status: true })
+            {
+                _info = result.Data.Descricao;
+            }
+            else
+            {
+                _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível salvar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar perfil de mineração.");
+            _error = "Não foi possível salvar o perfil.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static decimal? ParseDecimal(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return decimal.TryParse(raw.Replace(',', '.'), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+    }
+}

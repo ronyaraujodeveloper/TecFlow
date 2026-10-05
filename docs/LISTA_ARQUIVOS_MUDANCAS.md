@@ -943,6 +943,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **GruposMonitorados.razor** — badge cinza/vermelho `Esgotado`; feed principal oculta `IsAvailable = false`.
 - [x] **OfferValidationServiceTests.cs** / **GroupOfferCaptureRulesTests.cs** — frases de erro, regex de preço e meta tags.
 
+### Módulo 28 — Radar e mineração de ofertas
+
+- [x] **AffiliateMiningProfile.cs** / **ProductPriceSnapshot.cs** / **OfferRadarItem.cs** — perfil, histórico de preço e feed do radar.
+- [x] **AffiliateMiningRules.cs** / **AffiliateMiningRulesTests.cs** — nichos, ticket, cupom, score e lojas ativas.
+- [x] **AffiliateMiningProfileService.cs** / **ProductArbitrageService.cs** / **OfferRadarService.cs** / **OfferMiningEngine.cs**.
+- [x] **OfferMiningHost.cs** / **OfferMiningWorker.cs** — ciclo 10 minutos no IIS.
+- [x] **OfferRadarController.cs** — perfil, arbitragem, listagem, agendar e piloto.
+- [x] **RadarPerfil.razor** / **RadarOfertas.razor** / **GeradorLinks.razor** — UI de mineração, feed e cards de menor preço.
+- [x] **AddOfferRadarMining** — tabelas `AffiliateMiningProfiles`, `ProductPriceSnapshots` e `OfferRadarItems`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

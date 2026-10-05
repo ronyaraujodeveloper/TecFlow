@@ -11,6 +11,7 @@
 @using TecFlow.SharedUi.Services.LinkGenerator
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IAffiliateLinkApiService AffiliateLinkApi
+@inject TecFlow.SharedUi.Services.Radar.IOfferRadarApiService RadarApi
 @inject IActiveStoreScopeService StoreScope
 @inject NavigationManager Navigation
 @inject IJSRuntime Js
@@ -135,6 +136,55 @@
             </div>
         </ErrorContent>
     </ErrorBoundary>
+
+    @if (_generatedResponse is not null)
+    {
+        <section class="mt-4" aria-live="polite">
+            @if (_arbitrageLoading)
+            {
+                <div class="alert alert-info py-2 small mb-0">Buscando preços melhores em outras plataformas...</div>
+            }
+            else if (_arbitrage.Count > 0)
+            {
+                <h2 class="h5 fw-semibold mb-3">Sugestões de melhor preço</h2>
+                <div class="row g-3">
+                    @foreach (var item in _arbitrage)
+                    {
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <article class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformName)">
+                                        @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)
+                                    </span>
+                                    <p class="fw-semibold mt-2 mb-1 text-break">@item.ProductName</p>
+                                    <p class="mb-1">
+                                        De @ProductMetadataHtmlParser.FormatBrl(item.ComparedPrice)
+                                        por <strong>@ProductMetadataHtmlParser.FormatBrl(item.Price)</strong>
+                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(item.CouponCode))
+                                    {
+                                        <p class="small text-success mb-2">Cupom @item.CouponCode</p>
+                                    }
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => CopyAlternativeAsync(item)">
+                                            Copiar link alternativo
+                                        </button>
+                                        <a class="btn btn-outline-secondary btn-sm" href="@BuildShareUrl(item)" target="_blank" rel="noopener noreferrer">
+                                            Compartilhar
+                                        </a>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    }
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_arbitrageMessage))
+            {
+                <p class="text-muted small mb-0">@_arbitrageMessage</p>
+            }
+        </section>
+    }
 
     <ErrorBoundary @ref="_historyBoundary">
         <ChildContent>
@@ -269,6 +319,9 @@
     private bool _integrationsLoaded;
     private MarketplaceDefinition? _detectedPlatform;
     private GerarLinkAfiliadoResponseDto? _generatedResponse;
+    private readonly List<OfferArbitrageSuggestionDto> _arbitrage = [];
+    private bool _arbitrageLoading;
+    private string? _arbitrageMessage;
     private int _historyRefreshToken;
     private ErrorBoundary? _resultBoundary;
     private ErrorBoundary? _historyBoundary;
@@ -490,6 +543,7 @@
                 _historyRefreshToken++;
                 StateHasChanged();
                 await ScrollToResultPanelAsync();
+                await SearchArbitrageAsync(result.Data);
             }
             else
             {
@@ -581,7 +635,64 @@
         _needsConnectAccount = false;
     }
 
-    private void ClearGeneratedResult() => _generatedResponse = null;
+    private void ClearGeneratedResult()
+    {
+        _generatedResponse = null;
+        _arbitrage.Clear();
+        _arbitrageLoading = false;
+        _arbitrageMessage = null;
+    }
+
+    private async Task SearchArbitrageAsync(GerarLinkAfiliadoResponseDto generated)
+    {
+        _arbitrage.Clear();
+        _arbitrageMessage = null;
+        _arbitrageLoading = true;
+        StateHasChanged();
+        try
+        {
+            var result = await RadarApi.SearchArbitrageAsync(new OfferArbitrageRequestDto
+            {
+                OriginalUrl = generated.OriginalUrl,
+                ProductName = generated.ProductName,
+                ProductPrice = generated.ProductPrice
+            });
+            if (result.Data?.Suggestions is { Count: > 0 })
+            {
+                _arbitrage.AddRange(result.Data.Suggestions);
+            }
+
+            _arbitrageMessage = result.Data?.Descricao;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Busca de arbitragem falhou.");
+            _arbitrageMessage = "Não foi possível buscar preços menores agora.";
+        }
+        finally
+        {
+            _arbitrageLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyAlternativeAsync(OfferArbitrageSuggestionDto item)
+    {
+        var url = string.IsNullOrWhiteSpace(item.AffiliateUrl) ? item.OriginalUrl : item.AffiliateUrl;
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", url);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private static string BuildShareUrl(OfferArbitrageSuggestionDto item)
+    {
+        var url = string.IsNullOrWhiteSpace(item.AffiliateUrl) ? item.OriginalUrl : item.AffiliateUrl;
+        return "https://wa.me/?text=" + Uri.EscapeDataString($"{item.ProductName} {url}");
+    }
 
     private void RecoverErrorBoundaries()
     {
@@ -799,6 +910,7 @@
                 _historyRefreshToken++;
                 FecharEdicao();
                 await ScrollToResultPanelAsync();
+                await SearchArbitrageAsync(result.Data);
             }
             else
             {

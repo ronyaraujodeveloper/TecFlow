@@ -14,6 +14,7 @@ using TecFlow.SharedUi.Services.UI;
 using TecFlow.SharedUi.Services.Devices;
 using TecFlow.SharedUi.Services.Integrations;
 using TecFlow.SharedUi.Services.LinkGenerator;
+using TecFlow.SharedUi.Services.Radar;
 
 namespace TecFlow.SharedUi.Extensions;
 
@@ -61,6 +62,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWhatsAppIntegrationApiService, WhatsAppIntegrationApiService>();
         services.AddScoped<ITelegramIntegrationApiService, TelegramIntegrationApiService>();
         services.AddScoped<IMonitoredGroupsApiService, MonitoredGroupsApiService>();
+        services.AddScoped<IOfferRadarApiService, OfferRadarApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

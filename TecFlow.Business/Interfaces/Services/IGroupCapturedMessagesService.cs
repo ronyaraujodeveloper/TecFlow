@@ -1,0 +1,22 @@
+﻿using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
+
+namespace TecFlow.Business.Interfaces.Services;
+
+public interface IGroupCapturedMessagesService
+{
+    Task<IReadOnlyList<MarketplaceType>> ListActivePlatformsAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    IQueryable<GroupCapturedMessage> ApplyRelevanceFilter(
+        IQueryable<GroupCapturedMessage> query,
+        IReadOnlyCollection<MarketplaceType> activePlatforms,
+        bool ignored);
+
+    Task<bool> SetIgnoredAsync(
+        int userId,
+        int offerId,
+        bool ignored,
+        CancellationToken cancellationToken = default);
+}

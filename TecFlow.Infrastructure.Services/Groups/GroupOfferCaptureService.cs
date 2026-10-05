@@ -62,7 +62,8 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     PlatformType = platform,
                     PlatformName = platform?.ToString(),
                     OfferStatus = GroupOfferStatuses.Verificando,
-                    ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt
+                    ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
+                    HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url)
                 });
             }
             catch (Exception ex)

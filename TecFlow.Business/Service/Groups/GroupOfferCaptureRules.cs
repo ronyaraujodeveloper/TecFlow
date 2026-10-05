@@ -76,6 +76,27 @@ public static class GroupOfferCaptureRules
         return null;
     }
 
+    public static bool HasDirectProductUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return false;
+        }
+
+        var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
+        if (host is "t.me" or "telegram.me" or "www.t.me" || host.EndsWith(".t.me", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return DetectPlatform(url) is not null;
+    }
+
     public static decimal? ExtractPrice(string? text, string? url)
     {
         var parsed = ProductMetadataHtmlParser.Parse(

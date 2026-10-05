@@ -58,4 +58,10 @@ public class GroupCapturedMessage : BaseEntity
     public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? LastValidatedAt { get; set; }
+
+    public bool HasDirectProductUrl { get; set; }
+
+    public bool IsIgnored { get; set; }
+
+    public DateTime? IgnoredAt { get; set; }
 }

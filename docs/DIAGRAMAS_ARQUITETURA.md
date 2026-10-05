@@ -154,8 +154,9 @@ flowchart LR
   GMUI[GruposMonitorados] -->|POST sync aguarda CatchUp 48h/1500| USERBOT
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
-  GMUI[GruposMonitorados] -->|GET skip take 50| MGAPI[MonitoredGroupsController]
-  MGAPI -->|Count Skip Take| SQL
+  GMUI[GruposMonitorados] -->|GET skip take 50 ignored| MGAPI[MonitoredGroupsController]
+  MGAPI -->|lojas ativas + HasDirectProductUrl + IsIgnored| GCAPSVC[GroupCapturedMessagesService]
+  GCAPSVC --> SQL
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI
   CXUI -->|POST userbot/solicitar-codigo Login| USERBOT
   CXUI -->|POST userbot/confirmar MakeAuth PIN| USERBOT

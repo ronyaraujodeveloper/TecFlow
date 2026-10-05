@@ -47,6 +47,14 @@ public interface IMonitoredGroupService
         string? channel,
         int skip = 0,
         int take = 50,
+        bool ignored = false,
+        CancellationToken cancellationToken = default);
+
+    Task<MonitoredGroupsResponseDto> SetIgnoredAsync(
+        int userId,
+        int offerId,
+        bool ignored,
+        string? channel,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> ValidateAsync(

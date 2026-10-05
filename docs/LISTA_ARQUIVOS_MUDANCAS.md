@@ -926,7 +926,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats` (Dialogs/Slice) + `GetHistory` (1500/48h), botões inline e persistência no sync; sessão em `ProgramData`.
 - [x] **UserBotCatchUpResult.cs** — resultado do catch-up (offline vs persistidas) para o botão Sincronizar.
 - [x] **TelegramIntegrationController.cs** — `POST userbot/solicitar-codigo` e `POST userbot/confirmar` (Login MTProto em duas etapas).
-- [x] **GruposMonitorados.razor** — cards das ofertas, “Carregar mais 50”; Clonar Oferta com toast e atalho Agendar Disparo.
+- [x] **GruposMonitorados.razor** — feed/ocultos, grid 2x2, Sem interesse / Restaurar e Clonar Oferta.
+- [x] **GroupCapturedMessagesService.cs** / **IGroupCapturedMessagesService.cs** — filtro de lojas ativas, `HasDirectProductUrl` e `IsIgnored`.
+- [x] **GroupCapturedMessageFilter.cs** — hours, groupKey, channel, skip/take e ignored.
+- [x] **AddGroupCapturedMessageCuration** — colunas `HasDirectProductUrl`, `IsIgnored`, `IgnoredAt`.
 - [x] **IUrlResolverService.cs** / **UrlResolverService.cs** — HEAD/GET com `AllowAutoRedirect` até a URL canônica da loja.
 - [x] **IAffiliateLinkConverterService.cs** / **AffiliateLinkConverterService.cs** — conversão de comissão + título/preço/imagem.
 - [x] **CloneOfferRules.cs** / **UrlResolverDto.cs** / **AffiliateLinkConverterDto.cs** — mensagens e envelopes do clone.

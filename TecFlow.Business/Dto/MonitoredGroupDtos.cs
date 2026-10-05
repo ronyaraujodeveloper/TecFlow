@@ -40,6 +40,10 @@ public class GroupCapturedOfferDto
     public string OfferStatusLabel { get; set; } = string.Empty;
 
     public DateTime ReceivedAt { get; set; }
+
+    public bool HasDirectProductUrl { get; set; }
+
+    public bool IsIgnored { get; set; }
 }
 
 public class CloneMonitoredOfferResultDto
@@ -78,4 +82,6 @@ public class MonitoredGroupsResponseDto
     public int Take { get; set; }
 
     public CloneMonitoredOfferResultDto? Clone { get; set; }
+
+    public bool Ignored { get; set; }
 }

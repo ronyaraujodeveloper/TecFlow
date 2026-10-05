@@ -38,12 +38,13 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? channel = null,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
+        [FromQuery] bool ignored = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var userId = ResolveUserId();
-            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, skip, take, cancellationToken));
+            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, skip, take, ignored, cancellationToken));
         }
         catch (Exception ex)
         {
@@ -90,6 +91,26 @@ public sealed class MonitoredGroupsController : ControllerBase
         var userId = ResolveUserId();
         var result = await _service.CloneAsync(userId, offerId, channel, cancellationToken);
         return result.Status ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{offerId:int}/ignorar")]
+    public async Task<ActionResult<MonitoredGroupsResponseDto>> IgnoreAsync(
+        int offerId,
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _service.SetIgnoredAsync(ResolveUserId(), offerId, ignored: true, channel, cancellationToken);
+        return result.Status ? Ok(result) : NotFound(result);
+    }
+
+    [HttpPost("{offerId:int}/restaurar")]
+    public async Task<ActionResult<MonitoredGroupsResponseDto>> RestoreAsync(
+        int offerId,
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _service.SetIgnoredAsync(ResolveUserId(), offerId, ignored: false, channel, cancellationToken);
+        return result.Status ? Ok(result) : NotFound(result);
     }
 
     private int ResolveUserId()

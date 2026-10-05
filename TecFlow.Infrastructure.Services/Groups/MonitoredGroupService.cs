@@ -20,6 +20,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly TelegramUserMonitorHost _userBotHost;
     private readonly IOfferValidationService _validation;
     private readonly IAffiliateLinkConverterService _converter;
+    private readonly IGroupCapturedMessagesService _capturedMessages;
     private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
@@ -29,6 +30,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         TelegramUserMonitorHost userBotHost,
         IOfferValidationService validation,
         IAffiliateLinkConverterService converter,
+        IGroupCapturedMessagesService capturedMessages,
         ILogger<MonitoredGroupService> logger)
     {
         _context = context;
@@ -37,6 +39,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _userBotHost = userBotHost;
         _validation = validation;
         _converter = converter;
+        _capturedMessages = capturedMessages;
         _logger = logger;
     }
 
@@ -61,7 +64,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
             }
 
-            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, cancellationToken);
+            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
             list.Descricao = notes.Count == 0
                 ? "Grupos sincronizados."
@@ -88,6 +91,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         string? channel,
         int skip = 0,
         int take = 50,
+        bool ignored = false,
         CancellationToken cancellationToken = default)
     {
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
@@ -99,9 +103,11 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         try
         {
             var groups = await BuildGroupsAsync(userId, normalized, cancellationToken);
+            var platforms = await _capturedMessages.ListActivePlatformsAsync(userId, cancellationToken);
             var query = _context.GroupCapturedMessages
                 .AsNoTracking()
                 .Where(item => item.UserId == userId && item.ReceivedAt >= since);
+            query = _capturedMessages.ApplyRelevanceFilter(query, platforms, ignored);
             if (normalized is not null)
             {
                 query = query.Where(item => item.Channel == normalized);
@@ -126,7 +132,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 Offers = offers.Select(MapOffer).ToList(),
                 TotalOffers = total,
                 Skip = resolvedSkip,
-                Take = resolvedTake
+                Take = resolvedTake,
+                Ignored = ignored
             };
         }
         catch (Exception ex)
@@ -185,6 +192,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             channel ?? entity.Channel,
             skip: 0,
             take: GroupOfferCaptureRules.OffersPageSize,
+            ignored: false,
             cancellationToken);
         list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
         return list;
@@ -282,6 +290,27 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 OfferStatus = entity.OfferStatus,
                 RedirectUrl = redirect
             }
+        };
+    }
+
+    public async Task<MonitoredGroupsResponseDto> SetIgnoredAsync(
+        int userId,
+        int offerId,
+        bool ignored,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        var updated = await _capturedMessages.SetIgnoredAsync(userId, offerId, ignored, cancellationToken);
+        if (!updated)
+        {
+            return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
+        }
+
+        return new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = ignored ? "Oferta marcada como sem interesse." : "Oferta restaurada no feed.",
+            Ignored = ignored
         };
     }
 
@@ -438,7 +467,9 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             PlatformName = item.PlatformName,
             OfferStatus = item.OfferStatus,
             OfferStatusLabel = GroupOfferStatuses.ToUiLabel(item.OfferStatus),
-            ReceivedAt = item.ReceivedAt
+            ReceivedAt = item.ReceivedAt,
+            HasDirectProductUrl = item.HasDirectProductUrl,
+            IsIgnored = item.IsIgnored
         };
 
     private static string? FirstNonEmpty(params string?[] values)

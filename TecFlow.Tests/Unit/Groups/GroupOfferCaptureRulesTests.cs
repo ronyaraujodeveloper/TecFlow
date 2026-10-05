@@ -24,6 +24,14 @@ public class GroupOfferCaptureRulesTests
     }
 
     [Theory]
+    [InlineData("https://shopee.com.br/produto-i.1.2", true)]
+    [InlineData("https://www.mercadolivre.com.br/p/MLB1", true)]
+    [InlineData("https://t.me/ofertas/1", false)]
+    [InlineData("https://example.com/aviso", false)]
+    public void HasDirectProductUrl_ShouldKeepCheckoutLinksOnly(string url, bool expected) =>
+        Assert.Equal(expected, GroupOfferCaptureRules.HasDirectProductUrl(url));
+
+    [Theory]
     [InlineData(10, 10)]
     [InlineData(24, 24)]
     [InlineData(48, 48)]

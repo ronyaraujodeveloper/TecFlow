@@ -689,6 +689,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] HTTP 401 na listagem/sync não força `NavigateTo("/")`; o menu e a tela permanecem e o login sem JWT segue via `HttpService`.
 - [x] Sincronizar Telegram aguarda o catch-up UserBot (48h / 1500 msgs) e avisa se a sessão MTProto estiver offline.
 - [x] Clonar Oferta desencurta HEAD/GET, converte comissão, grava no histórico de `/gerador-links` (`SourceGroup`) e oferece Agendar Disparo.
+- [x] Feed Telegram filtra lojas ativas + URL de produto; Sem interesse / Restaurar; ações do card em grid 2x2.
 
 ### 🧠 Fase 28: Motor de Inteligência, Mineração e Arbitragem de Ofertas (Radar & Mining Bot)
 [ ] 28.1. Perfil e Parâmetros de Mineração do Afiliado:
@@ -804,6 +805,15 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - `AffiliateLinkConverterService` troca a tag de terceiro pela comissão do usuário logado e extrai título, preço e imagem.
 - [x] **Integração Grupos Monitorados -> Gerador de Links (`/gerador-links`):**
   - Clonar Oferta grava `ShortAffiliateLinks` (histórico) com `OriginalUrl`, `AffiliateUrl`, metadados e `SourceGroup`; toast de sucesso e atalho **Agendar Disparo**.
+
+## 🧹 Filtros Inteligentes e Curadoria no Monitor de Grupos
+
+- [x] **Filtragem Dinâmica por Integração Ativa:** Exibição exclusiva de ofertas das plataformas integradas na conta do usuário (Shopee, ML, Amazon, etc.).
+- [x] **Expurgo Automático de Comunicados Sem Produto:** Algoritmo para descartar avisos informativos, banners de eventos e textos sem URLs diretas de checkout.
+- [x] **Sistema de Uninterest / Feedback de Descarte:**
+  - Botão "Sem interesse" para ocultar posts irrelevantes e treinar o filtro do usuário.
+  - Aba de alternância "Ocultos / Descartados" para auditoria e restauração de mensagens.
+- [x] **Redesign do Card (Grid 2x2):** Compactação dos botões de ação em duas linhas para melhor aproveitamento do espaço visual.
 
    
 ---

@@ -403,6 +403,9 @@ public class AppDbContext : DbContext
             entity.Property(item => item.ProductName).HasMaxLength(255);
             entity.Property(item => item.PlatformName).HasMaxLength(64);
             entity.Property(item => item.OfferStatus).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.HasDirectProductUrl).HasDefaultValue(false);
+            entity.Property(item => item.IsIgnored).HasDefaultValue(false);
+            entity.HasIndex(item => new { item.UserId, item.IsIgnored, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.GroupKey, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.Channel, item.ExternalMessageId, item.OriginalUrl });

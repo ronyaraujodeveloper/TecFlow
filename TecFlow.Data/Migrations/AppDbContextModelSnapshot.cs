@@ -388,6 +388,19 @@ namespace TecFlow.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<bool>("HasDirectProductUrl")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("IgnoredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsIgnored")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("LastValidatedAt")
                         .HasColumnType("datetime2");
 
@@ -437,6 +450,8 @@ namespace TecFlow.Data.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsIgnored", "ReceivedAt");
 
                     b.HasIndex("UserId", "ReceivedAt");
 

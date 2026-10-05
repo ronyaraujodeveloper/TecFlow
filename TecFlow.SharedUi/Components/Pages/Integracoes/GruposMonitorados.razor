@@ -75,12 +75,20 @@
         </div>
     </div>
 
+    <div class="mb-4">
+        <span class="form-label fw-semibold d-block">Lista</span>
+        <div class="btn-group flex-wrap" role="group" aria-label="Filtro do feed">
+            <button type="button" class="btn btn-sm @FeedChipClass(false)" @onclick="() => SetIgnoredFeedAsync(false)">Feed de Ofertas</button>
+            <button type="button" class="btn btn-sm @FeedChipClass(true)" @onclick="() => SetIgnoredFeedAsync(true)">Ocultos / Descartados</button>
+        </div>
+    </div>
+
     @if (_offers.Count == 0)
     {
         <div class="alert alert-light border">
             @if (_groups.Count > 0)
             {
-                <span>@_groups.Count grupo(s) do @ChannelLabel. Nenhuma oferta com link neste período — webhooks e o UserBot MTProto gravam as mensagens aqui.</span>
+                <span>@_groups.Count grupo(s) do @ChannelLabel. @(_showIgnored ? "Nenhuma oferta ocultada neste período." : "Nenhuma oferta das suas lojas ativas neste período.")</span>
             }
             else
             {
@@ -119,23 +127,36 @@
                                 </span>
                                 <span class="badge @StatusBadgeClass(item.OfferStatus)">@item.OfferStatusLabel</span>
                             </div>
-                            <div class="d-grid gap-2">
-                                <a class="btn btn-outline-secondary btn-sm" href="@item.OriginalUrl" target="_blank" rel="noopener noreferrer">
+                            <div class="monitored-offer-actions">
+                                <a class="btn btn-outline-secondary w-100" href="@item.OriginalUrl" target="_blank" rel="noopener noreferrer">
                                     Abrir Link Original
                                 </a>
-                                <button type="button" class="btn btn-outline-primary btn-sm" disabled="@_isBusy" @onclick="() => ValidateAsync(item.Id)">
+                                <button type="button" class="btn btn-outline-primary w-100" disabled="@_isBusy" @onclick="() => ValidateAsync(item.Id)">
                                     Verificar anúncio
                                 </button>
-                                <button type="button" class="btn btn-primary btn-sm" disabled="@_isBusy" @onclick="() => CloneAsync(item.Id)">
-                                    @(IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha")
-                                </button>
-                                @if (IsTelegram && _clonedOfferId == item.Id && !string.IsNullOrWhiteSpace(_scheduleUrl))
+                                @if (_showIgnored)
                                 {
-                                    <a class="btn btn-success btn-sm" href="@_scheduleUrl">
-                                        @CloneOfferRules.ScheduleActionLabel
-                                    </a>
+                                    <button type="button" class="btn btn-outline-success w-100" disabled="@_isBusy" @onclick="() => RestoreAsync(item.Id)">
+                                        Restaurar
+                                    </button>
+                                    <span></span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-primary w-100" disabled="@_isBusy" @onclick="() => CloneAsync(item.Id)">
+                                        @(IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha")
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger w-100" disabled="@_isBusy" @onclick="() => MarkAsUninterested(item.Id)">
+                                        Sem interesse
+                                    </button>
                                 }
                             </div>
+                            @if (IsTelegram && !_showIgnored && _clonedOfferId == item.Id && !string.IsNullOrWhiteSpace(_scheduleUrl))
+                            {
+                                <a class="btn btn-success w-100 mt-2" href="@_scheduleUrl">
+                                    @CloneOfferRules.ScheduleActionLabel
+                                </a>
+                            }
                         </div>
                     </article>
                 </div>
@@ -171,6 +192,7 @@
     private bool _toastSuccess;
     private string? _scheduleUrl;
     private int? _clonedOfferId;
+    private bool _showIgnored;
     private CancellationTokenSource? _refreshCts;
 
     private bool IsTelegram => CurrentPath().Equals(TelegramPath, StringComparison.OrdinalIgnoreCase);
@@ -204,6 +226,15 @@
 
     private string ChipClass(int hours) =>
         _hours == hours ? "btn-primary" : "btn-outline-secondary";
+
+    private string FeedChipClass(bool ignored) =>
+        _showIgnored == ignored ? "btn-primary" : "btn-outline-secondary";
+
+    private Task SetIgnoredFeedAsync(bool ignored)
+    {
+        _showIgnored = ignored;
+        return LoadAsync();
+    }
 
     private static string StatusBadgeClass(string? status) => status switch
     {
@@ -267,7 +298,8 @@
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
                 Channel,
                 skip,
-                GroupOfferCaptureRules.OffersPageSize);
+                GroupOfferCaptureRules.OffersPageSize,
+                _showIgnored);
             if (result.Data is not null)
             {
                 Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);
@@ -342,6 +374,60 @@
         {
             Logger.LogError(ex, "Falha ao validar oferta {OfferId}.", offerId);
             _error = "Não foi possível validar o anúncio.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task MarkAsUninterested(int offerId)
+    {
+        _isBusy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.IgnoreAsync(offerId, Channel);
+            if (result.Data is { Status: true })
+            {
+                _info = result.Data.Descricao;
+                await LoadAsync();
+                return;
+            }
+
+            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível ocultar a oferta.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao ocultar oferta {OfferId}.", offerId);
+            _error = "Não foi possível marcar a oferta como sem interesse.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RestoreAsync(int offerId)
+    {
+        _isBusy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.RestoreAsync(offerId, Channel);
+            if (result.Data is { Status: true })
+            {
+                _info = result.Data.Descricao;
+                await LoadAsync();
+                return;
+            }
+
+            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível restaurar a oferta.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao restaurar oferta {OfferId}.", offerId);
+            _error = "Não foi possível restaurar a oferta.";
         }
         finally
         {

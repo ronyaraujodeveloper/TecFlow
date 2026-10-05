@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OrquestradorApiOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            client.Timeout = TecFlow.Business.Service.Groups.MonitoredGroupSyncRules.ResolveHttpTimeout(options.TimeoutSeconds);
             client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
         });
 

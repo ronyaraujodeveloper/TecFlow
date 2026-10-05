@@ -34,10 +34,19 @@
                 }
             </p>
         </div>
-        <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="SyncAsync">
-            @(_isBusy ? "Sincronizando..." : $"Sincronizar grupos do {ChannelLabel}")
+        <button type="button" class="btn btn-primary btn-touch" disabled="@_isSyncing" @onclick="SyncAsync">
+            @(_isSyncing ? "Sincronização em andamento" : $"Sincronizar grupos do {ChannelLabel}")
         </button>
     </div>
+    @if (_isSyncing)
+    {
+        <div class="mb-3">
+            <span class="badge rounded-pill text-bg-info px-3 py-2 d-inline-flex align-items-center gap-2">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>Sincronizando novas ofertas em background...</span>
+            </span>
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(_error))
     {
@@ -198,6 +207,7 @@
     private int _loadedSkip;
     private string _groupKey = string.Empty;
     private bool _isBusy;
+    private bool _isSyncing;
     private string? _error;
     private string? _info;
     private string? _toastMessage;
@@ -270,28 +280,46 @@
 
     private async Task SyncAsync()
     {
-        _isBusy = true;
         _error = null;
         _info = null;
         try
         {
             var result = await Api.SyncAsync(Channel);
-            Apply(result.Data, result.ErrorMessage, append: false, silent: false);
-            if (result.Data is { Status: true })
+            if (result.Success || result.Data is { Status: true })
             {
-                _info = string.IsNullOrWhiteSpace(result.Data.Descricao)
-                    ? "Sincronização concluída."
+                _isSyncing = true;
+                _info = string.IsNullOrWhiteSpace(result.Data?.Descricao)
+                    ? MonitoredGroupSyncRules.BackgroundStartedMessage
                     : result.Data.Descricao;
+                if (result.Data is not null)
+                {
+                    Apply(result.Data, null, append: false, silent: true);
+                }
+
+                StartOfferRefresh();
+                _ = StopSyncingBadgeAsync();
+                return;
             }
+
+            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível sincronizar os grupos.";
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao sincronizar grupos monitorados.");
             _error = "Não foi possível sincronizar os grupos.";
         }
-        finally
+    }
+
+    private async Task StopSyncingBadgeAsync()
+    {
+        try
         {
-            _isBusy = false;
+            await Task.Delay(MonitoredGroupSyncRules.ClientTimeout);
+            _isSyncing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 
@@ -349,7 +377,7 @@
 
     private async Task RefreshOffersLoopAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20));
+        using var timer = new PeriodicTimer(_isSyncing ? TimeSpan.FromSeconds(8) : TimeSpan.FromSeconds(20));
         try
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))

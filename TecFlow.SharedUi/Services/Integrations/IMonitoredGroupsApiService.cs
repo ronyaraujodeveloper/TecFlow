@@ -68,14 +68,11 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(
         string? channel,
-        CancellationToken cancellationToken = default)
-    {
-        using var _ = _loadingService.BeginScope("Sincronizando grupos monitorados...");
-        return _httpService.PostAsync<object, MonitoredGroupsResponseDto>(
+        CancellationToken cancellationToken = default) =>
+        _httpService.PostAsync<object, MonitoredGroupsResponseDto>(
             $"{Path}/sincronizar".AppendQueryString(new { channel }),
             new { },
             cancellationToken);
-    }
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,

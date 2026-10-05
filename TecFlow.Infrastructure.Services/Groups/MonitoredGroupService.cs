@@ -66,9 +66,11 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
             var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
-            list.Descricao = notes.Count == 0
-                ? "Grupos sincronizados."
-                : string.Join(" ", notes);
+            list.Descricao = notes.Exists(item => item == MonitoredGroupSyncRules.BackgroundStartedMessage)
+                ? MonitoredGroupSyncRules.BackgroundStartedMessage
+                : notes.Count == 0
+                    ? "Grupos sincronizados."
+                    : string.Join(" ", notes);
             return list;
         }
         catch (Exception ex)
@@ -404,16 +406,19 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
         try
         {
-            var catchUp = await _userBotHost.CatchUpUserAsync(userId, cancellationToken);
-            notes.Add(string.IsNullOrWhiteSpace(catchUp.Message)
-                ? "Varredura do histórico UserBot concluída."
-                : catchUp.Message);
-            return botOk || catchUp.UserBotReady || catchUp.Persisted > 0;
+            if (_userBotHost.EnqueueCatchUp(userId))
+            {
+                notes.Add(MonitoredGroupSyncRules.BackgroundStartedMessage);
+                return true;
+            }
+
+            notes.Add("Não foi possível enfileirar a varredura do histórico UserBot.");
+            return botOk;
         }
         catch (Exception catchUpEx)
         {
-            _logger.LogWarning(catchUpEx, "Catch-up UserBot falhou após sync. UserId={UserId}", userId);
-            notes.Add("A varredura do histórico UserBot falhou. Confira a sessão MTProto e sincronize de novo.");
+            _logger.LogWarning(catchUpEx, "Falha ao enfileirar catch-up UserBot. UserId={UserId}", userId);
+            notes.Add("A varredura do histórico UserBot falhou ao iniciar. Confira a sessão MTProto e sincronize de novo.");
             return botOk;
         }
     }

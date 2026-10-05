@@ -815,6 +815,13 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Worker diário apaga `.jpg` com mais de 15 dias em `uploads/products/` e zera `ProductImageUrl`.
 - [ ] **Disparo de Mídia Nativa nos Canais:**
   - Envio do arquivo de imagem físico armazenado em disco para as APIs de envio (WhatsApp/Telegram) ao agendar ou clonar ofertas.
+
+  ## ⚡ Sincronização Assíncrona de Grupos (Timeout Prevention)
+
+- [x] **Desacoplamento de Requisição HTTP:**
+  - `POST .../sincronizar` devolve HTTP 202 e enfileira o catch-up no `TelegramUserMonitorWorker` (`Channel`), sem aguardar as 1500 mensagens/48h.
+- [x] **Aumento de Timeout e Feedback Visual:**
+  - `HttpClient` Orquestrador com timeout mínimo de 3 minutos e badge "Sincronizando novas ofertas em background..." em `/integracoes/telegram/grupos/monitorados`.
    
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

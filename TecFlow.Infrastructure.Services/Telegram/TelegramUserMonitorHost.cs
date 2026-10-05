@@ -24,6 +24,14 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             SingleWriter = false,
             AllowSynchronousContinuations = false
         });
+    private readonly System.Threading.Channels.Channel<int> _catchUpJobs = System.Threading.Channels.Channel.CreateUnbounded<int>(
+        new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false
+        });
+    private readonly ConcurrentDictionary<int, byte> _catchUpQueued = new();
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _catchUpGates = new();
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
@@ -118,9 +126,32 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         return result;
     }
 
+    public bool EnqueueCatchUp(int userId)
+    {
+        if (userId <= 0)
+        {
+            return false;
+        }
+
+        if (!_catchUpQueued.TryAdd(userId, 0))
+        {
+            return true;
+        }
+
+        if (_catchUpJobs.Writer.TryWrite(userId))
+        {
+            _logger.LogInformation("Catch-up UserBot enfileirado em background. UserId={UserId}", userId);
+            return true;
+        }
+
+        _catchUpQueued.TryRemove(userId, out _);
+        return false;
+    }
+
     public async Task RunForeverAsync(CancellationToken stoppingToken)
     {
         var drain = DrainQueueAsync(CancellationToken.None);
+        var catchUpDrain = DrainCatchUpJobsAsync(stoppingToken);
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -153,6 +184,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         finally
         {
             _queue.Writer.TryComplete();
+            _catchUpJobs.Writer.TryComplete();
             try
             {
                 await drain.WaitAsync(TimeSpan.FromSeconds(15), CancellationToken.None);
@@ -160,6 +192,15 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Fila de captura UserBot encerrada com aviso.");
+            }
+
+            try
+            {
+                await catchUpDrain.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Fila de catch-up UserBot encerrada com aviso.");
             }
         }
     }
@@ -637,6 +678,35 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
             idleRounds++;
             await Task.Delay(80, cancellationToken);
+        }
+    }
+
+    private async Task DrainCatchUpJobsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var userId in _catchUpJobs.Reader.ReadAllAsync(cancellationToken))
+            {
+                try
+                {
+                    await CatchUpUserAsync(userId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Catch-up em background falhou. UserId={UserId}", userId);
+                }
+                finally
+                {
+                    _catchUpQueued.TryRemove(userId, out _);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
     }
 

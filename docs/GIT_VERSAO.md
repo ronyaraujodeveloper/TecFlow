@@ -52,3 +52,4 @@
 [2026-10-04 23:06:33]feat(radar): mineracao, arbitragem e piloto automatico
 [2026-10-04 23:53:18]feat(ofertas): saude, atribuicao, evergreen e pre-flight
 [2026-10-05 20:19:44]feat(media): segrega fotos por tenant e expurga apos 15 dias
+[2026-10-05 20:57:41]fix(telegram): sincroniza grupos em background sem timeout

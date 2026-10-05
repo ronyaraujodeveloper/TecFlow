@@ -62,7 +62,7 @@ public sealed class MonitoredGroupsController : ControllerBase
         {
             var userId = ResolveUserId();
             var result = await _service.SyncAsync(userId, channel, cancellationToken);
-            return Ok(result);
+            return result.Status ? Accepted(result) : Ok(result);
         }
         catch (Exception ex)
         {

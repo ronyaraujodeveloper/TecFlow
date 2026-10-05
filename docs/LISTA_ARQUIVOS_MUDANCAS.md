@@ -975,6 +975,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **ProductImageCleanupService.cs** / **ProductImageCleanupWorker.cs** — expurgo diário após 15 dias.
 - [x] **GruposMonitorados.razor** — `<img src="@item.ProductImageUrl">` com placeholder se a foto foi expurgada.
 
+### Módulo 32 — Sincronização assíncrona de grupos
+
+- [x] **MonitoredGroupSyncRules.cs** / **MonitoredGroupSyncRulesTests.cs** — mensagem 202 e timeout mínimo de 3 min.
+- [x] **TelegramUserMonitorHost.cs** — `EnqueueCatchUp` via `Channel` processado pelo worker.
+- [x] **MonitoredGroupsController.cs** — `Accepted` (HTTP 202) na sincronização.
+- [x] **GruposMonitorados.razor** — `_isSyncing` e badge animado em background.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

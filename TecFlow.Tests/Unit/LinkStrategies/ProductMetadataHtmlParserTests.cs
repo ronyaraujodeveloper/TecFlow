@@ -23,6 +23,24 @@ public class ProductMetadataHtmlParserTests
     }
 
     [Fact]
+    public void Parse_ShouldReadProductPriceAmountMeta()
+    {
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="Mouse Gamer" />
+            <meta property="product:price:amount" content="79.90" />
+            <meta name="twitter:image" content="https://cdn.example.com/mouse.jpg" />
+            </head></html>
+            """;
+
+        var parsed = ProductMetadataHtmlParser.Parse(html, "https://www.kabum.com.br/produto/mouse-gamer");
+
+        Assert.Equal("Mouse Gamer", parsed.ProductName);
+        Assert.Equal(79.90m, parsed.ProductPrice);
+        Assert.Equal("https://cdn.example.com/mouse.jpg", parsed.ProductImageUrl);
+    }
+
+    [Fact]
     public void Parse_ShouldReadItemPropImage_WhenOpenGraphIsMissing()
     {
         const string html = """

@@ -44,6 +44,8 @@ public class GroupCapturedOfferDto
     public bool HasDirectProductUrl { get; set; }
 
     public bool IsIgnored { get; set; }
+
+    public bool IsAvailable { get; set; } = true;
 }
 
 public class CloneMonitoredOfferResultDto

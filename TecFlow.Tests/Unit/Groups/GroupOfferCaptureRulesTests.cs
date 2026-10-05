@@ -16,6 +16,31 @@ public class GroupOfferCaptureRulesTests
         Assert.Equal(99.90m, price);
     }
 
+    [Theory]
+    [InlineData("Por R$ 1.299,00 hoje", 1299.00)]
+    [InlineData("$ 49,90", 49.90)]
+    [InlineData("R$1299", 1299)]
+    public void ExtractPrice_ShouldAcceptStructuredTelegramRegex(string text, decimal expected)
+    {
+        var price = GroupOfferCaptureRules.ExtractPrice(text, "https://shopee.com.br/produto-i.1.2");
+        Assert.Equal(expected, price);
+    }
+
+    [Fact]
+    public void ContainsUnavailableProductPhrase_ShouldDetectShopeeStoreError()
+    {
+        const string html = "<html><body>Essa loja falhou ao carregar. Tente novamente.</body></html>";
+        Assert.True(GroupOfferCaptureRules.ContainsUnavailableProductPhrase(html));
+    }
+
+    [Fact]
+    public void NeedsStructuredFallback_ShouldDetectTruncatedTitle()
+    {
+        Assert.True(GroupOfferCaptureRules.NeedsStructuredFallback("Oferta", 10m));
+        Assert.True(GroupOfferCaptureRules.NeedsStructuredFallback("Cadeira Gamer Pro", null));
+        Assert.False(GroupOfferCaptureRules.NeedsStructuredFallback("Cadeira Gamer Pro", 99.90m));
+    }
+
     [Fact]
     public void DetectPlatform_ShouldMapShopeeUrl()
     {

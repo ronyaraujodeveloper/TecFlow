@@ -163,26 +163,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         }
 
         var result = await _validation.ValidateAsync(entity.OriginalUrl, entity.ExtractedPrice, cancellationToken);
-        entity.OfferStatus = result.Status;
-        entity.ValidatedPrice = result.Price;
-        entity.LastValidatedAt = DateTime.UtcNow;
-        if (!string.IsNullOrWhiteSpace(result.ImageUrl))
-        {
-            entity.ProductImageUrl = result.ImageUrl;
-        }
-
-        if (!string.IsNullOrWhiteSpace(result.ProductName))
-        {
-            entity.ProductName = result.ProductName;
-        }
-
-        if (result.Platform is { } platform)
-        {
-            entity.PlatformType = platform;
-            entity.PlatformName = platform.ToString();
-        }
-
-        entity.Touch();
+        ApplyValidation(entity, result);
         await _context.SaveChangesAsync(cancellationToken);
 
         var list = await ListAsync(
@@ -212,20 +193,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         }
 
         var validation = await _validation.ValidateAsync(entity.OriginalUrl, entity.ExtractedPrice, cancellationToken);
-        entity.OfferStatus = validation.Status;
-        entity.ValidatedPrice = validation.Price;
-        entity.LastValidatedAt = DateTime.UtcNow;
-        if (!string.IsNullOrWhiteSpace(validation.ImageUrl))
-        {
-            entity.ProductImageUrl = validation.ImageUrl;
-        }
-
-        if (!string.IsNullOrWhiteSpace(validation.ProductName))
-        {
-            entity.ProductName = validation.ProductName;
-        }
-
-        entity.Touch();
+        ApplyValidation(entity, validation);
         await _context.SaveChangesAsync(cancellationToken);
 
         if (entity.OfferStatus == GroupOfferStatuses.Esgotado)
@@ -469,8 +437,34 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             OfferStatusLabel = GroupOfferStatuses.ToUiLabel(item.OfferStatus),
             ReceivedAt = item.ReceivedAt,
             HasDirectProductUrl = item.HasDirectProductUrl,
-            IsIgnored = item.IsIgnored
+            IsIgnored = item.IsIgnored,
+            IsAvailable = item.IsAvailable
         };
+
+    private static void ApplyValidation(GroupCapturedMessage entity, OfferValidationResultDto result)
+    {
+        entity.OfferStatus = result.Status;
+        entity.IsAvailable = result.IsAvailable;
+        entity.ValidatedPrice = result.Price;
+        entity.LastValidatedAt = DateTime.UtcNow;
+        if (!string.IsNullOrWhiteSpace(result.ImageUrl))
+        {
+            entity.ProductImageUrl = result.ImageUrl;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.ProductName))
+        {
+            entity.ProductName = result.ProductName;
+        }
+
+        if (result.Platform is { } platform)
+        {
+            entity.PlatformType = platform;
+            entity.PlatformName = platform.ToString();
+        }
+
+        entity.Touch();
+    }
 
     private static string? FirstNonEmpty(params string?[] values)
     {

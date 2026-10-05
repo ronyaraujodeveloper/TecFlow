@@ -64,4 +64,6 @@ public class GroupCapturedMessage : BaseEntity
     public bool IsIgnored { get; set; }
 
     public DateTime? IgnoredAt { get; set; }
+
+    public bool IsAvailable { get; set; } = true;
 }

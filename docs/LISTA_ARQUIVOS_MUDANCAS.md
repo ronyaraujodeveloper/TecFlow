@@ -935,6 +935,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **CloneOfferRules.cs** / **UrlResolverDto.cs** / **AffiliateLinkConverterDto.cs** — mensagens e envelopes do clone.
 - [x] **UrlResolverServiceTests.cs** / **AffiliateLinkConverterServiceTests.cs** — HEAD até Shopee e persistência com SourceGroup.
 - [x] **MonitoredGroupsController.cs** / **MonitoredGroupService.cs** — listagem paginada (`skip`/`take`, sem `Take(120)`).
+- [x] **OfferProductMediaStore.cs** / **IOfferProductMediaStore.cs** — grava foto do Telegram em `wwwroot/uploads/products`.
+- [x] **OfferValidationService.cs** / **OfferValidationDtos.cs** — `ValidateProductPageStatusAsync` com follow redirects e frases de esgotado.
+- [x] **GroupOfferCaptureRules.cs** — regex de preço Telegram + fallback `og:title` / `product:price:amount`.
+- [x] **GroupOfferCaptureService.cs** / **TelegramUserMonitorHost.cs** — download `MessageMediaPhoto` e scrape OpenGraph.
+- [x] **AddGroupCapturedMessageAvailability** — coluna `IsAvailable` e índice por disponibilidade.
+- [x] **GruposMonitorados.razor** — badge cinza/vermelho `Esgotado`; feed principal oculta `IsAvailable = false`.
+- [x] **OfferValidationServiceTests.cs** / **GroupOfferCaptureRulesTests.cs** — frases de erro, regex de preço e meta tags.
 
 ---
 

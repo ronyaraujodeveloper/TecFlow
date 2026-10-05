@@ -48,3 +48,4 @@
 [2026-10-04 19:22:02]fix(telegram): sync aguarda historico UserBot e preserva sessao
 [2026-10-04 21:22:59]feat(links): clona oferta com unshorten e historico
 [2026-10-04 21:55:28]feat(ui): filtra feed monitorado e descarta ofertas
+[2026-10-04 22:39:22]fix(telegram): extrai midia e valida esgotado

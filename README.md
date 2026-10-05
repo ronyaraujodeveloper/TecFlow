@@ -815,6 +815,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Aba de alternância "Ocultos / Descartados" para auditoria e restauração de mensagens.
 - [x] **Redesign do Card (Grid 2x2):** Compactação dos botões de ação em duas linhas para melhor aproveitamento do espaço visual.
 
+## 🛠️ Resiliência no Parser de Ofertas (Imagens, Validação e Scraping de Preço)
+
+- [x] **Extração Dupla de Mídia (Telegram Media + OpenGraph Scraper):**
+  - Download da foto direta da mensagem do Telegram ou fallback via extração da tag `og:image` no link final da loja.
+- [x] **Filtro de Páginas Quebradas/Esgotadas (Validation Ping):**
+  - Verificação de redirecionamento e expurgo automático de links que retornam erros conhecidos da Shopee/Mercado Livre (ex: "loja falhou ao carregar").
+- [x] **Parser Inteligente de Título e Preço (Regex + Fallback HTML):**
+  - Normalização de captura de valores (`R$`, `R$ `, `,00`) e fallback para as meta tags do e-commerce caso o texto do canal venha formatado de forma atípica.
    
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

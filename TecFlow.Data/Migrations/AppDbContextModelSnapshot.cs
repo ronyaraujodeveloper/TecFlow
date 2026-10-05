@@ -401,6 +401,11 @@ namespace TecFlow.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<DateTime?>("LastValidatedAt")
                         .HasColumnType("datetime2");
 
@@ -452,6 +457,8 @@ namespace TecFlow.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId", "IsIgnored", "ReceivedAt");
+
+                    b.HasIndex("UserId", "IsAvailable", "ReceivedAt");
 
                     b.HasIndex("UserId", "ReceivedAt");
 

@@ -125,7 +125,14 @@
                                 <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformName)">
                                     @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)
                                 </span>
-                                <span class="badge @StatusBadgeClass(item.OfferStatus)">@item.OfferStatusLabel</span>
+                                @if (!item.IsAvailable || item.OfferStatus == GroupOfferStatuses.Esgotado)
+                                {
+                                    <span class="badge text-bg-secondary border border-danger">Esgotado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge @StatusBadgeClass(item.OfferStatus)">@item.OfferStatusLabel</span>
+                                }
                             </div>
                             <div class="monitored-offer-actions">
                                 <a class="btn btn-outline-secondary w-100" href="@item.OriginalUrl" target="_blank" rel="noopener noreferrer">

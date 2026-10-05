@@ -250,7 +250,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 }
 
                 var (chatId, title) = ResolvePeer(updates, message.peer_id);
-                TryEnqueueFromMessage(userId, message, chatId, title);
+                await TryEnqueueFromMessageAsync(userId, client, message, chatId, title);
             }
         }
         catch (Exception ex)
@@ -359,7 +359,14 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                                 continue;
                             }
 
-                            if (!TryCreatePayload(userId, historic, chatId, title, out var payload) || payload is null)
+                            var payload = await TryCreatePayloadAsync(
+                                client,
+                                userId,
+                                historic,
+                                chatId,
+                                title,
+                                cancellationToken);
+                            if (payload is null)
                             {
                                 continue;
                             }
@@ -405,25 +412,31 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
-    private void TryEnqueueFromMessage(int userId, Message message, string chatId, string title)
+    private async Task TryEnqueueFromMessageAsync(
+        int userId,
+        Client client,
+        Message message,
+        string chatId,
+        string title)
     {
-        if (TryCreatePayload(userId, message, chatId, title, out var payload) && payload is not null)
+        var payload = await TryCreatePayloadAsync(client, userId, message, chatId, title, CancellationToken.None);
+        if (payload is not null)
         {
             _queue.Writer.TryWrite(payload);
         }
     }
 
-    private static bool TryCreatePayload(
+    private async Task<UserBotCapturedPayload?> TryCreatePayloadAsync(
+        Client client,
         int userId,
         Message message,
         string chatId,
         string title,
-        out UserBotCapturedPayload? payload)
+        CancellationToken cancellationToken)
     {
-        payload = null;
         if (string.IsNullOrWhiteSpace(message.message) && message.media is null && message.reply_markup is null)
         {
-            return false;
+            return null;
         }
 
         var text = message.message ?? string.Empty;
@@ -466,7 +479,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             .ToList();
         if (offerUrls.Count == 0)
         {
-            return false;
+            return null;
         }
 
         var raw = string.IsNullOrWhiteSpace(pageTitle) ? text : pageTitle + Environment.NewLine + text;
@@ -484,18 +497,33 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             mediaUrl = web.url;
         }
 
+        byte[]? photoBytes = null;
+        if (message.media is MessageMediaPhoto { photo: Photo photo })
+        {
+            try
+            {
+                using var stream = new MemoryStream();
+                await client.DownloadFileAsync(photo, stream);
+                photoBytes = stream.ToArray();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Download da foto Telegram falhou. UserId={UserId} MessageId={MessageId}", userId, message.id);
+            }
+        }
+
         var receivedAt = message.Date == default
             ? DateTime.UtcNow
             : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
-        payload = new UserBotCapturedPayload(
+        return new UserBotCapturedPayload(
             userId,
             chatId,
             title,
             raw,
             message.id.ToString(),
             mediaUrl,
-            receivedAt);
-        return true;
+            receivedAt,
+            photoBytes);
     }
 
     private static void CollectMarkupUrls(Message message, List<string> urls)
@@ -693,6 +721,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ExternalMessageId = messageId,
                 RawText = rawText,
                 MediaUrl = mediaUrl,
+                PhotoBytes = payload.PhotoBytes,
                 ReceivedAt = payload.ReceivedAt
             },
             cancellationToken);
@@ -941,7 +970,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         string RawText,
         string MessageId,
         string? MediaUrl,
-        DateTime ReceivedAt);
+        DateTime ReceivedAt,
+        byte[]? PhotoBytes);
 
     private sealed record UserBotSlot(Client Client, CancellationTokenSource Cts, Task Loop);
 }

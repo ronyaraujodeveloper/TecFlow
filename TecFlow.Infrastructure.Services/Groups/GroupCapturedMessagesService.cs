@@ -34,6 +34,11 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         bool ignored)
     {
         query = query.Where(item => item.IsIgnored == ignored && item.HasDirectProductUrl);
+        if (!ignored)
+        {
+            query = query.Where(item => item.IsAvailable);
+        }
+
         if (activePlatforms.Count == 0)
         {
             return query.Where(_ => false);

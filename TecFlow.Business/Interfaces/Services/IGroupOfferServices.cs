@@ -19,6 +19,8 @@ public sealed class GroupOfferCaptureRequest
 
     public string? MediaUrl { get; init; }
 
+    public byte[]? PhotoBytes { get; init; }
+
     public DateTime ReceivedAt { get; init; } = DateTime.UtcNow;
 }
 
@@ -29,8 +31,14 @@ public interface IGroupOfferCaptureService
 
 public interface IOfferValidationService
 {
-    Task<(string Status, decimal? Price, string? ImageUrl, string? ProductName, MarketplaceType? Platform)>
-        ValidateAsync(string originalUrl, decimal? capturedPrice, CancellationToken cancellationToken = default);
+    Task<OfferValidationResultDto> ValidateAsync(
+        string originalUrl,
+        decimal? capturedPrice,
+        CancellationToken cancellationToken = default);
+
+    Task<OfferPageStatusDto> ValidateProductPageStatusAsync(
+        string originalUrl,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IMonitoredGroupService

@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Service.LinkStrategies;
+﻿using System.Text.RegularExpressions;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Enums;
 
@@ -6,6 +7,21 @@ namespace TecFlow.Business.Service.Groups;
 
 public static class GroupOfferCaptureRules
 {
+    public static readonly Regex TelegramPriceRegex = new(
+        @"R?\$?\s*(\d{1,3}(\.\d{3})*|\d+)(,\d{2})?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    public static readonly string[] ProductPageErrorPhrases =
+    [
+        "Essa loja falhou ao carregar",
+        "Ops! Produto não encontrado",
+        "Anúncio pausado",
+        "Fora de estoque",
+        "Produto não encontrado",
+        "publicação pausada",
+        "este produto não está disponível"
+    ];
+
     public const string WhatsAppChannel = "WhatsApp";
     public const string TelegramChannel = "Telegram";
 
@@ -99,10 +115,47 @@ public static class GroupOfferCaptureRules
 
     public static decimal? ExtractPrice(string? text, string? url)
     {
+        var fromText = TryExtractTelegramPrice(text);
+        if (fromText is > 0)
+        {
+            return fromText;
+        }
+
         var parsed = ProductMetadataHtmlParser.Parse(
             string.IsNullOrWhiteSpace(text) ? null : $"<html><body>{text}</body></html>",
             url ?? string.Empty);
         return parsed.ProductPrice;
+    }
+
+    public static decimal? TryExtractTelegramPrice(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        foreach (Match match in TelegramPriceRegex.Matches(text))
+        {
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var end = match.Index + match.Length;
+            while (end < text.Length && char.IsDigit(text[end]))
+            {
+                end++;
+            }
+
+            var raw = text[match.Index..end];
+            var parsed = ProductMetadataHtmlParser.TryParseDisplayPrice(raw);
+            if (parsed is > 0)
+            {
+                return parsed;
+            }
+        }
+
+        return null;
     }
 
     public static string? ExtractName(string? text, string? url)
@@ -121,5 +174,39 @@ public static class GroupOfferCaptureRules
         var firstLine = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .FirstOrDefault(line => !line.StartsWith("http", StringComparison.OrdinalIgnoreCase));
         return ProductMetadataHtmlParser.NormalizePersistedProductName(firstLine);
+    }
+
+    public static bool NeedsStructuredFallback(string? name, decimal? price) =>
+        price is not > 0 || IsWeakProductName(name);
+
+    public static bool IsWeakProductName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return true;
+        }
+
+        var trimmed = name.Trim();
+        return trimmed.Length < 8
+            || trimmed.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Equals("oferta capturada", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool ContainsUnavailableProductPhrase(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return false;
+        }
+
+        foreach (var phrase in ProductPageErrorPhrases)
+        {
+            if (html.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

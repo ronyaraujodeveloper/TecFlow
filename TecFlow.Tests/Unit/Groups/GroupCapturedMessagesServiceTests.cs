@@ -12,10 +12,11 @@ public class GroupCapturedMessagesServiceTests
         var service = new GroupCapturedMessagesService(null!);
         var items = new List<GroupCapturedMessage>
         {
-            new() { Id = 1, HasDirectProductUrl = true, IsIgnored = false, PlatformType = MarketplaceType.Shopee },
-            new() { Id = 2, HasDirectProductUrl = true, IsIgnored = false, PlatformType = MarketplaceType.Amazon },
-            new() { Id = 3, HasDirectProductUrl = false, IsIgnored = false, PlatformType = MarketplaceType.Shopee },
-            new() { Id = 4, HasDirectProductUrl = true, IsIgnored = true, PlatformType = MarketplaceType.Shopee }
+            new() { Id = 1, HasDirectProductUrl = true, IsIgnored = false, IsAvailable = true, PlatformType = MarketplaceType.Shopee },
+            new() { Id = 2, HasDirectProductUrl = true, IsIgnored = false, IsAvailable = true, PlatformType = MarketplaceType.Amazon },
+            new() { Id = 3, HasDirectProductUrl = false, IsIgnored = false, IsAvailable = true, PlatformType = MarketplaceType.Shopee },
+            new() { Id = 4, HasDirectProductUrl = true, IsIgnored = true, IsAvailable = true, PlatformType = MarketplaceType.Shopee },
+            new() { Id = 5, HasDirectProductUrl = true, IsIgnored = false, IsAvailable = false, PlatformType = MarketplaceType.Shopee }
         }.AsQueryable();
 
         var feed = service.ApplyRelevanceFilter(items, [MarketplaceType.Shopee], ignored: false).ToList();

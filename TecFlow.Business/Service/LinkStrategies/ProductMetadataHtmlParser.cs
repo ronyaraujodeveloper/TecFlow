@@ -257,8 +257,17 @@ public static class ProductMetadataHtmlParser
         }
 
         trimmed = Truncate(trimmed, 500);
-        if (string.IsNullOrWhiteSpace(trimmed)
-            || !Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return null;
+        }
+
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             return null;
@@ -266,6 +275,8 @@ public static class ProductMetadataHtmlParser
 
         return trimmed;
     }
+
+    public static decimal? TryParseDisplayPrice(string? raw) => ParsePrice(raw);
 
     public static string FormatBrl(decimal? price)
     {

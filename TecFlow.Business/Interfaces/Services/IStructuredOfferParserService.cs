@@ -4,5 +4,5 @@ namespace TecFlow.Business.Interfaces.Services;
 
 public interface IStructuredOfferParserService
 {
-    OfferDataExtraction Parse(string? rawText);
+    OfferDataExtraction Parse(string? rawMessage);
 }

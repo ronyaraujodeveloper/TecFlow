@@ -47,9 +47,9 @@ public sealed class StructuredOfferParserService : IStructuredOfferParserService
         "bio.link"
     ];
 
-    public OfferDataExtraction Parse(string? rawText)
+    public OfferDataExtraction Parse(string? rawMessage)
     {
-        var text = rawText ?? string.Empty;
+        var text = rawMessage ?? string.Empty;
         var title = ExtractTitle(text);
         var price = ExtractPrice(text);
         var coupon = ExtractCoupon(text);

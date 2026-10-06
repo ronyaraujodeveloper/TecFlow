@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -9,10 +10,12 @@ namespace TecFlow.Infrastructure.Services.Groups;
 public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 {
     private readonly AppDbContext _context;
+    private readonly IStructuredOfferParserService _parser;
 
-    public GroupCapturedMessagesService(AppDbContext context)
+    public GroupCapturedMessagesService(AppDbContext context, IStructuredOfferParserService parser)
     {
         _context = context;
+        _parser = parser;
     }
 
     public async Task<IReadOnlyList<MarketplaceType>> ListActivePlatformsAsync(
@@ -66,5 +69,37 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         entity.Touch();
         await _context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public void ApplyStructuredParse(GroupCapturedMessage entity, string? rawMessage)
+    {
+        var parsed = _parser.Parse(rawMessage);
+        if (!string.IsNullOrWhiteSpace(parsed.ProductTitle))
+        {
+            entity.ProductName = parsed.ProductTitle.Trim();
+        }
+
+        if (parsed.Price is > 0)
+        {
+            entity.ExtractedPrice = parsed.Price;
+        }
+
+        if (!string.IsNullOrWhiteSpace(parsed.CouponCode))
+        {
+            entity.CouponCode = parsed.CouponCode.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(parsed.PrimaryProductUrl))
+        {
+            entity.PrimaryProductUrl = parsed.PrimaryProductUrl.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(parsed.Platform))
+        {
+            entity.PlatformName = parsed.Platform.Trim();
+        }
+
+        entity.ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(entity.ProductImageUrl);
+        entity.MediaUrl = ProductImageStorageRules.ToWebRelativePath(entity.MediaUrl);
     }
 }

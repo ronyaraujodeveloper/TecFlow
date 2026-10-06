@@ -34,9 +34,15 @@
                 }
             </p>
         </div>
-        <button type="button" class="btn btn-primary btn-touch" disabled="@_isSyncing" @onclick="SyncAsync">
-            @(_isSyncing ? "Sincronização em andamento" : $"Sincronizar grupos do {ChannelLabel}")
-        </button>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@_isBusy" @onclick="RefreshFeedAsync">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                Atualizar Feed
+            </button>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_isSyncing" @onclick="SyncAsync">
+                @(_isSyncing ? "Sincronização em andamento" : $"Sincronizar grupos do {ChannelLabel}")
+            </button>
+        </div>
     </div>
     @if (_isSyncing)
     {
@@ -115,11 +121,12 @@
                         <div class="card-body">
                             <div class="d-flex gap-3 mb-3">
                                 <div class="product-image-preview-box product-image-preview-box--sm">
-                                    @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
                                     {
-                                        <img src="@item.ProductImageUrl"
-                                             alt=""
-                                             class="product-image-preview-img"
+                                        <img src="@item.ImageUrl?.Replace('\\', '/')"
+                                             class="img-fluid rounded product-image-preview-img"
+                                             alt="@(item.Title ?? "Oferta capturada")"
+                                             style="max-height: 180px; object-fit: contain;"
                                              loading="lazy"
                                              onerror="this.classList.add('d-none'); var ph = this.nextElementSibling; if (ph) { ph.classList.remove('d-none'); }" />
                                         <span class="product-image-preview-placeholder d-none">Sem imagem</span>
@@ -130,12 +137,15 @@
                                     }
                                 </div>
                                 <div class="min-w-0">
-                                    <h2 class="h6 fw-semibold mb-1 text-break">@(string.IsNullOrWhiteSpace(item.ProductName) ? "Oferta capturada" : item.ProductName)</h2>
+                                    <h2 class="h6 fw-semibold mb-1 text-break monitored-offer-title">@(string.IsNullOrWhiteSpace(item.Title) ? "Oferta capturada" : item.Title)</h2>
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <p class="fw-bold mb-0">@ProductMetadataHtmlParser.FormatBrl(item.ExtractedPrice)</p>
+                                        <span class="badge text-bg-light border">
+                                            <i class="bi bi-cash-coin" aria-hidden="true"></i>
+                                            @(item.Price?.ToString("C2") ?? "—")
+                                        </span>
                                         @if (!string.IsNullOrWhiteSpace(item.CouponCode))
                                         {
-                                            <span class="badge rounded-pill text-bg-warning text-dark border border-success">Cupom @item.CouponCode</span>
+                                            <span class="badge bg-success-subtle text-success border border-success me-1">🎫 @item.CouponCode</span>
                                         }
                                     </div>
                                     <p class="text-muted small mb-0">@item.GroupName · @item.ReceivedAt.ToLocalTime().ToString("dd/MM HH:mm")</p>
@@ -282,6 +292,12 @@
     {
         _groupKey = e.Value?.ToString() ?? string.Empty;
         return LoadAsync();
+    }
+
+    private async Task RefreshFeedAsync()
+    {
+        await LoadAsync();
+        StateHasChanged();
     }
 
     private async Task SyncAsync()

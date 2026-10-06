@@ -540,6 +540,13 @@ html, body {
     height: 72px;
 }
 
+.monitored-offer-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 .monitored-offer-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -36,4 +36,12 @@ public class ProductImageStorageRulesTests
         var path = ProductImageStorageRules.TryResolvePhysicalPath(root, "/uploads/../secrets.txt");
         Assert.Null(path);
     }
+
+    [Fact]
+    public void ToWebRelativePath_ShouldStripWwwrootAndWindowsSeparators()
+    {
+        var path = ProductImageStorageRules.ToWebRelativePath(
+            @"C:\inetpub\tecflow\api\wwwroot\uploads\products\7\2026\10\abc.jpg");
+        Assert.Equal("/uploads/products/7/2026/10/abc.jpg", path);
+    }
 }

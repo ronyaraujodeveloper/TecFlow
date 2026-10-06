@@ -19,4 +19,6 @@ public interface IGroupCapturedMessagesService
         int offerId,
         bool ignored,
         CancellationToken cancellationToken = default);
+
+    void ApplyStructuredParse(GroupCapturedMessage entity, string? rawMessage);
 }

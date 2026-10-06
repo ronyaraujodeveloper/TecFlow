@@ -23,13 +23,31 @@ public class GroupCapturedOfferDto
 
     public string? ProductName { get; set; }
 
+    public string? Title
+    {
+        get => ProductName;
+        set => ProductName = value;
+    }
+
     public string? CouponCode { get; set; }
 
     public decimal? ExtractedPrice { get; set; }
 
+    public decimal? Price
+    {
+        get => ExtractedPrice;
+        set => ExtractedPrice = value;
+    }
+
     public decimal? ValidatedPrice { get; set; }
 
     public string? ProductImageUrl { get; set; }
+
+    public string? ImageUrl
+    {
+        get => ProductImageUrl;
+        set => ProductImageUrl = value;
+    }
 
     public string OriginalUrl { get; set; } = string.Empty;
 

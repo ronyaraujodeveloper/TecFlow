@@ -839,5 +839,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - **Cupom:** Mapeamento de códigos promocionais com palavras-chave (`CUPOM:`, `Cupom`, `Code:`).
   - **Link Principal:** Discriminação entre URL de checkout do produto e links institucionais/vitrines da campanha.
 
+  ## 🧠 Parser de Ofertas Estruturadas & Renderização Reativa (Parsing & UI Pipeline)
+
+- [x] **Engine Extrator de Ofertas (`StructuredOfferParserService`):**
+  - Isolamento de Título, Preço (`decimal`), Código de Cupom e URL Canônica do Produto via Regex avançado.
+- [x] **Sanitização de Caminho de Imagens (`ImageUrl` Web Path):**
+  - Conversão obrigatória de separadores do SO (`\`) para barras de URL web (`/`) ao salvar caminhos estáticos em `wwwroot/uploads/`.
+- [x] **Exibição Estruturada no Blazor (`/integracoes/telegram/grupos/monitorados`):**
+  - Renderização de badges visuais para Cupons ativos, preço formatado em BRL (`C2`) e recarga reativa da grid via botão "Atualizar Feed".
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

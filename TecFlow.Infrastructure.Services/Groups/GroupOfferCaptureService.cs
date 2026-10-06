@@ -16,6 +16,7 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
     private readonly IOfferValidationService _validation;
     private readonly IOfferProductMediaStore _mediaStore;
     private readonly IStructuredOfferParserService _parser;
+    private readonly IGroupCapturedMessagesService _capturedMessages;
     private readonly ILogger<GroupOfferCaptureService> _logger;
 
     public GroupOfferCaptureService(
@@ -23,12 +24,14 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
         IOfferValidationService validation,
         IOfferProductMediaStore mediaStore,
         IStructuredOfferParserService parser,
+        IGroupCapturedMessagesService capturedMessages,
         ILogger<GroupOfferCaptureService> logger)
     {
         _context = context;
         _validation = validation;
         _mediaStore = mediaStore;
         _parser = parser;
+        _capturedMessages = capturedMessages;
         _logger = logger;
     }
 
@@ -85,8 +88,8 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     GroupName = groupName.Length <= 256 ? groupName : groupName[..256],
                     ExternalMessageId = request.ExternalMessageId,
                     RawText = request.RawText,
-                    MediaUrl = Truncate(localPhotoUrl ?? request.MediaUrl, 500),
-                    ProductImageUrl = Truncate(image, 500),
+                    MediaUrl = Truncate(ProductImageStorageRules.ToWebRelativePath(localPhotoUrl ?? request.MediaUrl), 500),
+                    ProductImageUrl = Truncate(ProductImageStorageRules.ToWebRelativePath(image), 500),
                     OriginalUrl = Truncate(url, 1000) ?? url,
                     PrimaryProductUrl = Truncate(extracted.PrimaryProductUrl, 1000) ?? Truncate(url, 1000),
                     ProductName = name,
@@ -99,6 +102,7 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
                     IsAvailable = true
                 };
+                _capturedMessages.ApplyStructuredParse(entity, request.RawText);
                 _context.GroupCapturedMessages.Add(entity);
                 added.Add(entity);
             }
@@ -146,7 +150,8 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
             if (allowOgImage && string.IsNullOrWhiteSpace(entity.ProductImageUrl)
                 && !string.IsNullOrWhiteSpace(validation.ImageUrl))
             {
-                entity.ProductImageUrl = ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(validation.ImageUrl);
+                entity.ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(
+                    ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(validation.ImageUrl));
             }
 
             if (validation.Platform is { } platform)

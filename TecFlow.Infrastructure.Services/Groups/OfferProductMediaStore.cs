@@ -42,7 +42,8 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
             var fileName = ProductImageStorageRules.BuildFileName(messageId);
             var fullPath = Path.Combine(folder, fileName);
             await File.WriteAllBytesAsync(fullPath, photoBytes, cancellationToken);
-            return ProductImageStorageRules.BuildRelativeUrl(tenantId, utcNow, fileName);
+            var relativePath = ProductImageStorageRules.BuildRelativeUrl(tenantId, utcNow, fileName);
+            return ProductImageStorageRules.ToWebRelativePath(relativePath.Replace('\\', '/'));
         }
         catch (Exception ex)
         {

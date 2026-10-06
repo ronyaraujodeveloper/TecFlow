@@ -12,6 +12,47 @@ public static class ProductImageStorageRules
         return $"{RelativeRoot}/{tenantId}/{stamp:yyyy}/{stamp:MM}/{name}";
     }
 
+    public static string? ToWebRelativePath(string? storedUrl)
+    {
+        if (string.IsNullOrWhiteSpace(storedUrl))
+        {
+            return storedUrl;
+        }
+
+        var value = storedUrl.Trim().Replace('\\', '/');
+        var wwwRoot = value.IndexOf("wwwroot/", StringComparison.OrdinalIgnoreCase);
+        if (wwwRoot >= 0)
+        {
+            value = value[(wwwRoot + "wwwroot".Length)..];
+        }
+
+        var uploads = value.IndexOf("/uploads/products/", StringComparison.OrdinalIgnoreCase);
+        if (uploads < 0)
+        {
+            uploads = value.IndexOf("uploads/products/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (uploads >= 0)
+        {
+            value = value[uploads..];
+            if (!value.StartsWith('/'))
+            {
+                value = "/" + value;
+            }
+
+            return value;
+        }
+
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        return value.StartsWith('/') ? value : "/" + value.TrimStart('/');
+    }
+
     public static string BuildPhysicalFolder(string webRootPath, int tenantId, DateTime utcNow)
     {
         var stamp = utcNow.ToUniversalTime();
@@ -64,6 +105,7 @@ public static class ProductImageStorageRules
         }
 
         var relative = storedUrl.Trim();
+        relative = ToWebRelativePath(relative) ?? relative;
         if (Uri.TryCreate(relative, UriKind.Absolute, out var uri))
         {
             relative = uri.AbsolutePath;

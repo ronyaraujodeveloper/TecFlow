@@ -999,6 +999,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupOfferCaptureService.cs** — persiste extração na captura.
 - [x] **GruposMonitorados.razor** — badge de cupom ao lado do preço/título.
 
+### Módulo 35 — Renderização reativa e ImageUrl web
+
+- [x] **ProductImageStorageRules.ToWebRelativePath** — remove `wwwroot` e troca `\` por `/`.
+- [x] **GroupCapturedMessagesService.ApplyStructuredParse** — preenche título, preço, cupom, URL e sanitiza foto.
+- [x] **GruposMonitorados.razor** — `Title`/`Price`/`ImageUrl`, badge de cupom e botão **Atualizar Feed**.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

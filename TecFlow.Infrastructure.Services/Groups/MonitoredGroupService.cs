@@ -435,7 +435,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             CouponCode = item.CouponCode,
             ExtractedPrice = item.ValidatedPrice ?? item.ExtractedPrice,
             ValidatedPrice = item.ValidatedPrice,
-            ProductImageUrl = item.ProductImageUrl ?? item.MediaUrl,
+            ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(item.ProductImageUrl ?? item.MediaUrl),
             OriginalUrl = item.OriginalUrl,
             PrimaryProductUrl = item.PrimaryProductUrl ?? item.OriginalUrl,
             PlatformType = item.PlatformType,
@@ -456,7 +456,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         entity.LastValidatedAt = DateTime.UtcNow;
         if (!string.IsNullOrWhiteSpace(result.ImageUrl))
         {
-            entity.ProductImageUrl = result.ImageUrl;
+            entity.ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(result.ImageUrl);
         }
 
         if (!string.IsNullOrWhiteSpace(result.ProductName))

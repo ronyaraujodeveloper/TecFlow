@@ -153,6 +153,7 @@ flowchart LR
   USERBOT -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
   GCAP -->|StructuredOfferParserService regex titulo preco cupom URL| SQL
+  GCAP -->|ToWebRelativePath /uploads/products| MEDIA
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET status GetSyncStatus toast| ST

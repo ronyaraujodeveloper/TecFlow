@@ -1005,6 +1005,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupCapturedMessagesService.ApplyStructuredParse** — preenche título, preço, cupom, URL e sanitiza foto.
 - [x] **GruposMonitorados.razor** — `Title`/`Price`/`ImageUrl`, badge de cupom e botão **Atualizar Feed**.
 
+### Módulo 36 — Paginação e download de mídia da página visível
+
+- [x] **GroupOfferCaptureRules** — page sizes 10/25/50/100 (padrão 25) e `Skip` por página.
+- [x] **MonitoredGroupService.ListAsync** — `OrderByDescending(CreatedAt).Skip/Take`.
+- [x] **TelegramUserMonitorHost** — fila alta/baixa de fotos; `POST .../midia/priorizar`.
+- [x] **GruposMonitorados.razor** — paginação no topo/rodapé, skeleton "Carregando mídia..." e **Atualizar Feed**.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

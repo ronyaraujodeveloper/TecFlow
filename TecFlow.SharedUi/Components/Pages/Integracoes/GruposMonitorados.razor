@@ -69,26 +69,35 @@
         </div>
     }
 
-    <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
-        <div>
-            <span class="form-label fw-semibold d-block">Período</span>
-            <div class="btn-group" role="group" aria-label="Filtro de período">
-                <button type="button" class="btn btn-sm @ChipClass(10)" @onclick="() => SetHoursAsync(10)">Últimas 10 horas</button>
-                <button type="button" class="btn btn-sm @ChipClass(24)" @onclick="() => SetHoursAsync(24)">Últimas 24 horas</button>
-                <button type="button" class="btn btn-sm @ChipClass(48)" @onclick="() => SetHoursAsync(48)">Últimos 2 dias</button>
+        <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
+            <div>
+                <span class="form-label fw-semibold d-block">Período</span>
+                <div class="btn-group" role="group" aria-label="Filtro de período">
+                    <button type="button" class="btn btn-sm @ChipClass(10)" @onclick="() => SetHoursAsync(10)">Últimas 10 horas</button>
+                    <button type="button" class="btn btn-sm @ChipClass(24)" @onclick="() => SetHoursAsync(24)">Últimas 24 horas</button>
+                    <button type="button" class="btn btn-sm @ChipClass(48)" @onclick="() => SetHoursAsync(48)">Últimos 2 dias</button>
+                </div>
+            </div>
+            <div class="flex-grow-1" style="min-width: 16rem;">
+                <label class="form-label fw-semibold" for="monitored-group">Grupo selecionado</label>
+                <select id="monitored-group" class="form-select" value="@_groupKey" @onchange="OnGroupChanged">
+                    <option value="">Todos os grupos</option>
+                    @foreach (var group in _groups)
+                    {
+                        <option value="@group.GroupKey">@group.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label fw-semibold" for="monitored-page-size">Ofertas por página</label>
+                <select id="monitored-page-size" class="form-select" value="@_pageSize" @onchange="OnPageSizeChanged">
+                    @foreach (var size in GroupOfferCaptureRules.AllowedPageSizes)
+                    {
+                        <option value="@size">@size</option>
+                    }
+                </select>
             </div>
         </div>
-        <div class="flex-grow-1" style="min-width: 16rem;">
-            <label class="form-label fw-semibold" for="monitored-group">Grupo selecionado</label>
-            <select id="monitored-group" class="form-select" value="@_groupKey" @onchange="OnGroupChanged">
-                <option value="">Todos os grupos</option>
-                @foreach (var group in _groups)
-                {
-                    <option value="@group.GroupKey">@group.Name</option>
-                }
-            </select>
-        </div>
-    </div>
 
     <div class="mb-4">
         <span class="form-label fw-semibold d-block">Lista</span>
@@ -113,6 +122,7 @@
     }
     else
     {
+        @Pager
         <div class="row g-3">
             @foreach (var item in _offers)
             {
@@ -130,6 +140,13 @@
                                              loading="lazy"
                                              onerror="this.classList.add('d-none'); var ph = this.nextElementSibling; if (ph) { ph.classList.remove('d-none'); }" />
                                         <span class="product-image-preview-placeholder d-none">Sem imagem</span>
+                                    }
+                                    else if (item.IsMediaPending)
+                                    {
+                                        <span class="product-image-preview-placeholder media-skeleton" aria-live="polite">
+                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                            Carregando mídia...
+                                        </span>
                                     }
                                     else
                                     {
@@ -199,15 +216,7 @@
                 </div>
             }
         </div>
-        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mt-3">
-            <p class="text-muted small mb-0">Exibindo @_offers.Count de @_totalOffers oferta(s) neste período.</p>
-            @if (_offers.Count < _totalOffers)
-            {
-                <button type="button" class="btn btn-outline-primary btn-sm btn-touch" disabled="@_isBusy" @onclick="LoadMoreAsync">
-                    @(_isBusy ? "Carregando..." : "Carregar mais 50 ofertas")
-                </button>
-            }
-        </div>
+        @Pager
     }
 </div>
 
@@ -220,7 +229,8 @@
     private readonly List<GroupCapturedOfferDto> _offers = [];
     private int _hours = 24;
     private int _totalOffers;
-    private int _loadedSkip;
+    private int _page = 1;
+    private int _pageSize = GroupOfferCaptureRules.OffersPageSize;
     private string _groupKey = string.Empty;
     private bool _isBusy;
     private bool _isSyncing;
@@ -240,6 +250,24 @@
         : GroupOfferCaptureRules.WhatsAppChannel;
 
     private string ChannelLabel => IsTelegram ? "Telegram" : "WhatsApp";
+
+    private int TotalPages => GroupOfferCaptureRules.ResolveTotalPages(_totalOffers, _pageSize);
+
+    private int DisplayStart => _totalOffers == 0 ? 0 : ((_page - 1) * _pageSize) + 1;
+
+    private int DisplayEnd => Math.Min(_page * _pageSize, _totalOffers);
+
+    private RenderFragment Pager => @<nav class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 my-3" aria-label="Paginação de ofertas">
+        <p class="text-muted small mb-0">Exibindo @DisplayStart a @DisplayEnd de @_totalOffers ofertas</p>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_isBusy || _page <= 1)" @onclick="() => SetPageAsync(_page - 1)">Anterior</button>
+            @foreach (var pageNumber in VisiblePages())
+            {
+                <button type="button" class="btn btn-sm @(_page == pageNumber ? "btn-primary" : "btn-outline-secondary")" disabled="@_isBusy" @onclick="() => SetPageAsync(pageNumber)">@pageNumber</button>
+            }
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_isBusy || _page >= TotalPages)" @onclick="() => SetPageAsync(_page + 1)">Próximo</button>
+        </div>
+    </nav>;
 
     protected override async Task OnInitializedAsync()
     {
@@ -271,6 +299,7 @@
     private Task SetIgnoredFeedAsync(bool ignored)
     {
         _showIgnored = ignored;
+        _page = 1;
         return LoadAsync();
     }
 
@@ -285,13 +314,45 @@
     private Task SetHoursAsync(int hours)
     {
         _hours = hours;
+        _page = 1;
         return LoadAsync();
     }
 
     private Task OnGroupChanged(ChangeEventArgs e)
     {
         _groupKey = e.Value?.ToString() ?? string.Empty;
+        _page = 1;
         return LoadAsync();
+    }
+
+    private Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var size))
+        {
+            size = GroupOfferCaptureRules.OffersPageSize;
+        }
+
+        _pageSize = GroupOfferCaptureRules.ResolveOffersTake(size);
+        _page = 1;
+        return LoadAsync();
+    }
+
+    private Task SetPageAsync(int page)
+    {
+        _page = GroupOfferCaptureRules.ResolveOffersPage(page);
+        return LoadAsync();
+    }
+
+    private IEnumerable<int> VisiblePages()
+    {
+        var total = TotalPages;
+        var start = Math.Max(1, _page - 2);
+        var end = Math.Min(total, start + 4);
+        start = Math.Max(1, end - 4);
+        for (var i = start; i <= end; i++)
+        {
+            yield return i;
+        }
     }
 
     private async Task RefreshFeedAsync()
@@ -354,17 +415,18 @@
         }
         try
         {
-            var skip = append ? _loadedSkip : 0;
+            var skip = GroupOfferCaptureRules.ResolveOffersSkipFromPage(_page, _pageSize);
             var result = await Api.ListAsync(
                 _hours,
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
                 Channel,
                 skip,
-                GroupOfferCaptureRules.OffersPageSize,
+                _pageSize,
                 _showIgnored);
             if (result.Data is not null)
             {
                 Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);
+                await PrioritizeVisibleMediaAsync();
             }
             else if (!silent)
             {
@@ -388,7 +450,28 @@
         }
     }
 
-    private Task LoadMoreAsync() => LoadAsync(append: true);
+    private async Task PrioritizeVisibleMediaAsync()
+    {
+        if (!IsTelegram)
+        {
+            return;
+        }
+
+        var pending = _offers.Where(item => item.IsMediaPending).Select(item => item.Id).ToList();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await Api.PrioritizeMediaAsync(pending);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Falha ao priorizar download de mídia da página visível.");
+        }
+    }
 
     private void StartOfferRefresh()
     {
@@ -612,58 +695,18 @@
         _groups.Clear();
         _groups.AddRange(data.Groups);
         _totalOffers = data.TotalOffers;
-        if (!append)
+        var maxPage = GroupOfferCaptureRules.ResolveTotalPages(_totalOffers, _pageSize);
+        if (_page > maxPage)
         {
-            if (silent)
-            {
-                MergeNewestOffers(data.Offers);
-            }
-            else
-            {
-                _offers.Clear();
-                _offers.AddRange(data.Offers);
-                _loadedSkip = data.Offers.Count;
-            }
+            _page = maxPage;
         }
-        else
-        {
-            foreach (var item in data.Offers)
-            {
-                if (_offers.All(existing => existing.Id != item.Id))
-                {
-                    _offers.Add(item);
-                }
-            }
 
-            _loadedSkip += data.Offers.Count;
-        }
+        _offers.Clear();
+        _offers.AddRange(data.Offers);
 
         if (!data.Status)
         {
             _error = FirstNonEmpty(data.Descricao, error, "Não foi possível carregar os grupos monitorados.");
-        }
-    }
-
-    private void MergeNewestOffers(IReadOnlyList<GroupCapturedOfferDto> incoming)
-    {
-        foreach (var item in incoming.OrderByDescending(offer => offer.ReceivedAt))
-        {
-            var index = _offers.FindIndex(existing => existing.Id == item.Id);
-            if (index >= 0)
-            {
-                _offers[index] = item;
-                continue;
-            }
-
-            var insertAt = _offers.FindIndex(existing => existing.ReceivedAt < item.ReceivedAt);
-            if (insertAt < 0)
-            {
-                _offers.Add(item);
-            }
-            else
-            {
-                _offers.Insert(insertAt, item);
-            }
         }
     }
 }

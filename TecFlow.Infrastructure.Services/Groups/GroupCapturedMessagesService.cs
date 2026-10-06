@@ -11,11 +11,16 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 {
     private readonly AppDbContext _context;
     private readonly IStructuredOfferParserService _parser;
+    private readonly IOfferProductMediaStore _mediaStore;
 
-    public GroupCapturedMessagesService(AppDbContext context, IStructuredOfferParserService parser)
+    public GroupCapturedMessagesService(
+        AppDbContext context,
+        IStructuredOfferParserService parser,
+        IOfferProductMediaStore mediaStore)
     {
         _context = context;
         _parser = parser;
+        _mediaStore = mediaStore;
     }
 
     public async Task<IReadOnlyList<MarketplaceType>> ListActivePlatformsAsync(
@@ -101,5 +106,46 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 
         entity.ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(entity.ProductImageUrl);
         entity.MediaUrl = ProductImageStorageRules.ToWebRelativePath(entity.MediaUrl);
+    }
+
+    public async Task<int> AttachProductPhotoAsync(
+        int userId,
+        string externalMessageId,
+        byte[] photoBytes,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0 || string.IsNullOrWhiteSpace(externalMessageId) || photoBytes is not { Length: > 0 })
+        {
+            return 0;
+        }
+
+        var rows = await _context.GroupCapturedMessages
+            .Where(item => item.UserId == userId && item.ExternalMessageId == externalMessageId)
+            .ToListAsync(cancellationToken);
+        if (rows.Count == 0)
+        {
+            return 0;
+        }
+
+        var relativePath = await _mediaStore.SaveProductPhotoAsync(
+            userId,
+            externalMessageId,
+            photoBytes,
+            cancellationToken);
+        relativePath = ProductImageStorageRules.ToWebRelativePath(relativePath?.Replace('\\', '/'));
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return 0;
+        }
+
+        foreach (var row in rows)
+        {
+            row.ProductImageUrl = relativePath;
+            row.MediaUrl = relativePath;
+            row.Touch();
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return rows.Count;
     }
 }

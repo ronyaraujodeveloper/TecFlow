@@ -61,7 +61,9 @@ public static class GroupOfferCaptureRules
     public static string BuildGroupKey(string channel, string groupId) =>
         $"{channel}:{groupId.Trim()}";
 
-    public const int OffersPageSize = 50;
+    public const int OffersPageSize = 25;
+
+    public static readonly int[] AllowedPageSizes = [10, 25, 50, 100];
 
     public static int ResolveLookbackHours(int hours) =>
         hours switch
@@ -73,8 +75,24 @@ public static class GroupOfferCaptureRules
 
     public static int ResolveOffersSkip(int skip) => Math.Max(0, skip);
 
+    public static int ResolveOffersPage(int page) => page < 1 ? 1 : page;
+
     public static int ResolveOffersTake(int take) =>
-        take is > 0 and <= 100 ? take : OffersPageSize;
+        AllowedPageSizes.Contains(take) ? take : OffersPageSize;
+
+    public static int ResolveOffersSkipFromPage(int page, int pageSize) =>
+        (ResolveOffersPage(page) - 1) * ResolveOffersTake(pageSize);
+
+    public static int ResolveTotalPages(int totalItems, int pageSize)
+    {
+        var size = ResolveOffersTake(pageSize);
+        if (totalItems <= 0)
+        {
+            return 1;
+        }
+
+        return Math.Max(1, (int)Math.Ceiling(totalItems / (double)size));
+    }
 
     public static MarketplaceType? DetectPlatform(string? url)
     {

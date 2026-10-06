@@ -162,7 +162,8 @@ flowchart LR
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
-  GMUI[GruposMonitorados] -->|GET skip take 50 ignored| MGAPI[MonitoredGroupsController]
+  GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
+  GMUI -->|POST midia/priorizar IDs visiveis| USERBOT
   MGAPI -->|lojas ativas + HasDirectProductUrl + IsIgnored + IsAvailable| GCAPSVC[GroupCapturedMessagesService]
   GCAPSVC --> SQL
   GCAP -->|GroupCapturedMessages GroupName canal| GMUI

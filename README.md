@@ -848,5 +848,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Exibição Estruturada no Blazor (`/integracoes/telegram/grupos/monitorados`):**
   - Renderização de badges visuais para Cupons ativos, preço formatado em BRL (`C2`) e recarga reativa da grid via botão "Atualizar Feed".
 
+## 📄 Paginação Dinâmica e Priorização Visual de Mídia (Paging & On-Demand Downloader)
+
+- [x] **Seletor de Tamanho de Página (10, 25, 50, 100):**
+  - Implementação de paginação de dados com controle dinâmico de `PageSize` no Blazor e no repositório LINQ (`Skip/Take`).
+- [x] **Download Prioritário por Página Ativa:**
+  - Otimização do Worker de imagens para priorizar o download das mídias referentes aos itens da página visível no momento.
+- [x] **Indicador de Status do Lote e Skeleton Loader:**
+  - Carregamento progressivo de mídia mantendo a interface leve e responsiva.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

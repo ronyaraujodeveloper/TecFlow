@@ -68,6 +68,10 @@ public class GroupCapturedOfferDto
     public bool IsIgnored { get; set; }
 
     public bool IsAvailable { get; set; } = true;
+
+    public bool IsMediaPending { get; set; }
+
+    public string? ExternalMessageId { get; set; }
 }
 
 public class CloneMonitoredOfferResultDto
@@ -108,4 +112,9 @@ public class MonitoredGroupsResponseDto
     public CloneMonitoredOfferResultDto? Clone { get; set; }
 
     public bool Ignored { get; set; }
+}
+
+public class PrioritizeMonitoredMediaRequest
+{
+    public List<int> OfferIds { get; set; } = [];
 }

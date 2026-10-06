@@ -33,6 +33,11 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         });
     private readonly ConcurrentDictionary<int, byte> _catchUpQueued = new();
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _catchUpGates = new();
+    private readonly ConcurrentDictionary<(int UserId, string ChatId, int MessageId), byte> _mediaQueued = new();
+    private readonly ConcurrentDictionary<int, ConcurrentDictionary<string, ChatBase>> _chatsByUser = new();
+    private readonly ConcurrentQueue<UserBotMediaJob> _mediaHigh = new();
+    private readonly ConcurrentQueue<UserBotMediaJob> _mediaLow = new();
+    private readonly SemaphoreSlim _mediaSignal = new(0);
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly TelegramUserBotCodeStore _codes;
@@ -182,10 +187,25 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         return false;
     }
 
+    public bool EnqueuePriorityPhoto(int userId, string chatId, string externalMessageId)
+    {
+        if (userId <= 0
+            || string.IsNullOrWhiteSpace(chatId)
+            || !int.TryParse(externalMessageId, out var messageId)
+            || messageId <= 0)
+        {
+            return false;
+        }
+
+        EnqueueMediaJob(new UserBotMediaJob(userId, chatId.Trim(), messageId), highPriority: true);
+        return true;
+    }
+
     public async Task RunForeverAsync(CancellationToken stoppingToken)
     {
         var drain = DrainQueueAsync(CancellationToken.None);
         var catchUpDrain = DrainCatchUpJobsAsync(stoppingToken);
+        var mediaDrain = DrainMediaJobsAsync(stoppingToken);
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -236,6 +256,15 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Fila de catch-up UserBot encerrada com aviso.");
+            }
+
+            try
+            {
+                await mediaDrain.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Fila de mídia UserBot encerrada com aviso.");
             }
         }
     }
@@ -326,6 +355,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 }
 
                 var (chatId, title) = ResolvePeer(updates, message.peer_id);
+                RememberChatsFromUpdates(userId, updates);
                 await TryEnqueueFromMessageAsync(userId, client, message, chatId, title);
             }
         }
@@ -397,6 +427,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 }
 
                 var (chatId, title) = ResolvePeerFromChat(chat);
+                RememberChat(userId, chat);
                 var offsetId = 0;
                 var totalFetched = 0;
                 var reachedOld = false;
@@ -447,7 +478,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                                 continue;
                             }
 
-                            await PersistAsync(payload, cancellationToken);
+                    await PersistAsync(payload, cancellationToken, prioritizePhoto: false);
                             persisted++;
                         }
 
@@ -574,20 +605,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
 
         byte[]? photoBytes = null;
-        if (message.media is MessageMediaPhoto { photo: Photo photo })
-        {
-            try
-            {
-                using var stream = new MemoryStream();
-                await client.DownloadFileAsync(photo, stream);
-                photoBytes = stream.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Download da foto Telegram falhou. UserId={UserId} MessageId={MessageId}", userId, message.id);
-            }
-        }
-
+        var hasPhoto = message.media is MessageMediaPhoto { photo: Photo };
         var receivedAt = message.Date == default
             ? DateTime.UtcNow
             : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
@@ -599,7 +617,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             message.id.ToString(),
             mediaUrl,
             receivedAt,
-            photoBytes);
+            photoBytes,
+            hasPhoto);
     }
 
     private static void CollectMarkupUrls(Message message, List<string> urls)
@@ -669,7 +688,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         InputPeer inputPeer,
         int offsetId,
         int pageSize,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int addOffset = 0)
     {
         for (var attempt = 0; attempt < 4; attempt++)
         {
@@ -678,6 +698,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 return await client.Messages_GetHistory(
                     inputPeer,
                     offset_id: offsetId,
+                    add_offset: addOffset,
                     limit: pageSize);
             }
             catch (Exception ex) when (TryGetFloodWaitSeconds(ex, out var seconds) && attempt < 3)
@@ -686,7 +707,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             }
         }
 
-        return await client.Messages_GetHistory(inputPeer, offset_id: offsetId, limit: pageSize);
+        return await client.Messages_GetHistory(inputPeer, offset_id: offsetId, add_offset: addOffset, limit: pageSize);
     }
 
     private static bool TryGetFloodWaitSeconds(Exception ex, out int seconds)
@@ -754,7 +775,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             {
                 try
                 {
-                    await PersistAsync(payload, cancellationToken);
+                    await PersistAsync(payload, cancellationToken, prioritizePhoto: true);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -779,7 +800,10 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
-    private async Task PersistAsync(UserBotCapturedPayload payload, CancellationToken cancellationToken)
+    private async Task PersistAsync(
+        UserBotCapturedPayload payload,
+        CancellationToken cancellationToken,
+        bool prioritizePhoto = false)
     {
         var userId = payload.UserId;
         var chatId = payload.ChatId;
@@ -831,6 +855,11 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ReceivedAt = payload.ReceivedAt
             },
             cancellationToken);
+
+        if (payload.HasPhoto && int.TryParse(payload.MessageId, out var telegramMessageId) && telegramMessageId > 0)
+        {
+            EnqueueMediaJob(new UserBotMediaJob(payload.UserId, payload.ChatId, telegramMessageId), prioritizePhoto);
+        }
     }
 
     private static List<ChatBase> CollectHistoryChats(Messages_DialogsBase dialogs)
@@ -1069,6 +1098,179 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
+    private void RememberChat(int userId, ChatBase chat)
+    {
+        var (chatId, _) = ResolvePeerFromChat(chat);
+        if (chatId is "0" or "")
+        {
+            return;
+        }
+
+        var map = _chatsByUser.GetOrAdd(userId, _ => new ConcurrentDictionary<string, ChatBase>(StringComparer.OrdinalIgnoreCase));
+        map[chatId] = chat;
+    }
+
+    private void RememberChatsFromUpdates(int userId, UpdatesBase updates)
+    {
+        if (updates.Chats is null)
+        {
+            return;
+        }
+
+        foreach (var chat in updates.Chats.Values)
+        {
+            RememberChat(userId, chat);
+        }
+    }
+
+    private void EnqueueMediaJob(UserBotMediaJob job, bool highPriority)
+    {
+        var key = (job.UserId, job.ChatId, job.MessageId);
+        if (highPriority)
+        {
+            _mediaHigh.Enqueue(job);
+            _mediaQueued[key] = 0;
+            _mediaSignal.Release();
+            return;
+        }
+
+        if (!_mediaQueued.TryAdd(key, 0))
+        {
+            return;
+        }
+
+        _mediaLow.Enqueue(job);
+        _mediaSignal.Release();
+    }
+
+    private async Task DrainMediaJobsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await _mediaSignal.WaitAsync(cancellationToken);
+                while (TryDequeueMedia(out var job))
+                {
+                    try
+                    {
+                        await DownloadPriorityPhotoAsync(job, cancellationToken);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(
+                            ex,
+                            "Download priorizado de foto falhou. UserId={UserId} Chat={ChatId} MessageId={MessageId}",
+                            job.UserId,
+                            job.ChatId,
+                            job.MessageId);
+                    }
+                    finally
+                    {
+                        _mediaQueued.TryRemove((job.UserId, job.ChatId, job.MessageId), out _);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private bool TryDequeueMedia(out UserBotMediaJob job)
+    {
+        if (_mediaHigh.TryDequeue(out job!))
+        {
+            return true;
+        }
+
+        return _mediaLow.TryDequeue(out job!);
+    }
+
+    private async Task DownloadPriorityPhotoAsync(UserBotMediaJob job, CancellationToken cancellationToken)
+    {
+        if (!_slots.TryGetValue(job.UserId, out var slot))
+        {
+            return;
+        }
+
+        var chat = await ResolveCachedChatAsync(slot.Client, job.UserId, job.ChatId, cancellationToken);
+        if (chat is null)
+        {
+            return;
+        }
+
+        InputPeer inputPeer;
+        try
+        {
+            inputPeer = chat.ToInputPeer();
+        }
+        catch
+        {
+            return;
+        }
+
+        var history = await GetHistoryWithFloodRetryAsync(
+            slot.Client,
+            inputPeer,
+            offsetId: job.MessageId + 1,
+            pageSize: 1,
+            cancellationToken,
+            addOffset: -1);
+        var messages = history.Messages?.OfType<Message>().Where(item => item.id == job.MessageId).ToArray() ?? [];
+        if (messages.Length == 0 || messages[0].media is not MessageMediaPhoto { photo: Photo photo })
+        {
+            return;
+        }
+
+        using var stream = new MemoryStream();
+        await slot.Client.DownloadFileAsync(photo, stream);
+        var bytes = stream.ToArray();
+        if (bytes.Length == 0)
+        {
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
+        await captured.AttachProductPhotoAsync(job.UserId, job.MessageId.ToString(), bytes, cancellationToken);
+    }
+
+    private async Task<ChatBase?> ResolveCachedChatAsync(
+        Client client,
+        int userId,
+        string chatId,
+        CancellationToken cancellationToken)
+    {
+        if (_chatsByUser.TryGetValue(userId, out var map)
+            && map.TryGetValue(chatId, out var cached))
+        {
+            return cached;
+        }
+
+        try
+        {
+            var dialogs = await client.Messages_GetAllDialogs();
+            foreach (var chat in CollectHistoryChats(dialogs))
+            {
+                RememberChat(userId, chat);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Não foi possível recarregar diálogos para mídia. UserId={UserId}", userId);
+            return null;
+        }
+
+        return _chatsByUser.TryGetValue(userId, out map) && map.TryGetValue(chatId, out cached)
+            ? cached
+            : null;
+    }
+
     private sealed record UserBotCapturedPayload(
         int UserId,
         string ChatId,
@@ -1077,7 +1279,10 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         string MessageId,
         string? MediaUrl,
         DateTime ReceivedAt,
-        byte[]? PhotoBytes);
+        byte[]? PhotoBytes,
+        bool HasPhoto);
+
+    private sealed record UserBotMediaJob(int UserId, string ChatId, int MessageId);
 
     private sealed record UserBotSlot(Client Client, CancellationTokenSource Cts, Task Loop);
 }

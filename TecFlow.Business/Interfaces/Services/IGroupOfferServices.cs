@@ -54,7 +54,7 @@ public interface IMonitoredGroupService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 50,
+        int take = 25,
         bool ignored = false,
         CancellationToken cancellationToken = default);
 
@@ -75,5 +75,10 @@ public interface IMonitoredGroupService
         int userId,
         int offerId,
         string? channel,
+        CancellationToken cancellationToken = default);
+
+    Task<int> PrioritizeVisibleMediaAsync(
+        int userId,
+        IReadOnlyList<int> offerIds,
         CancellationToken cancellationToken = default);
 }

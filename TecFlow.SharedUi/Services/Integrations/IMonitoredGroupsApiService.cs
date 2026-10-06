@@ -13,13 +13,17 @@ public interface IMonitoredGroupsApiService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 50,
+        int take = 25,
         bool ignored = false,
         CancellationToken cancellationToken = default);
 
     Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(string? channel, CancellationToken cancellationToken = default);
 
     Task<ApiResult<UserBotSyncStatusDto>> GetSyncStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResult<MonitoredGroupsResponseDto>> PrioritizeMediaAsync(
+        IReadOnlyList<int> offerIds,
+        CancellationToken cancellationToken = default);
 
     Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,
@@ -60,7 +64,7 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 50,
+        int take = 25,
         bool ignored = false,
         CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<MonitoredGroupsResponseDto>(
@@ -78,6 +82,14 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
 
     public Task<ApiResult<UserBotSyncStatusDto>> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<UserBotSyncStatusDto>($"{Path}/status", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<MonitoredGroupsResponseDto>> PrioritizeMediaAsync(
+        IReadOnlyList<int> offerIds,
+        CancellationToken cancellationToken = default) =>
+        _httpService.PostAsync<PrioritizeMonitoredMediaRequest, MonitoredGroupsResponseDto>(
+            $"{Path}/midia/priorizar",
+            new PrioritizeMonitoredMediaRequest { OfferIds = offerIds.ToList() },
+            cancellationToken);
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,

@@ -547,6 +547,17 @@ html, body {
     overflow: hidden;
 }
 
+.media-skeleton {
+    font-size: 0.65rem;
+    line-height: 1.2;
+    animation: monitored-media-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes monitored-media-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+}
+
 .monitored-offer-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;

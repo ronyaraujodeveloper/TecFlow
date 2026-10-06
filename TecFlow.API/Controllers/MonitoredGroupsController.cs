@@ -40,7 +40,7 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? groupKey = null,
         [FromQuery] string? channel = null,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 50,
+        [FromQuery] int take = 25,
         [FromQuery] bool ignored = false,
         CancellationToken cancellationToken = default)
     {
@@ -78,6 +78,24 @@ public sealed class MonitoredGroupsController : ControllerBase
             _logger.LogError(ex, "Erro ao sincronizar grupos monitorados");
             return Ok(Fail(Describe(ex)));
         }
+    }
+
+    [HttpPost("midia/priorizar")]
+    public async Task<ActionResult<object>> PrioritizeMediaAsync(
+        [FromBody] PrioritizeMonitoredMediaRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        var queued = await _service.PrioritizeVisibleMediaAsync(
+            ResolveUserId(),
+            request?.OfferIds ?? [],
+            cancellationToken);
+        return Ok(new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = queued > 0
+                ? $"{queued} foto(s) da página visível foram priorizadas."
+                : "Nenhuma foto pendente na página visível."
+        });
     }
 
     [HttpPost("{offerId:int}/validar")]

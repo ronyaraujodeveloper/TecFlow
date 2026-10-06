@@ -92,7 +92,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 50,
+        int take = 25,
         bool ignored = false,
         CancellationToken cancellationToken = default)
     {
@@ -122,7 +122,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
             var total = await query.CountAsync(cancellationToken);
             var offers = await query
-                .OrderByDescending(item => item.ReceivedAt)
+                .OrderByDescending(item => item.CreatedAt)
+                .ThenByDescending(item => item.ReceivedAt)
                 .Skip(resolvedSkip)
                 .Take(resolvedTake)
                 .ToListAsync(cancellationToken);
@@ -435,7 +436,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             CouponCode = item.CouponCode,
             ExtractedPrice = item.ValidatedPrice ?? item.ExtractedPrice,
             ValidatedPrice = item.ValidatedPrice,
-            ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(item.ProductImageUrl ?? item.MediaUrl),
+            ProductImageUrl = ResolveOfferImageUrl(item),
             OriginalUrl = item.OriginalUrl,
             PrimaryProductUrl = item.PrimaryProductUrl ?? item.OriginalUrl,
             PlatformType = item.PlatformType,
@@ -445,8 +446,67 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             ReceivedAt = item.ReceivedAt,
             HasDirectProductUrl = item.HasDirectProductUrl,
             IsIgnored = item.IsIgnored,
-            IsAvailable = item.IsAvailable
+            IsAvailable = item.IsAvailable,
+            ExternalMessageId = item.ExternalMessageId,
+            IsMediaPending = item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && string.IsNullOrWhiteSpace(ResolveOfferImageUrl(item))
         };
+
+    private static string? ResolveOfferImageUrl(GroupCapturedMessage item)
+    {
+        if (ProductImageStorageRules.IsLocalProductImage(item.ProductImageUrl))
+        {
+            return ProductImageStorageRules.ToWebRelativePath(item.ProductImageUrl);
+        }
+
+        if (ProductImageStorageRules.IsLocalProductImage(item.MediaUrl))
+        {
+            return ProductImageStorageRules.ToWebRelativePath(item.MediaUrl);
+        }
+
+        return null;
+    }
+
+    public async Task<int> PrioritizeVisibleMediaAsync(
+        int userId,
+        IReadOnlyList<int> offerIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0 || offerIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var ids = offerIds.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        var pending = await _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId
+                && ids.Contains(item.Id)
+                && item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && (item.ProductImageUrl == null || item.ProductImageUrl == string.Empty)
+                && item.ExternalMessageId != null)
+            .Select(item => new { item.GroupKey, item.ExternalMessageId })
+            .ToListAsync(cancellationToken);
+
+        var queued = 0;
+        foreach (var item in pending)
+        {
+            var chatId = item.GroupKey.Contains(':')
+                ? item.GroupKey[(item.GroupKey.IndexOf(':') + 1)..]
+                : item.GroupKey;
+            if (_userBotHost.EnqueuePriorityPhoto(userId, chatId, item.ExternalMessageId!))
+            {
+                queued++;
+            }
+        }
+
+        return queued;
+    }
 
     private static void ApplyValidation(GroupCapturedMessage entity, OfferValidationResultDto result)
     {

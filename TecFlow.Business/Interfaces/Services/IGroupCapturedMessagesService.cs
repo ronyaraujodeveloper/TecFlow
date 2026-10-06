@@ -21,4 +21,10 @@ public interface IGroupCapturedMessagesService
         CancellationToken cancellationToken = default);
 
     void ApplyStructuredParse(GroupCapturedMessage entity, string? rawMessage);
+
+    Task<int> AttachProductPhotoAsync(
+        int userId,
+        string externalMessageId,
+        byte[] photoBytes,
+        CancellationToken cancellationToken = default);
 }

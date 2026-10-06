@@ -991,6 +991,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupsController.cs** — `GET .../status` (`GetSyncStatus`).
 - [x] **GruposMonitorados.razor** — poll do status e toast vermelho com a mensagem exata.
 
+### Módulo 34 — Parser estruturado de ofertas Telegram
+
+- [x] **OfferDataExtraction.cs** — título, preço, cupom, URL principal e plataforma.
+- [x] **StructuredOfferParserService.cs** / **IStructuredOfferParserService.cs** / **StructuredOfferParserServiceTests.cs**.
+- [x] **GroupCapturedMessage** — colunas `CouponCode` e `PrimaryProductUrl`.
+- [x] **GroupOfferCaptureService.cs** — persiste extração na captura.
+- [x] **GruposMonitorados.razor** — badge de cupom ao lado do preço/título.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

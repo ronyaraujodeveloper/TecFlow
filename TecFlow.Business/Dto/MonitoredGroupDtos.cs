@@ -23,6 +23,8 @@ public class GroupCapturedOfferDto
 
     public string? ProductName { get; set; }
 
+    public string? CouponCode { get; set; }
+
     public decimal? ExtractedPrice { get; set; }
 
     public decimal? ValidatedPrice { get; set; }
@@ -30,6 +32,8 @@ public class GroupCapturedOfferDto
     public string? ProductImageUrl { get; set; }
 
     public string OriginalUrl { get; set; } = string.Empty;
+
+    public string? PrimaryProductUrl { get; set; }
 
     public MarketplaceType? PlatformType { get; set; }
 

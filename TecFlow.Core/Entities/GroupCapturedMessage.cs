@@ -40,6 +40,12 @@ public class GroupCapturedMessage : BaseEntity
     [MaxLength(255)]
     public string? ProductName { get; set; }
 
+    [MaxLength(64)]
+    public string? CouponCode { get; set; }
+
+    [MaxLength(1000)]
+    public string? PrimaryProductUrl { get; set; }
+
     [Column(TypeName = "decimal(18,2)")]
     public decimal? ExtractedPrice { get; set; }
 

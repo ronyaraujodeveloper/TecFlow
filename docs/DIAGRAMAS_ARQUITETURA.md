@@ -152,6 +152,7 @@ flowchart LR
   USERBOT[TelegramUserMonitorWorker] -->|StartAsync CreateDirectory| FOLD[uploads/products + App_Data/telegram-sessions]
   USERBOT -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
+  GCAP -->|StructuredOfferParserService regex titulo preco cupom URL| SQL
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET status GetSyncStatus toast| ST

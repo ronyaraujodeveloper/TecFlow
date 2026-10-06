@@ -54,3 +54,4 @@
 [2026-10-05 20:19:44]feat(media): segrega fotos por tenant e expurga apos 15 dias
 [2026-10-05 20:57:41]fix(telegram): sincroniza grupos em background sem timeout
 [2026-10-05 21:28:52]fix(telegram): expoe falhas do UserBot e cria pastas no start
+[2026-10-05 22:05:08]feat(ofertas): extrai titulo, preco, cupom e URL principal

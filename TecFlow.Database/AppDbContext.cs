@@ -407,6 +407,8 @@ public class AppDbContext : DbContext
             entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
             entity.Property(item => item.OriginalUrl).HasMaxLength(1000).IsRequired();
             entity.Property(item => item.ProductName).HasMaxLength(255);
+            entity.Property(item => item.CouponCode).HasMaxLength(64);
+            entity.Property(item => item.PrimaryProductUrl).HasMaxLength(1000);
             entity.Property(item => item.PlatformName).HasMaxLength(64);
             entity.Property(item => item.OfferStatus).HasMaxLength(32).IsRequired();
             entity.Property(item => item.HasDirectProductUrl).HasDefaultValue(false);

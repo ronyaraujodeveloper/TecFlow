@@ -830,6 +830,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Log Estruturado e Captura de Falhas no Job em Segundo Plano:**
   - Inclusão de blocos `try-catch` globais no loop do Worker para evitar crash silencioso da thread de background.
   - Exibição de alertas de erro de conexão/autenticação no feed do Blazor caso o Worker encontre exceções no WTelegramClient.
-  
+
+  ## 🧠 Engine Inteligente de Parsing e Structuring de Ofertas (Telegram Post Parser)
+
+- [x] **Extração Estruturada por Expressões Regulares Avançadas / AI:**
+  - **Título:** Normalização e remoção de emojis e prefixos visuais (`🟡`, `👌`, `🔥`).
+  - **Preço:** Captura resiliente de valores numéricos (`✅ R$ 50,91`, `💲 Valor: R$479`).
+  - **Cupom:** Mapeamento de códigos promocionais com palavras-chave (`CUPOM:`, `Cupom`, `Code:`).
+  - **Link Principal:** Discriminação entre URL de checkout do produto e links institucionais/vitrines da campanha.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

@@ -5,6 +5,7 @@ using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 
 namespace TecFlow.Infrastructure.Services.Groups;
@@ -14,23 +15,29 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
     private readonly AppDbContext _context;
     private readonly IOfferValidationService _validation;
     private readonly IOfferProductMediaStore _mediaStore;
+    private readonly IStructuredOfferParserService _parser;
     private readonly ILogger<GroupOfferCaptureService> _logger;
 
     public GroupOfferCaptureService(
         AppDbContext context,
         IOfferValidationService validation,
         IOfferProductMediaStore mediaStore,
+        IStructuredOfferParserService parser,
         ILogger<GroupOfferCaptureService> logger)
     {
         _context = context;
         _validation = validation;
         _mediaStore = mediaStore;
+        _parser = parser;
         _logger = logger;
     }
 
     public async Task CaptureAsync(GroupOfferCaptureRequest request, CancellationToken cancellationToken = default)
     {
-        var urls = WhatsAppBotRules.ExtractUrls(request.RawText);
+        var extracted = _parser.Parse(request.RawText);
+        var urls = StructuredOfferParserService.FilterPersistableUrls(
+            WhatsAppBotRules.ExtractUrls(request.RawText),
+            extracted);
         if (urls.Count == 0)
         {
             return;
@@ -64,9 +71,10 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     continue;
                 }
 
-                var platform = GroupOfferCaptureRules.DetectPlatform(url);
-                var name = GroupOfferCaptureRules.ExtractName(request.RawText, url);
-                var price = GroupOfferCaptureRules.ExtractPrice(request.RawText, url);
+                var platform = GroupOfferCaptureRules.DetectPlatform(url)
+                    ?? GroupOfferCaptureRules.DetectPlatform(extracted.PrimaryProductUrl);
+                var name = FirstNonEmpty(extracted.ProductTitle, GroupOfferCaptureRules.ExtractName(request.RawText, url));
+                var price = extracted.Price ?? GroupOfferCaptureRules.ExtractPrice(request.RawText, url);
                 var image = ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(localPhotoUrl)
                     ?? ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(request.MediaUrl);
                 var entity = new GroupCapturedMessage
@@ -79,11 +87,13 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     RawText = request.RawText,
                     MediaUrl = Truncate(localPhotoUrl ?? request.MediaUrl, 500),
                     ProductImageUrl = Truncate(image, 500),
-                    OriginalUrl = url.Length <= 1000 ? url : url[..1000],
+                    OriginalUrl = Truncate(url, 1000) ?? url,
+                    PrimaryProductUrl = Truncate(extracted.PrimaryProductUrl, 1000) ?? Truncate(url, 1000),
                     ProductName = name,
+                    CouponCode = Truncate(extracted.CouponCode, 64),
                     ExtractedPrice = price,
                     PlatformType = platform,
-                    PlatformName = platform?.ToString(),
+                    PlatformName = FirstNonEmpty(extracted.Platform, platform?.GetDisplayName()),
                     OfferStatus = GroupOfferStatuses.Verificando,
                     ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
                     HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
@@ -142,7 +152,11 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
             if (validation.Platform is { } platform)
             {
                 entity.PlatformType = platform;
-                entity.PlatformName = platform.ToString();
+                if (string.IsNullOrWhiteSpace(entity.PlatformName))
+                {
+                    entity.PlatformName = platform.GetDisplayName();
+                }
+
                 entity.HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(entity.OriginalUrl);
             }
 
@@ -152,6 +166,19 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
         {
             _logger.LogWarning(ex, "Falha ao enriquecer oferta capturada. Id={Id} Url={Url}", entity.Id, entity.OriginalUrl);
         }
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
     }
 
     private static string? Truncate(string? value, int maxLength)

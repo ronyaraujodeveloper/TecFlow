@@ -131,7 +131,13 @@
                                 </div>
                                 <div class="min-w-0">
                                     <h2 class="h6 fw-semibold mb-1 text-break">@(string.IsNullOrWhiteSpace(item.ProductName) ? "Oferta capturada" : item.ProductName)</h2>
-                                    <p class="fw-bold mb-1">@ProductMetadataHtmlParser.FormatBrl(item.ExtractedPrice)</p>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <p class="fw-bold mb-0">@ProductMetadataHtmlParser.FormatBrl(item.ExtractedPrice)</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.CouponCode))
+                                        {
+                                            <span class="badge rounded-pill text-bg-warning text-dark border border-success">Cupom @item.CouponCode</span>
+                                        }
+                                    </div>
                                     <p class="text-muted small mb-0">@item.GroupName · @item.ReceivedAt.ToLocalTime().ToString("dd/MM HH:mm")</p>
                                 </div>
                             </div>

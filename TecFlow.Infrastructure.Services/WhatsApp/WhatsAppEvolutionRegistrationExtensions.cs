@@ -55,6 +55,7 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddSingleton<TecFlow.Infrastructure.Services.Radar.PreFlightHost>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotCodeStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotSessionStore>();
+        services.AddSingleton<IUserBotSyncStatusService, TecFlow.Infrastructure.Services.Telegram.UserBotSyncStatusService>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserMonitorHost>();
         services.AddHttpClient<IOfferValidationService, TecFlow.Infrastructure.Services.Groups.OfferValidationService>(client =>
         {

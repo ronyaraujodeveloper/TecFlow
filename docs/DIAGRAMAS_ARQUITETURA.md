@@ -149,9 +149,12 @@ flowchart LR
   TGAGEN[TelegramAgendador.razor] -->|GetChat Title + SelectedChatIds| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
-  USERBOT[TelegramUserMonitorWorker] -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
+  USERBOT[TelegramUserMonitorWorker] -->|StartAsync CreateDirectory| FOLD[uploads/products + App_Data/telegram-sessions]
+  USERBOT -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
+  USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
+  GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|DownloadFileAsync MessageMediaPhoto| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA

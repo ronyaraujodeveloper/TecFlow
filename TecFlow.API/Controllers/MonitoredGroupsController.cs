@@ -15,17 +15,20 @@ public sealed class MonitoredGroupsController : ControllerBase
     private const int LocalFallbackUserId = 1;
 
     private readonly IMonitoredGroupService _service;
+    private readonly IUserBotSyncStatusService _syncStatus;
     private readonly IUserContextProvider _userContext;
     private readonly IHostEnvironment _environment;
     private readonly ILogger<MonitoredGroupsController> _logger;
 
     public MonitoredGroupsController(
         IMonitoredGroupService service,
+        IUserBotSyncStatusService syncStatus,
         IUserContextProvider userContext,
         IHostEnvironment environment,
         ILogger<MonitoredGroupsController> logger)
     {
         _service = service;
+        _syncStatus = syncStatus;
         _userContext = userContext;
         _environment = environment;
         _logger = logger;
@@ -51,6 +54,12 @@ public sealed class MonitoredGroupsController : ControllerBase
             _logger.LogError(ex, "Erro ao listar grupos monitorados");
             return Ok(Fail(Describe(ex)));
         }
+    }
+
+    [HttpGet("status")]
+    public ActionResult<UserBotSyncStatusDto> GetSyncStatus()
+    {
+        return Ok(_syncStatus.Get(ResolveUserId()));
     }
 
     [HttpPost("sincronizar")]

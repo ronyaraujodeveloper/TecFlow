@@ -380,14 +380,52 @@
         using var timer = new PeriodicTimer(_isSyncing ? TimeSpan.FromSeconds(8) : TimeSpan.FromSeconds(20));
         try
         {
+            await PollSyncStatusAsync();
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
+                await PollSyncStatusAsync();
                 await LoadAsync(silent: true);
                 await InvokeAsync(StateHasChanged);
             }
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    private async Task PollSyncStatusAsync()
+    {
+        if (!IsTelegram)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await Api.GetSyncStatusAsync();
+            var status = result.Data;
+            if (status is null)
+            {
+                return;
+            }
+
+            if (status.IsFailed)
+            {
+                _isSyncing = false;
+                _error = status.Message;
+                _ = ShowToastAsync(status.Message, success: false);
+                return;
+            }
+
+            if (status.IsCompleted && _isSyncing)
+            {
+                _isSyncing = false;
+                _info = status.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao consultar status da sincronização UserBot.");
         }
     }
 

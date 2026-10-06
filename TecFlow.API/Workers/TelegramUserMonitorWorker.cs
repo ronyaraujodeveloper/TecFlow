@@ -1,16 +1,66 @@
-﻿using TecFlow.Infrastructure.Services.Telegram;
+﻿using Microsoft.AspNetCore.Hosting;
+using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Telegram;
+using TecFlow.Infrastructure.Services.Telegram;
 
 namespace TecFlow.API.Workers;
 
 public sealed class TelegramUserMonitorWorker : BackgroundService
 {
     private readonly TelegramUserMonitorHost _host;
+    private readonly TelegramUserBotSessionStore _sessions;
+    private readonly IUserBotSyncStatusService _syncStatus;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<TelegramUserMonitorWorker> _logger;
 
-    public TelegramUserMonitorWorker(TelegramUserMonitorHost host)
+    public TelegramUserMonitorWorker(
+        TelegramUserMonitorHost host,
+        TelegramUserBotSessionStore sessions,
+        IUserBotSyncStatusService syncStatus,
+        IWebHostEnvironment environment,
+        ILogger<TelegramUserMonitorWorker> logger)
     {
         _host = host;
+        _sessions = sessions;
+        _syncStatus = syncStatus;
+        _environment = environment;
+        _logger = logger;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
-        _host.RunForeverAsync(stoppingToken);
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var folders = UserBotRuntimeRules.EnsureLocalFolders(_environment.WebRootPath);
+            _ = _sessions.GetSessionDirectory();
+            _logger.LogInformation(
+                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions}",
+                folders.UploadsPath,
+                folders.SessionsPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro crítico ao criar pastas do UserBot");
+            _syncStatus.MarkFailed(0, ex.Message);
+        }
+
+        return base.StartAsync(cancellationToken);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            _logger.LogInformation("Iniciando conexão com WTelegramClient...");
+            await _host.RunForeverAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro crítico na execução em segundo plano do UserBot");
+            _syncStatus.MarkFailed(0, ex.Message);
+        }
+    }
 }

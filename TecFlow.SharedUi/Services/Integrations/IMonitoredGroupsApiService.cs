@@ -19,6 +19,8 @@ public interface IMonitoredGroupsApiService
 
     Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(string? channel, CancellationToken cancellationToken = default);
 
+    Task<ApiResult<UserBotSyncStatusDto>> GetSyncStatusAsync(CancellationToken cancellationToken = default);
+
     Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,
         string? channel,
@@ -73,6 +75,9 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
             $"{Path}/sincronizar".AppendQueryString(new { channel }),
             new { },
             cancellationToken);
+
+    public Task<ApiResult<UserBotSyncStatusDto>> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+        _httpService.GetAsync<UserBotSyncStatusDto>($"{Path}/status", cancellationToken: cancellationToken);
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,

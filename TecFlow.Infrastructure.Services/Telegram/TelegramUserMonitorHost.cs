@@ -36,17 +36,20 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly TelegramUserBotCodeStore _codes;
+    private readonly IUserBotSyncStatusService _syncStatus;
     private readonly ILogger<TelegramUserMonitorHost> _logger;
 
     public TelegramUserMonitorHost(
         IServiceScopeFactory scopeFactory,
         TelegramUserBotSessionStore sessions,
         TelegramUserBotCodeStore codes,
+        IUserBotSyncStatusService syncStatus,
         ILogger<TelegramUserMonitorHost> logger)
     {
         _scopeFactory = scopeFactory;
         _sessions = sessions;
         _codes = codes;
+        _syncStatus = syncStatus;
         _logger = logger;
     }
 
@@ -94,6 +97,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     ex,
                     "UserBot ignorado por falha de sessão/arquivo. A sincronização Bot API segue. UserId={UserId}",
                     row.UserId);
+                _syncStatus.MarkFailed(row.UserId, ex.Message);
             }
             catch (Exception ex)
             {
@@ -101,29 +105,58 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     ex,
                     "UserBot não iniciado. A sincronização de canais via Bot Token segue. UserId={UserId}",
                     row.UserId);
+                _syncStatus.MarkFailed(row.UserId, ex.Message);
             }
         }
     }
 
     public async Task<UserBotCatchUpResult> CatchUpUserAsync(int userId, CancellationToken cancellationToken)
     {
-        if (!_slots.TryGetValue(userId, out _))
+        _syncStatus.MarkRunning(userId, "Iniciando conexão com WTelegramClient...");
+        try
         {
-            await TryStartSlotFromDatabaseAsync(userId, cancellationToken);
-        }
+            _logger.LogInformation("Iniciando conexão com WTelegramClient... UserId={UserId}", userId);
+            if (!_slots.TryGetValue(userId, out _))
+            {
+                await TryStartSlotFromDatabaseAsync(userId, cancellationToken);
+            }
 
-        if (!_slots.TryGetValue(userId, out var slot))
+            if (!_slots.TryGetValue(userId, out var slot))
+            {
+                _logger.LogWarning(
+                    "Catch-up ignorado: UserBot ainda não está autenticado. UserId={UserId} HasSession={HasSession}",
+                    userId,
+                    _sessions.HasSession(userId));
+                var offline = UserBotCatchUpResult.Offline();
+                _syncStatus.MarkFailed(userId, offline.Message);
+                return offline;
+            }
+
+            _logger.LogInformation("Conexão estabelecida! Varrendo histórico de grupos... UserId={UserId}", userId);
+            _syncStatus.MarkRunning(userId);
+            var result = await CatchUpAsync(userId, slot.Client, cancellationToken);
+            await WaitForQueueIdleAsync(cancellationToken);
+            if (!result.UserBotReady)
+            {
+                _syncStatus.MarkFailed(userId, result.Message);
+            }
+            else
+            {
+                _syncStatus.MarkCompleted(userId, result.Message);
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException)
         {
-            _logger.LogWarning(
-                "Catch-up ignorado: UserBot ainda não está autenticado. UserId={UserId} HasSession={HasSession}",
-                userId,
-                _sessions.HasSession(userId));
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro crítico na execução em segundo plano do UserBot. UserId={UserId}", userId);
+            _syncStatus.MarkFailed(userId, ex.Message);
             return UserBotCatchUpResult.Offline();
         }
-
-        var result = await CatchUpAsync(userId, slot.Client, cancellationToken);
-        await WaitForQueueIdleAsync(cancellationToken);
-        return result;
     }
 
     public bool EnqueueCatchUp(int userId)
@@ -140,6 +173,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
         if (_catchUpJobs.Writer.TryWrite(userId))
         {
+            _syncStatus.MarkRunning(userId, "Sincronização iniciada! Os links estão sendo capturados em segundo plano.");
             _logger.LogInformation("Catch-up UserBot enfileirado em background. UserId={UserId}", userId);
             return true;
         }
@@ -169,6 +203,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     _logger.LogWarning(
                         ex,
                         "Ciclo do UserBot Telegram falhou. A sincronização de grupos via Bot API continua.");
+                    _syncStatus.MarkFailed(0, ex.Message);
                 }
 
                 try
@@ -697,7 +732,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Catch-up em background falhou. UserId={UserId}", userId);
+                    _logger.LogError(ex, "Erro crítico na execução em segundo plano do UserBot. UserId={UserId}", userId);
+                    _syncStatus.MarkFailed(userId, ex.Message);
                 }
                 finally
                 {

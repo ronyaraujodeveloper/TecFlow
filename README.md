@@ -823,5 +823,13 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Aumento de Timeout e Feedback Visual:**
   - `HttpClient` Orquestrador com timeout mínimo de 3 minutos e badge "Sincronizando novas ofertas em background..." em `/integracoes/telegram/grupos/monitorados`.
    
+   ## 🛡️ Tratamento de Exceções e Resiliência no UserBot Background Worker
+
+- [x] **Garantia de Criação de Diretórios na Inicialização:**
+  - Verificação e criação proativa de `App_Data/telegram-sessions` e `wwwroot/uploads/products` na inicialização do serviço (`IHostedService.StartAsync`).
+- [x] **Log Estruturado e Captura de Falhas no Job em Segundo Plano:**
+  - Inclusão de blocos `try-catch` globais no loop do Worker para evitar crash silencioso da thread de background.
+  - Exibição de alertas de erro de conexão/autenticação no feed do Blazor caso o Worker encontre exceções no WTelegramClient.
+  
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

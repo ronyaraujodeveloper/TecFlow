@@ -982,6 +982,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupsController.cs** — `Accepted` (HTTP 202) na sincronização.
 - [x] **GruposMonitorados.razor** — `_isSyncing` e badge animado em background.
 
+### Módulo 33 — Resiliência do UserBot em background
+
+- [x] **UserBotRuntimeRules.cs** / **UserBotRuntimeRulesTests.cs** — cria `wwwroot/uploads/products` e `App_Data/telegram-sessions`.
+- [x] **IUserBotSyncStatusService.cs** / **UserBotSyncStatusService.cs** / **UserBotSyncStatusDto.cs** — status Idle/Running/Completed/Failed por usuário.
+- [x] **TelegramUserMonitorWorker.cs** — `StartAsync` cria pastas; `ExecuteAsync` com try-catch e `LogError`.
+- [x] **TelegramUserMonitorHost.cs** — falhas de catch-up/auth/pasta em `MarkFailed`.
+- [x] **MonitoredGroupsController.cs** — `GET .../status` (`GetSyncStatus`).
+- [x] **GruposMonitorados.razor** — poll do status e toast vermelho com a mensagem exata.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

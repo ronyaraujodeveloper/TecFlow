@@ -21,6 +21,8 @@ public sealed class GroupOfferCaptureRequest
 
     public byte[]? PhotoBytes { get; init; }
 
+    public string? ProductImageUrl { get; init; }
+
     public DateTime ReceivedAt { get; init; } = DateTime.UtcNow;
 }
 

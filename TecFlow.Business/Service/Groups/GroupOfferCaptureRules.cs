@@ -61,6 +61,23 @@ public static class GroupOfferCaptureRules
     public static string BuildGroupKey(string channel, string groupId) =>
         $"{channel}:{groupId.Trim()}";
 
+    public static string? TryParseTelegramChatId(string? groupKey)
+    {
+        if (string.IsNullOrWhiteSpace(groupKey))
+        {
+            return null;
+        }
+
+        var prefix = TelegramChannel + ":";
+        if (groupKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var chatId = groupKey[prefix.Length..].Trim();
+            return string.IsNullOrWhiteSpace(chatId) ? null : chatId;
+        }
+
+        return groupKey.Trim();
+    }
+
     public const int OffersPageSize = 25;
 
     public static readonly int[] AllowedPageSizes = [10, 25, 50, 100];

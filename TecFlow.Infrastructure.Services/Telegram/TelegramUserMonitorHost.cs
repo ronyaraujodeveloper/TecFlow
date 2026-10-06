@@ -213,6 +213,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 try
                 {
                     await ReconcileAsync(stoppingToken);
+                    await BackfillMissingPhotosAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -604,8 +605,18 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             mediaUrl = web.url;
         }
 
-        byte[]? photoBytes = null;
         var hasPhoto = message.media is MessageMediaPhoto { photo: Photo };
+        string? productImageUrl = null;
+        if (hasPhoto && message.media is not null)
+        {
+            productImageUrl = await TrySavePhotoToDiskAsync(
+                client,
+                userId,
+                message.id.ToString(),
+                message.media,
+                cancellationToken);
+        }
+
         var receivedAt = message.Date == default
             ? DateTime.UtcNow
             : DateTime.SpecifyKind(message.Date, DateTimeKind.Utc);
@@ -617,8 +628,9 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             message.id.ToString(),
             mediaUrl,
             receivedAt,
-            photoBytes,
-            hasPhoto);
+            PhotoBytes: null,
+            hasPhoto,
+            productImageUrl);
     }
 
     private static void CollectMarkupUrls(Message message, List<string> urls)
@@ -852,11 +864,16 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 RawText = rawText,
                 MediaUrl = mediaUrl,
                 PhotoBytes = payload.PhotoBytes,
+                ProductImageUrl = payload.ProductImageUrl,
                 ReceivedAt = payload.ReceivedAt
             },
             cancellationToken);
 
-        if (payload.HasPhoto && int.TryParse(payload.MessageId, out var telegramMessageId) && telegramMessageId > 0)
+        var photoAlreadyOnDisk = ProductImageStorageRules.IsLocalProductImage(payload.ProductImageUrl);
+        if (payload.HasPhoto
+            && !photoAlreadyOnDisk
+            && int.TryParse(payload.MessageId, out var telegramMessageId)
+            && telegramMessageId > 0)
         {
             EnqueueMediaJob(new UserBotMediaJob(payload.UserId, payload.ChatId, telegramMessageId), prioritizePhoto);
         }
@@ -1222,22 +1239,119 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             cancellationToken,
             addOffset: -1);
         var messages = history.Messages?.OfType<Message>().Where(item => item.id == job.MessageId).ToArray() ?? [];
-        if (messages.Length == 0 || messages[0].media is not MessageMediaPhoto { photo: Photo photo })
-        {
-            return;
-        }
-
-        using var stream = new MemoryStream();
-        await slot.Client.DownloadFileAsync(photo, stream);
-        var bytes = stream.ToArray();
-        if (bytes.Length == 0)
+        if (messages.Length == 0 || messages[0].media is not MessageMediaPhoto { photo: Photo })
         {
             return;
         }
 
         using var scope = _scopeFactory.CreateScope();
+        var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
         var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
-        await captured.AttachProductPhotoAsync(job.UserId, job.MessageId.ToString(), bytes, cancellationToken);
+        var relative = await store.SaveFromStreamAsync(
+            job.UserId,
+            job.MessageId.ToString(),
+            async (stream, _) => await DownloadMediaAsync(slot.Client, messages[0].media, stream),
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(relative))
+        {
+            return;
+        }
+
+        await captured.SetProductImageUrlAsync(
+            job.UserId,
+            job.MessageId.ToString(),
+            relative,
+            cancellationToken);
+    }
+
+    private async Task BackfillMissingPhotosAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
+        var rows = await context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && item.ExternalMessageId != null
+                && item.ExternalMessageId != "")
+            .OrderByDescending(item => item.CreatedAt)
+            .Take(200)
+            .Select(item => new
+            {
+                item.UserId,
+                item.GroupKey,
+                item.ExternalMessageId,
+                item.ProductImageUrl
+            })
+            .ToListAsync(cancellationToken);
+
+        var enqueued = 0;
+        foreach (var row in rows)
+        {
+            if (!int.TryParse(row.ExternalMessageId, out var messageId) || messageId <= 0)
+            {
+                continue;
+            }
+
+            var missing = string.IsNullOrWhiteSpace(row.ProductImageUrl) || !store.ExistsOnDisk(row.ProductImageUrl);
+            if (!missing)
+            {
+                continue;
+            }
+
+            var chatId = GroupOfferCaptureRules.TryParseTelegramChatId(row.GroupKey);
+            if (string.IsNullOrWhiteSpace(chatId))
+            {
+                continue;
+            }
+
+            EnqueueMediaJob(new UserBotMediaJob(row.UserId, chatId, messageId), highPriority: false);
+            enqueued++;
+        }
+
+        if (enqueued > 0)
+        {
+            _logger.LogInformation("Backfill de fotos enfileirado. Count={Count}", enqueued);
+        }
+    }
+
+    private async Task<string?> TrySavePhotoToDiskAsync(
+        Client client,
+        int tenantId,
+        string messageId,
+        MessageMedia media,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
+            return await store.SaveFromStreamAsync(
+                tenantId,
+                messageId,
+                async (stream, _) => await DownloadMediaAsync(client, media, stream),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Download imediato de foto falhou. Tenant={TenantId} MessageId={MessageId}", tenantId, messageId);
+            return null;
+        }
+    }
+
+    private static Task DownloadMediaAsync(Client client, MessageMedia media, Stream stream)
+    {
+        if (media is MessageMediaPhoto { photo: Photo photo })
+        {
+            return client.DownloadFileAsync(photo, stream);
+        }
+
+        if (media is MessageMediaDocument { document: Document document })
+        {
+            return client.DownloadFileAsync(document, stream);
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task<ChatBase?> ResolveCachedChatAsync(
@@ -1280,7 +1394,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         string? MediaUrl,
         DateTime ReceivedAt,
         byte[]? PhotoBytes,
-        bool HasPhoto);
+        bool HasPhoto,
+        string? ProductImageUrl);
 
     private sealed record UserBotMediaJob(int UserId, string ChatId, int MessageId);
 

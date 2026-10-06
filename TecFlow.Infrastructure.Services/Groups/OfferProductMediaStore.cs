@@ -20,7 +20,7 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
         _logger = logger;
     }
 
-    public async Task<string?> SaveProductPhotoAsync(
+    public Task<string?> SaveProductPhotoAsync(
         int userId,
         string? messageId,
         byte[] photoBytes,
@@ -28,32 +28,71 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
     {
         if (photoBytes is not { Length: > 0 })
         {
+            return Task.FromResult<string?>(null);
+        }
+
+        return SaveFromStreamAsync(
+            userId,
+            messageId,
+            async (stream, token) => await stream.WriteAsync(photoBytes, token),
+            cancellationToken);
+    }
+
+    public async Task<string?> SaveFromStreamAsync(
+        int tenantId,
+        string? messageId,
+        Func<Stream, CancellationToken, Task> writeAsync,
+        CancellationToken cancellationToken = default)
+    {
+        if (writeAsync is null)
+        {
             return null;
         }
 
         try
         {
-            var webRoot = ResolveWebRoot();
-            var utcNow = DateTime.UtcNow;
-            var tenantId = userId;
-            var folder = ProductImageStorageRules.BuildPhysicalFolder(webRoot, tenantId, utcNow);
-            Directory.CreateDirectory(folder);
-
+            var webRoot = ProductImageStorageRules.ResolveWebRoot(
+                _environment.WebRootPath,
+                _environment.ContentRootPath);
             var fileName = ProductImageStorageRules.BuildFileName(messageId);
-            var fullPath = Path.Combine(folder, fileName);
-            await File.WriteAllBytesAsync(fullPath, photoBytes, cancellationToken);
-            var relativePath = ProductImageStorageRules.BuildRelativeUrl(tenantId, utcNow, fileName);
-            return ProductImageStorageRules.ToWebRelativePath(relativePath.Replace('\\', '/'));
+            var (absoluteDir, absoluteFilePath, webRelativeUrl) = ProductImageStorageRules.BuildSaveTarget(
+                webRoot,
+                tenantId,
+                fileName,
+                DateTime.UtcNow);
+            Directory.CreateDirectory(absoluteDir);
+
+            await using (var stream = File.Create(absoluteFilePath))
+            {
+                await writeAsync(stream, cancellationToken);
+            }
+
+            var info = new FileInfo(absoluteFilePath);
+            if (!info.Exists || info.Length <= 0)
+            {
+                if (info.Exists)
+                {
+                    File.Delete(absoluteFilePath);
+                }
+
+                return null;
+            }
+
+            _logger.LogInformation("Imagem salva no caminho: {path}", absoluteFilePath);
+            return webRelativeUrl;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha ao gravar foto da oferta. UserId={UserId}", userId);
+            _logger.LogWarning(ex, "Falha ao gravar foto da oferta. UserId={UserId}", tenantId);
             return null;
         }
     }
 
-    private string ResolveWebRoot() =>
-        string.IsNullOrWhiteSpace(_environment.WebRootPath)
-            ? Path.Combine(_environment.ContentRootPath, "wwwroot")
-            : _environment.WebRootPath;
+    public bool ExistsOnDisk(string? webRelativeUrl)
+    {
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(
+            _environment.WebRootPath,
+            _environment.ContentRootPath);
+        return ProductImageStorageRules.FileExistsOnDisk(webRoot, webRelativeUrl);
+    }
 }

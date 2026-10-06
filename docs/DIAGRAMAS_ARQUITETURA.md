@@ -158,7 +158,8 @@ flowchart LR
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
-  USERBOT -->|DownloadFileAsync MessageMediaPhoto| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
+  USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
+  USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]

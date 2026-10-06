@@ -33,10 +33,13 @@ public sealed class TelegramUserMonitorWorker : BackgroundService
         {
             var folders = UserBotRuntimeRules.EnsureLocalFolders(_environment.WebRootPath);
             _ = _sessions.GetSessionDirectory();
+            var baseWebRoot = _environment.WebRootPath
+                ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
             _logger.LogInformation(
-                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions}",
+                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions} WebRoot={WebRoot}",
                 folders.UploadsPath,
-                folders.SessionsPath);
+                folders.SessionsPath,
+                baseWebRoot);
         }
         catch (Exception ex)
         {

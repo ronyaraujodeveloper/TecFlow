@@ -97,4 +97,12 @@ public class GroupOfferCaptureRulesTests
         Assert.True(TelegramBotRules.ShouldCaptureGroup(incoming));
         Assert.True(TelegramBotRules.ShouldIgnore(incoming));
     }
+
+    [Fact]
+    public void TryParseTelegramChatId_ShouldStripChannelPrefix()
+    {
+        Assert.Equal("-100123", GroupOfferCaptureRules.TryParseTelegramChatId("Telegram:-100123"));
+        Assert.Equal("-100123", GroupOfferCaptureRules.TryParseTelegramChatId("-100123"));
+        Assert.Null(GroupOfferCaptureRules.TryParseTelegramChatId("Telegram:"));
+    }
 }

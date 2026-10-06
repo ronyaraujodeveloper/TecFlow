@@ -48,14 +48,16 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
 
         var groupKey = GroupOfferCaptureRules.BuildGroupKey(request.Channel, request.GroupId);
         var groupName = string.IsNullOrWhiteSpace(request.GroupName) ? request.GroupId : request.GroupName.Trim();
-        string? localPhotoUrl = null;
+        string? localPhotoUrl = ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl)
+            ? ProductImageStorageRules.ToWebRelativePath(request.ProductImageUrl)
+            : null;
         if (request.PhotoBytes is { Length: > 0 })
         {
             localPhotoUrl = await _mediaStore.SaveProductPhotoAsync(
                 request.UserId,
                 request.ExternalMessageId,
                 request.PhotoBytes,
-                cancellationToken);
+                cancellationToken) ?? localPhotoUrl;
         }
 
         var added = new List<GroupCapturedMessage>();
@@ -78,8 +80,9 @@ public sealed class GroupOfferCaptureService : IGroupOfferCaptureService
                     ?? GroupOfferCaptureRules.DetectPlatform(extracted.PrimaryProductUrl);
                 var name = FirstNonEmpty(extracted.ProductTitle, GroupOfferCaptureRules.ExtractName(request.RawText, url));
                 var price = extracted.Price ?? GroupOfferCaptureRules.ExtractPrice(request.RawText, url);
-                var image = ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(localPhotoUrl)
-                    ?? ProductMetadataHtmlParser.NormalizePersistedProductImageUrl(request.MediaUrl);
+                var image = ProductImageStorageRules.IsLocalProductImage(localPhotoUrl)
+                    ? ProductImageStorageRules.ToWebRelativePath(localPhotoUrl)
+                    : null;
                 var entity = new GroupCapturedMessage
                 {
                     UserId = request.UserId,

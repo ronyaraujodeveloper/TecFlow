@@ -74,7 +74,45 @@ public static class ProductImageStorageRules
             safeMessage = "msg";
         }
 
-        return $"{safeMessage}_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+        return $"{safeMessage}_{Guid.NewGuid():N}.jpg";
+    }
+
+    public static string ResolveWebRoot(string? webRootPath, string? contentRootPath = null, string? baseDirectory = null)
+    {
+        if (!string.IsNullOrWhiteSpace(webRootPath))
+        {
+            return webRootPath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(contentRootPath))
+        {
+            return Path.Combine(contentRootPath, "wwwroot");
+        }
+
+        var root = string.IsNullOrWhiteSpace(baseDirectory)
+            ? AppDomain.CurrentDomain.BaseDirectory
+            : baseDirectory;
+        return Path.Combine(root, "wwwroot");
+    }
+
+    public static (string AbsoluteDir, string AbsoluteFilePath, string WebRelativeUrl) BuildSaveTarget(
+        string webRootPath,
+        int tenantId,
+        string fileName,
+        DateTime utcNow)
+    {
+        var stamp = utcNow.ToUniversalTime();
+        var relativeDir = Path.Combine("uploads", "products", tenantId.ToString(), stamp.ToString("yyyy/MM"));
+        var absoluteDir = Path.Combine(webRootPath, relativeDir);
+        var absoluteFilePath = Path.Combine(absoluteDir, fileName);
+        var webRelativeUrl = $"/{relativeDir}/{fileName}".Replace('\\', '/');
+        return (absoluteDir, absoluteFilePath, ToWebRelativePath(webRelativeUrl) ?? webRelativeUrl);
+    }
+
+    public static bool FileExistsOnDisk(string webRootPath, string? storedUrl)
+    {
+        var physical = TryResolvePhysicalPath(webRootPath, storedUrl);
+        return physical is not null && File.Exists(physical);
     }
 
     public static bool IsLocalProductImage(string? url)

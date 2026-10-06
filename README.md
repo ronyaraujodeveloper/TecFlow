@@ -857,5 +857,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Indicador de Status do Lote e Skeleton Loader:**
   - Carregamento progressivo de mídia mantendo a interface leve e responsiva.
 
+## 🖼️ Recuperação e Forçamento de Download de Mídia (Media Downloader Fix)
+
+- [x] **Garantia de Stream em Disco no UserBot:**
+  - Invocação explícita do `client.DownloadMediaAsync` para salvamento físico do arquivo `.jpg` na pasta `wwwroot/uploads/products/{TenantId}/{Ano}/{Mes}/`.
+- [x] **Tratamento Fallback de `WebRootPath`:**
+  - Resolução segura do caminho físico do servidor evitando exceções de diretório inexistente.
+- [x] **Reprocessamento de Imagens Pendentes (Backfill Worker):**
+  - Rotina para verificar mensagens no banco sem `ImageUrl` e refazer o download a partir do ID da mensagem no Telegram.
+  
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

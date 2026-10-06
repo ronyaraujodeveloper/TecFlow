@@ -133,7 +133,7 @@
                                 <div class="product-image-preview-box product-image-preview-box--sm">
                                     @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
                                     {
-                                        <img src="@item.ImageUrl?.Replace('\\', '/')"
+                                        <img src="@item.ImageUrl"
                                              class="img-fluid rounded product-image-preview-img"
                                              alt="@(item.Title ?? "Oferta capturada")"
                                              style="max-height: 180px; object-fit: contain;"

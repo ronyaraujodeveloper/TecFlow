@@ -1012,6 +1012,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserMonitorHost** — fila alta/baixa de fotos; `POST .../midia/priorizar`.
 - [x] **GruposMonitorados.razor** — paginação no topo/rodapé, skeleton "Carregando mídia..." e **Atualizar Feed**.
 
+### Módulo 37 — Download físico e backfill de ImageUrl
+
+- [x] **OfferProductMediaStore.SaveFromStreamAsync** — `File.Create` + stream do Telegram em `wwwroot/uploads/products/{tenant}/{yyyy}/{MM}/`.
+- [x] **TelegramUserMonitorHost** — `DownloadMediaAsync` na leitura de `MessageMediaPhoto`, log `Imagem salva no caminho` e backfill (`ProductImageUrl` nulo ou `!File.Exists`).
+- [x] **GroupCapturedMessagesService.SetProductImageUrlAsync** — força a coluna `ProductImageUrl` (alias `ImageUrl` no Blazor).
+- [x] **GruposMonitorados.razor** — `<img src="@item.ImageUrl" />`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

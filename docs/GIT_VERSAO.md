@@ -57,3 +57,4 @@
 [2026-10-05 22:05:08]feat(ofertas): extrai titulo, preco, cupom e URL principal
 [2026-10-05 22:38:52]fix(ui): sanitiza ImageUrl e atualiza o feed monitorado
 [2026-10-06 20:12:27]feat(ui): pagina ofertas e prioriza download das fotos visiveis
+[2026-10-06 20:37:18] feat(media): grava fotos do Telegram em disco e reprocessa ImageUrl faltante

@@ -148,4 +148,38 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         await _context.SaveChangesAsync(cancellationToken);
         return rows.Count;
     }
+
+    public async Task<int> SetProductImageUrlAsync(
+        int userId,
+        string externalMessageId,
+        string webRelativeUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var relativePath = ProductImageStorageRules.ToWebRelativePath(webRelativeUrl?.Replace('\\', '/'));
+        if (userId <= 0
+            || string.IsNullOrWhiteSpace(externalMessageId)
+            || string.IsNullOrWhiteSpace(relativePath)
+            || !ProductImageStorageRules.IsLocalProductImage(relativePath))
+        {
+            return 0;
+        }
+
+        var rows = await _context.GroupCapturedMessages
+            .Where(item => item.UserId == userId && item.ExternalMessageId == externalMessageId)
+            .ToListAsync(cancellationToken);
+        if (rows.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var row in rows)
+        {
+            row.ProductImageUrl = relativePath;
+            row.MediaUrl = relativePath;
+            row.Touch();
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return rows.Count;
+    }
 }

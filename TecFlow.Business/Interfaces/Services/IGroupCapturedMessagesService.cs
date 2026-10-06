@@ -33,4 +33,10 @@ public interface IGroupCapturedMessagesService
         string externalMessageId,
         string webRelativeUrl,
         CancellationToken cancellationToken = default);
+
+    Task<int> UpdateImageUrlAsync(
+        long messageId,
+        string imageWebPath,
+        int? userId = null,
+        CancellationToken cancellationToken = default);
 }

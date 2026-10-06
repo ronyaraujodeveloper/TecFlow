@@ -119,34 +119,19 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        var rows = await _context.GroupCapturedMessages
-            .Where(item => item.UserId == userId && item.ExternalMessageId == externalMessageId)
-            .ToListAsync(cancellationToken);
-        if (rows.Count == 0)
-        {
-            return 0;
-        }
-
         var relativePath = await _mediaStore.SaveProductPhotoAsync(
             userId,
             externalMessageId,
             photoBytes,
             cancellationToken);
         relativePath = ProductImageStorageRules.ToWebRelativePath(relativePath?.Replace('\\', '/'));
-        if (string.IsNullOrWhiteSpace(relativePath))
+        if (string.IsNullOrWhiteSpace(relativePath)
+            || !long.TryParse(externalMessageId, out var messageId))
         {
             return 0;
         }
 
-        foreach (var row in rows)
-        {
-            row.ProductImageUrl = relativePath;
-            row.MediaUrl = relativePath;
-            row.Touch();
-        }
-
-        await _context.SaveChangesAsync(cancellationToken);
-        return rows.Count;
+        return await UpdateImageUrlAsync(messageId, relativePath, userId, cancellationToken);
     }
 
     public async Task<int> SetProductImageUrlAsync(
@@ -155,31 +140,45 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         string webRelativeUrl,
         CancellationToken cancellationToken = default)
     {
-        var relativePath = ProductImageStorageRules.ToWebRelativePath(webRelativeUrl?.Replace('\\', '/'));
         if (userId <= 0
             || string.IsNullOrWhiteSpace(externalMessageId)
-            || string.IsNullOrWhiteSpace(relativePath)
-            || !ProductImageStorageRules.IsLocalProductImage(relativePath))
+            || !long.TryParse(externalMessageId, out var messageId))
         {
             return 0;
         }
 
-        var rows = await _context.GroupCapturedMessages
-            .Where(item => item.UserId == userId && item.ExternalMessageId == externalMessageId)
-            .ToListAsync(cancellationToken);
-        if (rows.Count == 0)
+        return await UpdateImageUrlAsync(messageId, webRelativeUrl, userId, cancellationToken);
+    }
+
+    public async Task<int> UpdateImageUrlAsync(
+        long messageId,
+        string imageWebPath,
+        int? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var cleanPath = ProductImageStorageRules.ToWebRelativePath(imageWebPath?.Replace('\\', '/'));
+        if (messageId <= 0
+            || string.IsNullOrWhiteSpace(cleanPath)
+            || !ProductImageStorageRules.IsLocalProductImage(cleanPath))
         {
             return 0;
         }
 
-        foreach (var row in rows)
+        var externalId = messageId.ToString();
+        var updatedAt = DateTime.UtcNow;
+        if (userId is > 0)
         {
-            row.ProductImageUrl = relativePath;
-            row.MediaUrl = relativePath;
-            row.Touch();
+            return await _context.Database.ExecuteSqlInterpolatedAsync(
+                $@"UPDATE GroupCapturedMessages
+SET ProductImageUrl = {cleanPath}, MediaUrl = {cleanPath}, UpdatedAt = {updatedAt}
+WHERE ExternalMessageId = {externalId} AND UserId = {userId.Value}",
+                cancellationToken);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
-        return rows.Count;
+        return await _context.Database.ExecuteSqlInterpolatedAsync(
+            $@"UPDATE GroupCapturedMessages
+SET ProductImageUrl = {cleanPath}, MediaUrl = {cleanPath}, UpdatedAt = {updatedAt}
+WHERE ExternalMessageId = {externalId}",
+            cancellationToken);
     }
 }

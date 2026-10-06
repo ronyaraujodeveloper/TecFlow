@@ -1257,11 +1257,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             return;
         }
 
-        await captured.SetProductImageUrlAsync(
-            job.UserId,
-            job.MessageId.ToString(),
-            relative,
-            cancellationToken);
+        await captured.UpdateImageUrlAsync(job.MessageId, relative, job.UserId, cancellationToken);
     }
 
     private async Task BackfillMissingPhotosAsync(CancellationToken cancellationToken)
@@ -1326,11 +1322,19 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         {
             using var scope = _scopeFactory.CreateScope();
             var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
-            return await store.SaveFromStreamAsync(
+            var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
+            var relative = await store.SaveFromStreamAsync(
                 tenantId,
                 messageId,
                 async (stream, _) => await DownloadMediaAsync(client, media, stream),
                 cancellationToken);
+            if (string.IsNullOrWhiteSpace(relative) || !long.TryParse(messageId, out var telegramMessageId))
+            {
+                return relative;
+            }
+
+            await captured.UpdateImageUrlAsync(telegramMessageId, relative, tenantId, cancellationToken);
+            return relative;
         }
         catch (Exception ex)
         {

@@ -865,6 +865,15 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Resolução segura do caminho físico do servidor evitando exceções de diretório inexistente.
 - [x] **Reprocessamento de Imagens Pendentes (Backfill Worker):**
   - Rotina para verificar mensagens no banco sem `ImageUrl` e refazer o download a partir do ID da mensagem no Telegram.
+
+## ⚡ Atualização Cirúrgica e Assíncrona de Mídia (Non-Blocking UI & Fast SQL Update)
+
+- [x] **Desconexão Total do Render da UI e do Download:**
+  - A consulta Blazor utiliza queries otimizadas (`AsNoTracking` + `Skip/Take`) para resposta em sub-100ms.
+- [x] **Gravador Direto de Caminho de Imagem (`UpdateImageUrlAsync`):**
+  - Atualização direta da coluna `ImageUrl` no SQL Server via `MessageId` assim que o arquivo é gravado no disco, sem recarregar entidades inteiras na memória.
+- [x] **Fallback de Interface Instantâneo:**
+  - Renderização de texto/oferta imediata mesmo durante o processamento em lote de imagens pelo Worker.
   
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

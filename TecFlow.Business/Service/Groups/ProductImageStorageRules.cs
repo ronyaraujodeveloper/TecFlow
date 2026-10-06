@@ -165,4 +165,69 @@ public static class ProductImageStorageRules
 
         return combined;
     }
+
+    public static bool TryParseMessageIdFromFileName(string? fileName, out long messageId)
+    {
+        messageId = 0;
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return false;
+        }
+
+        var name = Path.GetFileNameWithoutExtension(fileName.Trim());
+        var separator = name.IndexOf('_');
+        if (separator <= 0)
+        {
+            return false;
+        }
+
+        return long.TryParse(name[..separator], out messageId) && messageId > 0;
+    }
+
+    public static bool TryParseTenantIdFromPhysicalPath(string webRootPath, string physicalPath, out int tenantId)
+    {
+        tenantId = 0;
+        var relative = ToWebRelativePath(physicalPath);
+        if (string.IsNullOrWhiteSpace(relative) || !relative.StartsWith(RelativeRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var parts = relative.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 3 && int.TryParse(parts[2], out tenantId) && tenantId > 0;
+    }
+
+    public sealed record ExistingProductPhoto(long MessageId, int TenantId, string WebRelativeUrl, DateTime LastWriteUtc);
+
+    public static IEnumerable<ExistingProductPhoto> EnumerateExistingPhotos(string webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(webRootPath))
+        {
+            yield break;
+        }
+
+        var root = Path.Combine(webRootPath, "uploads", "products");
+        if (!Directory.Exists(root))
+        {
+            yield break;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(root, "*.jpg", SearchOption.AllDirectories))
+        {
+            if (!TryParseMessageIdFromFileName(file, out var messageId)
+                || !TryParseTenantIdFromPhysicalPath(webRootPath, file, out var tenantId))
+            {
+                continue;
+            }
+
+            var webUrl = ToWebRelativePath(file);
+            if (string.IsNullOrWhiteSpace(webUrl) || !IsLocalProductImage(webUrl))
+            {
+                continue;
+            }
+
+            var stamp = File.GetLastWriteTimeUtc(file);
+            yield return new ExistingProductPhoto(messageId, tenantId, webUrl, stamp);
+        }
+    }
 }

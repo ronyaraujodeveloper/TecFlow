@@ -1019,6 +1019,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupCapturedMessagesService.SetProductImageUrlAsync** — força a coluna `ProductImageUrl` (alias `ImageUrl` no Blazor).
 - [x] **GruposMonitorados.razor** — `<img src="@item.ImageUrl" />`.
 
+### Módulo 38 — Vínculo SQL imediato e backfill de arquivos em disco
+
+- [x] **GroupCapturedMessagesService.UpdateImageUrlAsync** — `ExecuteSqlInterpolatedAsync` em `ProductImageUrl`/`ExternalMessageId` sem carregar entidades.
+- [x] **ProductImageUrlLinkBackfillService** — execução única no `StartAsync` mapeando `wwwroot/uploads/products` para o banco.
+- [x] **MonitoredGroupService.ListAsync** — `AsNoTracking` + `OrderByDescending(CreatedAt)` + `Skip/Take`.
+- [x] **GruposMonitorados.razor** — `<img src="@item.ImageUrl" />` ou placeholder "Processando mídia...".
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

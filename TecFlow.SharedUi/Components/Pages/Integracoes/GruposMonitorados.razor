@@ -131,26 +131,19 @@
                         <div class="card-body">
                             <div class="d-flex gap-3 mb-3">
                                 <div class="product-image-preview-box product-image-preview-box--sm">
-                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
                                     {
                                         <img src="@item.ImageUrl"
-                                             class="img-fluid rounded product-image-preview-img"
+                                             class="card-img-top img-fluid rounded product-image-preview-img"
                                              alt="@(item.Title ?? "Oferta capturada")"
                                              style="max-height: 180px; object-fit: contain;"
-                                             loading="lazy"
-                                             onerror="this.classList.add('d-none'); var ph = this.nextElementSibling; if (ph) { ph.classList.remove('d-none'); }" />
-                                        <span class="product-image-preview-placeholder d-none">Sem imagem</span>
-                                    }
-                                    else if (item.IsMediaPending)
-                                    {
-                                        <span class="product-image-preview-placeholder media-skeleton" aria-live="polite">
-                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                            Carregando mídia...
-                                        </span>
+                                             loading="lazy" />
                                     }
                                     else
                                     {
-                                        <span class="product-image-preview-placeholder">Sem imagem</span>
+                                        <div class="d-flex align-items-center justify-content-center bg-light rounded text-muted" style="height: 140px;">
+                                            <small>📷 Processando mídia...</small>
+                                        </div>
                                     }
                                 </div>
                                 <div class="min-w-0">

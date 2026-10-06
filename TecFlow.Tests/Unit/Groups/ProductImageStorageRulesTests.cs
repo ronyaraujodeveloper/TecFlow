@@ -65,4 +65,26 @@ public class ProductImageStorageRulesTests
         Assert.True(ProductImageStorageRules.FileExistsOnDisk(root, relative));
         Assert.False(ProductImageStorageRules.FileExistsOnDisk(root, "/uploads/products/1/2026/10/missing.jpg"));
     }
+
+    [Fact]
+    public void TryParseMessageIdFromFileName_ShouldReadTelegramIdPrefix()
+    {
+        Assert.True(ProductImageStorageRules.TryParseMessageIdFromFileName("987654_abcdef0123456789.jpg", out var id));
+        Assert.Equal(987654, id);
+        Assert.False(ProductImageStorageRules.TryParseMessageIdFromFileName("msg_abcdef.jpg", out _));
+    }
+
+    [Fact]
+    public void EnumerateExistingPhotos_ShouldMapTenantAndWebUrl()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-enum-" + Guid.NewGuid().ToString("N"));
+        var physical = ProductImageStorageRules.TryResolvePhysicalPath(root, "/uploads/products/7/2026/10/321_abcd.jpg")!;
+        Directory.CreateDirectory(Path.GetDirectoryName(physical)!);
+        File.WriteAllBytes(physical, [1, 2, 3]);
+
+        var photo = Assert.Single(ProductImageStorageRules.EnumerateExistingPhotos(root));
+        Assert.Equal(321, photo.MessageId);
+        Assert.Equal(7, photo.TenantId);
+        Assert.Equal("/uploads/products/7/2026/10/321_abcd.jpg", photo.WebRelativeUrl);
+    }
 }

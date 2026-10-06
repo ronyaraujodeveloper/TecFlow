@@ -23,3 +23,8 @@ public interface IProductImageCleanupService
 {
     Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default);
 }
+
+public interface IProductImageUrlLinkBackfillService
+{
+    Task<int> LinkExistingFilesOnceAsync(CancellationToken cancellationToken = default);
+}

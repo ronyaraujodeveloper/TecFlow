@@ -216,8 +216,6 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 try
                 {
                     await ReconcileAsync(stoppingToken);
-                    await LinkPendingDiskPhotosAsync(stoppingToken);
-                    await BackfillMissingPhotosAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -827,7 +825,6 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         var messageId = payload.MessageId;
         var mediaUrl = payload.MediaUrl;
         using var scope = _scopeFactory.CreateScope();
-        var capture = scope.ServiceProvider.GetRequiredService<IGroupOfferCaptureService>();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var group = await context.TelegramGroups
@@ -856,7 +853,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        await capture.CaptureAsync(
+        var pipeline = scope.ServiceProvider.GetRequiredService<IOfferPipelineProcessor>();
+        await pipeline.ProcessAsync(
             new GroupOfferCaptureRequest
             {
                 UserId = userId,
@@ -870,16 +868,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ProductImageUrl = payload.ProductImageUrl,
                 ReceivedAt = payload.ReceivedAt
             },
+            requireLocalPhoto: payload.HasPhoto,
             cancellationToken);
-
-        var photoAlreadyOnDisk = ProductImageStorageRules.IsLocalProductImage(payload.ProductImageUrl);
-        if (payload.HasPhoto
-            && !photoAlreadyOnDisk
-            && int.TryParse(payload.MessageId, out var telegramMessageId)
-            && telegramMessageId > 0)
-        {
-            EnqueueMediaJob(new UserBotMediaJob(payload.UserId, payload.ChatId, telegramMessageId), prioritizePhoto);
-        }
     }
 
     private static List<ChatBase> CollectHistoryChats(Messages_DialogsBase dialogs)

@@ -45,4 +45,8 @@ public interface IGroupCapturedMessagesService
     Task<int> LinkDownloadedImagesForCurrentPageAsync(
         IEnumerable<GroupCapturedMessage> currentItems,
         CancellationToken cancellationToken = default);
+
+    Task<int> SaveValidatedOfferAsync(
+        GroupCapturedMessage entity,
+        CancellationToken cancellationToken = default);
 }

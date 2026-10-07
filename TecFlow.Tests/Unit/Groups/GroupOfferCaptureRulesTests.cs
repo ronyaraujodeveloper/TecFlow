@@ -105,4 +105,21 @@ public class GroupOfferCaptureRulesTests
         Assert.Equal("-100123", GroupOfferCaptureRules.TryParseTelegramChatId("-100123"));
         Assert.Null(GroupOfferCaptureRules.TryParseTelegramChatId("Telegram:"));
     }
+
+    [Fact]
+    public void IsCompleteAtomicPackage_ShouldRequireLocalImageForTelegram()
+    {
+        Assert.True(GroupOfferCaptureRules.IsCompleteAtomicPackage(
+            "Telegram",
+            "Cadeira Gamer",
+            99.9m,
+            "/uploads/products/1/2026/10/45892.jpg",
+            MarketplaceType.Shopee));
+        Assert.False(GroupOfferCaptureRules.IsCompleteAtomicPackage(
+            "Telegram",
+            "Cadeira Gamer",
+            99.9m,
+            null,
+            MarketplaceType.Shopee));
+    }
 }

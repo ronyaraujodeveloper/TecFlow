@@ -148,6 +148,29 @@ public static class GroupOfferCaptureRules
         return DetectPlatform(url) is not null;
     }
 
+    public static bool IsCompleteAtomicPackage(
+        string? channel,
+        string? productName,
+        decimal? price,
+        string? productImageUrl,
+        MarketplaceType? platformType)
+    {
+        if (string.IsNullOrWhiteSpace(productName) || price is not > 0 || platformType is null)
+        {
+            return false;
+        }
+
+        if (IsTelegramChannel(channel))
+        {
+            return ProductImageStorageRules.IsLocalProductImage(productImageUrl);
+        }
+
+        return true;
+    }
+
+    public static bool IsTelegramChannel(string? channel) =>
+        string.Equals(NormalizeChannel(channel), TelegramChannel, StringComparison.OrdinalIgnoreCase);
+
     public static decimal? ExtractPrice(string? text, string? url)
     {
         var fromText = TryExtractTelegramPrice(text);

@@ -1045,6 +1045,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupService.ListAsync** — vincula após o `Skip/Take` e devolve `ImageUrl` já preenchido.
 - [x] **GruposMonitorados.razor** — `StateHasChanged` após carregar a página.
 
+### Módulo 42 — Empacotamento atômico de ofertas
+
+- [x] **OfferPipelineProcessor.cs** — Parse ➔ filtro de loja ➔ foto `{msg.id}.jpg` ➔ validação ➔ `SaveValidatedOfferAsync`.
+- [x] **GroupCapturedMessagesService.SaveValidatedOfferAsync** — INSERT único com título, preço, cupom, `ProductImageUrl` e plataforma.
+- [x] **MonitoredGroupService.ListAsync** — `AsNoTracking` + pacote completo (Telegram exige imagem local).
+- [x] **GruposMonitorados.razor** — lista paginada sem vínculo retroativo nem download sob demanda.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

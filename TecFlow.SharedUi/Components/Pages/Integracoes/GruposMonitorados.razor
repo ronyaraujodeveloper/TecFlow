@@ -142,7 +142,7 @@
                                     else
                                     {
                                         <div class="d-flex align-items-center justify-content-center bg-light rounded text-muted" style="height: 140px;">
-                                            <small>📷 Processando mídia...</small>
+                                            <small>Sem imagem</small>
                                         </div>
                                     }
                                 </div>
@@ -409,11 +409,6 @@
         try
         {
             var skip = GroupOfferCaptureRules.ResolveOffersSkipFromPage(_page, _pageSize);
-            if (IsTelegram)
-            {
-                await Api.LinkExistingImagesAsync();
-            }
-
             var result = await Api.ListAsync(
                 _hours,
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
@@ -424,8 +419,6 @@
             if (result.Data is not null)
             {
                 Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);
-                await PrioritizeVisibleMediaAsync();
-                await InvokeAsync(StateHasChanged);
             }
             else if (!silent)
             {
@@ -446,32 +439,6 @@
             {
                 _isBusy = false;
             }
-        }
-    }
-
-    private async Task PrioritizeVisibleMediaAsync()
-    {
-        if (!IsTelegram)
-        {
-            return;
-        }
-
-        var pending = _offers
-            .Where(item => string.IsNullOrEmpty(item.ImageUrl))
-            .Select(item => item.Id)
-            .ToList();
-        if (pending.Count == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            await Api.PrioritizeMediaAsync(pending);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Falha ao priorizar download de mídia da página visível.");
         }
     }
 

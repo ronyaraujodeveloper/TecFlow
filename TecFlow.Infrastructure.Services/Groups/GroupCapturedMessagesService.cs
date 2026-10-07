@@ -312,4 +312,29 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             : ProductImageStorageRules.EnsureLeadingSlash(
                 ProductImageStorageRules.ToWebRelativePath(chosen.Replace(webRoot, string.Empty)));
     }
+
+    public async Task<int> SaveValidatedOfferAsync(
+        GroupCapturedMessage entity,
+        CancellationToken cancellationToken = default)
+    {
+        if (entity.UserId <= 0 || string.IsNullOrWhiteSpace(entity.OriginalUrl))
+        {
+            return 0;
+        }
+
+        var exists = await _context.GroupCapturedMessages.AnyAsync(
+            item => item.UserId == entity.UserId
+                && item.Channel == entity.Channel
+                && item.OriginalUrl == entity.OriginalUrl
+                && item.ExternalMessageId == entity.ExternalMessageId,
+            cancellationToken);
+        if (exists)
+        {
+            return 0;
+        }
+
+        _context.GroupCapturedMessages.Add(entity);
+        await _context.SaveChangesAsync(cancellationToken);
+        return 1;
+    }
 }

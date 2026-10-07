@@ -31,6 +31,14 @@ public interface IGroupOfferCaptureService
     Task CaptureAsync(GroupOfferCaptureRequest request, CancellationToken cancellationToken = default);
 }
 
+public interface IOfferPipelineProcessor
+{
+    Task<int> ProcessAsync(
+        GroupOfferCaptureRequest request,
+        bool requireLocalPhoto,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IOfferValidationService
 {
     Task<OfferValidationResultDto> ValidateAsync(

@@ -120,6 +120,17 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 query = query.Where(item => item.GroupKey == groupKey);
             }
 
+            if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
+            {
+                query = query.Where(item =>
+                    item.ProductName != null
+                    && item.ProductName != ""
+                    && item.ExtractedPrice != null
+                    && item.PlatformType != null
+                    && item.ProductImageUrl != null
+                    && item.ProductImageUrl != "");
+            }
+
             var total = await query.CountAsync(cancellationToken);
             var offers = await query
                 .OrderByDescending(item => item.CreatedAt)
@@ -127,8 +138,6 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .Skip(resolvedSkip)
                 .Take(resolvedTake)
                 .ToListAsync(cancellationToken);
-
-            await _capturedMessages.LinkDownloadedImagesForCurrentPageAsync(offers, cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {

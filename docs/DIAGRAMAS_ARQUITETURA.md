@@ -151,9 +151,9 @@ flowchart LR
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
   USERBOT[TelegramUserMonitorWorker] -->|StartAsync CreateDirectory + BackfillMediaPaths| FOLD[uploads/products + App_Data/telegram-sessions]
   USERBOT -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
-  QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
-  GCAP -->|StructuredOfferParserService regex titulo preco cupom URL| SQL
-  GCAP -->|ToWebRelativePath /uploads/products| MEDIA
+  QUEUE -->|Drain PersistAsync OfferPipelineProcessor| PIPE[Parse filtro loja foto validacao]
+  PIPE -->|SaveValidatedOfferAsync INSERT atomico| SQL
+  GCAP[GroupOfferCaptureService] -->|delegates OfferPipelineProcessor| PIPE
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET status GetSyncStatus toast| ST
@@ -161,7 +161,7 @@ flowchart LR
   USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
   USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
   USERBOT -->|BackfillMediaPaths {ExternalMessageId}.jpg| SQL
-  GMUI -->|GET ListAsync vincula 25 cards por Id| SQL
+  GMUI -->|GET ListAsync AsNoTracking Skip Take pacote completo| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL

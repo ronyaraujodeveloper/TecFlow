@@ -62,3 +62,4 @@
 [2026-10-06 21:20:23] fix(media): vincula ProductImageUrl pelo ExternalMessageId e arquivos em disco
 [2026-10-06 21:36:07] fix(media): grava {telegramId}.jpg e vincula ProductImageUrl na carga da pagina
 [2026-10-06 21:52:14] fix(media): vincula as 25 ofertas da pagina ao jpg pelo Id da mensagem
+[2026-10-06 22:11:44] feat(ofertas): empacota parse, foto e validacao antes do INSERT atomico

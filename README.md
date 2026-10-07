@@ -898,5 +898,12 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Script de Vínculo Retroativo por Prefix/ID (`LinkDownloadedImages`):**
   - Mapeamento e associação direta dos arquivos já baixados em `wwwroot/uploads/products/` para os registros da página ativa no Blazor.
 
+  ## ⛓️ Esteira de Processamento e Empacotamento Atômico de Ofertas (Atomic Pipeline)
+
+- [x] **Arquitetura de Pacote Validado (Pipeline Pattern):**
+  - Processamento em memória das mensagens capturadas do Telegram: Parse ➔ Download de Imagem ➔ Validação de Link ➔ Gravação Atômica no SQL.
+- [x] **Garantia de Integridade na Tela:**
+  - Exibição exclusiva de registros cujo pacote de dados (Título, Preço, Cupom e Caminho de Mídia em Disco) esteja 100% validado e persistido.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

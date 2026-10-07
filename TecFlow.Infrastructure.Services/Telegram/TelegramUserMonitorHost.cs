@@ -409,14 +409,23 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
             var channels = CollectHistoryChats(dialogs);
             var persisted = 0;
+            var targetOffers = TelegramUserMonitorRules.ResolveCatchUpTargetOffers();
+            var maxPerChannel = TelegramUserMonitorRules.ResolveCatchUpMaxPerChannel();
+            var catchUpPageSize = TelegramUserMonitorRules.ResolveCatchUpPageSize();
             var since = TelegramUserMonitorRules.HistoryCatchUpSinceUtc(DateTime.UtcNow);
             _logger.LogInformation(
-                "Catch-up iniciando. UserId={UserId} Canais={Count}",
+                "Catch-up iniciando. UserId={UserId} Canais={Count} Alvo={Target}",
                 userId,
-                channels.Count);
+                channels.Count,
+                targetOffers);
 
             foreach (var chat in channels)
             {
+                if (persisted >= targetOffers)
+                {
+                    break;
+                }
+
                 cancellationToken.ThrowIfCancellationRequested();
                 InputPeer inputPeer;
                 try
@@ -436,11 +445,11 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 var reachedOld = false;
                 try
                 {
-                    while (totalFetched < TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel && !reachedOld)
+                    while (totalFetched < maxPerChannel && !reachedOld && persisted < targetOffers)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var remaining = TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel - totalFetched;
-                        var pageSize = Math.Min(TelegramUserMonitorRules.HistoryCatchUpPageSize, remaining);
+                        var remaining = maxPerChannel - totalFetched;
+                        var pageSize = Math.Min(catchUpPageSize, remaining);
                         var history = await GetHistoryWithFloodRetryAsync(
                             client,
                             inputPeer,
@@ -455,6 +464,11 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
                         foreach (var item in messages)
                         {
+                            if (persisted >= targetOffers)
+                            {
+                                break;
+                            }
+
                             if (item is not Message historic)
                             {
                                 continue;
@@ -481,8 +495,11 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                                 continue;
                             }
 
-                    await PersistAsync(payload, cancellationToken, prioritizePhoto: false);
-                            persisted++;
+                            var saved = await PersistAsync(payload, cancellationToken, prioritizePhoto: false);
+                            if (saved > 0)
+                            {
+                                persisted += saved;
+                            }
                         }
 
                         var oldestId = messages.Min(item => item.ID);
@@ -607,9 +624,9 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             mediaUrl = web.url;
         }
 
-        var hasPhoto = message.media is MessageMediaPhoto { photo: Photo };
+        var hasPhoto = IsDownloadableOfferMedia(message.media);
         string? productImageUrl = null;
-        if (hasPhoto && message.media is not null)
+        if (hasPhoto)
         {
             productImageUrl = await PersistTelegramPhotoAsync(
                 client,
@@ -813,7 +830,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
-    private async Task PersistAsync(
+    private async Task<int> PersistAsync(
         UserBotCapturedPayload payload,
         CancellationToken cancellationToken,
         bool prioritizePhoto = false)
@@ -854,7 +871,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
 
         await context.SaveChangesAsync(cancellationToken);
         var pipeline = scope.ServiceProvider.GetRequiredService<IOfferPipelineProcessor>();
-        await pipeline.ProcessAsync(
+        return await pipeline.ProcessAsync(
             new GroupOfferCaptureRequest
             {
                 UserId = userId,
@@ -868,7 +885,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 ProductImageUrl = payload.ProductImageUrl,
                 ReceivedAt = payload.ReceivedAt
             },
-            requireLocalPhoto: payload.HasPhoto,
+            requireLocalPhoto: payload.HasPhoto || ProductImageStorageRules.IsLocalProductImage(payload.ProductImageUrl),
             cancellationToken);
     }
 
@@ -1316,7 +1333,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         Message message,
         CancellationToken cancellationToken)
     {
-        if (message.media is not MessageMediaPhoto { photo: Photo })
+        if (!IsDownloadableOfferMedia(message.media))
         {
             return null;
         }
@@ -1362,6 +1379,18 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             _logger.LogDebug(ex, "Download imediato de foto falhou. Tenant={TenantId} MessageId={MessageId}", tenantId, message.id);
             return null;
         }
+    }
+
+    private static bool IsDownloadableOfferMedia(MessageMedia? media)
+    {
+        if (media is MessageMediaPhoto { photo: Photo })
+        {
+            return true;
+        }
+
+        return media is MessageMediaDocument { document: Document document }
+            && !string.IsNullOrWhiteSpace(document.mime_type)
+            && document.mime_type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Task DownloadMediaAsync(Client client, MessageMedia media, Stream stream)

@@ -66,3 +66,4 @@
 [2026-10-06 23:05:45] feat(ofertas): limpa o feed e dispara ressincronizacao atomica do Telegram
 [2026-10-06 23:21:18] fix(ofertas): trata lock de arquivos no purge e liga o botao HandleResetAllAsync
 [2026-10-06 23:32:42] fix(ofertas): separa limpar o feed da sincronizacao dos grupos
+[2026-10-06 23:54:56] fix(ofertas): limita o feed a 10 itens e serve as fotos em /uploads

@@ -911,6 +911,8 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Expurgo completo dos registros na tabela `GroupCapturedMessages` (`DELETE WHERE UserId`) e exclusão física arquivo a arquivo em `wwwroot/uploads/products/{userId}` (ignora arquivos em uso no IIS).
 - [x] **Disparo de Re-Sincronização Atômica:**
   - Botão **Limpar** (`HandleResetAllAsync`) só expurga SQL/disco; a recarga atômica fica no botão **Sincronizar grupos**.
+- [x] **Limite temporário de 10 ofertas:**
+  - Tela e catch-up UserBot param em 10 pacotes completos (título, preço, loja e imagem em `uploads/products`). Remover `TemporaryLimitTenOffers` quando pedir o feed completo.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

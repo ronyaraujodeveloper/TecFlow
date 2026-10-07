@@ -9,11 +9,25 @@ public static class ProductUploadsStaticFilesExtensions
         var candidates = new[]
         {
             Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "api", "wwwroot", "uploads")),
+            Path.GetFullPath(@"C:\inetpub\tecflow\api\wwwroot\uploads"),
             Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "TecFlow.API", "wwwroot", "uploads"))
         };
 
         foreach (var root in candidates)
         {
+            try
+            {
+                Directory.CreateDirectory(root);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
             if (!Directory.Exists(root))
             {
                 continue;

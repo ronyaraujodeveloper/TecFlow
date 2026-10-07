@@ -156,7 +156,8 @@ flowchart LR
   GCAP[GroupOfferCaptureService] -->|delegates OfferPipelineProcessor| PIPE
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|HandleResetAllAsync POST resetar só limpa SQL e disco| GCAPSVC
-  GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
+  GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp limite 10 ofertas| USERBOT
+  GMUI -->|GET /uploads PhysicalFileProvider api/wwwroot/uploads| MEDIA
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]

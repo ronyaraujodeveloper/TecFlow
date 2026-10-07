@@ -65,19 +65,19 @@ public class GroupOfferCaptureRulesTests
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveLookbackHours(input));
 
     [Theory]
-    [InlineData(0, 25)]
+    [InlineData(0, 10)]
     [InlineData(10, 10)]
-    [InlineData(25, 25)]
-    [InlineData(50, 50)]
-    [InlineData(100, 100)]
-    [InlineData(101, 25)]
-    [InlineData(-8, 25)]
-    public void ResolveOffersTake_ShouldAllowOnlyTenTwentyFiveFiftyOrHundred(int input, int expected) =>
+    [InlineData(25, 10)]
+    [InlineData(50, 10)]
+    [InlineData(100, 10)]
+    [InlineData(101, 10)]
+    [InlineData(-8, 10)]
+    public void ResolveOffersTake_ShouldHonorTemporaryTenItemLimit(int input, int expected) =>
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveOffersTake(input));
 
     [Fact]
     public void ResolveOffersSkipFromPage_ShouldUseZeroBasedOffset() =>
-        Assert.Equal(50, GroupOfferCaptureRules.ResolveOffersSkipFromPage(3, 25));
+        Assert.Equal(10, GroupOfferCaptureRules.ResolveOffersSkipFromPage(2, 10));
 
     [Fact]
     public void ResolveOffersSkip_ShouldRejectNegative() =>

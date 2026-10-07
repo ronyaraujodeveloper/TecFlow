@@ -97,15 +97,22 @@
                     }
                 </select>
             </div>
-            <div>
-                <label class="form-label fw-semibold" for="monitored-page-size">Ofertas por página</label>
-                <select id="monitored-page-size" class="form-select" value="@_pageSize" @onchange="OnPageSizeChanged">
-                    @foreach (var size in GroupOfferCaptureRules.AllowedPageSizes)
-                    {
-                        <option value="@size">@size</option>
-                    }
-                </select>
-            </div>
+            @if (!GroupOfferCaptureRules.TemporaryLimitTenOffers)
+            {
+                <div>
+                    <label class="form-label fw-semibold" for="monitored-page-size">Ofertas por página</label>
+                    <select id="monitored-page-size" class="form-select" value="@_pageSize" @onchange="OnPageSizeChanged">
+                        @foreach (var size in GroupOfferCaptureRules.AllowedPageSizes)
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    </select>
+                </div>
+            }
+            else
+            {
+                <div class="text-muted small">Exibindo até 10 ofertas (limite temporário).</div>
+            }
         </div>
 
     <div class="mb-4">

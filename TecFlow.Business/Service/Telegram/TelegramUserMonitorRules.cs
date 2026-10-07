@@ -14,6 +14,17 @@ public static class TelegramUserMonitorRules
 
     public const int HistoryCatchUpLookbackHours = 48;
 
+    public const int TemporaryCatchUpTargetOffers = 10;
+
+    public static int ResolveCatchUpPageSize() =>
+        GroupOfferCaptureRules.TemporaryLimitTenOffers ? 20 : HistoryCatchUpPageSize;
+
+    public static int ResolveCatchUpMaxPerChannel() =>
+        GroupOfferCaptureRules.TemporaryLimitTenOffers ? 80 : HistoryCatchUpMaxPerChannel;
+
+    public static int ResolveCatchUpTargetOffers() =>
+        GroupOfferCaptureRules.TemporaryLimitTenOffers ? TemporaryCatchUpTargetOffers : int.MaxValue;
+
     public const string UserBotOfflineSyncMessage =
         "UserBot desconectado. A sessão MTProto não está ativa — autentique ApiId/ApiHash e o PIN em Conexões (Telegram) e sincronize de novo.";
 

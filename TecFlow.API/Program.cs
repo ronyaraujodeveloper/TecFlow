@@ -150,6 +150,11 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
+var productUploads = Path.Combine(
+    app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+    "uploads",
+    "products");
+Directory.CreateDirectory(productUploads);
 app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("AllowAll");

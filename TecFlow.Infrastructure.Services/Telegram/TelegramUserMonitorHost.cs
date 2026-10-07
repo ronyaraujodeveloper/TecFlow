@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -612,11 +613,10 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         string? productImageUrl = null;
         if (hasPhoto && message.media is not null)
         {
-            productImageUrl = await TrySavePhotoToDiskAsync(
+            productImageUrl = await PersistTelegramPhotoAsync(
                 client,
                 userId,
-                message.id.ToString(),
-                message.media,
+                message,
                 cancellationToken);
         }
 
@@ -1248,13 +1248,8 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
 
         using var scope = _scopeFactory.CreateScope();
-        var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
         var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
-        var relative = await store.SaveFromStreamAsync(
-            job.UserId,
-            job.MessageId.ToString(),
-            async (stream, _) => await DownloadMediaAsync(slot.Client, messages[0].media, stream),
-            cancellationToken);
+        var relative = await PersistTelegramPhotoAsync(slot.Client, job.UserId, messages[0], cancellationToken);
         if (string.IsNullOrWhiteSpace(relative))
         {
             return;
@@ -1325,34 +1320,56 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
     }
 
-    private async Task<string?> TrySavePhotoToDiskAsync(
+    private async Task<string?> PersistTelegramPhotoAsync(
         Client client,
         int tenantId,
-        string messageId,
-        MessageMedia media,
+        Message message,
         CancellationToken cancellationToken)
     {
+        if (message.media is not MessageMediaPhoto { photo: Photo })
+        {
+            return null;
+        }
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
-            var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
-            var relative = await store.SaveFromStreamAsync(
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var webRoot = ProductImageStorageRules.ResolveWebRoot(
+                environment.WebRootPath,
+                environment.ContentRootPath,
+                AppDomain.CurrentDomain.BaseDirectory);
+            var fileName = $"{message.id}.jpg";
+            var (absoluteDir, absolutePath, relativePath) = ProductImageStorageRules.BuildSaveTarget(
+                webRoot,
                 tenantId,
-                messageId,
-                async (stream, _) => await DownloadMediaAsync(client, media, stream),
-                cancellationToken);
-            if (string.IsNullOrWhiteSpace(relative) || !long.TryParse(messageId, out var telegramMessageId))
+                fileName,
+                DateTime.UtcNow);
+            Directory.CreateDirectory(absoluteDir);
+            await using (var stream = File.Create(absolutePath))
             {
-                return relative;
+                await DownloadMediaAsync(client, message.media, stream);
             }
 
-            await captured.UpdateImageUrlAsync(telegramMessageId, relative, tenantId, cancellationToken);
-            return relative;
+            var info = new FileInfo(absolutePath);
+            if (!info.Exists || info.Length <= 0)
+            {
+                return null;
+            }
+
+            relativePath = ProductImageStorageRules.EnsureLeadingSlash(relativePath) ?? relativePath;
+            var externalId = message.id.ToString();
+            await dbContext.Database.ExecuteSqlRawAsync(
+                "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
+                new object[] { relativePath, relativePath, DateTime.UtcNow, externalId },
+                cancellationToken);
+            _logger.LogInformation("Imagem salva no caminho: {path}", absolutePath);
+            return relativePath;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Download imediato de foto falhou. Tenant={TenantId} MessageId={MessageId}", tenantId, messageId);
+            _logger.LogDebug(ex, "Download imediato de foto falhou. Tenant={TenantId} MessageId={MessageId}", tenantId, message.id);
             return null;
         }
     }

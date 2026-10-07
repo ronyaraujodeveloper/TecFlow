@@ -105,4 +105,15 @@ public class ProductImageStorageRulesTests
         var url = ProductImageStorageRules.TryFindPhotoForMessageId(root, "555");
         Assert.Equal("/uploads/products/3/2026/10/555_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz.jpg", url);
     }
+
+    [Fact]
+    public void TryFindPhotoForMessageId_ShouldPreferExactTelegramIdFileName()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-exact-" + Guid.NewGuid().ToString("N"));
+        var physical = ProductImageStorageRules.TryResolvePhysicalPath(root, "/uploads/products/1/2026/10/45892.jpg")!;
+        Directory.CreateDirectory(Path.GetDirectoryName(physical)!);
+        File.WriteAllBytes(physical, [1]);
+
+        Assert.Equal("/uploads/products/1/2026/10/45892.jpg", ProductImageStorageRules.TryFindPhotoForMessageId(root, "45892"));
+    }
 }

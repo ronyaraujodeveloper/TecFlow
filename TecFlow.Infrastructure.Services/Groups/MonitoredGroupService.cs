@@ -106,7 +106,6 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         {
             var groups = await BuildGroupsAsync(userId, normalized, cancellationToken);
             var platforms = await _capturedMessages.ListActivePlatformsAsync(userId, cancellationToken);
-            await _capturedMessages.LinkExistingDownloadedImagesAsync(cancellationToken);
             var query = _context.GroupCapturedMessages
                 .AsNoTracking()
                 .Where(item => item.UserId == userId && item.ReceivedAt >= since);
@@ -128,6 +127,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .Skip(resolvedSkip)
                 .Take(resolvedTake)
                 .ToListAsync(cancellationToken);
+
+            await _capturedMessages.LinkDownloadedImagesForCurrentPageAsync(offers, cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {

@@ -220,4 +220,96 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 
         return linked;
     }
+
+    public async Task<int> LinkDownloadedImagesForCurrentPageAsync(
+        IEnumerable<GroupCapturedMessage> currentItems,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentItems is null)
+        {
+            return 0;
+        }
+
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(
+            _environment.WebRootPath,
+            _environment.ContentRootPath,
+            AppDomain.CurrentDomain.BaseDirectory);
+        var uploadsFolder = Path.Combine(webRoot, "uploads", "products");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            return 0;
+        }
+
+        var linked = 0;
+        foreach (var item in currentItems)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (item.Id <= 0)
+            {
+                continue;
+            }
+
+            if (ProductImageStorageRules.FileExistsOnDisk(webRoot, item.ProductImageUrl))
+            {
+                item.ProductImageUrl = ProductImageStorageRules.EnsureLeadingSlash(
+                    ProductImageStorageRules.ToWebRelativePath(item.ProductImageUrl));
+                continue;
+            }
+
+            var telegramId = item.ExternalMessageId;
+            var relativeUrl = ProductImageStorageRules.TryFindPhotoForMessageId(webRoot, telegramId);
+            if (string.IsNullOrWhiteSpace(relativeUrl)
+                && !string.IsNullOrWhiteSpace(telegramId))
+            {
+                relativeUrl = TryMatchPrefixJpg(uploadsFolder, webRoot, telegramId);
+            }
+
+            if (string.IsNullOrWhiteSpace(relativeUrl)
+                || !ProductImageStorageRules.IsLocalProductImage(relativeUrl))
+            {
+                continue;
+            }
+
+            item.ProductImageUrl = relativeUrl;
+            item.MediaUrl = relativeUrl;
+            item.Touch();
+            linked += await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE Id = {3}",
+                new object[] { relativeUrl, relativeUrl, DateTime.UtcNow, item.Id },
+                cancellationToken);
+        }
+
+        return linked;
+    }
+
+    private static string? TryMatchPrefixJpg(string uploadsFolder, string webRoot, string telegramMessageId)
+    {
+        var digits = new string(telegramMessageId.Where(char.IsDigit).ToArray());
+        if (string.IsNullOrWhiteSpace(digits) || digits.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return null;
+        }
+
+        string[] matches;
+        try
+        {
+            matches = Directory.GetFiles(uploadsFolder, $"{digits}*.jpg", SearchOption.AllDirectories);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+
+        var chosen = matches
+            .Select(path => new { path, name = Path.GetFileNameWithoutExtension(path) })
+            .Where(item => item.name == digits || item.name.StartsWith(digits + "_", StringComparison.Ordinal))
+            .OrderBy(item => item.name == digits ? 0 : 1)
+            .ThenByDescending(item => File.GetLastWriteTimeUtc(item.path))
+            .Select(item => item.path)
+            .FirstOrDefault();
+        return chosen is null
+            ? null
+            : ProductImageStorageRules.EnsureLeadingSlash(
+                ProductImageStorageRules.ToWebRelativePath(chosen.Replace(webRoot, string.Empty)));
+    }
 }

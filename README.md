@@ -890,6 +890,13 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - O nome do arquivo no disco DEVE iniciar rigorosamente com `{TelegramMessageId}.jpg` para permitir amarração direta no SQL.
 - [x] **Priorização de Download para a Página Atual (Paging First):**
   - O Worker deve receber explicitamente a lista dos `TelegramMessageId` presentes nos 25 cards da página atual do Blazor e baixar ESSAS imagens em prioridade máxima.
-  
+
+  ## 🎯 Amarração Estrita de Nome de Arquivo e Injeção de Imagem (`MessageId Sync`)
+
+- [x] **Padronização do Nome de Arquivo Físico:**
+  - O arquivo físico no disco DEVE ser salvo estritamente com o nome `{TelegramMessageId}.jpg` para vincular automaticamente ao registro do banco de dados.
+- [x] **Script de Vínculo Retroativo por Prefix/ID (`LinkDownloadedImages`):**
+  - Mapeamento e associação direta dos arquivos já baixados em `wwwroot/uploads/products/` para os registros da página ativa no Blazor.
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

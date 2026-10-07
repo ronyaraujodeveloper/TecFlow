@@ -1038,6 +1038,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupCapturedMessagesService.LinkExistingDownloadedImagesAsync** — `UPDATE ProductImageUrl` por `ExternalMessageId` a partir dos `.jpg` em disco.
 - [x] **GruposMonitorados.razor** — `POST midia/vincular-disco` antes do `ListAsync` da página 1 e prioriza as 25 fotos visíveis.
 
+### Módulo 41 — Vínculo da página visível por Id e `{msg.id}.jpg`
+
+- [x] **TelegramUserMonitorHost.PersistTelegramPhotoAsync** — grava `{msg.id}.jpg` e `UPDATE ProductImageUrl WHERE ExternalMessageId`.
+- [x] **GroupCapturedMessagesService.LinkDownloadedImagesForCurrentPageAsync** — para os 25 cards, busca `{id}.jpg`/`{id}_*.jpg` e atualiza por `Id`.
+- [x] **MonitoredGroupService.ListAsync** — vincula após o `Skip/Take` e devolve `ImageUrl` já preenchido.
+- [x] **GruposMonitorados.razor** — `StateHasChanged` após carregar a página.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

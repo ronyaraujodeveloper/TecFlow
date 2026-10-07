@@ -161,7 +161,7 @@ flowchart LR
   USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
   USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
   USERBOT -->|BackfillMediaPaths {ExternalMessageId}.jpg| SQL
-  GMUI -->|POST midia/vincular-disco LinkExistingDownloadedImages| SQL
+  GMUI -->|GET ListAsync vincula 25 cards por Id| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL

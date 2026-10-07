@@ -31,8 +31,15 @@ public static class HomologDemoUserSeeder
 
         currentTenant.BypassTenantFilters = true;
 
-        await EnsureDemoUserAsync(userRepository, tenantProvisioning, userManager, DemoEmail, logger);
-        await EnsureDemoUserAsync(userRepository, tenantProvisioning, userManager, LegacyDemoEmail, logger);
+        try
+        {
+            await EnsureDemoUserAsync(userRepository, tenantProvisioning, userManager, DemoEmail, logger);
+            await EnsureDemoUserAsync(userRepository, tenantProvisioning, userManager, LegacyDemoEmail, logger);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Seed do usuário demo falhou. Verifique login SQL do pool IIS APPPOOL\\TecFlowApiPool no banco AutomacaoSociais.");
+        }
     }
 
     private static bool IsSeedEnvironment(string environmentName) =>

@@ -1060,12 +1060,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupsController.cs** — `POST api/integracoes/grupos/monitorados/resetar` retorna HTTP 200.
 - [x] **IMonitoredGroupsApiService.cs** — cliente `ResetAndResyncAsync`.
 - [x] **GruposMonitorados.razor** — botão **Limpar** (`HandleResetAllAsync`); sincronização só no botão **Sincronizar grupos**.
-- [x] **GroupOfferCaptureRules.cs** — `TemporaryLimitTenOffers` (página 10).
+- [x] **GroupOfferCaptureRules.cs** — `TemporaryLimitTenOffers = false`; paginação 10/25/50/100 (padrão 25).
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorHost.cs** — catch-up para ao gravar 10 ofertas com foto.
 - [x] **ProductUploadsStaticFilesExtensions.cs** — mapeia `/uploads` para `inetpub/tecflow/api/wwwroot/uploads`.
 - [x] **GroupOfferCaptureRules.cs** — `DeduplicateOffers` / `IsSameCapturedOffer` por mensagem e URL.
 - [x] **GroupCapturedMessagesService.cs** — `SaveValidatedOfferAsync` recusa duplicata de `ExternalMessageId` ou URL.
 - [x] **MonitoredGroupService.ListAsync** / **GruposMonitorados.razor** — lista e tela só aceitam oferta nova se ainda não estiver visível.
+- [x] **HomologDemoUserSeeder.cs** / **Program.cs** — seed de demo não aborta o start da API (evita IIS 500.30).
 
 ---
 

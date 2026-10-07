@@ -68,3 +68,4 @@
 [2026-10-06 23:32:42] fix(ofertas): separa limpar o feed da sincronizacao dos grupos
 [2026-10-06 23:54:56] fix(ofertas): limita o feed a 10 itens e serve as fotos em /uploads
 [2026-10-07 19:38:18] fix(ofertas): impede ofertas duplicadas no feed monitorado
+[2026-10-07 20:33:23] fix(ui): restaura paginacao completa do feed monitorado

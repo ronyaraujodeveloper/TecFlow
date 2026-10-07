@@ -912,9 +912,11 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Disparo de Re-Sincronização Atômica:**
   - Botão **Limpar** (`HandleResetAllAsync`) só expurga SQL/disco; a recarga atômica fica no botão **Sincronizar grupos**.
 - [x] **Limite temporário de 10 ofertas:**
-  - Tela e catch-up UserBot param em 10 pacotes completos (título, preço, loja e imagem em `uploads/products`). Remover `TemporaryLimitTenOffers` quando pedir o feed completo.
+  - Removido. Paginação voltou a 10/25/50/100 (padrão 25) e o catch-up UserBot usa o histórico completo.
 - [x] **Deduplicação do feed monitorado:**
   - Nova oferta só entra se ainda não existir na tela/SQL pelo `ExternalMessageId` ou URL do produto (sem query string).
+- [x] **IIS 500.30 (API):**
+  - Seed de homologação não derruba mais a API; o pool `TecFlowApiPool` precisa de login Windows no SQL Server `AutomacaoSociais`.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

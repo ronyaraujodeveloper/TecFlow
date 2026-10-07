@@ -79,12 +79,11 @@ public static class GroupOfferCaptureRules
         return groupKey.Trim();
     }
 
-    // Limite temporário da tela de grupos monitorados; voltar para false quando o feed completo for pedido.
-    public static readonly bool TemporaryLimitTenOffers = true;
+    public static readonly bool TemporaryLimitTenOffers = false;
 
-    public const int OffersPageSize = 10;
+    public const int OffersPageSize = 25;
 
-    public static readonly int[] AllowedPageSizes = TemporaryLimitTenOffers ? [10] : [10, 25, 50, 100];
+    public static readonly int[] AllowedPageSizes = [10, 25, 50, 100];
 
     public static int ResolveLookbackHours(int hours) =>
         hours switch

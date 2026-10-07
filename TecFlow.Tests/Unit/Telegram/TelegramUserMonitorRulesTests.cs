@@ -65,9 +65,9 @@ public class TelegramUserMonitorRulesTests
     {
         Assert.Equal(100, TelegramUserMonitorRules.HistoryCatchUpPageSize);
         Assert.Equal(1500, TelegramUserMonitorRules.HistoryCatchUpMaxPerChannel);
-        Assert.Equal(20, TelegramUserMonitorRules.ResolveCatchUpPageSize());
-        Assert.Equal(80, TelegramUserMonitorRules.ResolveCatchUpMaxPerChannel());
-        Assert.Equal(10, TelegramUserMonitorRules.ResolveCatchUpTargetOffers());
+        Assert.Equal(100, TelegramUserMonitorRules.ResolveCatchUpPageSize());
+        Assert.Equal(1500, TelegramUserMonitorRules.ResolveCatchUpMaxPerChannel());
+        Assert.Equal(int.MaxValue, TelegramUserMonitorRules.ResolveCatchUpTargetOffers());
         Assert.Equal(48, TelegramUserMonitorRules.HistoryCatchUpLookbackHours);
         var now = new DateTime(2026, 10, 4, 20, 0, 0, DateTimeKind.Utc);
         var since = TelegramUserMonitorRules.HistoryCatchUpSinceUtc(now);

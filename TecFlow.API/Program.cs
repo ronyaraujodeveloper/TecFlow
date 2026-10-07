@@ -169,7 +169,14 @@ if (args is { Length: >= 3 }
     return;
 }
 
-await app.SeedHomologDemoUserAsync();
+try
+{
+    await app.SeedHomologDemoUserAsync();
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Seed de homologação falhou. A API continuará no ar.");
+}
 
 try
 {

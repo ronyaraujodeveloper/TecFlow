@@ -357,19 +357,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             _environment.ContentRootPath,
             AppDomain.CurrentDomain.BaseDirectory);
         var tenantUploadPath = ProductImageStorageRules.TryResolveTenantProductsFolder(webRoot, userId);
-        if (tenantUploadPath is not null && Directory.Exists(tenantUploadPath))
-        {
-            try
-            {
-                Directory.Delete(tenantUploadPath, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
+        ProductImageStorageRules.TryDeleteTenantProductFiles(tenantUploadPath);
 
         return deleted;
     }

@@ -43,7 +43,7 @@
             </button>
             @if (IsTelegram)
             {
-                <button type="button" class="btn btn-outline-danger btn-touch me-2" disabled="@_isProcessing" @onclick="ConfirmAndResetAllAsync">
+                <button type="button" class="btn btn-outline-danger btn-touch me-2" disabled="@_isProcessing" @onclick="HandleResetAllAsync">
                     <i class="bi bi-trash" aria-hidden="true"></i>
                     Limpar e Sincronizar do Zero
                 </button>
@@ -236,7 +236,7 @@
     private string _groupKey = string.Empty;
     private bool _isBusy;
     private bool _isSyncing;
-    private bool _isProcessing => _isBusy || _isSyncing;
+    private bool _isProcessing;
     private string? _error;
     private string? _info;
     private string? _toastMessage;
@@ -364,7 +364,7 @@
         StateHasChanged();
     }
 
-    private async Task ConfirmAndResetAllAsync()
+    private async Task HandleResetAllAsync()
     {
         if (!IsTelegram || _isProcessing)
         {
@@ -384,36 +384,48 @@
             return;
         }
 
-        _error = null;
-        _info = null;
-        _isBusy = true;
         try
         {
+            _isProcessing = true;
+            StateHasChanged();
+            _error = null;
+            _info = null;
+
             var result = await Api.ResetAndResyncAsync(Channel);
+
             _offers.Clear();
             _totalOffers = 0;
             _page = 1;
+            StateHasChanged();
+
             if (result.Success || result.Data is { Status: true })
             {
                 _isSyncing = true;
                 _info = string.IsNullOrWhiteSpace(result.Data?.Descricao)
-                    ? "Feed zerado. Sincronização atômica em andamento."
+                    ? "Banco de dados e imagens zerados com sucesso! Reiniciando sincronização..."
                     : result.Data.Descricao;
+                _ = ShowToastAsync(
+                    "Banco de dados e imagens zerados com sucesso! Reiniciando sincronização...",
+                    success: true);
                 StartOfferRefresh();
                 _ = StopSyncingBadgeAsync();
                 return;
             }
 
-            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível limpar o feed.";
+            var fail = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível limpar o feed.";
+            _error = fail;
+            _ = ShowToastAsync($"Falha ao limpar: {fail}", success: false);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Falha ao limpar e sincronizar grupos monitorados.");
-            _error = "Não foi possível limpar o feed.";
+            Logger.LogError(ex, "Erro ao limpar dados");
+            _error = $"Falha ao limpar: {ex.Message}";
+            _ = ShowToastAsync($"Falha ao limpar: {ex.Message}", success: false);
         }
         finally
         {
-            _isBusy = false;
+            _isProcessing = false;
+            StateHasChanged();
         }
     }
 

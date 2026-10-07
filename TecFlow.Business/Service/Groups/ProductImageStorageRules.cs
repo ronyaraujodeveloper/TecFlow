@@ -70,6 +70,47 @@ public static class ProductImageStorageRules
         return folder;
     }
 
+    public static int TryDeleteTenantProductFiles(string? tenantFolder)
+    {
+        if (string.IsNullOrWhiteSpace(tenantFolder) || !Directory.Exists(tenantFolder))
+        {
+            return 0;
+        }
+
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(tenantFolder, "*.*", SearchOption.AllDirectories);
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return 0;
+        }
+
+        var deleted = 0;
+        foreach (var file in files)
+        {
+            try
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+                deleted++;
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return deleted;
+    }
+
     public static string BuildPhysicalDirectory(string webRootPath, int tenantId, DateTime utcNow)
     {
         var stamp = utcNow.ToUniversalTime();

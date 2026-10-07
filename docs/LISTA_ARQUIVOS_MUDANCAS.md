@@ -1054,12 +1054,12 @@ API / Orquestrador / Worker / WebUi
 
 ### Módulo 43 — Purge e ressincronização atômica
 
-- [x] **ProductImageStorageRules.cs** — `TryResolveTenantProductsFolder` com path seguro sob `uploads/products/{userId}`.
-- [x] **IGroupCapturedMessagesService.cs** / **GroupCapturedMessagesService.cs** — `ResetAllCapturedMessagesAndMediaAsync` (`DELETE WHERE UserId` + `Directory.Delete`).
+- [x] **ProductImageStorageRules.cs** — `TryResolveTenantProductsFolder` e `TryDeleteTenantProductFiles` (File.Delete por arquivo, ignora lock do IIS).
+- [x] **IGroupCapturedMessagesService.cs** / **GroupCapturedMessagesService.cs** — `ResetAllCapturedMessagesAndMediaAsync` (`DELETE WHERE UserId` + exclusão segura em disco).
 - [x] **IGroupOfferServices.cs** / **MonitoredGroupService.cs** — `ResetAndResyncAsync` (purge + `SyncAsync`/`EnqueueCatchUp`).
 - [x] **MonitoredGroupsController.cs** — `POST api/integracoes/grupos/monitorados/resetar`.
 - [x] **IMonitoredGroupsApiService.cs** — cliente `ResetAndResyncAsync`.
-- [x] **GruposMonitorados.razor** — botão Telegram **Limpar e Sincronizar do Zero** com `IModalService.ConfirmAsync`.
+- [x] **GruposMonitorados.razor** — `@onclick="HandleResetAllAsync"` com confirmação, toast e `try-catch`.
 
 ---
 

@@ -107,6 +107,20 @@ public class ProductImageStorageRulesTests
     }
 
     [Fact]
+    public void TryDeleteTenantProductFiles_ShouldSkipLockedFilesAndDeleteTheRest()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-del-" + Guid.NewGuid().ToString("N"));
+        var folder = ProductImageStorageRules.TryResolveTenantProductsFolder(root, 9)!;
+        Directory.CreateDirectory(folder);
+        var free = Path.Combine(folder, "ok.jpg");
+        File.WriteAllBytes(free, [1, 2, 3]);
+
+        Assert.Equal(1, ProductImageStorageRules.TryDeleteTenantProductFiles(folder));
+        Assert.False(File.Exists(free));
+        Assert.Equal(0, ProductImageStorageRules.TryDeleteTenantProductFiles(null));
+    }
+
+    [Fact]
     public void TryResolveTenantProductsFolder_ShouldStayUnderUploadsProducts()
     {
         var root = Path.Combine(Path.GetTempPath(), "tecflow-tenant-" + Guid.NewGuid().ToString("N"));

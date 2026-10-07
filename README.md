@@ -905,5 +905,12 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Garantia de Integridade na Tela:**
   - Exibição exclusiva de registros cujo pacote de dados (Título, Preço, Cupom e Caminho de Mídia em Disco) esteja 100% validado e persistido.
 
+  ## 🧹 Purge e Reset de Dados de Monitoramento (Purge & Full Resync)
+
+- [x] **Mecanismo de Reset Total de Captura:**
+  - Expurgo completo dos registros na tabela `GroupCapturedMessages` (`DELETE WHERE UserId`) e exclusão física do diretório `wwwroot/uploads/products/{userId}`.
+- [x] **Disparo de Re-Sincronização Atômica:**
+  - Reinicialização da leitura de mensagens a partir de um banco zerado, garantindo que 100% dos registros criados sigam o padrão de empacotamento completo (Texto + Imagem + Link).
+
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

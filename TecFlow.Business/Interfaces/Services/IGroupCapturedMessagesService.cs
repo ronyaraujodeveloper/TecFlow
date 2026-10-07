@@ -49,4 +49,8 @@ public interface IGroupCapturedMessagesService
     Task<int> SaveValidatedOfferAsync(
         GroupCapturedMessage entity,
         CancellationToken cancellationToken = default);
+
+    Task<int> ResetAllCapturedMessagesAndMediaAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
 }

@@ -107,6 +107,15 @@ public class ProductImageStorageRulesTests
     }
 
     [Fact]
+    public void TryResolveTenantProductsFolder_ShouldStayUnderUploadsProducts()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-tenant-" + Guid.NewGuid().ToString("N"));
+        var folder = ProductImageStorageRules.TryResolveTenantProductsFolder(root, 7);
+        Assert.Equal(Path.GetFullPath(Path.Combine(root, "uploads", "products", "7")), folder);
+        Assert.Null(ProductImageStorageRules.TryResolveTenantProductsFolder(root, 0));
+    }
+
+    [Fact]
     public void TryFindPhotoForMessageId_ShouldPreferExactTelegramIdFileName()
     {
         var root = Path.Combine(Path.GetTempPath(), "tecflow-exact-" + Guid.NewGuid().ToString("N"));

@@ -522,6 +522,46 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     public Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default) =>
         _capturedMessages.LinkExistingDownloadedImagesAsync(cancellationToken);
 
+    public async Task<MonitoredGroupsResponseDto> ResetAndResyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0)
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário inválido."
+            };
+        }
+
+        try
+        {
+            await _capturedMessages.ResetAllCapturedMessagesAndMediaAsync(userId, cancellationToken);
+            var sync = await SyncAsync(userId, channel, cancellationToken);
+            if (sync.Status)
+            {
+                sync.Descricao = string.IsNullOrWhiteSpace(sync.Descricao)
+                    ? "Feed zerado. Sincronização atômica em andamento."
+                    : "Feed zerado. " + sync.Descricao;
+            }
+
+            return sync;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao limpar e sincronizar grupos monitorados. UserId={UserId}", userId);
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Não foi possível limpar o feed."
+                    : ex.Message
+            };
+        }
+    }
+
     private static void ApplyValidation(GroupCapturedMessage entity, OfferValidationResultDto result)
     {
         entity.OfferStatus = result.Status;

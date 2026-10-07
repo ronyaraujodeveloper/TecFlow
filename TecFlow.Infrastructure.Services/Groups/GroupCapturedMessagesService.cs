@@ -337,4 +337,40 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         await _context.SaveChangesAsync(cancellationToken);
         return 1;
     }
+
+    public async Task<int> ResetAllCapturedMessagesAndMediaAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0)
+        {
+            return 0;
+        }
+
+        var deleted = await _context.Database.ExecuteSqlRawAsync(
+            "DELETE FROM GroupCapturedMessages WHERE UserId = {0}",
+            new object[] { userId },
+            cancellationToken);
+
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(
+            _environment.WebRootPath,
+            _environment.ContentRootPath,
+            AppDomain.CurrentDomain.BaseDirectory);
+        var tenantUploadPath = ProductImageStorageRules.TryResolveTenantProductsFolder(webRoot, userId);
+        if (tenantUploadPath is not null && Directory.Exists(tenantUploadPath))
+        {
+            try
+            {
+                Directory.Delete(tenantUploadPath, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return deleted;
+    }
 }

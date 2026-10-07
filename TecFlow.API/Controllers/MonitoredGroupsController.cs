@@ -112,6 +112,23 @@ public sealed class MonitoredGroupsController : ControllerBase
         });
     }
 
+    [HttpPost("resetar")]
+    public async Task<ActionResult<MonitoredGroupsResponseDto>> ResetAndResyncAsync(
+        [FromQuery] string? channel = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _service.ResetAndResyncAsync(ResolveUserId(), channel, cancellationToken);
+            return result.Status ? Accepted(result) : Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao limpar e sincronizar grupos monitorados");
+            return Ok(Fail(Describe(ex)));
+        }
+    }
+
     [HttpPost("{offerId:int}/validar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,

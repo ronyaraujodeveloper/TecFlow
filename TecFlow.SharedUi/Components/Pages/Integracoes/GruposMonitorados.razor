@@ -9,7 +9,9 @@
 @using TecFlow.Core.Entities
 @using TecFlow.SharedUi.Helpers
 @using TecFlow.SharedUi.Services.Integrations
+@using TecFlow.SharedUi.Services.UI
 @inject IMonitoredGroupsApiService Api
+@inject IModalService ModalService
 @inject NavigationManager Navigation
 @inject ILogger<GruposMonitorados> Logger
 @implements IAsyncDisposable
@@ -39,6 +41,13 @@
                 <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                 Atualizar Feed
             </button>
+            @if (IsTelegram)
+            {
+                <button type="button" class="btn btn-outline-danger btn-touch me-2" disabled="@_isProcessing" @onclick="ConfirmAndResetAllAsync">
+                    <i class="bi bi-trash" aria-hidden="true"></i>
+                    Limpar e Sincronizar do Zero
+                </button>
+            }
             <button type="button" class="btn btn-primary btn-touch" disabled="@_isSyncing" @onclick="SyncAsync">
                 @(_isSyncing ? "Sincronização em andamento" : $"Sincronizar grupos do {ChannelLabel}")
             </button>
@@ -227,6 +236,7 @@
     private string _groupKey = string.Empty;
     private bool _isBusy;
     private bool _isSyncing;
+    private bool _isProcessing => _isBusy || _isSyncing;
     private string? _error;
     private string? _info;
     private string? _toastMessage;
@@ -352,6 +362,59 @@
     {
         await LoadAsync();
         StateHasChanged();
+    }
+
+    private async Task ConfirmAndResetAllAsync()
+    {
+        if (!IsTelegram || _isProcessing)
+        {
+            return;
+        }
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmDialogRequest
+        {
+            Title = "Limpar e sincronizar do zero",
+            Message = "Isso apaga todas as ofertas capturadas e as imagens em uploads/products deste usuário. A sincronização atômica será disparada em seguida. Continuar?",
+            ConfirmText = "Limpar e sincronizar",
+            CancelText = "Cancelar",
+            Kind = ConfirmDialogKind.Danger
+        });
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _error = null;
+        _info = null;
+        _isBusy = true;
+        try
+        {
+            var result = await Api.ResetAndResyncAsync(Channel);
+            _offers.Clear();
+            _totalOffers = 0;
+            _page = 1;
+            if (result.Success || result.Data is { Status: true })
+            {
+                _isSyncing = true;
+                _info = string.IsNullOrWhiteSpace(result.Data?.Descricao)
+                    ? "Feed zerado. Sincronização atômica em andamento."
+                    : result.Data.Descricao;
+                StartOfferRefresh();
+                _ = StopSyncingBadgeAsync();
+                return;
+            }
+
+            _error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível limpar o feed.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao limpar e sincronizar grupos monitorados.");
+            _error = "Não foi possível limpar o feed.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private async Task SyncAsync()

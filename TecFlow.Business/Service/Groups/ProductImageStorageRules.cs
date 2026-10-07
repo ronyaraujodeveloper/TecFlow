@@ -53,7 +53,24 @@ public static class ProductImageStorageRules
         return value.StartsWith('/') ? value : "/" + value.TrimStart('/');
     }
 
-    public static string BuildPhysicalFolder(string webRootPath, int tenantId, DateTime utcNow)
+    public static string? TryResolveTenantProductsFolder(string webRootPath, int tenantId)
+    {
+        if (string.IsNullOrWhiteSpace(webRootPath) || tenantId <= 0)
+        {
+            return null;
+        }
+
+        var root = Path.GetFullPath(Path.Combine(webRootPath, "uploads", "products"));
+        var folder = Path.GetFullPath(Path.Combine(root, tenantId.ToString()));
+        if (!folder.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return folder;
+    }
+
+    public static string BuildPhysicalDirectory(string webRootPath, int tenantId, DateTime utcNow)
     {
         var stamp = utcNow.ToUniversalTime();
         return Path.Combine(

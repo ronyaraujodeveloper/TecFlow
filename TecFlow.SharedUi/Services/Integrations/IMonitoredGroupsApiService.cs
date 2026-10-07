@@ -19,6 +19,10 @@ public interface IMonitoredGroupsApiService
 
     Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(string? channel, CancellationToken cancellationToken = default);
 
+    Task<ApiResult<MonitoredGroupsResponseDto>> ResetAndResyncAsync(
+        string? channel,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResult<UserBotSyncStatusDto>> GetSyncStatusAsync(CancellationToken cancellationToken = default);
 
     Task<ApiResult<MonitoredGroupsResponseDto>> PrioritizeMediaAsync(
@@ -80,6 +84,14 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         CancellationToken cancellationToken = default) =>
         _httpService.PostAsync<object, MonitoredGroupsResponseDto>(
             $"{Path}/sincronizar".AppendQueryString(new { channel }),
+            new { },
+            cancellationToken);
+
+    public Task<ApiResult<MonitoredGroupsResponseDto>> ResetAndResyncAsync(
+        string? channel,
+        CancellationToken cancellationToken = default) =>
+        _httpService.PostAsync<object, MonitoredGroupsResponseDto>(
+            $"{Path}/resetar".AppendQueryString(new { channel }),
             new { },
             cancellationToken);
 

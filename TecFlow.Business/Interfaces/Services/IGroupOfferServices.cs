@@ -93,4 +93,9 @@ public interface IMonitoredGroupService
         CancellationToken cancellationToken = default);
 
     Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default);
+
+    Task<MonitoredGroupsResponseDto> ResetAndResyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default);
 }

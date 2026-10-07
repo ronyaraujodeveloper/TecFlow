@@ -1052,6 +1052,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupService.ListAsync** — `AsNoTracking` + pacote completo (Telegram exige imagem local).
 - [x] **GruposMonitorados.razor** — lista paginada sem vínculo retroativo nem download sob demanda.
 
+### Módulo 43 — Purge e ressincronização atômica
+
+- [x] **ProductImageStorageRules.cs** — `TryResolveTenantProductsFolder` com path seguro sob `uploads/products/{userId}`.
+- [x] **IGroupCapturedMessagesService.cs** / **GroupCapturedMessagesService.cs** — `ResetAllCapturedMessagesAndMediaAsync` (`DELETE WHERE UserId` + `Directory.Delete`).
+- [x] **IGroupOfferServices.cs** / **MonitoredGroupService.cs** — `ResetAndResyncAsync` (purge + `SyncAsync`/`EnqueueCatchUp`).
+- [x] **MonitoredGroupsController.cs** — `POST api/integracoes/grupos/monitorados/resetar`.
+- [x] **IMonitoredGroupsApiService.cs** — cliente `ResetAndResyncAsync`.
+- [x] **GruposMonitorados.razor** — botão Telegram **Limpar e Sincronizar do Zero** com `IModalService.ConfirmAsync`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

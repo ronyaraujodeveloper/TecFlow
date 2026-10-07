@@ -149,7 +149,7 @@ flowchart LR
   TGAGEN[TelegramAgendador.razor] -->|GetChat Title + SelectedChatIds| TGBC[TelegramBroadcastController]
   TGBC --> TGBS[TelegramBroadcastService]
   TGWORK[TelegramBroadcastWorker] -->|Pending ScheduledAt| TGBS
-  USERBOT[TelegramUserMonitorWorker] -->|StartAsync CreateDirectory + LinkExistingFilesOnce| FOLD[uploads/products + App_Data/telegram-sessions]
+  USERBOT[TelegramUserMonitorWorker] -->|StartAsync CreateDirectory + BackfillMediaPaths| FOLD[uploads/products + App_Data/telegram-sessions]
   USERBOT -->|OnUpdates TryWrite Channel| QUEUE[Channel UserBotCapturedPayload]
   QUEUE -->|Drain PersistAsync| GCAP[GroupOfferCaptureService]
   GCAP -->|StructuredOfferParserService regex titulo preco cupom URL| SQL
@@ -159,7 +159,8 @@ flowchart LR
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
-  USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl| SQL
+  USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
+  USERBOT -->|BackfillMediaPaths {ExternalMessageId}_*.jpg| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL

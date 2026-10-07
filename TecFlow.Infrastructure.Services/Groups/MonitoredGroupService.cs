@@ -436,7 +436,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             CouponCode = item.CouponCode,
             ExtractedPrice = item.ValidatedPrice ?? item.ExtractedPrice,
             ValidatedPrice = item.ValidatedPrice,
-            ProductImageUrl = ResolveOfferImageUrl(item),
+            ProductImageUrl = ProductImageStorageRules.EnsureLeadingSlash(ResolveOfferImageUrl(item)),
             OriginalUrl = item.OriginalUrl,
             PrimaryProductUrl = item.PrimaryProductUrl ?? item.OriginalUrl,
             PlatformType = item.PlatformType,

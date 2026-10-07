@@ -156,7 +156,8 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         int? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var cleanPath = ProductImageStorageRules.ToWebRelativePath(imageWebPath?.Replace('\\', '/'));
+        var cleanPath = ProductImageStorageRules.EnsureLeadingSlash(
+            ProductImageStorageRules.ToWebRelativePath(imageWebPath?.Replace('\\', '/')));
         if (messageId <= 0
             || string.IsNullOrWhiteSpace(cleanPath)
             || !ProductImageStorageRules.IsLocalProductImage(cleanPath))
@@ -166,19 +167,9 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 
         var externalId = messageId.ToString();
         var updatedAt = DateTime.UtcNow;
-        if (userId is > 0)
-        {
-            return await _context.Database.ExecuteSqlInterpolatedAsync(
-                $@"UPDATE GroupCapturedMessages
-SET ProductImageUrl = {cleanPath}, MediaUrl = {cleanPath}, UpdatedAt = {updatedAt}
-WHERE ExternalMessageId = {externalId} AND UserId = {userId.Value}",
-                cancellationToken);
-        }
-
-        return await _context.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE GroupCapturedMessages
-SET ProductImageUrl = {cleanPath}, MediaUrl = {cleanPath}, UpdatedAt = {updatedAt}
-WHERE ExternalMessageId = {externalId}",
+        return await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
+            new object[] { cleanPath, cleanPath, updatedAt, externalId },
             cancellationToken);
     }
 }

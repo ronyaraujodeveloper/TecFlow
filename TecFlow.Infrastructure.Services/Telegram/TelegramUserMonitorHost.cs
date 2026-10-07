@@ -213,6 +213,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 try
                 {
                     await ReconcileAsync(stoppingToken);
+                    await LinkPendingDiskPhotosAsync(stoppingToken);
                     await BackfillMissingPhotosAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -1258,6 +1259,17 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         }
 
         await captured.UpdateImageUrlAsync(job.MessageId, relative, job.UserId, cancellationToken);
+    }
+
+    private async Task LinkPendingDiskPhotosAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var backfill = scope.ServiceProvider.GetRequiredService<IProductImageUrlLinkBackfillService>();
+        var linked = await backfill.LinkExistingFilesOnceAsync(cancellationToken);
+        if (linked > 0)
+        {
+            _logger.LogInformation("ImageUrl vinculado a arquivos já existentes no disco. Count={Count}", linked);
+        }
     }
 
     private async Task BackfillMissingPhotosAsync(CancellationToken cancellationToken)

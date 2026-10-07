@@ -1026,6 +1026,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupService.ListAsync** — `AsNoTracking` + `OrderByDescending(CreatedAt)` + `Skip/Take`.
 - [x] **GruposMonitorados.razor** — `<img src="@item.ImageUrl" />` ou placeholder "Processando mídia...".
 
+### Módulo 39 — Vínculo disco → ProductImageUrl por ExternalMessageId
+
+- [x] **BackfillMediaPathsService.cs** — na inicialização busca `ProductImageUrl` vazio e associa `{ExternalMessageId}_*.jpg` em `uploads/products`.
+- [x] **GroupCapturedMessagesService.UpdateImageUrlAsync** — `ExecuteSqlRawAsync` em `ProductImageUrl`/`ExternalMessageId` (sem filtro de UserId).
+- [x] **GruposMonitorados.razor** — `src` com barra inicial obrigatória.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

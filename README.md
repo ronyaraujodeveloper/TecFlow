@@ -875,5 +875,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Fallback de Interface Instantâneo:**
   - Renderização de texto/oferta imediata mesmo durante o processamento em lote de imagens pelo Worker.
   
+  ## 🐞 Correção de Vínculo e Persistência de Mídia (Media Identity & DB Context Fix)
+
+- [x] **Mapeamento Unificado por MessageId Real:**
+  - Garantia de correspondência exata entre o ID da mensagem no Telegram (`msg.id`) e a chave primária/índice na tabela `GroupCapturedMessages`.
+- [x] **Escopo Seguro de DbContext no Worker (`IServiceScopeFactory`):**
+  - Criação explícita de escopo de banco de dados para a execução de `ExecuteSqlRawAsync` no Worker de background.
+- [x] **Auditoria de URLs de Mídia:**
+  - Sanitização com prefixo obrigatório `/` em todas as rotas de imagem estática.
+  
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

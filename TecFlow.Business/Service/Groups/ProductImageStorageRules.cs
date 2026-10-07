@@ -109,6 +109,74 @@ public static class ProductImageStorageRules
         return (absoluteDir, absoluteFilePath, ToWebRelativePath(webRelativeUrl) ?? webRelativeUrl);
     }
 
+    public static string? EnsureLeadingSlash(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+
+        var value = url.Trim().Replace('\\', '/');
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        return value.StartsWith('/') ? value : "/" + value.TrimStart('/');
+    }
+
+    public static string? TryFindPhotoForMessageId(string webRootPath, string? telegramMessageId)
+    {
+        if (string.IsNullOrWhiteSpace(webRootPath) || string.IsNullOrWhiteSpace(telegramMessageId))
+        {
+            return null;
+        }
+
+        var root = Path.Combine(webRootPath, "uploads", "products");
+        if (!Directory.Exists(root))
+        {
+            return null;
+        }
+
+        var tokens = new[]
+            {
+                telegramMessageId.Trim(),
+                new string(telegramMessageId.Where(char.IsLetterOrDigit).ToArray())
+            }
+            .Where(token => token.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(token => token.IndexOfAny(Path.GetInvalidFileNameChars()) < 0);
+
+        string? newest = null;
+        var newestStamp = DateTime.MinValue;
+        foreach (var token in tokens)
+        {
+            string[] matches;
+            try
+            {
+                matches = Directory.GetFiles(root, $"{token}_*.jpg", SearchOption.AllDirectories);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+
+            foreach (var match in matches)
+            {
+                var stamp = File.GetLastWriteTimeUtc(match);
+                if (newest is null || stamp > newestStamp)
+                {
+                    newest = match;
+                    newestStamp = stamp;
+                }
+            }
+        }
+
+        return newest is null ? null : EnsureLeadingSlash(ToWebRelativePath(newest));
+    }
+
     public static bool FileExistsOnDisk(string webRootPath, string? storedUrl)
     {
         var physical = TryResolvePhysicalPath(webRootPath, storedUrl);

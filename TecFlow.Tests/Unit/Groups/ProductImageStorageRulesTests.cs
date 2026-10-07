@@ -87,4 +87,23 @@ public class ProductImageStorageRulesTests
         Assert.Equal(7, photo.TenantId);
         Assert.Equal("/uploads/products/7/2026/10/321_abcd.jpg", photo.WebRelativeUrl);
     }
+
+    [Fact]
+    public void EnsureLeadingSlash_ShouldPrefixRelativePaths()
+    {
+        Assert.Equal("/uploads/products/1/2026/10/a.jpg", ProductImageStorageRules.EnsureLeadingSlash("uploads/products/1/2026/10/a.jpg"));
+        Assert.Equal("/uploads/products/1/2026/10/a.jpg", ProductImageStorageRules.EnsureLeadingSlash("/uploads/products/1/2026/10/a.jpg"));
+    }
+
+    [Fact]
+    public void TryFindPhotoForMessageId_ShouldMatchTelegramIdPrefix()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-find-" + Guid.NewGuid().ToString("N"));
+        var physical = ProductImageStorageRules.TryResolvePhysicalPath(root, "/uploads/products/3/2026/10/555_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz.jpg")!;
+        Directory.CreateDirectory(Path.GetDirectoryName(physical)!);
+        File.WriteAllBytes(physical, [1]);
+
+        var url = ProductImageStorageRules.TryFindPhotoForMessageId(root, "555");
+        Assert.Equal("/uploads/products/3/2026/10/555_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz.jpg", url);
+    }
 }

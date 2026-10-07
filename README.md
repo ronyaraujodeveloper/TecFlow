@@ -884,5 +884,12 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Auditoria de URLs de Mídia:**
   - Sanitização com prefixo obrigatório `/` em todas as rotas de imagem estática.
   
+  ## 🎯 Correção Crítica de Vínculo de Mídia e Priorização de Tela
+
+- [x] **Mapeamento Rígido por `TelegramMessageId`:**
+  - O nome do arquivo no disco DEVE iniciar rigorosamente com `{TelegramMessageId}.jpg` para permitir amarração direta no SQL.
+- [x] **Priorização de Download para a Página Atual (Paging First):**
+  - O Worker deve receber explicitamente a lista dos `TelegramMessageId` presentes nos 25 cards da página atual do Blazor e baixar ESSAS imagens em prioridade máxima.
+  
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

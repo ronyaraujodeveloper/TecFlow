@@ -25,6 +25,9 @@ public interface IMonitoredGroupsApiService
         IReadOnlyList<int> offerIds,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResult<MonitoredGroupsResponseDto>> LinkExistingImagesAsync(
+        CancellationToken cancellationToken = default);
+
     Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,
         string? channel,
@@ -89,6 +92,13 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         _httpService.PostAsync<PrioritizeMonitoredMediaRequest, MonitoredGroupsResponseDto>(
             $"{Path}/midia/priorizar",
             new PrioritizeMonitoredMediaRequest { OfferIds = offerIds.ToList() },
+            cancellationToken);
+
+    public Task<ApiResult<MonitoredGroupsResponseDto>> LinkExistingImagesAsync(
+        CancellationToken cancellationToken = default) =>
+        _httpService.PostAsync<object, MonitoredGroupsResponseDto>(
+            $"{Path}/midia/vincular-disco",
+            new { },
             cancellationToken);
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> ValidateAsync(

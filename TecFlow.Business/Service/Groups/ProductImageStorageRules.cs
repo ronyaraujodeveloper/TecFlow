@@ -66,15 +66,15 @@ public static class ProductImageStorageRules
 
     public static string BuildFileName(string? messageId)
     {
-        var safeMessage = string.IsNullOrWhiteSpace(messageId)
-            ? "msg"
-            : new string(messageId.Where(char.IsLetterOrDigit).ToArray());
-        if (string.IsNullOrWhiteSpace(safeMessage))
+        var digits = string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : new string(messageId.Where(char.IsDigit).ToArray());
+        if (long.TryParse(digits, out var telegramId) && telegramId > 0)
         {
-            safeMessage = "msg";
+            return $"{telegramId}.jpg";
         }
 
-        return $"{safeMessage}_{Guid.NewGuid():N}.jpg";
+        return "0.jpg";
     }
 
     public static string ResolveWebRoot(string? webRootPath, string? contentRootPath = null, string? baseDirectory = null)
@@ -156,7 +156,11 @@ public static class ProductImageStorageRules
             string[] matches;
             try
             {
-                matches = Directory.GetFiles(root, $"{token}_*.jpg", SearchOption.AllDirectories);
+                matches =
+                [
+                    .. Directory.GetFiles(root, $"{token}.jpg", SearchOption.AllDirectories),
+                    .. Directory.GetFiles(root, $"{token}_*.jpg", SearchOption.AllDirectories)
+                ];
             }
             catch (IOException)
             {
@@ -243,6 +247,11 @@ public static class ProductImageStorageRules
         }
 
         var name = Path.GetFileNameWithoutExtension(fileName.Trim());
+        if (long.TryParse(name, out messageId) && messageId > 0)
+        {
+            return true;
+        }
+
         var separator = name.IndexOf('_');
         if (separator <= 0)
         {

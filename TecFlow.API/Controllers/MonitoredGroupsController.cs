@@ -98,6 +98,20 @@ public sealed class MonitoredGroupsController : ControllerBase
         });
     }
 
+    [HttpPost("midia/vincular-disco")]
+    public async Task<ActionResult<MonitoredGroupsResponseDto>> LinkDiskMediaAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var linked = await _service.LinkExistingDownloadedImagesAsync(cancellationToken);
+        return Ok(new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = linked > 0
+                ? $"{linked} imagem(ns) do disco foram vinculadas."
+                : "Nenhuma imagem pendente no disco."
+        });
+    }
+
     [HttpPost("{offerId:int}/validar")]
     public async Task<ActionResult<MonitoredGroupsResponseDto>> ValidateAsync(
         int offerId,

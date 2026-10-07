@@ -160,7 +160,8 @@ flowchart LR
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
   USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
-  USERBOT -->|BackfillMediaPaths {ExternalMessageId}_*.jpg| SQL
+  USERBOT -->|BackfillMediaPaths {ExternalMessageId}.jpg| SQL
+  GMUI -->|POST midia/vincular-disco LinkExistingDownloadedImages| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL

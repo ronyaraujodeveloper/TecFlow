@@ -83,4 +83,6 @@ public interface IMonitoredGroupService
         int userId,
         IReadOnlyList<int> offerIds,
         CancellationToken cancellationToken = default);
+
+    Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default);
 }

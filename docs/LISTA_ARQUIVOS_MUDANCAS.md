@@ -1032,6 +1032,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupCapturedMessagesService.UpdateImageUrlAsync** — `ExecuteSqlRawAsync` em `ProductImageUrl`/`ExternalMessageId` (sem filtro de UserId).
 - [x] **GruposMonitorados.razor** — `src` com barra inicial obrigatória.
 
+### Módulo 40 — Nome `{telegramId}.jpg` e vínculo na carga da página 1
+
+- [x] **ProductImageStorageRules.BuildFileName** — grava `{ExternalMessageId}.jpg` (sem GUID).
+- [x] **GroupCapturedMessagesService.LinkExistingDownloadedImagesAsync** — `UPDATE ProductImageUrl` por `ExternalMessageId` a partir dos `.jpg` em disco.
+- [x] **GruposMonitorados.razor** — `POST midia/vincular-disco` antes do `ListAsync` da página 1 e prioriza as 25 fotos visíveis.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

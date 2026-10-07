@@ -39,4 +39,6 @@ public interface IGroupCapturedMessagesService
         string imageWebPath,
         int? userId = null,
         CancellationToken cancellationToken = default);
+
+    Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default);
 }

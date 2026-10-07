@@ -409,6 +409,11 @@
         try
         {
             var skip = GroupOfferCaptureRules.ResolveOffersSkipFromPage(_page, _pageSize);
+            if (IsTelegram)
+            {
+                await Api.LinkExistingImagesAsync();
+            }
+
             var result = await Api.ListAsync(
                 _hours,
                 string.IsNullOrWhiteSpace(_groupKey) ? null : _groupKey,
@@ -450,7 +455,10 @@
             return;
         }
 
-        var pending = _offers.Where(item => item.IsMediaPending).Select(item => item.Id).ToList();
+        var pending = _offers
+            .Where(item => string.IsNullOrEmpty(item.ImageUrl))
+            .Select(item => item.Id)
+            .ToList();
         if (pending.Count == 0)
         {
             return;

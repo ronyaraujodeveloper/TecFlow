@@ -60,3 +60,4 @@
 [2026-10-06 20:37:18] feat(media): grava fotos do Telegram em disco e reprocessa ImageUrl faltante
 [2026-10-06 20:59:58] feat(media): vincula ImageUrl via SQL imediato e backfill unico do disco
 [2026-10-06 21:20:23] fix(media): vincula ProductImageUrl pelo ExternalMessageId e arquivos em disco
+[2026-10-06 21:36:07] fix(media): grava {telegramId}.jpg e vincula ProductImageUrl na carga da pagina

@@ -191,11 +191,13 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
     {
         if (userId <= 0
             || string.IsNullOrWhiteSpace(chatId)
-            || !int.TryParse(externalMessageId, out var messageId)
-            || messageId <= 0)
+            || !long.TryParse(externalMessageId, out var parsed)
+            || parsed is <= 0 or > int.MaxValue)
         {
             return false;
         }
+
+        var messageId = (int)parsed;
 
         EnqueueMediaJob(new UserBotMediaJob(userId, chatId.Trim(), messageId), highPriority: true);
         return true;

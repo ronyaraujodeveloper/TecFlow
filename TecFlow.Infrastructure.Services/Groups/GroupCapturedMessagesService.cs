@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Entities;
@@ -12,15 +13,18 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
     private readonly AppDbContext _context;
     private readonly IStructuredOfferParserService _parser;
     private readonly IOfferProductMediaStore _mediaStore;
+    private readonly IWebHostEnvironment _environment;
 
     public GroupCapturedMessagesService(
         AppDbContext context,
         IStructuredOfferParserService parser,
-        IOfferProductMediaStore mediaStore)
+        IOfferProductMediaStore mediaStore,
+        IWebHostEnvironment environment)
     {
         _context = context;
         _parser = parser;
         _mediaStore = mediaStore;
+        _environment = environment;
     }
 
     public async Task<IReadOnlyList<MarketplaceType>> ListActivePlatformsAsync(
@@ -171,5 +175,49 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
             new object[] { cleanPath, cleanPath, updatedAt, externalId },
             cancellationToken);
+    }
+
+    public async Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default)
+    {
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(
+            _environment.WebRootPath,
+            _environment.ContentRootPath,
+            AppDomain.CurrentDomain.BaseDirectory);
+        var uploadsFolder = Path.Combine(webRoot, "uploads", "products");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            return 0;
+        }
+
+        var files = Directory.GetFiles(uploadsFolder, "*.jpg", SearchOption.AllDirectories)
+            .OrderBy(path => Path.GetFileNameWithoutExtension(path).Contains('_') ? 1 : 0)
+            .ThenByDescending(File.GetLastWriteTimeUtc)
+            .ToArray();
+
+        var linked = 0;
+        foreach (var filePath in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ProductImageStorageRules.TryParseMessageIdFromFileName(filePath, out var telegramMsgId))
+            {
+                continue;
+            }
+
+            var relativeUrl = ProductImageStorageRules.EnsureLeadingSlash(
+                ProductImageStorageRules.ToWebRelativePath(filePath.Replace(webRoot, string.Empty)));
+            if (string.IsNullOrWhiteSpace(relativeUrl)
+                || !ProductImageStorageRules.IsLocalProductImage(relativeUrl))
+            {
+                continue;
+            }
+
+            var externalId = telegramMsgId.ToString();
+            linked += await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3} AND (ProductImageUrl IS NULL OR ProductImageUrl = '')",
+                new object[] { relativeUrl, relativeUrl, DateTime.UtcNow, externalId },
+                cancellationToken);
+        }
+
+        return linked;
     }
 }

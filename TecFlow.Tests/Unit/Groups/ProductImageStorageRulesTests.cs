@@ -13,12 +13,9 @@ public class ProductImageStorageRulesTests
     }
 
     [Fact]
-    public void BuildFileName_ShouldUseMessageIdAndGuid()
+    public void BuildFileName_ShouldUseTelegramMessageIdOnly()
     {
-        var name = ProductImageStorageRules.BuildFileName("987654");
-        Assert.StartsWith("987654_", name, StringComparison.Ordinal);
-        Assert.EndsWith(".jpg", name, StringComparison.Ordinal);
-        Assert.Equal(43, name.Length);
+        Assert.Equal("987654.jpg", ProductImageStorageRules.BuildFileName("987654"));
     }
 
     [Fact]
@@ -69,6 +66,8 @@ public class ProductImageStorageRulesTests
     [Fact]
     public void TryParseMessageIdFromFileName_ShouldReadTelegramIdPrefix()
     {
+        Assert.True(ProductImageStorageRules.TryParseMessageIdFromFileName("987654.jpg", out var exact));
+        Assert.Equal(987654, exact);
         Assert.True(ProductImageStorageRules.TryParseMessageIdFromFileName("987654_abcdef0123456789.jpg", out var id));
         Assert.Equal(987654, id);
         Assert.False(ProductImageStorageRules.TryParseMessageIdFromFileName("msg_abcdef.jpg", out _));

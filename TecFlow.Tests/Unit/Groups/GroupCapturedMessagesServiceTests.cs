@@ -10,7 +10,7 @@ public class GroupCapturedMessagesServiceTests
     [Fact]
     public void ApplyRelevanceFilter_ShouldKeepConnectedStoreAndHideIgnored()
     {
-        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!);
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!);
         var items = new List<GroupCapturedMessage>
         {
             new() { Id = 1, HasDirectProductUrl = true, IsIgnored = false, IsAvailable = true, PlatformType = MarketplaceType.Shopee },
@@ -30,7 +30,7 @@ public class GroupCapturedMessagesServiceTests
     [Fact]
     public void ApplyStructuredParse_ShouldFillCouponAndSanitizeImagePath()
     {
-        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!);
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!);
         var entity = new GroupCapturedMessage
         {
             RawText = "🔥 Fone X\nCUPOM: SURPRESAMELIMAIS\nhttps://shopee.com.br/produto-i.1.2",

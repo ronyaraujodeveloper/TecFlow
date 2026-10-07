@@ -65,3 +65,4 @@
 [2026-10-06 22:11:44] feat(ofertas): empacota parse, foto e validacao antes do INSERT atomico
 [2026-10-06 23:05:45] feat(ofertas): limpa o feed e dispara ressincronizacao atomica do Telegram
 [2026-10-06 23:21:18] fix(ofertas): trata lock de arquivos no purge e liga o botao HandleResetAllAsync
+[2026-10-06 23:32:42] fix(ofertas): separa limpar o feed da sincronizacao dos grupos

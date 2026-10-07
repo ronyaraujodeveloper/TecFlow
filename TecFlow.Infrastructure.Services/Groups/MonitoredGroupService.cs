@@ -538,20 +538,18 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
         try
         {
-            await _capturedMessages.ResetAllCapturedMessagesAndMediaAsync(userId, cancellationToken);
-            var sync = await SyncAsync(userId, channel, cancellationToken);
-            if (sync.Status)
+            var deleted = await _capturedMessages.ResetAllCapturedMessagesAndMediaAsync(userId, cancellationToken);
+            return new MonitoredGroupsResponseDto
             {
-                sync.Descricao = string.IsNullOrWhiteSpace(sync.Descricao)
-                    ? "Feed zerado. Sincronização atômica em andamento."
-                    : "Feed zerado. " + sync.Descricao;
-            }
-
-            return sync;
+                Status = true,
+                Descricao = deleted > 0
+                    ? $"{deleted} oferta(s) e imagens foram removidas. Use Sincronizar grupos para recarregar."
+                    : "Feed já estava vazio. Use Sincronizar grupos para recarregar."
+            };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao limpar e sincronizar grupos monitorados. UserId={UserId}", userId);
+            _logger.LogError(ex, "Erro ao limpar grupos monitorados. UserId={UserId} Channel={Channel}", userId, channel);
             return new MonitoredGroupsResponseDto
             {
                 Status = false,

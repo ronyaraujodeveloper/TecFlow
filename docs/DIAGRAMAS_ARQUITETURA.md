@@ -155,8 +155,7 @@ flowchart LR
   PIPE -->|SaveValidatedOfferAsync INSERT atomico| SQL
   GCAP[GroupOfferCaptureService] -->|delegates OfferPipelineProcessor| PIPE
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
-  GMUI[GruposMonitorados] -->|HandleResetAllAsync POST resetar DELETE UserId + File.Delete uploads/products/userId| GCAPSVC
-  GMUI -->|POST resetar + POST sync HTTP 202 EnqueueCatchUp| USERBOT
+  GMUI[GruposMonitorados] -->|HandleResetAllAsync POST resetar só limpa SQL e disco| GCAPSVC
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP

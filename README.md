@@ -910,7 +910,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Mecanismo de Reset Total de Captura:**
   - Expurgo completo dos registros na tabela `GroupCapturedMessages` (`DELETE WHERE UserId`) e exclusão física arquivo a arquivo em `wwwroot/uploads/products/{userId}` (ignora arquivos em uso no IIS).
 - [x] **Disparo de Re-Sincronização Atômica:**
-  - Botão Blazor `@onclick="HandleResetAllAsync"` limpa a lista local, exibe toast e reinicia a leitura com empacotamento completo (Texto + Imagem + Link).
+  - Botão **Limpar** (`HandleResetAllAsync`) só expurga SQL/disco; a recarga atômica fica no botão **Sincronizar grupos**.
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

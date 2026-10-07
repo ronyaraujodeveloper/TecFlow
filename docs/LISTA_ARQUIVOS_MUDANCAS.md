@@ -1056,10 +1056,10 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **ProductImageStorageRules.cs** — `TryResolveTenantProductsFolder` e `TryDeleteTenantProductFiles` (File.Delete por arquivo, ignora lock do IIS).
 - [x] **IGroupCapturedMessagesService.cs** / **GroupCapturedMessagesService.cs** — `ResetAllCapturedMessagesAndMediaAsync` (`DELETE WHERE UserId` + exclusão segura em disco).
-- [x] **IGroupOfferServices.cs** / **MonitoredGroupService.cs** — `ResetAndResyncAsync` (purge + `SyncAsync`/`EnqueueCatchUp`).
-- [x] **MonitoredGroupsController.cs** — `POST api/integracoes/grupos/monitorados/resetar`.
+- [x] **IGroupOfferServices.cs** / **MonitoredGroupService.cs** — `ResetAndResyncAsync` só faz purge (`DELETE` + arquivos); não dispara `SyncAsync`.
+- [x] **MonitoredGroupsController.cs** — `POST api/integracoes/grupos/monitorados/resetar` retorna HTTP 200.
 - [x] **IMonitoredGroupsApiService.cs** — cliente `ResetAndResyncAsync`.
-- [x] **GruposMonitorados.razor** — `@onclick="HandleResetAllAsync"` com confirmação, toast e `try-catch`.
+- [x] **GruposMonitorados.razor** — botão **Limpar** (`HandleResetAllAsync`); sincronização só no botão **Sincronizar grupos**.
 
 ---
 

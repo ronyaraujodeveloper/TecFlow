@@ -43,9 +43,9 @@
             </button>
             @if (IsTelegram)
             {
-                <button type="button" class="btn btn-outline-danger btn-touch me-2" disabled="@_isProcessing" @onclick="HandleResetAllAsync">
+                <button type="button" class="btn btn-outline-danger btn-touch me-2" disabled="@(_isProcessing || _isBusy || _isSyncing)" @onclick="HandleResetAllAsync">
                     <i class="bi bi-trash" aria-hidden="true"></i>
-                    Limpar e Sincronizar do Zero
+                    Limpar
                 </button>
             }
             <button type="button" class="btn btn-primary btn-touch" disabled="@_isSyncing" @onclick="SyncAsync">
@@ -373,9 +373,9 @@
 
         var confirmed = await ModalService.ConfirmAsync(new ConfirmDialogRequest
         {
-            Title = "Limpar e sincronizar do zero",
-            Message = "Isso apaga todas as ofertas capturadas e as imagens em uploads/products deste usuário. A sincronização atômica será disparada em seguida. Continuar?",
-            ConfirmText = "Limpar e sincronizar",
+            Title = "Limpar ofertas capturadas",
+            Message = "Isso apaga as ofertas capturadas e as imagens em uploads/products deste usuário. Depois use Sincronizar grupos para recarregar. Continuar?",
+            ConfirmText = "Limpar",
             CancelText = "Cancelar",
             Kind = ConfirmDialogKind.Danger
         });
@@ -400,15 +400,10 @@
 
             if (result.Success || result.Data is { Status: true })
             {
-                _isSyncing = true;
                 _info = string.IsNullOrWhiteSpace(result.Data?.Descricao)
-                    ? "Banco de dados e imagens zerados com sucesso! Reiniciando sincronização..."
+                    ? "Banco de dados e imagens zerados. Use Sincronizar grupos para recarregar."
                     : result.Data.Descricao;
-                _ = ShowToastAsync(
-                    "Banco de dados e imagens zerados com sucesso! Reiniciando sincronização...",
-                    success: true);
-                StartOfferRefresh();
-                _ = StopSyncingBadgeAsync();
+                _ = ShowToastAsync(_info, success: true);
                 return;
             }
 

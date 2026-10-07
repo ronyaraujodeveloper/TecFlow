@@ -120,11 +120,11 @@ public sealed class MonitoredGroupsController : ControllerBase
         try
         {
             var result = await _service.ResetAndResyncAsync(ResolveUserId(), channel, cancellationToken);
-            return result.Status ? Accepted(result) : Ok(result);
+            return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao limpar e sincronizar grupos monitorados");
+            _logger.LogError(ex, "Erro ao limpar grupos monitorados");
             return Ok(Fail(Describe(ex)));
         }
     }

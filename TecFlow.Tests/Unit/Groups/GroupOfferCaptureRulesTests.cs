@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Service.Groups;
+﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Core.Enums;
 
@@ -74,6 +75,31 @@ public class GroupOfferCaptureRulesTests
     [InlineData(-8, 10)]
     public void ResolveOffersTake_ShouldHonorTemporaryTenItemLimit(int input, int expected) =>
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveOffersTake(input));
+
+    [Fact]
+    public void DeduplicateOffers_ShouldSkipSameUrlAndTelegramMessage()
+    {
+        var first = new GroupCapturedOfferDto
+        {
+            Id = 1,
+            OriginalUrl = "https://shopee.com.br/item?utm_source=tg",
+            ExternalMessageId = "100"
+        };
+        var sameUrl = new GroupCapturedOfferDto
+        {
+            Id = 2,
+            OriginalUrl = "https://shopee.com.br/item",
+            ExternalMessageId = "101"
+        };
+        var sameMessage = new GroupCapturedOfferDto
+        {
+            Id = 3,
+            OriginalUrl = "https://mercadolivre.com.br/p/MLB1",
+            ExternalMessageId = "100"
+        };
+        var unique = GroupOfferCaptureRules.DeduplicateOffers([first, sameUrl, sameMessage]);
+        Assert.Equal(first.Id, Assert.Single(unique).Id);
+    }
 
     [Fact]
     public void ResolveOffersSkipFromPage_ShouldUseZeroBasedOffset() =>

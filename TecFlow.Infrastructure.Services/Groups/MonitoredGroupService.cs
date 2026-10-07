@@ -132,18 +132,23 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             }
 
             var total = await query.CountAsync(cancellationToken);
+            var fetchTake = Math.Min(Math.Max(resolvedTake * 4, resolvedTake), 80);
             var offers = await query
                 .OrderByDescending(item => item.CreatedAt)
                 .ThenByDescending(item => item.ReceivedAt)
                 .Skip(resolvedSkip)
-                .Take(resolvedTake)
+                .Take(fetchTake)
                 .ToListAsync(cancellationToken);
+            var uniqueOffers = GroupOfferCaptureRules
+                .DeduplicateOffers(offers.Select(MapOffer))
+                .Take(resolvedTake)
+                .ToList();
 
             return new MonitoredGroupsResponseDto
             {
                 Status = true,
                 Groups = groups,
-                Offers = offers.Select(MapOffer).ToList(),
+                Offers = uniqueOffers,
                 TotalOffers = total,
                 Skip = resolvedSkip,
                 Take = resolvedTake,

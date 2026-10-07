@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Enums;
@@ -173,6 +174,63 @@ public static class GroupOfferCaptureRules
 
     public static bool IsTelegramChannel(string? channel) =>
         string.Equals(NormalizeChannel(channel), TelegramChannel, StringComparison.OrdinalIgnoreCase);
+
+    public static string NormalizeProductUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = url.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return trimmed.ToLowerInvariant();
+        }
+
+        var host = uri.Host.Trim().TrimStart('.').ToLowerInvariant();
+        var path = uri.AbsolutePath.TrimEnd('/');
+        return $"{uri.Scheme}://{host}{path}".ToLowerInvariant();
+    }
+
+    public static bool IsSameCapturedOffer(GroupCapturedOfferDto existing, GroupCapturedOfferDto incoming)
+    {
+        if (existing.Id > 0 && existing.Id == incoming.Id)
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(existing.ExternalMessageId)
+            && string.Equals(existing.ExternalMessageId, incoming.ExternalMessageId, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var existingUrl = NormalizeProductUrl(
+            string.IsNullOrWhiteSpace(existing.PrimaryProductUrl) ? existing.OriginalUrl : existing.PrimaryProductUrl);
+        var incomingUrl = NormalizeProductUrl(
+            string.IsNullOrWhiteSpace(incoming.PrimaryProductUrl) ? incoming.OriginalUrl : incoming.PrimaryProductUrl);
+        return existingUrl.Length > 0
+            && incomingUrl.Length > 0
+            && string.Equals(existingUrl, incomingUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static List<GroupCapturedOfferDto> DeduplicateOffers(IEnumerable<GroupCapturedOfferDto> offers)
+    {
+        var unique = new List<GroupCapturedOfferDto>();
+        foreach (var offer in offers)
+        {
+            if (unique.Exists(existing => IsSameCapturedOffer(existing, offer)))
+            {
+                continue;
+            }
+
+            unique.Add(offer);
+        }
+
+        return unique;
+    }
 
     public static decimal? ExtractPrice(string? text, string? url)
     {

@@ -317,7 +317,7 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
 
 Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend `TecFlow.WebUi` / `TecFlow.SharedUi` / `TecFlow.Mobile` para controle, auditoria e monitoramento em produção.
 
-- [x] 5.0. Fundação de domínio e contratos (Core + Business)
+- [x] 5.0. Fucomatos (Core + Business)
   - [x] Enums: `SocialMediaType`, `EngagementStatus`, `CommissionStatus`.
   - [x] Entidade conceitual `AffiliateLink` (produto, link original, variações Shopee/TikTok Shop).
   - [x] Modelos de orquestração: `SocialEngagementEvent`, `EngagementOrchestrationResult`, `CommissionAuditLine`, `CommissionConciliationResult`.
@@ -913,6 +913,8 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Botão **Limpar** (`HandleResetAllAsync`) só expurga SQL/disco; a recarga atômica fica no botão **Sincronizar grupos**.
 - [x] **Limite temporário de 10 ofertas:**
   - Tela e catch-up UserBot param em 10 pacotes completos (título, preço, loja e imagem em `uploads/products`). Remover `TemporaryLimitTenOffers` quando pedir o feed completo.
+- [x] **Deduplicação do feed monitorado:**
+  - Nova oferta só entra se ainda não existir na tela/SQL pelo `ExternalMessageId` ou URL do produto (sem query string).
 
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

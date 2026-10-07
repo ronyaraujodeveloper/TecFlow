@@ -322,11 +322,18 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
+        var messageId = entity.ExternalMessageId;
+        var originalUrl = entity.OriginalUrl;
+        var primaryUrl = entity.PrimaryProductUrl;
         var exists = await _context.GroupCapturedMessages.AnyAsync(
             item => item.UserId == entity.UserId
                 && item.Channel == entity.Channel
-                && item.OriginalUrl == entity.OriginalUrl
-                && item.ExternalMessageId == entity.ExternalMessageId,
+                && (
+                    (messageId != null && messageId != "" && item.ExternalMessageId == messageId)
+                    || item.OriginalUrl == originalUrl
+                    || (primaryUrl != null && primaryUrl != "" && item.PrimaryProductUrl == primaryUrl)
+                    || (primaryUrl != null && primaryUrl != "" && item.OriginalUrl == primaryUrl)
+                    || item.PrimaryProductUrl == originalUrl),
             cancellationToken);
         if (exists)
         {

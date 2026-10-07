@@ -1063,6 +1063,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **GroupOfferCaptureRules.cs** — `TemporaryLimitTenOffers` (página 10).
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorHost.cs** — catch-up para ao gravar 10 ofertas com foto.
 - [x] **ProductUploadsStaticFilesExtensions.cs** — mapeia `/uploads` para `inetpub/tecflow/api/wwwroot/uploads`.
+- [x] **GroupOfferCaptureRules.cs** — `DeduplicateOffers` / `IsSameCapturedOffer` por mensagem e URL.
+- [x] **GroupCapturedMessagesService.cs** — `SaveValidatedOfferAsync` recusa duplicata de `ExternalMessageId` ou URL.
+- [x] **MonitoredGroupService.ListAsync** / **GruposMonitorados.razor** — lista e tela só aceitam oferta nova se ainda não estiver visível.
 
 ---
 

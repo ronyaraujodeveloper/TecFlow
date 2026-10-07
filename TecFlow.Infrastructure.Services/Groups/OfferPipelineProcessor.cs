@@ -170,6 +170,14 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                 };
                 _capturedMessages.ApplyStructuredParse(entity, request.RawText);
                 saved += await _capturedMessages.SaveValidatedOfferAsync(entity, cancellationToken);
+                if (saved > 0)
+                {
+                    break;
+                }
+                if (saved > 0)
+                {
+                    break;
+                }
             }
             catch (Exception ex)
             {

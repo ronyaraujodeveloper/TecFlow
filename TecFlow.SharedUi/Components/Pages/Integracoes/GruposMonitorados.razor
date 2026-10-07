@@ -142,7 +142,7 @@
         <div class="row g-3">
             @foreach (var item in _offers)
             {
-                <div class="col-12 col-md-6 col-xl-4">
+                <div class="col-12 col-md-6 col-xl-4" @key="item.Id">
                     <article class="card border-0 shadow-sm h-100 monitored-offer-card">
                         <div class="card-body">
                             <div class="d-flex gap-3 mb-3">
@@ -747,8 +747,24 @@
             _page = maxPage;
         }
 
-        _offers.Clear();
-        _offers.AddRange(data.Offers);
+        var incoming = GroupOfferCaptureRules.DeduplicateOffers(data.Offers);
+        if (append)
+        {
+            foreach (var offer in incoming)
+            {
+                if (_offers.Exists(existing => GroupOfferCaptureRules.IsSameCapturedOffer(existing, offer)))
+                {
+                    continue;
+                }
+
+                _offers.Add(offer);
+            }
+        }
+        else
+        {
+            _offers.Clear();
+            _offers.AddRange(incoming);
+        }
 
         if (!data.Status)
         {

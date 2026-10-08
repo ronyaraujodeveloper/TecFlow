@@ -271,16 +271,16 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 ## 🖼️ Fase 34: Otimização, Padronização e Regra Estrita de Mídia (Media Pipeline & Compression)
 
-- [ ] **34.1. Regra Estrita de Ingestão de Imagens (`StrictImageIngestionPolicy`):**
+- [x] **34.1. Regra Estrita de Ingestão de Imagens (`StrictImageIngestionPolicy`):**
   - **Interceptador Único de Salvamento:** Nenhuma imagem do Telegram, upload manual ou scraping pode ser salva na pasta `wwwroot/uploads/` sem passar obrigatoriamente pelo pipeline de validação e otimização.
   - **Rejeição/Ajuste de Formatos Inválidos:** Conversão forçada de arquivos pesados (PNGs sem transparência, BMPs, TIFFs ou JPEGs não otimizados) para o padrão leve da plataforma.
 
-- [ ] **34.2. Processamento e Normalização Técnica (`ImageOptimizationService`):**
+- [x] **34.2. Processamento e Normalização Técnica (`ImageOptimizationService`):**
   - **Redimensionamento Proporcional (Aspect Ratio Preserved):** Limite estrito de **1080px no maior lado** (largura ou altura), garantindo excelente definição sem distorção em telas mobile, notebooks e monitores ultrawide.
   - **Compressão Dinâmica e Formato WebP/JPEG:** Aplicação de qualidade adaptativa de 75% a 80%, reduzindo o peso final de cada foto para a faixa ideal de **80 KB a 250 KB** (economia de até 85% de espaço em disco e tráfego de rede).
   - **Remoção de Metadados (EXIF Stripping):** Expurgo automático de dados de geolocalização e perfis de cor para garantir segurança, privacidade e menor tamanho de payload.
 
-- [ ] **34.3. Adaptação Responsiva para Canais de Disparo (WhatsApp & Telegram Layouts):**
+- [x] **34.3. Adaptação Responsiva para Canais de Disparo (WhatsApp & Telegram Layouts):**
   - **Preview Perfeito Multi-Tela:** Mapeamento de proporção que evita cortes indesejados nas miniaturas do WhatsApp Web, WhatsApp Mobile e Telegram Desktop.
   - **Fallback com Canvas Neutro:** Aplicação automática de fundo neutro em imagens com proporções extremas (muito compridas ou verticais) para exibição elegante nos cards do Blazor e nos canais de mensagem.
 

@@ -10,13 +10,16 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
     public const string RelativeUploadsFolder = "uploads/products";
 
     private readonly IWebHostEnvironment _environment;
+    private readonly IImageOptimizationService _optimizer;
     private readonly ILogger<OfferProductMediaStore> _logger;
 
     public OfferProductMediaStore(
         IWebHostEnvironment environment,
+        IImageOptimizationService optimizer,
         ILogger<OfferProductMediaStore> logger)
     {
         _environment = environment;
+        _optimizer = optimizer;
         _logger = logger;
     }
 
@@ -44,42 +47,30 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
         Func<Stream, CancellationToken, Task> writeAsync,
         CancellationToken cancellationToken = default)
     {
-        if (writeAsync is null)
+        if (writeAsync is null || tenantId <= 0)
         {
             return null;
         }
 
         try
         {
-            var webRoot = ProductImageStorageRules.ResolveWebRoot(
-                _environment.WebRootPath,
-                _environment.ContentRootPath);
-            var fileName = ProductImageStorageRules.BuildFileName(messageId);
-            var (absoluteDir, absoluteFilePath, webRelativeUrl) = ProductImageStorageRules.BuildSaveTarget(
-                webRoot,
-                tenantId,
-                fileName,
-                DateTime.UtcNow);
-            Directory.CreateDirectory(absoluteDir);
-
-            await using (var stream = File.Create(absoluteFilePath))
+            await using var raw = new MemoryStream();
+            await writeAsync(raw, cancellationToken);
+            if (raw.Length <= 0)
             {
-                await writeAsync(stream, cancellationToken);
-            }
-
-            var info = new FileInfo(absoluteFilePath);
-            if (!info.Exists || info.Length <= 0)
-            {
-                if (info.Exists)
-                {
-                    File.Delete(absoluteFilePath);
-                }
-
                 return null;
             }
 
-            _logger.LogInformation("Imagem salva no caminho: {path}", absoluteFilePath);
-            return webRelativeUrl;
+            raw.Position = 0;
+            var digits = string.IsNullOrWhiteSpace(messageId)
+                ? string.Empty
+                : new string(messageId.Where(char.IsDigit).ToArray());
+            _ = long.TryParse(digits, out var telegramId);
+            return await _optimizer.ProcessAndSaveImageAsync(
+                raw,
+                tenantId.ToString(),
+                telegramId,
+                cancellationToken);
         }
         catch (Exception ex)
         {

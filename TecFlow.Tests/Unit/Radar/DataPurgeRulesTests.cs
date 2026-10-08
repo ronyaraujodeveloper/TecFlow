@@ -21,6 +21,7 @@ public class DataPurgeRulesTests
         Assert.Equal(now.AddDays(-14), DataPurgeRules.MessageCutoff(now));
         Assert.True(DataPurgeRules.IsPngOrJpeg("a.JPG"));
         Assert.True(DataPurgeRules.IsPngOrJpeg("b.png"));
-        Assert.False(DataPurgeRules.IsPngOrJpeg("c.webp"));
+        Assert.True(DataPurgeRules.IsPngOrJpeg("c.webp"));
+        Assert.False(DataPurgeRules.IsPngOrJpeg("d.gif"));
     }
 }

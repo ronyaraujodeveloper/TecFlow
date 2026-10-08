@@ -34,6 +34,7 @@ public static class DataPurgeRules
         var ext = Path.GetExtension(path);
         return ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
             || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".png", StringComparison.OrdinalIgnoreCase);
+            || ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 }

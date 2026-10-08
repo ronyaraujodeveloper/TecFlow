@@ -15,7 +15,7 @@ public class ProductImageStorageRulesTests
     [Fact]
     public void BuildFileName_ShouldUseTelegramMessageIdOnly()
     {
-        Assert.Equal("987654.jpg", ProductImageStorageRules.BuildFileName("987654"));
+        Assert.Equal("987654.webp", ProductImageStorageRules.BuildFileName("987654"));
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.IdentityModel.Tokens;
@@ -157,7 +158,9 @@ var productUploads = Path.Combine(
     "uploads",
     "products");
 Directory.CreateDirectory(productUploads);
-app.UseStaticFiles();
+var staticTypes = new FileExtensionContentTypeProvider();
+staticTypes.Mappings[".webp"] = "image/webp";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticTypes });
 app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();

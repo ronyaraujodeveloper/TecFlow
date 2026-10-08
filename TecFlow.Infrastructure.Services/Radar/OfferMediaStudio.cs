@@ -16,17 +16,20 @@ public sealed class OfferMediaStudio : IOfferMediaStudio
 {
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpClientFactory _httpFactory;
+    private readonly IImageOptimizationService _optimizer;
     private readonly ShortLinkOptions _shortLinks;
     private readonly ILogger<OfferMediaStudio> _logger;
 
     public OfferMediaStudio(
         IWebHostEnvironment environment,
         IHttpClientFactory httpFactory,
+        IImageOptimizationService optimizer,
         IOptions<ShortLinkOptions> shortLinks,
         ILogger<OfferMediaStudio> logger)
     {
         _environment = environment;
         _httpFactory = httpFactory;
+        _optimizer = optimizer;
         _shortLinks = shortLinks.Value;
         _logger = logger;
     }
@@ -60,19 +63,23 @@ public sealed class OfferMediaStudio : IOfferMediaStudio
                 Position = AnchorPositionMode.Top,
                 PadColor = Color.ParseHex("E85D04")
             }));
-            var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
-                ? Path.Combine(_environment.ContentRootPath, "wwwroot")
-                : _environment.WebRootPath;
-            var folder = Path.Combine(webRoot, "uploads", "frames");
-            Directory.CreateDirectory(folder);
-            var fileName = $"{userId}-{Guid.NewGuid():N}.jpg";
-            var path = Path.Combine(folder, fileName);
-            await image.SaveAsJpegAsync(path, cancellationToken);
+            await using var framed = new MemoryStream();
+            await image.SaveAsPngAsync(framed, cancellationToken);
+            framed.Position = 0;
+            var relative = await _optimizer.ProcessAndSaveToRelativePathAsync(
+                framed,
+                $"/uploads/frames/{userId}-{Guid.NewGuid():N}",
+                cancellationToken);
+            if (string.IsNullOrWhiteSpace(relative))
+            {
+                return new OfferMediaResponseDto { Status = false, Descricao = "Não foi possível otimizar a moldura desta imagem." };
+            }
+
             return new OfferMediaResponseDto
             {
                 Status = true,
                 Descricao = "Moldura promocional aplicada.",
-                FramedImageUrl = $"{ShortLinkPublicUrl.NormalizeHost(_shortLinks.PublicBaseUrl)}/uploads/frames/{fileName}"
+                FramedImageUrl = $"{ShortLinkPublicUrl.NormalizeHost(_shortLinks.PublicBaseUrl)}{relative}"
             };
         }
         catch (Exception ex)

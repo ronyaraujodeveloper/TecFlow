@@ -1341,26 +1341,21 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var webRoot = ProductImageStorageRules.ResolveWebRoot(
-                environment.WebRootPath,
-                environment.ContentRootPath,
-                AppDomain.CurrentDomain.BaseDirectory);
-            var fileName = $"{message.id}.jpg";
-            var (absoluteDir, absolutePath, relativePath) = ProductImageStorageRules.BuildSaveTarget(
-                webRoot,
+            await using var raw = new MemoryStream();
+            await DownloadMediaAsync(client, message.media, raw);
+            raw.Position = 0;
+            var relativePath = await store.SaveFromStreamAsync(
                 tenantId,
-                fileName,
-                DateTime.UtcNow);
-            Directory.CreateDirectory(absoluteDir);
-            await using (var stream = File.Create(absolutePath))
-            {
-                await DownloadMediaAsync(client, message.media, stream);
-            }
-
-            var info = new FileInfo(absolutePath);
-            if (!info.Exists || info.Length <= 0)
+                message.id.ToString(),
+                async (destination, token) =>
+                {
+                    raw.Position = 0;
+                    await raw.CopyToAsync(destination, token);
+                },
+                cancellationToken);
+            if (string.IsNullOrWhiteSpace(relativePath))
             {
                 return null;
             }
@@ -1371,7 +1366,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
                 new object[] { relativePath, relativePath, DateTime.UtcNow, externalId },
                 cancellationToken);
-            _logger.LogInformation("Imagem salva no caminho: {path}", absolutePath);
+            _logger.LogInformation("Imagem otimizada salva no caminho: {path}", relativePath);
             return relativePath;
         }
         catch (Exception ex)

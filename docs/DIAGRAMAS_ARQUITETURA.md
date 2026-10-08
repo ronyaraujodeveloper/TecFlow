@@ -160,14 +160,15 @@ flowchart LR
   GMUI -->|GET /uploads PhysicalFileProvider api/wwwroot/uploads| MEDIA
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
-  USERBOT -->|DownloadMediaAsync MessageMediaPhoto File.Create| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
+  USERBOT -->|DownloadMediaAsync + IOfferProductMediaStore| OPT[ImageOptimizationService]
+  OPT -->|1080px WebP EXIF strip canvas neutro| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
   USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
-  USERBOT -->|BackfillMediaPaths {ExternalMessageId}.jpg| SQL
+  USERBOT -->|BackfillMediaPaths {ExternalMessageId}.webp| SQL
   GMUI -->|GET ListAsync DeduplicateOffers Id msg URL| SQL
   APIIIS[TecFlowApiPool Integrated Security] -->|login Windows AutomacaoSociais| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|7 dias File.Delete + ProductImageUrl null| MEDIA
-  DATAPURGE[DataPurgeWorker 03:00 UTC] -->|PurgeOldMediaFiles jpg/png 7d| MEDIA
+  DATAPURGE[DataPurgeWorker 03:00 UTC] -->|PurgeOldMediaFiles jpg/png/webp 7d| MEDIA
   DATAPURGE -->|ColdStorageArchiver SKU preco cupom| HIST[(ProductPriceHistory)]
   DATAPURGE -->|DELETE TOP 5000 14d + REORGANIZE| SQL
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL

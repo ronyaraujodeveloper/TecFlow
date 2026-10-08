@@ -131,10 +131,10 @@ public static class ProductImageStorageRules
             : new string(messageId.Where(char.IsDigit).ToArray());
         if (long.TryParse(digits, out var telegramId) && telegramId > 0)
         {
-            return $"{telegramId}.jpg";
+            return ImageOptimizationRules.BuildOutputFileName(telegramId);
         }
 
-        return "0.jpg";
+        return ImageOptimizationRules.BuildOutputFileName(0);
     }
 
     public static string ResolveWebRoot(string? webRootPath, string? contentRootPath = null, string? baseDirectory = null)
@@ -218,7 +218,11 @@ public static class ProductImageStorageRules
             {
                 matches =
                 [
+                    .. Directory.GetFiles(root, $"{token}.webp", SearchOption.AllDirectories),
                     .. Directory.GetFiles(root, $"{token}.jpg", SearchOption.AllDirectories),
+                    .. Directory.GetFiles(root, $"{token}.jpeg", SearchOption.AllDirectories),
+                    .. Directory.GetFiles(root, $"{token}.png", SearchOption.AllDirectories),
+                    .. Directory.GetFiles(root, $"{token}_*.webp", SearchOption.AllDirectories),
                     .. Directory.GetFiles(root, $"{token}_*.jpg", SearchOption.AllDirectories)
                 ];
             }
@@ -349,7 +353,7 @@ public static class ProductImageStorageRules
             yield break;
         }
 
-        foreach (var pattern in new[] { "*.jpg", "*.jpeg", "*.png" })
+        foreach (var pattern in new[] { "*.webp", "*.jpg", "*.jpeg", "*.png" })
         {
             foreach (var file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
             {

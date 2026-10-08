@@ -72,3 +72,4 @@
 [2026-10-07 21:43:38] feat(achadinhos): historico de precos, creditos VIP e worker de Super Achados
 [2026-10-07 22:14:44] feat(busca): live-check nas APIs oficiais, barra de busca e historico de fases no README
 [2026-10-07 22:35:03]feat(retencao): expurgo diario 03:00 UTC, historico frio e delete em lote de 14 dias
+[2026-10-07 22:51:49]feat(midia): pipeline estrito ImageSharp 1080px WebP e canvas neutro

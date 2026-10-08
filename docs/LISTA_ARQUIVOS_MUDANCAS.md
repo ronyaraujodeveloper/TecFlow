@@ -992,9 +992,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **AddProductPriceHistoryCouponCode** — coluna `CouponCode` no histórico condensado.
 - [x] **ProductImageCleanupService.cs** — retenção alinhada a 7 dias, JPG/PNG e órfãos em disco.
 
+### Fase 34 README — Pipeline de mídia e compressão
+
+- [x] **ImageOptimizationRules.cs** / **StrictImageIngestionPolicy** / **ImageOptimizationRulesTests.cs** — 1080px, qualidade 75–80, canvas `#F4F4F4`.
+- [x] **IImageOptimizationService.cs** / **ImageOptimizationService.cs** / **ImageOptimizationServiceTests.cs** — WebP, EXIF strip e rejeição de formato inválido.
+- [x] **OfferProductMediaStore.cs** / **TelegramUserMonitorHost.cs** / **OfferMediaStudio.cs** — interceptador único; sem `File.Create` cru em `uploads`.
+- [x] **ProductImageStorageRules.cs** — nome `{messageId}.webp` e varredura jpg/png/webp.
+
 ### Módulo 31 — Pipeline de imagens capturadas
 
-- [x] **ProductImageStorageRules.cs** / **ProductImageStorageRulesTests.cs** — pasta `{tenant}/{yyyy}/{MM}` e nome `{messageId}_{guid8}.jpg`.
+- [x] **ProductImageStorageRules.cs** / **ProductImageStorageRulesTests.cs** — pasta `{tenant}/{yyyy}/{MM}` e nome `{messageId}.webp`.
 - [x] **OfferProductMediaStore.cs** — grava caminho relativo em `GroupCapturedMessages.ProductImageUrl`.
 - [x] **ProductImageCleanupService.cs** / **ProductImageCleanupWorker.cs** — expurgo diário após 7 dias.
 - [x] **GruposMonitorados.razor** — `<img src="@item.ProductImageUrl">` com placeholder se a foto foi expurgada.

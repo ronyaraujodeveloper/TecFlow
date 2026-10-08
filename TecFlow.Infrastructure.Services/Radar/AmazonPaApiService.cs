@@ -67,7 +67,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
                 ItemIds = new[] { asin },
                 Resources = new[] { "ItemInfo.Title", "Offers.Listings.Price" }
             });
-            using var request = BuildSignedRequest(access, secret, payload);
+            using var request = BuildSignedRequest(access, secret, payload, "/paapi5/getitems", "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems");
             using var response = await _http.SendAsync(request, cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -82,6 +82,77 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         {
             _logger.LogWarning(ex, "Falha na PA-API. Asin={Asin}", asin);
             return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+        int userId,
+        string query,
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return [];
+        }
+
+        var access = _options.AccessKey;
+        var secret = _options.SecretKey;
+        var tag = _options.PartnerTag;
+        if (!_options.HasCredentials)
+        {
+            var account = await _context.MarketplaceAccounts.AsNoTracking()
+                .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Amazon
+                    && item.UserId == userId.ToString())
+                .FirstOrDefaultAsync(cancellationToken);
+            access = First(account?.AppKey, access);
+            secret = First(account?.AppSecret, secret);
+            tag = First(account?.TrackingId, account?.AffiliateTrackingId, tag);
+        }
+
+        if (string.IsNullOrWhiteSpace(access) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(tag))
+        {
+            return [];
+        }
+
+        try
+        {
+            var payload = JsonSerializer.Serialize(new
+            {
+                PartnerTag = tag,
+                PartnerType = "Associates",
+                Marketplace = _options.Marketplace,
+                Keywords = query.Trim(),
+                SearchIndex = "All",
+                ItemCount = OfficialCatalogSearchRules.ClampLimit(limit),
+                Resources = new[]
+                {
+                    "ItemInfo.Title",
+                    "Offers.Listings.Price",
+                    "Images.Primary.Large",
+                    "Images.Primary.Medium"
+                }
+            });
+            using var request = BuildSignedRequest(
+                access,
+                secret,
+                payload,
+                "/paapi5/searchitems",
+                "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems");
+            using var response = await _http.SendAsync(request, cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Amazon PA-API SearchItems falhou. Status={Status}", (int)response.StatusCode);
+                return [];
+            }
+
+            return ParseSearch(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha no SearchItems. Query={Query}", query);
+            return [];
         }
     }
 
@@ -134,7 +205,95 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         };
     }
 
-    private HttpRequestMessage BuildSignedRequest(string accessKey, string secretKey, string payload)
+    public static IReadOnlyList<OfficialCatalogProductDto> ParseSearch(string json)
+    {
+        var list = new List<OfficialCatalogProductDto>();
+        using var doc = JsonDocument.Parse(json);
+        JsonElement items;
+        if (doc.RootElement.TryGetProperty("SearchResult", out var search)
+            && search.TryGetProperty("Items", out items)
+            && items.ValueKind == JsonValueKind.Array)
+        {
+        }
+        else if (doc.RootElement.TryGetProperty("ItemsResult", out var result)
+            && result.TryGetProperty("Items", out items)
+            && items.ValueKind == JsonValueKind.Array)
+        {
+        }
+        else
+        {
+            return list;
+        }
+
+        foreach (var item in items.EnumerateArray())
+        {
+            var asin = item.TryGetProperty("ASIN", out var asinEl) ? asinEl.GetString() : null;
+            var url = item.TryGetProperty("DetailPageURL", out var urlEl) ? urlEl.GetString() : null;
+            if (string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(asin))
+            {
+                url = "https://www.amazon.com.br/dp/" + asin;
+            }
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                continue;
+            }
+
+            string? title = null;
+            if (item.TryGetProperty("ItemInfo", out var info)
+                && info.TryGetProperty("Title", out var titleEl)
+                && titleEl.TryGetProperty("DisplayValue", out var display))
+            {
+                title = display.GetString();
+            }
+
+            decimal? price = null;
+            if (item.TryGetProperty("Offers", out var offers)
+                && offers.TryGetProperty("Listings", out var listings)
+                && listings.GetArrayLength() > 0
+                && listings[0].TryGetProperty("Price", out var priceEl)
+                && priceEl.TryGetProperty("Amount", out var amount)
+                && amount.TryGetDecimal(out var value))
+            {
+                price = value;
+            }
+
+            string? image = null;
+            if (item.TryGetProperty("Images", out var images)
+                && images.TryGetProperty("Primary", out var primary))
+            {
+                if (primary.TryGetProperty("Large", out var large) && large.TryGetProperty("URL", out var largeUrl))
+                {
+                    image = largeUrl.GetString();
+                }
+                else if (primary.TryGetProperty("Medium", out var medium) && medium.TryGetProperty("URL", out var mediumUrl))
+                {
+                    image = mediumUrl.GetString();
+                }
+            }
+
+            list.Add(new OfficialCatalogProductDto
+            {
+                Platform = nameof(MarketplaceType.Amazon),
+                PlatformType = MarketplaceType.Amazon,
+                ProductId = asin,
+                ProductName = title,
+                Price = price,
+                ImageUrl = image,
+                SourceUrl = url,
+                Source = "Api"
+            });
+        }
+
+        return list;
+    }
+
+    private HttpRequestMessage BuildSignedRequest(
+        string accessKey,
+        string secretKey,
+        string payload,
+        string path,
+        string target)
     {
         var now = DateTime.UtcNow;
         var amzDate = now.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
@@ -142,8 +301,6 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         var host = string.IsNullOrWhiteSpace(_options.Host) ? "webservices.amazon.com.br" : _options.Host.Trim();
         var region = string.IsNullOrWhiteSpace(_options.Region) ? "us-east-1" : _options.Region.Trim();
         const string service = "ProductAdvertisingAPI";
-        const string path = "/paapi5/getitems";
-        const string target = "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems";
         var payloadHash = Sha256Hex(payload);
         var canonicalHeaders =
             "content-encoding:amz-1.0\n"

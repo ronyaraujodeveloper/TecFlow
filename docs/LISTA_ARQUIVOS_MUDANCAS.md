@@ -983,6 +983,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreApiService.cs** / **ShopeeAffiliateOfferService.cs** / **AmazonPaApiService.cs** — `/items`, HMAC `productOfferV2` e PA-API 5.0 GetItems.
 - [x] **LiveCheckSearchService.cs** — ping na clonagem/validação com fallback HTML; atualiza preço e status no SQL.
 - [x] **GruposMonitorados.razor** / **Achadinhos.razor** — barra de busca rápida no topo.
+- [x] **OfficialCatalogSearchRules.cs** / **OfficialCatalogSearchService.cs** / **OfficialCatalogSearchController.cs** — `Task.WhenAll` ML/Shopee/Amazon + base interna.
+- [x] **BuscaGlobal.razor** (`/busca`) / **NavMenu.razor** — item Buscar Ofertas e Converter & Gerar Link.
+- [x] **appsettings.json** — nó `Integrations:AmazonPaApi`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

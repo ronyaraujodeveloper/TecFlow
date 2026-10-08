@@ -5,27 +5,16 @@ namespace TecFlow.Tests.Unit.Radar;
 public class MercadoLivreItemParserTests
 {
     [Fact]
-    public void Parse_ShouldReadPriceStatusAndShipping()
+    public void ParseSearch_ShouldMapPermalinkPriceAndTitle()
     {
         const string json = """
-            {"id":"MLB123","title":"Cadeira Gamer","price":199.9,"original_price":299.9,"status":"active","shipping":{"free_shipping":true},"secure_thumbnail":"https://img.ml/a.jpg"}
+            {"results":[{"id":"MLB123","title":"Notebook Gamer","price":1999.9,"permalink":"https://produto.mercadolivre.com.br/MLB-123","thumbnail":"https://http2.mlstatic.com/x.jpg","shipping":{"free_shipping":true}}]}
             """;
-
-        var snapshot = MercadoLivreItemParser.Parse(json);
-        Assert.NotNull(snapshot);
-        Assert.True(snapshot!.IsAvailable);
-        Assert.Equal(199.9m, snapshot.Price);
-        Assert.Equal(299.9m, snapshot.OriginalPrice);
-        Assert.Equal("Cadeira Gamer", snapshot.ProductName);
-        Assert.Contains("Frete grátis", snapshot.Shipping, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("Api", snapshot.Source);
-    }
-
-    [Fact]
-    public void Parse_ShouldMarkClosedAsUnavailable()
-    {
-        var snapshot = MercadoLivreItemParser.Parse("""{"id":"MLB1","title":"X","price":10,"status":"closed"}""");
-        Assert.NotNull(snapshot);
-        Assert.False(snapshot!.IsAvailable);
+        var item = Assert.Single(MercadoLivreItemParser.ParseSearch(json));
+        Assert.Equal("MLB123", item.ProductId);
+        Assert.Equal("Notebook Gamer", item.ProductName);
+        Assert.Equal(1999.9m, item.Price);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-123", item.SourceUrl);
+        Assert.Equal("Frete grátis", item.Shipping);
     }
 }

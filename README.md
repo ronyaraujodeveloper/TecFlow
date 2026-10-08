@@ -246,43 +246,16 @@ As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para
 
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
----
+## 🔍 Fase 32: Módulo de Busca Inteligente e Integração com APIs Oficiais (Live Search & API Integration)
 
-## 🧹 Fase 33: Plano de Expurgo e Retenção de Dados (Data Retention & Purge Pipeline)
-
-- [x] **33.1. Worker de Expurgo Automatizado (`DataPurgeWorker`):**
-  - **Rotina Diária de Manutenção (Cron Job às 03:00 AM UTC):** Worker de segundo plano projetado para execução contínua com baixo impacto de I/O em disco e CPU.
-  - **Exclusão de Mídia Física em Disco (`PurgeOldMediaFiles`):**
-    - Varredura na pasta `wwwroot/uploads/products/{TenantId}/{yyyy/MM}/`.
-    - Apagamento físico de todos os arquivos `.jpg`/`.png` cujos registros associados na tabela tenham sido criados há mais de 7 dias.
-    - Atualização do campo `ImageUrl = NULL` ou caminho relativo para o placeholder padrão da aplicação.
-
-- [x] **33.2. Condensação de Histórico de Preços (`ColdStorageArchiver`):**
-  - **Migração Pré-Deleção (*Extract-Transform-Archive*):**
-    - Antes da exclusão da mensagem capturada, o serviço extrai as métricas de precificação: `{ Platform, PlatformProductId, Price, CouponCode, CapturedAt }`.
-    - Insere o registro condensado de poucas bytes na tabela `ProductPriceHistory`.
-  - **Preservação da Memória Analítica:** Garante que o histórico de preços para os badges de "Menor Preço em 30 Dias" permaneça intacto mesmo após o descarte do texto longo e da imagem física.
-
-- [x] **33.3. Manutenção de Alta Performance na Tabela Principal:**
-  - **Hard Delete na Tabela `GroupCapturedMessages`:**
-    - Execução da instrução SQL em lotes (*Batch Delete*) para prevenir *table lock* no SQL Server:
-      `DELETE TOP (5000) FROM GroupCapturedMessages WHERE CreatedAt < DATEADD(day, -14, GETUTCDATE())`
-  - **Manutenção de Índices:** Reorganização/reconstrução automática dos índices da tabela principal após o expurgo para garantir que as queries de paginação Blazor (`Skip`/`Take`) continuem respondendo em sub-100ms.
-
-## 🖼️ Fase 34: Otimização, Padronização e Regra Estrita de Mídia (Media Pipeline & Compression)
-
-- [x] **34.1. Regra Estrita de Ingestão de Imagens (`StrictImageIngestionPolicy`):**
-  - **Interceptador Único de Salvamento:** Nenhuma imagem do Telegram, upload manual ou scraping pode ser salva na pasta `wwwroot/uploads/` sem passar obrigatoriamente pelo pipeline de validação e otimização.
-  - **Rejeição/Ajuste de Formatos Inválidos:** Conversão forçada de arquivos pesados (PNGs sem transparência, BMPs, TIFFs ou JPEGs não otimizados) para o padrão leve da plataforma.
-
-- [x] **34.2. Processamento e Normalização Técnica (`ImageOptimizationService`):**
-  - **Redimensionamento Proporcional (Aspect Ratio Preserved):** Limite estrito de **1080px no maior lado** (largura ou altura), garantindo excelente definição sem distorção em telas mobile, notebooks e monitores ultrawide.
-  - **Compressão Dinâmica e Formato WebP/JPEG:** Aplicação de qualidade adaptativa de 75% a 80%, reduzindo o peso final de cada foto para a faixa ideal de **80 KB a 250 KB** (economia de até 85% de espaço em disco e tráfego de rede).
-  - **Remoção de Metadados (EXIF Stripping):** Expurgo automático de dados de geolocalização e perfis de cor para garantir segurança, privacidade e menor tamanho de payload.
-
-- [x] **34.3. Adaptação Responsiva para Canais de Disparo (WhatsApp & Telegram Layouts):**
-  - **Preview Perfeito Multi-Tela:** Mapeamento de proporção que evita cortes indesejados nas miniaturas do WhatsApp Web, WhatsApp Mobile e Telegram Desktop.
-  - **Fallback com Canvas Neutro:** Aplicação automática de fundo neutro em imagens com proporções extremas (muito compridas ou verticais) para exibição elegante nos cards do Blazor e nos canais de mensagem.
+- [x] **32.3. Filtro Local e Live Check no Workflow:**
+  - Filtro em memória/LINQ nas telas de Grupos Monitorados e Achadinhos VIP.
+  - Re-checagem ao vivo (Live Check) de status, preço e cupom por SKU no clone/desbloqueio.
+- [x] **32.4. Motor de Descoberta por Palavra-Chave nas APIs Oficiais:**
+  - Implementação de endpoints de busca textual nas APIs do Mercado Livre (`/sites/MLB/search`), Shopee (`productOfferV2`) e Amazon (`SearchItems`).
+  - Mapeamento das credenciais corporativas da Amazon PA-API no `appsettings.json`.
+- [x] **32.5. Interface Dedicada de Busca Omnichannel (`/busca`):**
+  - Criação da página Blazor `/busca` integrada ao menu principal para exibição da vitrine unificada de resultados das lojas oficiais + base interna.
 
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

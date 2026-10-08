@@ -200,6 +200,12 @@ flowchart LR
   TREND -->|5 creditos UTC midnight| CRED[(TenantCredits)]
   LIVE[LiveCheckSearchService] -->|ML /items + Shopee HMAC + PA-API| APIEXT[APIs oficiais]
   LIVE -->|fallback HTML ValidateAsync| VAL
+  BUSCAUI[BuscaGlobal /busca] -->|GET api/busca WhenAll| CAT[OfficialCatalogSearchService]
+  CAT -->|sites/MLB/search| APIEXT
+  CAT -->|productOfferV2 keyword| APIEXT
+  CAT -->|PA-API SearchItems| APIEXT
+  CAT -->|GroupCapturedMessages termo| SQL
+  BUSCAUI -->|POST api/links/convert| CONV
   GMUI -->|q minPrice maxPrice cupom loja| LIVE
   ACH[Achadinhos.razor] -->|GET api/achadinhos blur| POOL
   ACH -->|busca q/store/preco| LIVE

@@ -95,6 +95,10 @@
                         <i class="bi bi-link-45deg portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Gerador de Links</span>
                     </a>
+                    <a href="/busca" class="portal-nav-link portal-nav-sublink @GetActiveClass("/busca")" @onclick="NotifyNavigate">
+                        <i class="bi bi-search portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Buscar Ofertas</span>
+                    </a>
                     <a href="/radar-ofertas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/radar-ofertas")" @onclick="NotifyNavigate">
                         <i class="bi bi-broadcast portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Radar de Ofertas</span>
@@ -242,6 +246,7 @@
         "/account/integrations",
         "/integracoes/lojas",
         "/gerador-links",
+        "/busca",
         "/comissao/gerar",
         "/radar-ofertas",
         "/radar/perfil",

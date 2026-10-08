@@ -1,0 +1,231 @@
+﻿@page "/busca"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
+@using TecFlow.Core.Enums
+@using TecFlow.Database.Filter
+@using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.LinkGenerator
+@using TecFlow.SharedUi.Services.Radar
+@inject IOfficialCatalogSearchApiService SearchApi
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject ILogger<BuscaGlobal> Logger
+
+<PageTitle>Buscar Ofertas — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="text-center mb-4">
+        <h1 class="h3 fw-bold mb-1">Buscar Ofertas</h1>
+        <p class="text-muted small mb-0">Consulta paralela nas APIs oficiais do Mercado Livre, Shopee e Amazon.</p>
+    </div>
+
+    <form class="col-12 col-lg-8 mx-auto mb-4 px-0" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
+        <div class="input-group input-group-lg">
+            <input class="form-control" placeholder="Ex: notebook 16GB, fone bluetooth..." @bind="_keyword" />
+            <button type="submit" class="btn btn-primary" disabled="@_busy">Buscar</button>
+        </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
+            <div class="form-check">
+                <input id="busca-ml" class="form-check-input" type="checkbox" @bind="_ml" />
+                <label class="form-check-label" for="busca-ml">Mercado Livre</label>
+            </div>
+            <div class="form-check">
+                <input id="busca-shopee" class="form-check-input" type="checkbox" @bind="_shopee" />
+                <label class="form-check-label" for="busca-shopee">Shopee</label>
+            </div>
+            <div class="form-check">
+                <input id="busca-amazon" class="form-check-input" type="checkbox" @bind="_amazon" />
+                <label class="form-check-label" for="busca-amazon">Amazon</label>
+            </div>
+            <div class="form-check">
+                <input id="busca-cupom" class="form-check-input" type="checkbox" @bind="_couponOnly" />
+                <label class="form-check-label" for="busca-cupom">Apenas com cupom</label>
+            </div>
+        </div>
+        <div class="row g-2 mt-2">
+            <div class="col-6">
+                <label class="form-label small fw-semibold" for="busca-min">Preço mín.</label>
+                <input id="busca-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" />
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-semibold" for="busca-max">Preço máx.</label>
+                <input id="busca-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" />
+            </div>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small">@_info</div>
+    }
+
+    @if (_items.Count == 0 && _searched && !_busy)
+    {
+        <div class="alert alert-light border">Nenhum produto retornado. Confira as lojas marcadas e as chaves da Amazon/Shopee.</div>
+    }
+    else if (_items.Count > 0)
+    {
+        <div class="row g-3">
+            @foreach (var item in _items)
+            {
+                var platform = item.PlatformType ?? MarketplaceType.Shopee;
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card border-0 shadow-sm h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex gap-3 mb-3">
+                                <div class="product-image-preview-box product-image-preview-box--sm">
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="product-image-preview-placeholder">Sem imagem</span>
+                                    }
+                                </div>
+                                <div>
+                                    <span class="badge rounded-pill @PlatformBadgeHelper.GetPlatformBadgeClass(item.Platform)"
+                                          style="background-color: @PlatformBadgeHelper.GetPlatformColor(item.Platform); color: @(platform == MarketplaceType.MercadoLivre ? "#000000" : "#FFFFFF");">
+                                        @PlatformBadgeHelper.GetPlatformLabel(item.Platform, item.PlatformType)
+                                    </span>
+                                    <span class="badge text-bg-light">@item.Source</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.CouponCode))
+                                    {
+                                        <span class="badge text-bg-warning">@item.CouponCode</span>
+                                    }
+                                </div>
+                            </div>
+                            <h2 class="h6">@(item.ProductName ?? "Produto")</h2>
+                            <p class="fw-semibold mb-1">@ProductMetadataHtmlParser.FormatBrl(item.Price)</p>
+                            @if (!string.IsNullOrWhiteSpace(item.Shipping))
+                            {
+                                <p class="small text-muted mb-2">@item.Shipping</p>
+                            }
+                            <button type="button"
+                                    class="btn btn-primary mt-auto"
+                                    disabled="@(_busy || _convertingUrl == item.SourceUrl)"
+                                    @onclick="() => ConvertAsync(item)">
+                                Converter &amp; Gerar Link
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string _keyword = string.Empty;
+    private bool _ml = true;
+    private bool _shopee = true;
+    private bool _amazon = true;
+    private bool _couponOnly;
+    private decimal? _minPrice;
+    private decimal? _maxPrice;
+    private bool _busy;
+    private bool _searched;
+    private string? _error;
+    private string? _info;
+    private string? _convertingUrl;
+    private List<OfficialCatalogProductDto> _items = [];
+
+    private async Task SearchAsync()
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            var result = await SearchApi.SearchAsync(new OfficialCatalogSearchFilter
+            {
+                Keyword = _keyword,
+                MinPrice = _minPrice,
+                MaxPrice = _maxPrice,
+                HasCoupon = _couponOnly ? true : null,
+                MercadoLivre = _ml,
+                Shopee = _shopee,
+                Amazon = _amazon
+            });
+            _searched = true;
+            if (!result.Success || result.Data is null)
+            {
+                _items = [];
+                _error = result.ErrorMessage ?? "Não foi possível consultar as lojas oficiais.";
+                return;
+            }
+
+            _items = result.Data.DataList ?? [];
+            if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
+            {
+                _error = result.Data.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha na busca omnichannel.");
+            _error = "Falha inesperada na busca.";
+            _items = [];
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ConvertAsync(OfficialCatalogProductDto item)
+    {
+        if (string.IsNullOrWhiteSpace(item.SourceUrl))
+        {
+            return;
+        }
+
+        _convertingUrl = item.SourceUrl;
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            var result = await AffiliateLinkApi.GenerateAsync(new GerarLinkAfiliadoDto
+            {
+                OriginalUrl = item.SourceUrl,
+                Source = "Gerador",
+                SourceGroup = "Busca omnichannel",
+                CustomNickname = item.ProductName
+            });
+            if (result.Success && result.Data is not null)
+            {
+                result.Data.NormalizeHttp200();
+            }
+
+            if (result.Success && result.Data is { HasConvertedLink: true })
+            {
+                var link = string.IsNullOrWhiteSpace(result.Data.ShortenedUrl)
+                    ? result.Data.AffiliateUrl
+                    : result.Data.ShortenedUrl;
+                _info = $"Link gerado: {link}";
+            }
+            else
+            {
+                _error = result.Data?.Descricao
+                    ?? result.ErrorMessage
+                    ?? "Não foi possível converter. Cadastre a loja da plataforma em Minhas Lojas.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao converter da busca. Url={Url}", item.SourceUrl);
+            _error = "Falha ao gerar o link de afiliado.";
+        }
+        finally
+        {
+            _convertingUrl = null;
+            _busy = false;
+        }
+    }
+}

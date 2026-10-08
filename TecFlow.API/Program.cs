@@ -87,6 +87,7 @@ builder.Services.AddHostedService<TecFlow.API.Workers.OfferIntelligenceWorker>()
 builder.Services.AddHostedService<TecFlow.API.Workers.PreFlightWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.GlobalTrendingDealsWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.ProductImageCleanupWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.DataPurgeWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]

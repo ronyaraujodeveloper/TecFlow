@@ -20,5 +20,8 @@ public class ProductPriceHistory : BaseEntity
     [MaxLength(1000)]
     public string? SourceUrl { get; set; }
 
+    [MaxLength(64)]
+    public string? CouponCode { get; set; }
+
     public DateTime CapturedAt { get; set; } = DateTime.UtcNow;
 }

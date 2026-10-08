@@ -242,48 +242,28 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
 
 ## 🚀 Fases do Desenvolvimento (Checklist ativo)
 
-As **Fases 1 a 31** (e entregas equivalentes já concluídas) foram movidas para o [Registro Histórico de Fases Concluídas](./docs/HISTORICO_FASES_CONCLUIDAS.md).
+As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para o [Registro Histórico de Fases Concluídas](./docs/HISTORICO_FASES_CONCLUIDAS.md).
 
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
-
-## 🔍 Fase 32: Módulo de Busca Inteligente e Integração com APIs Oficiais (Live Search & API Integration)
-
-- [x] **32.1. Buscador de Ofertas com Validação em Tempo Real (`LiveCheckSearchService`):**
-  - **Barra de Busca com Indexação Full-Text:** Campo de busca rápida no topo da tela de grupos monitorados e achadinhos, filtrando por palavra-chave, faixa de preço, cupom e loja.
-  - **Estratégia de Validação *Pre-Flight* (Live Check):**
-    - Ao selecionar uma oferta para disparar ou clonar, o serviço executa um ping assíncrono para a API da loja correspondente via ID do produto.
-    - **Checagem de Anúncio:** Retorna se a oferta/campanha permanece ativa ou se o anúncio foi pausado/encerrado na origem.
-    - **Checagem de Variação de Preço/Cupom:** Se o preço na API for menor do que o capturado no banco ou houver um novo cupom ativo, atualiza a entidade e o card em tempo real antes de enviar ao canal do cliente.
-
-- [x] **32.2. Ingestão Gratuita via APIs Oficiais de Afiliados:**
-  - **Mercado Livre Developers API (`MercadoLivreApiService`):**
-    - Consulta de endpoints públicos `/items/{Item_ID}` e `/offers` sem necessidade de token de usuário final.
-    - Captura automática de `original_price`, `price`, `status`, estoque disponível e condições de frete.
-  - **Shopee Affiliate Open API (`ShopeeApiService`):**
-    - Integração via `AppKey` / `AppSecret` com assinatura HMAC-SHA256 no header da requisição.
-    - Consulta ao endpoint `productOfferV2` para buscar detalhes do item, taxa de comissão e cupons de loja vigentes.
-  - **Amazon Product Advertising API (`AmazonPaApiService` - PA-API 5.0):**
-    - Integração HMAC via chave de associado Amazon para requisições `GetItems` e `SearchItems`.
-    - Mapeamento de ofertas em tempo real com renovação de cota de chamadas atrelada às vendas da conta.
 
 ---
 
 ## 🧹 Fase 33: Plano de Expurgo e Retenção de Dados (Data Retention & Purge Pipeline)
 
-- [ ] **33.1. Worker de Expurgo Automatizado (`DataPurgeWorker`):**
+- [x] **33.1. Worker de Expurgo Automatizado (`DataPurgeWorker`):**
   - **Rotina Diária de Manutenção (Cron Job às 03:00 AM UTC):** Worker de segundo plano projetado para execução contínua com baixo impacto de I/O em disco e CPU.
   - **Exclusão de Mídia Física em Disco (`PurgeOldMediaFiles`):**
     - Varredura na pasta `wwwroot/uploads/products/{TenantId}/{yyyy/MM}/`.
     - Apagamento físico de todos os arquivos `.jpg`/`.png` cujos registros associados na tabela tenham sido criados há mais de 7 dias.
     - Atualização do campo `ImageUrl = NULL` ou caminho relativo para o placeholder padrão da aplicação.
 
-- [ ] **33.2. Condensação de Histórico de Preços (`ColdStorageArchiver`):**
+- [x] **33.2. Condensação de Histórico de Preços (`ColdStorageArchiver`):**
   - **Migração Pré-Deleção (*Extract-Transform-Archive*):**
     - Antes da exclusão da mensagem capturada, o serviço extrai as métricas de precificação: `{ Platform, PlatformProductId, Price, CouponCode, CapturedAt }`.
     - Insere o registro condensado de poucas bytes na tabela `ProductPriceHistory`.
   - **Preservação da Memória Analítica:** Garante que o histórico de preços para os badges de "Menor Preço em 30 Dias" permaneça intacto mesmo após o descarte do texto longo e da imagem física.
 
-- [ ] **33.3. Manutenção de Alta Performance na Tabela Principal:**
+- [x] **33.3. Manutenção de Alta Performance na Tabela Principal:**
   - **Hard Delete na Tabela `GroupCapturedMessages`:**
     - Execução da instrução SQL em lotes (*Batch Delete*) para prevenir *table lock* no SQL Server:
       `DELETE TOP (5000) FROM GroupCapturedMessages WHERE CreatedAt < DATEADD(day, -14, GETUTCDATE())`

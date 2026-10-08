@@ -868,6 +868,10 @@ namespace TecFlow.Data.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("CouponCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");

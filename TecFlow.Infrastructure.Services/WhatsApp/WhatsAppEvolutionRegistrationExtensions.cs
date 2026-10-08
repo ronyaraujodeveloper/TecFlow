@@ -82,6 +82,9 @@ public static class WhatsAppEvolutionRegistrationExtensions
             client.Timeout = TimeSpan.FromSeconds(12);
         });
         services.AddScoped<ILiveCheckSearchService, TecFlow.Infrastructure.Services.Radar.LiveCheckSearchService>();
+        services.AddScoped<TecFlow.Infrastructure.Services.Radar.ColdStorageArchiver>();
+        services.AddScoped<IDataPurgeService, TecFlow.Infrastructure.Services.Radar.DataPurgeService>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Radar.DataPurgeHost>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotCodeStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotSessionStore>();
         services.AddSingleton<IUserBotSyncStatusService, TecFlow.Infrastructure.Services.Telegram.UserBotSyncStatusService>();

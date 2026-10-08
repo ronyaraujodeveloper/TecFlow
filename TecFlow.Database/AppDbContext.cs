@@ -498,6 +498,7 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Platform).HasMaxLength(32).IsRequired();
             entity.Property(item => item.PlatformProductId).HasMaxLength(80).IsRequired();
             entity.Property(item => item.SourceUrl).HasMaxLength(1000);
+            entity.Property(item => item.CouponCode).HasMaxLength(64);
             entity.HasIndex(item => new { item.Platform, item.PlatformProductId, item.CapturedAt });
         });
 

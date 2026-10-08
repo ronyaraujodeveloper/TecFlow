@@ -29,8 +29,8 @@ public sealed class ProductImageCleanupService : IProductImageCleanupService
         var cutoff = DateTime.UtcNow.Subtract(ProductImageStorageRules.Retention);
         var items = await _context.GroupCapturedMessages
             .Where(item => item.CreatedAt <= cutoff
-                && item.ProductImageUrl != null
-                && item.ProductImageUrl.Contains("/uploads/products"))
+                && ((item.ProductImageUrl != null && item.ProductImageUrl.Contains("/uploads/products"))
+                    || (item.MediaUrl != null && item.MediaUrl.Contains("/uploads/products"))))
             .OrderBy(item => item.CreatedAt)
             .Take(500)
             .ToListAsync(cancellationToken);
@@ -62,6 +62,17 @@ public sealed class ProductImageCleanupService : IProductImageCleanupService
         if (purged > 0)
         {
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var photo in ProductImageStorageRules.EnumerateExistingPhotos(webRoot))
+        {
+            if (photo.LastWriteUtc > cutoff)
+            {
+                continue;
+            }
+
+            TryDeleteFile(webRoot, photo.WebRelativeUrl);
+            purged++;
         }
 
         _logger.LogInformation("Expurgo de imagens de produto. Arquivos={Count} Corte={Cutoff:u}", purged, cutoff);

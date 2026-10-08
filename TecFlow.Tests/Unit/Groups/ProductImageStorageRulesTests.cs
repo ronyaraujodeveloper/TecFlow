@@ -27,10 +27,10 @@ public class ProductImageStorageRulesTests
     }
 
     [Fact]
-    public void IsExpired_ShouldFlagRecordsOlderThanFifteenDays()
+    public void IsExpired_ShouldFlagRecordsOlderThanSevenDays()
     {
         var now = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        Assert.True(ProductImageStorageRules.IsExpired(now.AddDays(-16), now));
+        Assert.True(ProductImageStorageRules.IsExpired(now.AddDays(-8), now));
         Assert.False(ProductImageStorageRules.IsExpired(now.AddDays(-2), now));
     }
 

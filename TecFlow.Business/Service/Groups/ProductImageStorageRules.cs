@@ -1,9 +1,11 @@
-﻿namespace TecFlow.Business.Service.Groups;
+﻿using TecFlow.Business.Service.Radar;
+
+namespace TecFlow.Business.Service.Groups;
 
 public static class ProductImageStorageRules
 {
     public const string RelativeRoot = "/uploads/products";
-    public static readonly TimeSpan Retention = TimeSpan.FromDays(15);
+    public static readonly TimeSpan Retention = DataPurgeRules.MediaRetention;
 
     public static string BuildRelativeUrl(int tenantId, DateTime utcNow, string fileName)
     {
@@ -347,22 +349,25 @@ public static class ProductImageStorageRules
             yield break;
         }
 
-        foreach (var file in Directory.EnumerateFiles(root, "*.jpg", SearchOption.AllDirectories))
+        foreach (var pattern in new[] { "*.jpg", "*.jpeg", "*.png" })
         {
-            if (!TryParseMessageIdFromFileName(file, out var messageId)
-                || !TryParseTenantIdFromPhysicalPath(webRootPath, file, out var tenantId))
+            foreach (var file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
             {
-                continue;
-            }
+                if (!TryParseMessageIdFromFileName(file, out var messageId)
+                    || !TryParseTenantIdFromPhysicalPath(webRootPath, file, out var tenantId))
+                {
+                    continue;
+                }
 
-            var webUrl = ToWebRelativePath(file);
-            if (string.IsNullOrWhiteSpace(webUrl) || !IsLocalProductImage(webUrl))
-            {
-                continue;
-            }
+                var webUrl = ToWebRelativePath(file);
+                if (string.IsNullOrWhiteSpace(webUrl) || !IsLocalProductImage(webUrl))
+                {
+                    continue;
+                }
 
-            var stamp = File.GetLastWriteTimeUtc(file);
-            yield return new ExistingProductPhoto(messageId, tenantId, webUrl, stamp);
+                var stamp = File.GetLastWriteTimeUtc(file);
+                yield return new ExistingProductPhoto(messageId, tenantId, webUrl, stamp);
+            }
         }
     }
 }

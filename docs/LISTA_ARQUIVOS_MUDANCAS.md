@@ -984,11 +984,19 @@ API / Orquestrador / Worker / WebUi
 - [x] **LiveCheckSearchService.cs** — ping na clonagem/validação com fallback HTML; atualiza preço e status no SQL.
 - [x] **GruposMonitorados.razor** / **Achadinhos.razor** — barra de busca rápida no topo.
 
+### Fase 33 README — Expurgo e retenção de dados
+
+- [x] **DataPurgeRules.cs** / **DataPurgeRulesTests.cs** — mídia 7 dias, mensagens 14 dias, lote 5000 e delay 03:00 UTC.
+- [x] **IDataPurgeServices.cs** / **DataPurgeService.cs** / **DataPurgeHost** / **DataPurgeWorker.cs**.
+- [x] **ColdStorageArchiver.cs** — extrai SKU/preço/cupom para `ProductPriceHistory` antes do hard delete.
+- [x] **AddProductPriceHistoryCouponCode** — coluna `CouponCode` no histórico condensado.
+- [x] **ProductImageCleanupService.cs** — retenção alinhada a 7 dias, JPG/PNG e órfãos em disco.
+
 ### Módulo 31 — Pipeline de imagens capturadas
 
 - [x] **ProductImageStorageRules.cs** / **ProductImageStorageRulesTests.cs** — pasta `{tenant}/{yyyy}/{MM}` e nome `{messageId}_{guid8}.jpg`.
 - [x] **OfferProductMediaStore.cs** — grava caminho relativo em `GroupCapturedMessages.ProductImageUrl`.
-- [x] **ProductImageCleanupService.cs** / **ProductImageCleanupWorker.cs** — expurgo diário após 15 dias.
+- [x] **ProductImageCleanupService.cs** / **ProductImageCleanupWorker.cs** — expurgo diário após 7 dias.
 - [x] **GruposMonitorados.razor** — `<img src="@item.ProductImageUrl">` com placeholder se a foto foi expurgada.
 
 ### Módulo 32 — Sincronização assíncrona de grupos

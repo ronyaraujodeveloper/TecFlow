@@ -166,7 +166,10 @@ flowchart LR
   GMUI -->|GET ListAsync DeduplicateOffers Id msg URL| SQL
   APIIIS[TecFlowApiPool Integrated Security] -->|login Windows AutomacaoSociais| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
-  PURGE[ProductImageCleanupWorker] -->|15 dias File.Delete + ProductImageUrl null| MEDIA
+  PURGE[ProductImageCleanupWorker] -->|7 dias File.Delete + ProductImageUrl null| MEDIA
+  DATAPURGE[DataPurgeWorker 03:00 UTC] -->|PurgeOldMediaFiles jpg/png 7d| MEDIA
+  DATAPURGE -->|ColdStorageArchiver SKU preco cupom| HIST[(ProductPriceHistory)]
+  DATAPURGE -->|DELETE TOP 5000 14d + REORGANIZE| SQL
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
@@ -190,7 +193,7 @@ flowchart LR
   MIDIA[EstudioMidia] -->|moldura ImageSharp + og:video| UP[wwwroot/uploads/frames videos]
   PRE[PreFlightWorker] -->|15min ValidateAsync| PAUSE[Paused WA/TG]
   PRE --> HOLD[(PreFlightNotifications)]
-  PIPE[OfferPipelineProcessor] -->|RecordAsync SKU| HIST[(ProductPriceHistory)]
+  PIPE[OfferPipelineProcessor] -->|RecordAsync SKU| HIST
   GMUI -->|badges 30d EnrichOffersAsync| HIST
   TREND[GlobalTrendingDealsWorker] -->|drop>=15% + engajamento| POOL[(GlobalTrendingDeals)]
   TREND -->|5 creditos UTC midnight| CRED[(TenantCredits)]

@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOfferRadarApiService, OfferRadarApiService>();
         services.AddScoped<IOfferIntelligenceApiService, OfferIntelligenceApiService>();
         services.AddScoped<IPreFlightApiService, PreFlightApiService>();
+        services.AddScoped<IDealIntelligenceApiService, DealIntelligenceApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

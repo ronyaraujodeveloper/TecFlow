@@ -21,6 +21,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly IOfferValidationService _validation;
     private readonly IAffiliateLinkConverterService _converter;
     private readonly IGroupCapturedMessagesService _capturedMessages;
+    private readonly IPriceHistoryTracker _priceHistory;
     private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
@@ -31,6 +32,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         IOfferValidationService validation,
         IAffiliateLinkConverterService converter,
         IGroupCapturedMessagesService capturedMessages,
+        IPriceHistoryTracker priceHistory,
         ILogger<MonitoredGroupService> logger)
     {
         _context = context;
@@ -40,6 +42,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _validation = validation;
         _converter = converter;
         _capturedMessages = capturedMessages;
+        _priceHistory = priceHistory;
         _logger = logger;
     }
 
@@ -143,6 +146,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .DeduplicateOffers(offers.Select(MapOffer))
                 .Take(resolvedTake)
                 .ToList();
+            await _priceHistory.EnrichOffersAsync(uniqueOffers, cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {

@@ -69,3 +69,4 @@
 [2026-10-06 23:54:56] fix(ofertas): limita o feed a 10 itens e serve as fotos em /uploads
 [2026-10-07 19:38:18] fix(ofertas): impede ofertas duplicadas no feed monitorado
 [2026-10-07 20:33:23] fix(ui): restaura paginacao completa do feed monitorado
+[2026-10-07 21:43:38] feat(achadinhos): historico de precos, creditos VIP e worker de Super Achados

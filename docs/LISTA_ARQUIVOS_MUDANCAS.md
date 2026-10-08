@@ -968,6 +968,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **PreFlightService.cs** / **PreFlightWorker.cs** / **PreFlightController.cs**.
 - [x] **SaudeAgendamentos.razor** — central de notificações e substituição inteligente de link.
 
+### Fase 31 README — Deal Intelligence (Achadinhos e histórico)
+
+- [x] **ProductPriceHistory.cs** / **TenantCredit.cs** / **CreditTransaction.cs** / **GlobalTrendingDeal.cs** / **TenantDealUnlock.cs** / **AddDealIntelligencePhase31**.
+- [x] **ProductSkuRules.cs** / **PriceHistoryRules.cs** / **DealCreditRules.cs** — SKU MLB/Shopee/Amazon, janelas 30/60/90 e cota diária.
+- [x] **PriceHistoryTracker.cs** / **DealCreditsService.cs** / **GlobalTrendingDealsEngine.cs** / **GlobalTrendingDealsWorker.cs**.
+- [x] **DealIntelligenceController.cs** — vitrine VIP, desbloqueio (1 crédito) e pacotes +10/+50/+100.
+- [x] **Achadinhos.razor** / **GruposMonitorados.razor** — blur paywall e badges de menor preço / economia.
+
 ### Módulo 31 — Pipeline de imagens capturadas
 
 - [x] **ProductImageStorageRules.cs** / **ProductImageStorageRulesTests.cs** — pasta `{tenant}/{yyyy}/{MM}` e nome `{messageId}_{guid8}.jpg`.

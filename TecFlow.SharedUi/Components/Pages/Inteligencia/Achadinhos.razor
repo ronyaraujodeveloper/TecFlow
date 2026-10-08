@@ -1,0 +1,205 @@
+﻿@page "/achadinhos"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using TecFlow.Business.Dto
+@using TecFlow.Business.Service.LinkStrategies
+@using TecFlow.SharedUi.Services.Radar
+@inject IDealIntelligenceApiService Api
+@inject ILogger<Achadinhos> Logger
+
+<PageTitle>Achadinhos VIP — TecFlow</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Pool de Achadinhos</h1>
+            <p class="text-muted small mb-0">
+                Super Achados globais com queda de preço de pelo menos 15% e alta circulação nos grupos. Plano Básico recebe 5 créditos diários (UTC).
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="badge text-bg-dark">Créditos @_credits.TotalBalance</span>
+            <span class="badge text-bg-secondary">Diários @_credits.DailyBalance</span>
+            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => _showTopUp = true">Comprar pacote</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small">@_error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_info))
+    {
+        <div class="alert alert-success py-2 small">@_info</div>
+    }
+
+    @if (_items.Count == 0)
+    {
+        <div class="alert alert-light border">Nenhum Super Achado no pool ainda. O worker global atualiza a cada 10 minutos.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var item in _items)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex gap-3 mb-3 @(item.IsUnlocked ? null : "offer-card-blur")">
+                                <div class="product-image-preview-box product-image-preview-box--sm">
+                                    @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
+                                    {
+                                        <img src="@item.ProductImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="product-image-preview-placeholder">Sem imagem</span>
+                                    }
+                                </div>
+                                <div class="min-w-0">
+                                    <h2 class="h6 fw-semibold mb-1 text-break">@item.ProductName</h2>
+                                    <p class="fw-bold mb-1">@ProductMetadataHtmlParser.FormatBrl(item.CurrentPrice)</p>
+                                    @if (item.IsUnlocked && item.PreviousPrice is > 0)
+                                    {
+                                        <p class="text-muted small mb-0">Antes @ProductMetadataHtmlParser.FormatBrl(item.PreviousPrice)</p>
+                                    }
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                <span class="badge bg-fire">🔥 Super Achado</span>
+                                <span class="badge text-bg-success">Queda @item.PriceDropPercent.ToString("0")%</span>
+                                <span class="badge text-bg-secondary">@item.Platform</span>
+                            </div>
+                            @if (item.IsUnlocked)
+                            {
+                                <a class="btn btn-outline-secondary w-100" href="@item.OriginalUrl" target="_blank" rel="noopener noreferrer">Abrir oferta</a>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary w-100" disabled="@_busy" @onclick="() => UnlockAsync(item.Id)">
+                                    🔒 Desbloquear esta oferta (1 Crédito)
+                                </button>
+                            }
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (_showTopUp)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.45);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5">Pacotes de créditos</h2>
+                    <button type="button" class="btn-close" @onclick="() => _showTopUp = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Desconto progressivo por volume. Créditos comprados não expiram.</p>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => TopUpAsync(10)">+10 créditos</button>
+                        <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => TopUpAsync(50)">+50 créditos</button>
+                        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="() => TopUpAsync(100)">+100 créditos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<GlobalTrendingDealDto> _items = [];
+    private TenantCreditsDto _credits = new();
+    private bool _busy;
+    private bool _showTopUp;
+    private string? _error;
+    private string? _info;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var result = await Api.ListAsync();
+            Apply(result.Data);
+            if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar achadinhos.");
+            _error = "Não foi possível carregar o pool de achadinhos.";
+        }
+    }
+
+    private async Task UnlockAsync(int id)
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            var result = await Api.UnlockAsync(id);
+            Apply(result.Data);
+            if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+                if (string.Equals(result.Data.Descricao, "Saldo insuficiente. Compre um pacote de créditos.", StringComparison.Ordinal))
+                {
+                    _showTopUp = true;
+                }
+            }
+            else
+            {
+                _info = result.Data?.Descricao;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task TopUpAsync(int pack)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await Api.TopUpAsync(pack);
+            Apply(result.Data);
+            _showTopUp = false;
+            _info = result.Data?.Descricao;
+            if (result.Data is { Status: false })
+            {
+                _error = result.Data.Descricao;
+                _info = null;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void Apply(DealCreditsResponseDto? data)
+    {
+        _items.Clear();
+        if (data is null)
+        {
+            return;
+        }
+
+        _credits = data.Credits ?? new TenantCreditsDto();
+        if (data.Items is { Count: > 0 })
+        {
+            _items.AddRange(data.Items);
+        }
+    }
+}

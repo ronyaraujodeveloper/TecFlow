@@ -173,6 +173,14 @@
                                         {
                                             <span class="badge bg-success-subtle text-success border border-success me-1">🎫 @item.CouponCode</span>
                                         }
+                                        @if (item.IsLowestPrice30Days)
+                                        {
+                                            <span class="badge bg-fire">🔥 Menor Preço dos Últimos 30 Dias</span>
+                                        }
+                                        @if (item.SavingsVersusAverage is > 0)
+                                        {
+                                            <span class="badge bg-success">🏷️ Economia de R$ @item.SavingsVersusAverage.Value.ToString("N2") vs. Média Histórica</span>
+                                        }
                                     </div>
                                     <p class="text-muted small mb-0">@item.GroupName · @item.ReceivedAt.ToLocalTime().ToString("dd/MM HH:mm")</p>
                                 </div>

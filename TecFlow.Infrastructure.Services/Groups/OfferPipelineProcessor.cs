@@ -15,6 +15,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
     private readonly IGroupCapturedMessagesService _capturedMessages;
     private readonly IOfferValidationService _validation;
     private readonly IOfferProductMediaStore _mediaStore;
+    private readonly IPriceHistoryTracker _priceHistory;
     private readonly ILogger<OfferPipelineProcessor> _logger;
 
     public OfferPipelineProcessor(
@@ -22,12 +23,14 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         IGroupCapturedMessagesService capturedMessages,
         IOfferValidationService validation,
         IOfferProductMediaStore mediaStore,
+        IPriceHistoryTracker priceHistory,
         ILogger<OfferPipelineProcessor> logger)
     {
         _parser = parser;
         _capturedMessages = capturedMessages;
         _validation = validation;
         _mediaStore = mediaStore;
+        _priceHistory = priceHistory;
         _logger = logger;
     }
 
@@ -172,10 +175,12 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                 saved += await _capturedMessages.SaveValidatedOfferAsync(entity, cancellationToken);
                 if (saved > 0)
                 {
-                    break;
-                }
-                if (saved > 0)
-                {
+                    await _priceHistory.RecordAsync(
+                        entity.PrimaryProductUrl ?? entity.OriginalUrl,
+                        entity.PlatformType,
+                        entity.ValidatedPrice ?? entity.ExtractedPrice,
+                        entity.ReceivedAt,
+                        cancellationToken);
                     break;
                 }
             }

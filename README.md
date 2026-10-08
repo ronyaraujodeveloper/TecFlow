@@ -718,6 +718,89 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Painel `/saude/agendamentos` com o motivo da pausa (ex: "Cancelado: Preço alterado de R$ 49 para R$ 89").
   - Botão de substituição pelo menor preço nas lojas concorrentes, recolocando o disparo na fila.
 
+## 💎 Fase 31: Módulo Inteligente de Achadinhos e Histórico de Preços (Deal Intelligence)
+
+- [x] **31.1. Mecanismo de Menor Preço Histórico (`PriceHistoryTracker`):**
+  - **Modelagem de Dados (`ProductPriceHistory`):** Tabela de histórico compacta indexada por `Platform` (Mercado Livre, Shopee, Amazon) + `PlatformProductId` (SKU numérico extraído da URL/API) e `Price`.
+  - **Normalização de SKUs:** Extração do ID do produto independente do título anunciado (ex: `MLB1234567890` no Mercado Livre, `item_id` + `shop_id` na Shopee) para associar variações de postagens ao mesmo item.
+  - **Cálculo de Desconto e Volatilidade:** Algoritmo que calcula o menor valor registrado nos últimos 30, 60 e 90 dias, além do preço médio do período.
+  - **Interface Blazor (`MonitoredGroups.razor` / `Achadinhos.razor`):** Renderização de badges visuais em tempo real no Card de Oferta:
+    - `<span class="badge bg-fire">🔥 Menor Preço dos Últimos 30 Dias</span>`
+    - `<span class="badge bg-success">🏷️ Economia de R$ X vs. Média Histórica</span>`
+
+- [x] **31.2. Gestão de Créditos de Ofertas Vips por Tenant (`TenantDealCredits`):**
+  - **Tabela de Controle (`TenantCredits` & `CreditTransactions`):** Gestão de saldo por `TenantId`, registrando entradas (renovação do plano, compras de pacotes) e saídas (consumo por liberação de Achadinho).
+  - **Regra de Cota Diária (Reset Atômico):** Renovação automática de 5 créditos diários para o Plano Básico todo dia à meia-noite (UTC). Os créditos da cota diária expiram em 24h (não acumulativos), incentivando o engajamento diário.
+  - **Lógica de Desbloqueio Paywall na UI:**
+    - Ofertas classificadas como "Super Achado" nascem com visual estético desfocado/bloqueado (`blur effect`) na vitrine VIP.
+    - Botão no Card: `<button>🔒 Desbloquear esta oferta (1 Crédito)</button>`.
+    - Modal de Top-Up: Quando o saldo zera, exibe opções de pacotes avulsos com desconto progressivo por volume (+10, +50, +100 créditos).
+
+- [x] **31.3. Worker Global de Rastreamento de Tendências (`GlobalTrendingDealsWorker`):**
+  - **Serviço em Segundo Plano Centralizado (`IHostedService`):** Worker executado no nível do sistema (sem vínculo com tenant específico) para varrer produtos em alta (*Trending Deals*).
+  - **Algoritmo de Atratividade:** Cruzamento de alta taxa de engajamento nos grupos (mensagens duplicadas/encaminhadas com frequência) com redução súbita de preço (`PriceDropPercent >= 15%`).
+  - **Vitrine Global ("Pool de Achadinhos"):** Ingestão na tabela `GlobalTrendingDeals` para disponibilização e consumo via créditos por todos os assinantes do TecFlow.
+
+---
+
+## 🔍 Fase 32: Módulo de Busca Inteligente e Integração com APIs Oficiais (Live Search & API Integration)
+
+- [ ] **32.1. Buscador de Ofertas com Validação em Tempo Real (`LiveCheckSearchService`):**
+  - **Barra de Busca com Indexação Full-Text:** Campo de busca rápida no topo da tela de grupos monitorados e achadinhos, filtrando por palavra-chave, faixa de preço, cupom e loja.
+  - **Estratégia de Validação *Pre-Flight* (Live Check):**
+    - Ao selecionar uma oferta para disparar ou clonar, o serviço executa um ping assíncrono para a API da loja correspondente via ID do produto.
+    - **Checagem de Anúncio:** Retorna se a oferta/campanha permanece ativa ou se o anúncio foi pausado/encerrado na origem.
+    - **Checagem de Variação de Preço/Cupom:** Se o preço na API for menor do que o capturado no banco ou houver um novo cupom ativo, atualiza a entidade e o card em tempo real antes de enviar ao canal do cliente.
+
+- [ ] **32.2. Ingestão Gratuita via APIs Oficiais de Afiliados:**
+  - **Mercado Livre Developers API (`MercadoLivreApiService`):**
+    - Consulta de endpoints públicos `/items/{Item_ID}` e `/offers` sem necessidade de token de usuário final.
+    - Captura automática de `original_price`, `price`, `status`, estoque disponível e condições de frete.
+  - **Shopee Affiliate Open API (`ShopeeApiService`):**
+    - Integração via `AppKey` / `AppSecret` com assinatura HMAC-SHA256 no header da requisição.
+    - Consulta ao endpoint `productOfferV2` para buscar detalhes do item, taxa de comissão e cupons de loja vigentes.
+  - **Amazon Product Advertising API (`AmazonPaApiService` - PA-API 5.0):**
+    - Integração HMAC via chave de associado Amazon para requisições `GetItems` e `SearchItems`.
+    - Mapeamento de ofertas em tempo real com renovação de cota de chamadas atrelada às vendas da conta.
+
+---
+
+## 🧹 Fase 33: Plano de Expurgo e Retenção de Dados (Data Retention & Purge Pipeline)
+
+- [ ] **33.1. Worker de Expurgo Automatizado (`DataPurgeWorker`):**
+  - **Rotina Diária de Manutenção (Cron Job às 03:00 AM UTC):** Worker de segundo plano projetado para execução contínua com baixo impacto de I/O em disco e CPU.
+  - **Exclusão de Mídia Física em Disco (`PurgeOldMediaFiles`):**
+    - Varredura na pasta `wwwroot/uploads/products/{TenantId}/{yyyy/MM}/`.
+    - Apagamento físico de todos os arquivos `.jpg`/`.png` cujos registros associados na tabela tenham sido criados há mais de 7 dias.
+    - Atualização do campo `ImageUrl = NULL` ou caminho relativo para o placeholder padrão da aplicação.
+
+- [ ] **33.2. Condensação de Histórico de Preços (`ColdStorageArchiver`):**
+  - **Migração Pré-Deleção (*Extract-Transform-Archive*):**
+    - Antes da exclusão da mensagem capturada, o serviço extrai as métricas de precificação: `{ Platform, PlatformProductId, Price, CouponCode, CapturedAt }`.
+    - Insere o registro condensado de poucas bytes na tabela `ProductPriceHistory`.
+  - **Preservação da Memória Analítica:** Garante que o histórico de preços para os badges de "Menor Preço em 30 Dias" permaneça intacto mesmo após o descarte do texto longo e da imagem física.
+
+- [ ] **33.3. Manutenção de Alta Performance na Tabela Principal:**
+  - **Hard Delete na Tabela `GroupCapturedMessages`:**
+    - Execução da instrução SQL em lotes (*Batch Delete*) para prevenir *table lock* no SQL Server:
+      `DELETE TOP (5000) FROM GroupCapturedMessages WHERE CreatedAt < DATEADD(day, -14, GETUTCDATE())`
+  - **Manutenção de Índices:** Reorganização/reconstrução automática dos índices da tabela principal após o expurgo para garantir que as queries de paginação Blazor (`Skip`/`Take`) continuem respondendo em sub-100ms.
+
+## 🖼️ Fase 34: Otimização, Padronização e Regra Estrita de Mídia (Media Pipeline & Compression)
+
+- [ ] **34.1. Regra Estrita de Ingestão de Imagens (`StrictImageIngestionPolicy`):**
+  - **Interceptador Único de Salvamento:** Nenhuma imagem do Telegram, upload manual ou scraping pode ser salva na pasta `wwwroot/uploads/` sem passar obrigatoriamente pelo pipeline de validação e otimização.
+  - **Rejeição/Ajuste de Formatos Inválidos:** Conversão forçada de arquivos pesados (PNGs sem transparência, BMPs, TIFFs ou JPEGs não otimizados) para o padrão leve da plataforma.
+
+- [ ] **34.2. Processamento e Normalização Técnica (`ImageOptimizationService`):**
+  - **Redimensionamento Proporcional (Aspect Ratio Preserved):** Limite estrito de **1080px no maior lado** (largura ou altura), garantindo excelente definição sem distorção em telas mobile, notebooks e monitores ultrawide.
+  - **Compressão Dinâmica e Formato WebP/JPEG:** Aplicação de qualidade adaptativa de 75% a 80%, reduzindo o peso final de cada foto para a faixa ideal de **80 KB a 250 KB** (economia de até 85% de espaço em disco e tráfego de rede).
+  - **Remoção de Metadados (EXIF Stripping):** Expurgo automático de dados de geolocalização e perfis de cor para garantir segurança, privacidade e menor tamanho de payload.
+
+- [ ] **34.3. Adaptação Responsiva para Canais de Disparo (WhatsApp & Telegram Layouts):**
+  - **Preview Perfeito Multi-Tela:** Mapeamento de proporção que evita cortes indesejados nas miniaturas do WhatsApp Web, WhatsApp Mobile e Telegram Desktop.
+  - **Fallback com Canvas Neutro:** Aplicação automática de fundo neutro em imagens com proporções extremas (muito compridas ou verticais) para exibição elegante nos cards do Blazor e nos canais de mensagem.
+
 ## 🤖 UX e Validação da Conexão Telegram (BotFather Modal)
 
 1. **Validação e Feedbacks do Botão:**

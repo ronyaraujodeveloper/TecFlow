@@ -56,6 +56,10 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IPreFlightService, TecFlow.Infrastructure.Services.Radar.PreFlightService>();
         services.AddSingleton<IPreFlightEngine, TecFlow.Infrastructure.Services.Radar.PreFlightEngine>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Radar.PreFlightHost>();
+        services.AddScoped<IPriceHistoryTracker, TecFlow.Infrastructure.Services.Radar.PriceHistoryTracker>();
+        services.AddScoped<IDealCreditsService, TecFlow.Infrastructure.Services.Radar.DealCreditsService>();
+        services.AddScoped<IGlobalTrendingDealsEngine, TecFlow.Infrastructure.Services.Radar.GlobalTrendingDealsEngine>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Radar.GlobalTrendingDealsHost>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotCodeStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotSessionStore>();
         services.AddSingleton<IUserBotSyncStatusService, TecFlow.Infrastructure.Services.Telegram.UserBotSyncStatusService>();

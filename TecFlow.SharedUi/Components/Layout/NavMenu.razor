@@ -123,6 +123,10 @@
                         <i class="bi bi-shield-check portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Saúde de agendamentos</span>
                     </a>
+                    <a href="/achadinhos" class="portal-nav-link portal-nav-sublink @GetActiveClass("/achadinhos")" @onclick="NotifyNavigate">
+                        <i class="bi bi-stars portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Achadinhos VIP</span>
+                    </a>
                     <a href="/minhas-paginas-publicas" class="portal-nav-link portal-nav-sublink @GetActiveClass("/minhas-paginas-publicas")" @onclick="NotifyNavigate">
                         <i class="bi bi-globe2 portal-nav-icon" aria-hidden="true"></i>
                         <span class="portal-nav-link-label">Minhas Páginas Públicas</span>
@@ -246,6 +250,7 @@
         "/biblioteca-evergreen",
         "/estudio-midia",
         "/saude/agendamentos",
+        "/achadinhos",
         "/minhas-paginas-publicas"
     ];
 

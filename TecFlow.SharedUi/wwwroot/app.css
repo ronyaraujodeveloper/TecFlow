@@ -2127,3 +2127,14 @@ html, body {
     overflow-y: auto;
     z-index: 25;
 }
+
+.badge.bg-fire {
+    background: linear-gradient(90deg, #ff6a00, #ff1e56);
+    color: #fff;
+}
+
+.offer-card-blur {
+    filter: blur(8px);
+    pointer-events: none;
+    user-select: none;
+}

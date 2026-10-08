@@ -190,6 +190,13 @@ flowchart LR
   MIDIA[EstudioMidia] -->|moldura ImageSharp + og:video| UP[wwwroot/uploads/frames videos]
   PRE[PreFlightWorker] -->|15min ValidateAsync| PAUSE[Paused WA/TG]
   PRE --> HOLD[(PreFlightNotifications)]
+  PIPE[OfferPipelineProcessor] -->|RecordAsync SKU| HIST[(ProductPriceHistory)]
+  GMUI -->|badges 30d EnrichOffersAsync| HIST
+  TREND[GlobalTrendingDealsWorker] -->|drop>=15% + engajamento| POOL[(GlobalTrendingDeals)]
+  TREND -->|5 creditos UTC midnight| CRED[(TenantCredits)]
+  ACH[Achadinhos.razor] -->|GET api/achadinhos blur| POOL
+  ACH -->|POST desbloquear 1 credito| UNL[(TenantDealUnlocks)]
+  ACH -->|pacotes +10 +50 +100| TX[(CreditTransactions)]
   SAUDE[SaudeAgendamentos] -->|menor preco concorrente| HOLD
   SAUDE -->|ReplaceFirstUrl Pending| CAMP
   RESOLV -->|URL canônica| CONV[AffiliateLinkConverterService]

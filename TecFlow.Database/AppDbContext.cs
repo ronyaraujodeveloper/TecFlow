@@ -63,6 +63,11 @@ public class AppDbContext : DbContext
     public DbSet<OfferHealthAlert> OfferHealthAlerts { get; set; } = null!;
     public DbSet<EvergreenOffer> EvergreenOffers { get; set; } = null!;
     public DbSet<PreFlightNotification> PreFlightNotifications { get; set; } = null!;
+    public DbSet<ProductPriceHistory> ProductPriceHistories { get; set; } = null!;
+    public DbSet<TenantCredit> TenantCredits { get; set; } = null!;
+    public DbSet<CreditTransaction> CreditTransactions { get; set; } = null!;
+    public DbSet<GlobalTrendingDeal> GlobalTrendingDeals { get; set; } = null!;
+    public DbSet<TenantDealUnlock> TenantDealUnlocks { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -485,6 +490,46 @@ public class AppDbContext : DbContext
             entity.Property(item => item.SubstituteUrl).HasMaxLength(2048);
             entity.Property(item => item.SubstituteName).HasMaxLength(255);
             entity.HasIndex(item => new { item.UserId, item.IsResolved, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<ProductPriceHistory>(entity =>
+        {
+            entity.ToTable("ProductPriceHistory");
+            entity.Property(item => item.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.PlatformProductId).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.SourceUrl).HasMaxLength(1000);
+            entity.HasIndex(item => new { item.Platform, item.PlatformProductId, item.CapturedAt });
+        });
+
+        modelBuilder.Entity<TenantCredit>(entity =>
+        {
+            entity.ToTable("TenantCredits");
+            entity.HasIndex(item => item.TenantId).IsUnique();
+        });
+
+        modelBuilder.Entity<CreditTransaction>(entity =>
+        {
+            entity.ToTable("CreditTransactions");
+            entity.Property(item => item.Kind).HasMaxLength(32).IsRequired();
+            entity.HasIndex(item => new { item.TenantId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<GlobalTrendingDeal>(entity =>
+        {
+            entity.ToTable("GlobalTrendingDeals");
+            entity.Property(item => item.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.PlatformProductId).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.ProductName).HasMaxLength(255).IsRequired();
+            entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
+            entity.Property(item => item.OriginalUrl).HasMaxLength(1000).IsRequired();
+            entity.HasIndex(item => new { item.Platform, item.PlatformProductId }).IsUnique();
+            entity.HasIndex(item => new { item.IsActive, item.PriceDropPercent });
+        });
+
+        modelBuilder.Entity<TenantDealUnlock>(entity =>
+        {
+            entity.ToTable("TenantDealUnlocks");
+            entity.HasIndex(item => new { item.TenantId, item.DealId }).IsUnique();
         });
 
         modelBuilder.Entity<WhatsAppGroup>(entity =>

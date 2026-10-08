@@ -72,6 +72,14 @@ public class GroupCapturedOfferDto
     public bool IsMediaPending { get; set; }
 
     public string? ExternalMessageId { get; set; }
+
+    public bool IsLowestPrice30Days { get; set; }
+
+    public decimal? MinPrice30Days { get; set; }
+
+    public decimal? AveragePrice30Days { get; set; }
+
+    public decimal? SavingsVersusAverage { get; set; }
 }
 
 public class CloneMonitoredOfferResultDto

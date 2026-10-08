@@ -22,6 +22,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly IAffiliateLinkConverterService _converter;
     private readonly IGroupCapturedMessagesService _capturedMessages;
     private readonly IPriceHistoryTracker _priceHistory;
+    private readonly ILiveCheckSearchService _liveCheck;
     private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
@@ -33,6 +34,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         IAffiliateLinkConverterService converter,
         IGroupCapturedMessagesService capturedMessages,
         IPriceHistoryTracker priceHistory,
+        ILiveCheckSearchService liveCheck,
         ILogger<MonitoredGroupService> logger)
     {
         _context = context;
@@ -43,6 +45,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _converter = converter;
         _capturedMessages = capturedMessages;
         _priceHistory = priceHistory;
+        _liveCheck = liveCheck;
         _logger = logger;
     }
 
@@ -67,7 +70,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
             }
 
-            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, cancellationToken);
+            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, search: null, cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
             list.Descricao = notes.Exists(item => item == MonitoredGroupSyncRules.BackgroundStartedMessage)
                 ? MonitoredGroupSyncRules.BackgroundStartedMessage
@@ -97,6 +100,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         int skip = 0,
         int take = 25,
         bool ignored = false,
+        LiveSearchFilterDto? search = null,
         CancellationToken cancellationToken = default)
     {
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
@@ -121,6 +125,41 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             if (!string.IsNullOrWhiteSpace(groupKey))
             {
                 query = query.Where(item => item.GroupKey == groupKey);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search?.Keyword))
+            {
+                var term = search.Keyword.Trim();
+                query = query.Where(item =>
+                    (item.ProductName != null && item.ProductName.Contains(term))
+                    || (item.CouponCode != null && item.CouponCode.Contains(term))
+                    || item.OriginalUrl.Contains(term)
+                    || (item.PlatformName != null && item.PlatformName.Contains(term)));
+            }
+
+            if (search?.MinPrice is > 0)
+            {
+                var min = search.MinPrice.Value;
+                query = query.Where(item => (item.ValidatedPrice ?? item.ExtractedPrice) >= min);
+            }
+
+            if (search?.MaxPrice is > 0)
+            {
+                var max = search.MaxPrice.Value;
+                query = query.Where(item => (item.ValidatedPrice ?? item.ExtractedPrice) <= max);
+            }
+
+            if (search?.HasCoupon == true)
+            {
+                query = query.Where(item => item.CouponCode != null && item.CouponCode != "");
+            }
+
+            if (!string.IsNullOrWhiteSpace(search?.Store))
+            {
+                var store = search.Store.Trim();
+                query = query.Where(item =>
+                    (item.PlatformName != null && item.PlatformName.Contains(store))
+                    || item.OriginalUrl.Contains(store));
             }
 
             if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
@@ -185,9 +224,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
         }
 
-        var result = await _validation.ValidateAsync(entity.OriginalUrl, entity.ExtractedPrice, cancellationToken);
-        ApplyValidation(entity, result);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
 
         var list = await ListAsync(
             userId,
@@ -197,6 +234,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             skip: 0,
             take: GroupOfferCaptureRules.OffersPageSize,
             ignored: false,
+            search: null,
             cancellationToken);
         list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
         return list;
@@ -215,9 +253,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
         }
 
-        var validation = await _validation.ValidateAsync(entity.OriginalUrl, entity.ExtractedPrice, cancellationToken);
-        ApplyValidation(entity, validation);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
 
         if (entity.OfferStatus == GroupOfferStatuses.Esgotado)
         {

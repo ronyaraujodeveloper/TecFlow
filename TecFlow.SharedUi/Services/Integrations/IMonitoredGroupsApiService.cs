@@ -15,6 +15,7 @@ public interface IMonitoredGroupsApiService
         int skip = 0,
         int take = 25,
         bool ignored = false,
+        LiveSearchFilterDto? search = null,
         CancellationToken cancellationToken = default);
 
     Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(string? channel, CancellationToken cancellationToken = default);
@@ -73,10 +74,24 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         int skip = 0,
         int take = 25,
         bool ignored = false,
+        LiveSearchFilterDto? search = null,
         CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<MonitoredGroupsResponseDto>(
             Path,
-            new { hours, groupKey, channel, skip, take, ignored },
+            new
+            {
+                hours,
+                groupKey,
+                channel,
+                skip,
+                take,
+                ignored,
+                q = search?.Keyword,
+                minPrice = search?.MinPrice,
+                maxPrice = search?.MaxPrice,
+                coupon = search?.HasCoupon,
+                store = search?.Store
+            },
             cancellationToken);
 
     public Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(

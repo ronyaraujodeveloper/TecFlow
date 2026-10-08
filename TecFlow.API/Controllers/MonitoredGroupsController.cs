@@ -42,12 +42,34 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] int skip = 0,
         [FromQuery] int take = 25,
         [FromQuery] bool ignored = false,
+        [FromQuery] string? q = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] bool? coupon = null,
+        [FromQuery] string? store = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var userId = ResolveUserId();
-            return Ok(await _service.ListAsync(userId, hours, groupKey, channel, skip, take, ignored, cancellationToken));
+            var search = new LiveSearchFilterDto
+            {
+                Keyword = q,
+                MinPrice = minPrice,
+                MaxPrice = maxPrice,
+                HasCoupon = coupon,
+                Store = store
+            };
+            return Ok(await _service.ListAsync(
+                userId,
+                hours,
+                groupKey,
+                channel,
+                skip,
+                take,
+                ignored,
+                search.HasAny ? search : null,
+                cancellationToken));
         }
         catch (Exception ex)
         {

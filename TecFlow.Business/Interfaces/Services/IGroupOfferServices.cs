@@ -66,6 +66,7 @@ public interface IMonitoredGroupService
         int skip = 0,
         int take = 25,
         bool ignored = false,
+        LiveSearchFilterDto? search = null,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> SetIgnoredAsync(

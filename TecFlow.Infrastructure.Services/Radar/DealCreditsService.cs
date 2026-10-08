@@ -12,14 +12,22 @@ public sealed class DealCreditsService : IDealCreditsService
 {
     private readonly AppDbContext _context;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ILiveCheckSearchService _liveCheck;
 
-    public DealCreditsService(AppDbContext context, ICurrentTenantService currentTenant)
+    public DealCreditsService(
+        AppDbContext context,
+        ICurrentTenantService currentTenant,
+        ILiveCheckSearchService liveCheck)
     {
         _context = context;
         _currentTenant = currentTenant;
+        _liveCheck = liveCheck;
     }
 
-    public async Task<DealCreditsResponseDto> ListShowcaseAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<DealCreditsResponseDto> ListShowcaseAsync(
+        int userId,
+        LiveSearchFilterDto? search = null,
+        CancellationToken cancellationToken = default)
     {
         var tenantId = await ResolveTenantIdAsync(userId, cancellationToken);
         if (tenantId is null)
@@ -42,10 +50,28 @@ public sealed class DealCreditsService : IDealCreditsService
             .Take(40)
             .ToListAsync(cancellationToken);
 
+        var items = deals.Select(item => MapDeal(item, unlockedSet.Contains(item.Id))).ToList();
+        if (search is { HasAny: true })
+        {
+            items = items
+                .Where(item => LiveSearchRules.Matches(
+                    item.ProductName,
+                    item.CurrentPrice,
+                    null,
+                    item.Platform,
+                    null,
+                    search.Keyword,
+                    search.MinPrice,
+                    search.MaxPrice,
+                    search.HasCoupon,
+                    search.Store))
+                .ToList();
+        }
+
         return new DealCreditsResponseDto
         {
             Credits = MapCredits(credits),
-            Items = deals.Select(item => MapDeal(item, unlockedSet.Contains(item.Id))).ToList()
+            Items = items
         };
     }
 
@@ -63,6 +89,27 @@ public sealed class DealCreditsService : IDealCreditsService
             return Fail("Achadinho não encontrado.");
         }
 
+        var live = await _liveCheck.CheckUrlAsync(
+            userId,
+            deal.OriginalUrl,
+            null,
+            deal.CurrentPrice,
+            cancellationToken);
+        if (!live.IsAvailable)
+        {
+            deal.IsActive = false;
+            deal.Touch();
+            await _context.SaveChangesAsync(cancellationToken);
+            return Fail("O anúncio não está mais ativo na loja.");
+        }
+
+        if (live.Price is > 0)
+        {
+            deal.PreviousPrice = deal.CurrentPrice;
+            deal.CurrentPrice = live.Price.Value;
+            deal.Touch();
+        }
+
         var already = await _context.TenantDealUnlocks.AnyAsync(
             item => item.TenantId == tenantId.Value && item.DealId == dealId,
             cancellationToken);
@@ -71,7 +118,7 @@ public sealed class DealCreditsService : IDealCreditsService
         {
             if (!DealCreditRules.TryConsume(wallet.DailyBalance, wallet.PurchasedBalance, DealCreditRules.UnlockCost, out var daily, out var purchased))
             {
-                var empty = await ListShowcaseAsync(userId, cancellationToken);
+                var empty = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
                 empty.Status = false;
                 empty.Descricao = "Saldo insuficiente. Compre um pacote de créditos.";
                 return empty;
@@ -96,7 +143,7 @@ public sealed class DealCreditsService : IDealCreditsService
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        var result = await ListShowcaseAsync(userId, cancellationToken);
+        var result = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
         result.Descricao = already ? "Oferta já desbloqueada." : "Oferta desbloqueada com 1 crédito.";
         return result;
     }
@@ -124,7 +171,7 @@ public sealed class DealCreditsService : IDealCreditsService
             Kind = DealCreditRules.KindTopUp
         });
         await _context.SaveChangesAsync(cancellationToken);
-        var result = await ListShowcaseAsync(userId, cancellationToken);
+        var result = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
         result.Descricao = $"Pacote de {packSize} créditos adicionado.";
         return result;
     }

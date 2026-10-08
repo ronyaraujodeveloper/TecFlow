@@ -22,8 +22,27 @@ public sealed class DealIntelligenceController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<DealCreditsResponseDto>> ListAsync(CancellationToken cancellationToken) =>
-        Ok(await _credits.ListShowcaseAsync(ResolveUserId(), cancellationToken));
+    public async Task<ActionResult<DealCreditsResponseDto>> ListAsync(
+        [FromQuery] string? q = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] bool? coupon = null,
+        [FromQuery] string? store = null,
+        CancellationToken cancellationToken = default)
+    {
+        var search = new LiveSearchFilterDto
+        {
+            Keyword = q,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice,
+            HasCoupon = coupon,
+            Store = store
+        };
+        return Ok(await _credits.ListShowcaseAsync(
+            ResolveUserId(),
+            search.HasAny ? search : null,
+            cancellationToken));
+    }
 
     [HttpPost("{id:int}/desbloquear")]
     public async Task<ActionResult<DealCreditsResponseDto>> UnlockAsync(int id, CancellationToken cancellationToken) =>

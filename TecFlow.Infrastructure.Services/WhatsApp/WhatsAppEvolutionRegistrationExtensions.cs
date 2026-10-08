@@ -60,6 +60,28 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IDealCreditsService, TecFlow.Infrastructure.Services.Radar.DealCreditsService>();
         services.AddScoped<IGlobalTrendingDealsEngine, TecFlow.Infrastructure.Services.Radar.GlobalTrendingDealsEngine>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Radar.GlobalTrendingDealsHost>();
+        services.Configure<TecFlow.Business.Integrations.Amazon.AmazonPaApiOptions>(
+            configuration.GetSection(TecFlow.Business.Integrations.Amazon.AmazonPaApiOptions.SectionName));
+        services.AddHttpClient<IMercadoLivreApiService, TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.mercadolibre.com/");
+            client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TecFlowLiveCheck/1.0");
+        });
+        services.AddHttpClient<IShopeeAffiliateOfferService, TecFlow.Infrastructure.Services.Radar.ShopeeAffiliateOfferService>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<TecFlow.Business.Integrations.Shopee.ShopeeIntegrationOptions>>().Value;
+            var baseUrl = string.IsNullOrWhiteSpace(options.AffiliateApiBaseUrl)
+                ? "https://open-api.affiliate.shopee.com.br"
+                : options.AffiliateApiBaseUrl.TrimEnd('/');
+            client.BaseAddress = new Uri(baseUrl + "/");
+            client.Timeout = TimeSpan.FromSeconds(12);
+        });
+        services.AddHttpClient<IAmazonPaApiService, TecFlow.Infrastructure.Services.Radar.AmazonPaApiService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(12);
+        });
+        services.AddScoped<ILiveCheckSearchService, TecFlow.Infrastructure.Services.Radar.LiveCheckSearchService>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotCodeStore>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Telegram.TelegramUserBotSessionStore>();
         services.AddSingleton<IUserBotSyncStatusService, TecFlow.Infrastructure.Services.Telegram.UserBotSyncStatusService>();

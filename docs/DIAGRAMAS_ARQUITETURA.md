@@ -194,7 +194,12 @@ flowchart LR
   GMUI -->|badges 30d EnrichOffersAsync| HIST
   TREND[GlobalTrendingDealsWorker] -->|drop>=15% + engajamento| POOL[(GlobalTrendingDeals)]
   TREND -->|5 creditos UTC midnight| CRED[(TenantCredits)]
+  LIVE[LiveCheckSearchService] -->|ML /items + Shopee HMAC + PA-API| APIEXT[APIs oficiais]
+  LIVE -->|fallback HTML ValidateAsync| VAL
+  GMUI -->|q minPrice maxPrice cupom loja| LIVE
   ACH[Achadinhos.razor] -->|GET api/achadinhos blur| POOL
+  ACH -->|busca q/store/preco| LIVE
+  CLONE[Clonar Oferta] -->|CheckAndPersistAsync| LIVE
   ACH -->|POST desbloquear 1 credito| UNL[(TenantDealUnlocks)]
   ACH -->|pacotes +10 +50 +100| TX[(CreditTransactions)]
   SAUDE[SaudeAgendamentos] -->|menor preco concorrente| HOLD
@@ -388,7 +393,8 @@ flowchart TB
 
 ```
 Tecso.AutomacaoCusor/
-├── README.md                    # Painel principal (roadmap + regras)
+├── README.md                    # Painel principal (regras + Fases 32–34)
+│   └── docs/HISTORICO_FASES_CONCLUIDAS.md  # Fases 1–31 concluídas
 ├── TecFlow.sln
 ├── .gitignore
 ├── docs/                        # Documentação (este arquivo, LISTA, ANALISE, …)

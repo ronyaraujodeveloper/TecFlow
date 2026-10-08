@@ -120,6 +120,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **appsettings.Homologacao.json** — `Database:Provider=SqlServer` / `AutomacaoSociais` (mesmo banco do `appsettings.json`).
 - [x] **TecFlow.Infrastructure/Migrations/20260922240000_AddMarketplaceAccountOptionalCredentialsPg.cs** — mesmas colunas no PostgreSQL do IIS (`Homologacao`) para evitar Npgsql `42703`.
 - [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** — `dotnet ef database update` no SQL Server (`TecFlow.Data`) para Development e Homologacao IIS.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** — registro das Fases 1 a 31 e entregas `[x]`; o `README.md` ficou só com regras permanentes e Fases 32–34.
 - [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
 - [x] **TecFlow.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
 - [x] **TecFlow.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.
@@ -975,6 +976,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **PriceHistoryTracker.cs** / **DealCreditsService.cs** / **GlobalTrendingDealsEngine.cs** / **GlobalTrendingDealsWorker.cs**.
 - [x] **DealIntelligenceController.cs** — vitrine VIP, desbloqueio (1 crédito) e pacotes +10/+50/+100.
 - [x] **Achadinhos.razor** / **GruposMonitorados.razor** — blur paywall e badges de menor preço / economia.
+
+### Fase 32 README — Live Search e APIs oficiais
+
+- [x] **LiveSearchRules.cs** / **LiveSearchRulesTests.cs** — filtro por palavra-chave, preço, cupom e loja.
+- [x] **MercadoLivreApiService.cs** / **ShopeeAffiliateOfferService.cs** / **AmazonPaApiService.cs** — `/items`, HMAC `productOfferV2` e PA-API 5.0 GetItems.
+- [x] **LiveCheckSearchService.cs** — ping na clonagem/validação com fallback HTML; atualiza preço e status no SQL.
+- [x] **GruposMonitorados.razor** / **Achadinhos.razor** — barra de busca rápida no topo.
 
 ### Módulo 31 — Pipeline de imagens capturadas
 

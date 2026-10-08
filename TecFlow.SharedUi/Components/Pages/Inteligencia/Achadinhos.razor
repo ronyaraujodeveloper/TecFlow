@@ -24,6 +24,28 @@
         </div>
     </div>
 
+    <form class="row g-2 align-items-end mb-4" @onsubmit="ApplySearchAsync" @onsubmit:preventDefault="true">
+        <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold" for="ach-q">Busca rápida</label>
+            <input id="ach-q" class="form-control" placeholder="Palavra-chave ou loja" @bind="_searchKeyword" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label fw-semibold" for="ach-min">Preço mín.</label>
+            <input id="ach-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label fw-semibold" for="ach-max">Preço máx.</label>
+            <input id="ach-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label fw-semibold" for="ach-store">Loja</label>
+            <input id="ach-store" class="form-control" placeholder="Amazon, ML..." @bind="_store" />
+        </div>
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="btn btn-outline-primary" disabled="@_busy">Filtrar</button>
+        </div>
+    </form>
+
     @if (!string.IsNullOrWhiteSpace(_error))
     {
         <div class="alert alert-danger py-2 small">@_error</div>
@@ -117,6 +139,10 @@
     private bool _showTopUp;
     private string? _error;
     private string? _info;
+    private string? _searchKeyword;
+    private decimal? _minPrice;
+    private decimal? _maxPrice;
+    private string? _store;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -124,7 +150,7 @@
     {
         try
         {
-            var result = await Api.ListAsync();
+            var result = await Api.ListAsync(BuildSearch());
             Apply(result.Data);
             if (result.Data is { Status: false })
             {
@@ -186,6 +212,20 @@
         {
             _busy = false;
         }
+    }
+
+    private Task ApplySearchAsync() => LoadAsync();
+
+    private LiveSearchFilterDto? BuildSearch()
+    {
+        var filter = new LiveSearchFilterDto
+        {
+            Keyword = _searchKeyword,
+            MinPrice = _minPrice,
+            MaxPrice = _maxPrice,
+            Store = _store
+        };
+        return filter.HasAny ? filter : null;
     }
 
     private void Apply(DealCreditsResponseDto? data)

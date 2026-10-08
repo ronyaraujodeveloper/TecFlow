@@ -17,7 +17,10 @@ public interface IPriceHistoryTracker
 
 public interface IDealCreditsService
 {
-    Task<DealCreditsResponseDto> ListShowcaseAsync(int userId, CancellationToken cancellationToken = default);
+    Task<DealCreditsResponseDto> ListShowcaseAsync(
+        int userId,
+        LiveSearchFilterDto? search = null,
+        CancellationToken cancellationToken = default);
 
     Task<DealCreditsResponseDto> UnlockAsync(int userId, int dealId, CancellationToken cancellationToken = default);
 

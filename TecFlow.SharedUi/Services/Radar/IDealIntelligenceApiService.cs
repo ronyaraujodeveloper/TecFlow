@@ -7,7 +7,9 @@ namespace TecFlow.SharedUi.Services.Radar;
 
 public interface IDealIntelligenceApiService
 {
-    Task<ApiResult<DealCreditsResponseDto>> ListAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<DealCreditsResponseDto>> ListAsync(
+        LiveSearchFilterDto? search = null,
+        CancellationToken cancellationToken = default);
 
     Task<ApiResult<DealCreditsResponseDto>> UnlockAsync(int id, CancellationToken cancellationToken = default);
 
@@ -25,8 +27,20 @@ public sealed class DealIntelligenceApiService : IDealIntelligenceApiService
         _loading = loading;
     }
 
-    public Task<ApiResult<DealCreditsResponseDto>> ListAsync(CancellationToken cancellationToken = default) =>
-        _http.GetAsync<DealCreditsResponseDto>("api/achadinhos", cancellationToken: cancellationToken);
+    public Task<ApiResult<DealCreditsResponseDto>> ListAsync(
+        LiveSearchFilterDto? search = null,
+        CancellationToken cancellationToken = default) =>
+        _http.GetAsync<DealCreditsResponseDto>(
+            "api/achadinhos",
+            new
+            {
+                q = search?.Keyword,
+                minPrice = search?.MinPrice,
+                maxPrice = search?.MaxPrice,
+                coupon = search?.HasCoupon,
+                store = search?.Store
+            },
+            cancellationToken);
 
     public Task<ApiResult<DealCreditsResponseDto>> UnlockAsync(int id, CancellationToken cancellationToken = default)
     {

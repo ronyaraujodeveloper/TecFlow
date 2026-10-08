@@ -8,6 +8,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
+using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
 
@@ -17,18 +18,18 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
 {
     private readonly HttpClient _http;
     private readonly ShopeeIntegrationOptions _options;
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<ShopeeAffiliateOfferService> _logger;
 
     public ShopeeAffiliateOfferService(
         HttpClient http,
         IOptions<ShopeeIntegrationOptions> options,
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<ShopeeAffiliateOfferService> logger)
     {
         _http = http;
         _options = options.Value;
-        _context = context;
+        _dbContextFactory = dbContextFactory;
         _logger = logger;
     }
 
@@ -42,10 +43,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
         var secret = _options.ResolveAffiliateSecret();
         if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(secret) || _options.IsSandboxMode)
         {
-            var account = await _context.MarketplaceAccounts.AsNoTracking()
-                .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Shopee
-                    && item.UserId == userId.ToString() && item.AppKey != null && item.AppSecret != null)
-                .FirstOrDefaultAsync(cancellationToken);
+            var account = await LoadShopeeAccountAsync(userId, cancellationToken);
             appId = account?.AppKey ?? appId;
             secret = account?.AppSecret ?? secret;
         }
@@ -99,10 +97,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
         var secret = _options.ResolveAffiliateSecret();
         if (!OfficialCatalogSearchRules.HasRealAffiliateCredentials(appId, secret))
         {
-            var account = await _context.MarketplaceAccounts.AsNoTracking()
-                .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Shopee
-                    && item.UserId == userId.ToString() && item.AppKey != null && item.AppSecret != null)
-                .FirstOrDefaultAsync(cancellationToken);
+            var account = await LoadShopeeAccountAsync(userId, cancellationToken);
             appId = account?.AppKey ?? appId;
             secret = account?.AppSecret ?? secret;
         }
@@ -240,6 +235,15 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
         }
 
         return list;
+    }
+
+    private async Task<MarketplaceAccount?> LoadShopeeAccountAsync(int userId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.MarketplaceAccounts.AsNoTracking()
+            .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Shopee
+                && item.UserId == userId.ToString() && item.AppKey != null && item.AppSecret != null)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static string? ReadId(JsonElement node, string name)

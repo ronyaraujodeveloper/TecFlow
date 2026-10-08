@@ -246,16 +246,13 @@ As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para
 
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
-## 🔍 Fase 32: Módulo de Busca Inteligente e Integração com APIs Oficiais (Live Search & API Integration)
 
-- [x] **32.3. Filtro Local e Live Check no Workflow:**
-  - Filtro em memória/LINQ nas telas de Grupos Monitorados e Achadinhos VIP.
-  - Re-checagem ao vivo (Live Check) de status, preço e cupom por SKU no clone/desbloqueio.
-- [x] **32.4. Motor de Descoberta por Palavra-Chave nas APIs Oficiais:**
-  - Implementação de endpoints de busca textual nas APIs do Mercado Livre (`/sites/MLB/search`), Shopee (`productOfferV2`) e Amazon (`SearchItems`).
-  - Mapeamento das credenciais corporativas da Amazon PA-API no `appsettings.json`.
-- [x] **32.5. Interface Dedicada de Busca Omnichannel (`/busca`):**
-  - Criação da página Blazor `/busca` integrada ao menu principal para exibição da vitrine unificada de resultados das lojas oficiais + base interna.
+  ## 🐞 Correção de Concorrência de DbContext na Busca (`IDbContextFactory` Fix)
+
+- [x] **Isolamento de Thread no Live Search Paralelo:**
+  - Substituição da injeção direta de `DbContext` scoped por `IDbContextFactory<AppDbContext>` nas consultas simultâneas da tela `/busca`.
+- [x] **Execução Segura em Parallel Tasks:**
+  - Garantia de escopos de banco independentes para cada task concorrente no motor de busca omnichannel.
 
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

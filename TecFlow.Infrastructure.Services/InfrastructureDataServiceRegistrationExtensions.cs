@@ -74,7 +74,7 @@ namespace TecFlow.Infrastructure.Services
             services.AddScoped<IUserContextProvider, UserContextProvider>();
             services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 
-            services.AddDbContext<AppDbContext>(options =>
+            void ConfigureAppDbContext(DbContextOptionsBuilder options)
             {
                 options.UseConfiguredProvider(connectionString, provider);
 
@@ -85,7 +85,10 @@ namespace TecFlow.Infrastructure.Services
                 {
                     options.EnableSensitiveDataLogging();
                 }
-            });
+            }
+
+            services.AddDbContextFactory<AppDbContext>(ConfigureAppDbContext, ServiceLifetime.Scoped);
+            services.AddDbContext<AppDbContext>(ConfigureAppDbContext);
 
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<ICampaignRepository, CampaignRepository>();

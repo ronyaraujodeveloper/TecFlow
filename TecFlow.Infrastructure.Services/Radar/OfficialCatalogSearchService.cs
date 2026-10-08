@@ -13,18 +13,18 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     private readonly IMercadoLivreApiService _mercadoLivre;
     private readonly IShopeeAffiliateOfferService _shopee;
     private readonly IAmazonPaApiService _amazon;
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     public OfficialCatalogSearchService(
         IMercadoLivreApiService mercadoLivre,
         IShopeeAffiliateOfferService shopee,
         IAmazonPaApiService amazon,
-        AppDbContext context)
+        IDbContextFactory<AppDbContext> dbContextFactory)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
         _amazon = amazon;
-        _context = context;
+        _dbContextFactory = dbContextFactory;
     }
 
     public async Task<OfficialCatalogSearchResponseDto> SearchAsync(
@@ -61,7 +61,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var amazonTask = includeAmazon
             ? _amazon.SearchProductsAsync(userId, keyword, limit, cancellationToken)
             : Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([]);
-        var internalTask = SearchInternalAsync(keyword, limit, cancellationToken);
+        var internalTask = SearchLocalProductsAsync(keyword, limit, cancellationToken);
         await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask);
 
         var merged = mlTask.Result
@@ -93,12 +93,13 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         };
     }
 
-    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchInternalAsync(
+    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchLocalProductsAsync(
         string keyword,
         int limit,
         CancellationToken cancellationToken)
     {
-        var rows = await _context.GroupCapturedMessages
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var rows = await dbContext.GroupCapturedMessages
             .AsNoTracking()
             .Where(item =>
                 (item.ProductName != null && item.ProductName.Contains(keyword))

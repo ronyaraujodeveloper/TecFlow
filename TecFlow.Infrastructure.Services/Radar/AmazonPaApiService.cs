@@ -9,6 +9,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Amazon;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
+using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
 
@@ -18,18 +19,18 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
 {
     private readonly HttpClient _http;
     private readonly AmazonPaApiOptions _options;
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<AmazonPaApiService> _logger;
 
     public AmazonPaApiService(
         HttpClient http,
         IOptions<AmazonPaApiOptions> options,
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<AmazonPaApiService> logger)
     {
         _http = http;
         _options = options.Value;
-        _context = context;
+        _dbContextFactory = dbContextFactory;
         _logger = logger;
     }
 
@@ -43,10 +44,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         var tag = _options.PartnerTag;
         if (!_options.HasCredentials)
         {
-            var account = await _context.MarketplaceAccounts.AsNoTracking()
-                .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Amazon
-                    && item.UserId == userId.ToString())
-                .FirstOrDefaultAsync(cancellationToken);
+            var account = await LoadAmazonAccountAsync(userId, cancellationToken);
             access = First(account?.AppKey, access);
             secret = First(account?.AppSecret, secret);
             tag = First(account?.TrackingId, account?.AffiliateTrackingId, tag);
@@ -101,10 +99,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         var tag = _options.PartnerTag;
         if (!_options.HasCredentials)
         {
-            var account = await _context.MarketplaceAccounts.AsNoTracking()
-                .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Amazon
-                    && item.UserId == userId.ToString())
-                .FirstOrDefaultAsync(cancellationToken);
+            var account = await LoadAmazonAccountAsync(userId, cancellationToken);
             access = First(account?.AppKey, access);
             secret = First(account?.AppSecret, secret);
             tag = First(account?.TrackingId, account?.AffiliateTrackingId, tag);
@@ -353,6 +348,15 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
     }
 
     private static string ToHex(byte[] bytes) => Convert.ToHexString(bytes).ToLowerInvariant();
+
+    private async Task<MarketplaceAccount?> LoadAmazonAccountAsync(int userId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.MarketplaceAccounts.AsNoTracking()
+            .Where(item => item.IsActive && item.MarketplaceType == MarketplaceType.Amazon
+                && item.UserId == userId.ToString())
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
     private static string? First(params string?[] values)
     {

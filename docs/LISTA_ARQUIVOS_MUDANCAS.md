@@ -986,6 +986,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **OfficialCatalogSearchRules.cs** / **OfficialCatalogSearchService.cs** / **OfficialCatalogSearchController.cs** — `Task.WhenAll` ML/Shopee/Amazon + base interna.
 - [x] **BuscaGlobal.razor** (`/busca`) / **NavMenu.razor** — item Buscar Ofertas e Converter & Gerar Link.
 - [x] **appsettings.json** — nó `Integrations:AmazonPaApi`.
+- [x] **InfrastructureDataServiceRegistrationExtensions.cs** — `AddDbContextFactory<AppDbContext>` scoped.
+- [x] **OfficialCatalogSearchService.cs** / **ShopeeAffiliateOfferService.cs** / **AmazonPaApiService.cs** — contexto isolado por task no `WhenAll`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

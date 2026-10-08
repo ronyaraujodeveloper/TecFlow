@@ -739,7 +739,15 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
     - Consulta ao endpoint `productOfferV2` para buscar detalhes do item, taxa de comissão e cupons de loja vigentes.
   - **Amazon Product Advertising API (`AmazonPaApiService` - PA-API 5.0):**
     - Integração HMAC via chave de associado Amazon para requisições `GetItems` e `SearchItems`.
-    - Mapeamento de ofertas em tempo real com renovação de cota de chamadas atrelada às vendas da conta.
+    - Mapeamento de ofertas em tempo real com renovação de cota de chamadas atrelada às vendas da conta.    
+- [x] **32.3. Filtro Local e Live Check no Workflow:**
+  - Filtro em memória/LINQ nas telas de Grupos Monitorados e Achadinhos VIP.
+  - Re-checagem ao vivo (Live Check) de status, preço e cupom por SKU no clone/desbloqueio.
+- [x] **32.4. Motor de Descoberta por Palavra-Chave nas APIs Oficiais:**
+  - Implementação de endpoints de busca textual nas APIs do Mercado Livre (`/sites/MLB/search`), Shopee (`productOfferV2`) e Amazon (`SearchItems`).
+  - Mapeamento das credenciais corporativas da Amazon PA-API no `appsettings.json`.
+- [x] **32.5. Interface Dedicada de Busca Omnichannel (`/busca`):**
+  - Criação da página Blazor `/busca` integrada ao menu principal para exibição da vitrine unificada de resultados das lojas oficiais + base interna.
 
     
 

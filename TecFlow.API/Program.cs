@@ -69,6 +69,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddTecFlowCoreServices();
 builder.Services.AddTecFlowInfrastructureServices(builder.Configuration);
+// IDbContextFactory<AppDbContext> + AddDbContext (SQL Server / tenant scoped) — paralelo seguro no /busca.
 builder.Services.AddTecFlowInfrastructureData(builder.Configuration);
 builder.Services.AddTecFlowApplicationServices();
 builder.Services.AddAffiliateLinkInfrastructureServices();

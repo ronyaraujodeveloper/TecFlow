@@ -204,7 +204,7 @@ flowchart LR
   CAT -->|sites/MLB/search| APIEXT
   CAT -->|productOfferV2 keyword| APIEXT
   CAT -->|PA-API SearchItems| APIEXT
-  CAT -->|GroupCapturedMessages termo| SQL
+  CAT -->|IDbContextFactory CreateDbContext por task| SQL
   BUSCAUI -->|POST api/links/convert| CONV
   GMUI -->|q minPrice maxPrice cupom loja| LIVE
   ACH[Achadinhos.razor] -->|GET api/achadinhos blur| POOL

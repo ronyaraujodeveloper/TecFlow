@@ -79,3 +79,4 @@
 [2026-10-08 21:18:53]fix(busca): User-Agent e DTO results na busca publica do MLB
 [2026-10-08 21:34:17]fix(busca): diagnostico HTTP do MLB no badge da /busca
 [2026-10-08 21:55:52]fix(busca): token OAuth do MLB e aviso de conta conectada
+[2026-10-08 22:12:18]feat(busca): botao Conectar no badge do Mercado Livre

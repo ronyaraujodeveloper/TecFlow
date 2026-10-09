@@ -751,6 +751,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Isolamento de DbContext na busca paralela:** `IDbContextFactory<AppDbContext>` scoped por task no `WhenAll`.
 - [x] **SearchTelemetryUI:** badges por plataforma (encontrados / 0 / chave ausente) e log estruturado `ML/Shopee/Amazon/Local`.
 - [x] **MercadoLivreSearchFix:** User-Agent Chrome/120, DTO `results`, Bearer OAuth da conta/`appsettings` e badge `⚠️ Requer conta conectada no painel`.
+- [x] **Botão Conectar no badge ML:** redireciona para Minhas Lojas com modal de Mercado Livre.
 
     
 

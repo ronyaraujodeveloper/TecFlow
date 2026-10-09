@@ -88,6 +88,7 @@
 <ConnectStoreModal Visible="@_connectModalVisible"
                    IsBusy="@_isBusy"
                    ErrorMessage="@_connectModalError"
+                   PreferredPlatform="_connectPreferredPlatform"
                    OnClose="CloseConnectModal"
                    OnStartOAuth="StartOAuthAsync"
                    OnLojaVinculada="OnLojaVinculadaAsync" />
@@ -101,6 +102,7 @@
     private string? _pageMessage;
     private bool _pageMessageIsError;
     private string? _connectModalError;
+    private MarketplaceType? _connectPreferredPlatform;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,27 +126,43 @@
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        var stripQuery = false;
 
-        if (!query.TryGetValue("link", out var linkResult))
+        if (query.TryGetValue("conectar", out var conectarRaw))
         {
-            return;
+            var conectar = conectarRaw.ToString();
+            if (conectar.Contains("mercado", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(conectar, "ml", StringComparison.OrdinalIgnoreCase))
+            {
+                _connectPreferredPlatform = MarketplaceType.MercadoLivre;
+                _connectModalVisible = true;
+                stripQuery = true;
+            }
         }
 
-        var link = linkResult.ToString();
-        if (string.Equals(link, "success", StringComparison.OrdinalIgnoreCase))
+        if (query.TryGetValue("link", out var linkResult))
         {
-            _pageMessage = "Loja vinculada com sucesso.";
-            _pageMessageIsError = false;
-        }
-        else if (string.Equals(link, "failed", StringComparison.OrdinalIgnoreCase))
-        {
-            _pageMessageIsError = true;
-            _pageMessage = query.TryGetValue("message", out var messageResult) && !string.IsNullOrWhiteSpace(messageResult)
-                ? messageResult.ToString()
-                : "Não foi possível vincular a loja.";
+            var link = linkResult.ToString();
+            if (string.Equals(link, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                _pageMessage = "Loja vinculada com sucesso.";
+                _pageMessageIsError = false;
+            }
+            else if (string.Equals(link, "failed", StringComparison.OrdinalIgnoreCase))
+            {
+                _pageMessageIsError = true;
+                _pageMessage = query.TryGetValue("message", out var messageResult) && !string.IsNullOrWhiteSpace(messageResult)
+                    ? messageResult.ToString()
+                    : "Não foi possível vincular a loja.";
+            }
+
+            stripQuery = true;
         }
 
-        Navigation.NavigateTo("/minhas-lojas", replace: true);
+        if (stripQuery)
+        {
+            Navigation.NavigateTo("/minhas-lojas", replace: true);
+        }
     }
 
     private async Task ObterLojasAsync()
@@ -197,6 +215,7 @@
 
     private void OpenConnectModal()
     {
+        _connectPreferredPlatform = null;
         _connectModalError = null;
         _connectModalVisible = true;
     }

@@ -264,6 +264,8 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `User-Agent` Chrome/120, `Accept: application/json`, log `Erro API ML [{StatusCode}]: {Body}` e badge `❌ Erro HTTP 403 (Forbidden)` / `Erro de Desserialização`.
 - [x] **Bearer OAuth na busca MLB:**
   - Token da conta conectada, `Integrations:MercadoLivre` (AppId/SecretKey) e badge `⚠️ Requer conta conectada no painel`.
+- [x] **Botão Conectar no badge do ML:**
+  - Redireciona para `/minhas-lojas?conectar=mercadolivre` e abre o modal com Mercado Livre pré-selecionado.
 
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

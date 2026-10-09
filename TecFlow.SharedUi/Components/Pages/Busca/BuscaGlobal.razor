@@ -11,6 +11,7 @@
 @using TecFlow.SharedUi.Services.Radar
 @inject IOfficialCatalogSearchApiService SearchApi
 @inject IAffiliateLinkApiService AffiliateLinkApi
+@inject NavigationManager Navigation
 @inject ILogger<BuscaGlobal> Logger
 
 <PageTitle>Buscar Ofertas — TecFlow</PageTitle>
@@ -70,9 +71,19 @@
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-3" aria-label="Status da busca por loja">
             @foreach (var channel in _channels.Where(item => item.Included))
             {
-                <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2">
-                    <span class="fw-semibold">@channel.Label:</span>
-                    @ChannelGlyph(channel.State) @ChannelDisplayMessage(channel)
+                <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2 d-inline-flex align-items-center gap-2">
+                    <span>
+                        <span class="fw-semibold">@channel.Label:</span>
+                        @ChannelGlyph(channel.State) @ChannelDisplayMessage(channel)
+                    </span>
+                    @if (NeedsMercadoLivreConnect(channel))
+                    {
+                        <button type="button"
+                                class="btn btn-sm btn-dark"
+                                @onclick="GoToMercadoLivreConnect">
+                            Conectar
+                        </button>
+                    }
                 </span>
             }
         </div>
@@ -166,24 +177,26 @@
         _ => "text-bg-secondary"
     };
 
-    private static string ChannelDisplayMessage(OfficialCatalogChannelStatusDto channel)
-    {
-        if (!string.Equals(channel.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase))
-        {
-            return channel.Message;
-        }
-
-        if (channel.State is "missing"
+    private static bool NeedsMercadoLivreConnect(OfficialCatalogChannelStatusDto channel) =>
+        string.Equals(channel.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase)
+        && (channel.State is "missing"
             || channel.Message.Contains("403", StringComparison.OrdinalIgnoreCase)
             || channel.Message.Contains("401", StringComparison.OrdinalIgnoreCase)
             || channel.Message.Contains("Forbidden", StringComparison.OrdinalIgnoreCase)
-            || channel.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+            || channel.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase));
+
+    private static string ChannelDisplayMessage(OfficialCatalogChannelStatusDto channel)
+    {
+        if (NeedsMercadoLivreConnect(channel))
         {
             return OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage;
         }
 
         return channel.Message;
     }
+
+    private void GoToMercadoLivreConnect() =>
+        Navigation.NavigateTo("/minhas-lojas?conectar=mercadolivre");
 
     private async Task SearchAsync()
     {

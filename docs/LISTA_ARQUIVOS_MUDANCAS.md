@@ -999,6 +999,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreIntegrationOptions.cs** / **appsettings.json** — `Integrations:MercadoLivre` AppId/SecretKey/AccessToken.
 - [x] **MercadoLivreApiService.cs** — Bearer da conta do tenant, client_credentials e 401/403 como conta ausente.
 - [x] **BuscaGlobal.razor** — `⚠️ Requer conta conectada no painel`.
+- [x] **BuscaGlobal.razor** / **MinhasLojas.razor** / **ConnectStoreModal.razor** — botão Conectar abre `/minhas-lojas?conectar=mercadolivre`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

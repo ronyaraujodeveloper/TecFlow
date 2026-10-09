@@ -203,7 +203,10 @@
     [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
+    [Parameter] public MarketplaceType? PreferredPlatform { get; set; }
+
     private MarketplaceType _platform = MarketplaceType.Shopee;
+    private bool _wasVisible;
 
     private MarketplaceType SelectedPlatform
     {
@@ -255,7 +258,16 @@
         if (!Visible)
         {
             ResetForm();
+            _wasVisible = false;
+            return;
         }
+
+        if (!_wasVisible && PreferredPlatform is { } preferred)
+        {
+            SelectPlatform(preferred);
+        }
+
+        _wasVisible = true;
     }
 
     private void SelectPlatform(MarketplaceType platform)

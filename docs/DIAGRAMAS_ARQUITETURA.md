@@ -206,6 +206,7 @@ flowchart LR
   CAT -->|PA-API SearchItems| APIEXT
   CAT -->|IDbContextFactory CreateDbContext por task| SQL
   BUSCAUI -->|POST api/links/convert| CONV
+  BUSCAUI -->|Conectar ?conectar=mercadolivre| LOJASUI[MinhasLojas]
   GMUI -->|q minPrice maxPrice cupom loja| LIVE
   ACH[Achadinhos.razor] -->|GET api/achadinhos blur| POOL
   ACH -->|busca q/store/preco| LIVE

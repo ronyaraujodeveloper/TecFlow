@@ -1011,6 +1011,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreHtmlParser.cs** / **MercadoLivreHtmlParserTests.cs** — cards da vitrine `lista.mercadolivre.com.br`.
 - [x] **MercadoLivreApiService.cs** — fallback web em HTTP 403 e `InjectMattTool` no permalink.
 - [x] **OfficialCatalogSearchFilter** / **BuscaGlobal.razor** — envia `MercadoLivreTrackingId` da loja ativa.
+- [x] **MercadoLivreHtmlParser.cs** — itera todos os `ui-search-layout__item` / `ui-search-result__content`.
+- [x] **OfficialCatalogSearchService.cs** — `PassesOptionalFilters` (preço/cupom) sem exigir a keyword no título.
+- [x] **BuscaGlobal.razor** — grid com `_items.Count > 0` e `InvokeAsync(StateHasChanged)`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

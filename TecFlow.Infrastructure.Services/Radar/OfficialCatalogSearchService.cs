@@ -88,17 +88,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             .Concat(shopeeItems)
             .Concat(amazonItems)
             .Concat(localItems)
-            .Where(item => LiveSearchRules.Matches(
-                item.ProductName,
-                item.Price,
-                item.CouponCode,
-                item.Platform,
-                item.PlatformType,
-                keyword,
-                filter.MinPrice,
-                filter.MaxPrice,
-                filter.HasCoupon,
-                store: null))
+            .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
             .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();

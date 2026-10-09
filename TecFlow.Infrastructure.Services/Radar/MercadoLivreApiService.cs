@@ -216,8 +216,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
 
         return items
-            .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
-            .Take(OfficialCatalogSearchRules.MaxLimit)
+            .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl) && !string.IsNullOrWhiteSpace(item.ProductName))
+            .Take(MercadoLivreHtmlParser.MaxResults)
             .ToList();
     }
 

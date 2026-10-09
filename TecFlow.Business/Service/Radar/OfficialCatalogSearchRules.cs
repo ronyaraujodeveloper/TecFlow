@@ -1,5 +1,6 @@
 ﻿using TecFlow.Business.Dto;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Filter;
 
 namespace TecFlow.Business.Service.Radar;
 
@@ -79,6 +80,23 @@ public static class OfficialCatalogSearchRules
         }
 
         return string.IsNullOrWhiteSpace(affiliateTrackingId) ? null : affiliateTrackingId.Trim();
+    }
+
+    public static bool PassesOptionalFilters(
+        OfficialCatalogProductDto item,
+        OfficialCatalogSearchFilter filter)
+    {
+        if (filter.MinPrice is > 0 && (item.Price is null || item.Price < filter.MinPrice))
+        {
+            return false;
+        }
+
+        if (filter.MaxPrice is > 0 && (item.Price is null || item.Price > filter.MaxPrice))
+        {
+            return false;
+        }
+
+        return filter.HasCoupon != true || !string.IsNullOrWhiteSpace(item.CouponCode);
     }
 
     public static bool HasConnectedMercadoLivreStore(

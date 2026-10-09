@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.Filter;
 using TecFlow.Infrastructure.Services.Radar;
@@ -52,6 +53,51 @@ public class OfficialCatalogSearchServiceTests
         Assert.Equal("Chave de API não configurada", result.Channels.Single(c => c.Key == "Shopee").Message);
         Assert.Equal("PA-API não configurada", result.Channels.Single(c => c.Key == "Amazon").Message);
         Assert.Equal("0 produtos", result.Channels.Single(c => c.Key == "Local").Message);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ShouldKeepMercadoLivreCardsWhenTitleOmitsKeyword()
+    {
+        var ml = new Mock<IMercadoLivreApiService>();
+        ml.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.From(
+            [
+                new OfficialCatalogProductDto
+                {
+                    Platform = "Mercado Livre",
+                    PlatformType = MarketplaceType.MercadoLivre,
+                    ProductName = "Ultrabook Gamer",
+                    SourceUrl = "https://www.mercadolivre.com.br/ultrabook/p/MLB-1"
+                },
+                new OfficialCatalogProductDto
+                {
+                    Platform = "Mercado Livre",
+                    PlatformType = MarketplaceType.MercadoLivre,
+                    ProductName = "Mini PC",
+                    SourceUrl = "https://www.mercadolivre.com.br/mini-pc/p/MLB-2"
+                }
+            ]));
+        var shopee = new Mock<IShopeeAffiliateOfferService>();
+        shopee.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.Empty);
+        var amazon = new Mock<IAmazonPaApiService>();
+        amazon.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.Empty);
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDbContext);
+
+        var sut = new OfficialCatalogSearchService(
+            ml.Object,
+            shopee.Object,
+            amazon.Object,
+            factory.Object,
+            NullLogger<OfficialCatalogSearchService>.Instance);
+
+        var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter { Keyword = "notebook 16GB" });
+
+        Assert.Equal(2, result.DataList!.Count);
+        Assert.Equal("ok", result.Channels.Single(c => c.Key == "MercadoLivre").State);
     }
 
     [Fact]

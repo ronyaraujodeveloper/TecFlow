@@ -1,5 +1,7 @@
-﻿using TecFlow.Business.Service.Radar;
+﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Enums;
+using TecFlow.Database.Filter;
 
 namespace TecFlow.Tests.Unit.Radar;
 
@@ -96,5 +98,23 @@ public class OfficialCatalogSearchRulesTests
         Assert.Equal(
             "14343296",
             OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(null, "14343296"));
+    }
+
+    [Fact]
+    public void PassesOptionalFilters_ShouldNotRequireKeywordInTitle()
+    {
+        var item = new OfficialCatalogProductDto
+        {
+            ProductName = "Ultrabook Gamer",
+            Price = 10,
+            SourceUrl = "https://www.mercadolivre.com.br/p/MLB1"
+        };
+
+        Assert.True(OfficialCatalogSearchRules.PassesOptionalFilters(
+            item,
+            new OfficialCatalogSearchFilter { Keyword = "notebook 16GB" }));
+        Assert.False(OfficialCatalogSearchRules.PassesOptionalFilters(
+            item,
+            new OfficialCatalogSearchFilter { MinPrice = 50 }));
     }
 }

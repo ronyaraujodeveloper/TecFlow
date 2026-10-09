@@ -92,11 +92,11 @@
         </div>
     }
 
-    @if (_items.Count == 0 && _searched && !_busy)
+    @if (_searched && !_busy && (_items is null || _items.Count == 0))
     {
         <div class="alert alert-light border">Nenhum produto retornado. Confira as lojas marcadas e as chaves da Amazon/Shopee.</div>
     }
-    else if (_items.Count > 0)
+    @if (_items is { Count: > 0 })
     {
         <div class="row g-3">
             @foreach (var item in _items)
@@ -232,6 +232,8 @@
         _error = null;
         _info = null;
         _channels = [];
+        _items = [];
+        await InvokeAsync(StateHasChanged);
         try
         {
             var result = await SearchApi.SearchAsync(new OfficialCatalogSearchFilter
@@ -253,7 +255,7 @@
                 return;
             }
 
-            _items = result.Data.DataList ?? [];
+            _items = [.. result.Data.DataList ?? []];
             _channels = result.Data.Channels ?? [];
             if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
             {
@@ -269,6 +271,7 @@
         finally
         {
             _busy = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

@@ -83,3 +83,4 @@
 [2026-10-08 22:46:49] feat(lojas): simplifica conexao ML com link de afiliado
 [2026-10-08 22:58:38] fix(busca): reconhece loja ML pelo Affiliate ID
 [2026-10-08 23:14:03] fix(busca): fallback HTML MLB em HTTP 403
+[2026-10-08 23:29:04] fix(busca): renderiza todos os cards HTML do MLB

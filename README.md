@@ -286,6 +286,10 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Implementação de fallback resiliênte para busca HTML/OpenGraph na vitrine do Mercado Livre quando a chamada da API sem Bearer Token retornar HTTP 403.
 - [x] **Preservação do TrackingId:**
   - Garantia de que todos os produtos encontrados na busca (seja via API ou Fallback Scraper) tenham o `matt_tool` do tenant (`14343296`) injetado no link final de comissão.
-  
+- [x] **Parser de todos os cards da vitrine:**
+  - Percorre cada `ui-search-layout__item` / `ui-search-result__content` (título, preço, link e imagem).
+- [x] **Grid Blazor reativa:**
+  - Unifica `DataList` e chama `InvokeAsync(StateHasChanged)` sem filtro de palavra-chave que ocultava os itens.
+
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

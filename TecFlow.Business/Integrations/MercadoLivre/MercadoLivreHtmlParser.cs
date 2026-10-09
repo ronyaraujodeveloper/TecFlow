@@ -6,34 +6,55 @@ using TecFlow.Core.Enums;
 
 namespace TecFlow.Business.Integrations.MercadoLivre;
 
-/// <summary>Extrai cards da vitrine pública lista.mercadolivre.com.br (fallback HTML).</summary>
+/// <summary>Extrai todos os cards da vitrine pública lista.mercadolivre.com.br (fallback HTML).</summary>
 public static class MercadoLivreHtmlParser
 {
-    public const int MaxResults = 20;
+    public const int MaxResults = 48;
+
+    private static readonly string[] CardMarkers =
+    [
+        "ui-search-layout__item",
+        "ui-search-result__content",
+        "ui-search-result__wrapper"
+    ];
 
     private static readonly Regex PermalinkJsonRegex = new(
         @"""permalink""\s*:\s*""(?<url>https:[^""]+)""",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    private static readonly Regex AnchorRegex = new(
-        @"<a\b[^>]*href\s*=\s*[""'](?<url>https?://(?:www\.|produto\.)?mercadoli(?:vre|bre)\.com(?:\.br)?/[^""']+)[""'][^>]*>",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    private static readonly Regex TitleAttrRegex = new(
-        @"title\s*=\s*[""'](?<title>[^""']+)[""']",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex TitleJsonRegex = new(
         @"""(?:title|name)""\s*:\s*""(?<title>[^""]+)""",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex HeadingRegex = new(
+        @"<h2\b[^>]*>(?<title>.*?)</h2>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.Compiled);
+
+    private static readonly Regex TitleAttrRegex = new(
+        @"title\s*=\s*[""'](?<title>[^""']+)[""']",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex HrefRegex = new(
+        @"href\s*=\s*[""'](?<url>[^""']+)[""']",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex AnchorRegex = new(
+        @"<a\b[^>]*href\s*=\s*[""'](?<url>https?://(?:www\.|produto\.)?mercadoli(?:vre|bre)\.com(?:\.br)?/[^""']+|/+[^""']+)[""'][^>]*>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ImgRegex = new(
+        @"<img\b[^>]*(?:data-src|src)\s*=\s*[""'](?<img>[^""']+)[""']",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex PriceFractionRegex = new(
+        @"andes-money-amount__fraction[^>]*>(?<price>[\d\.\,]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex PriceJsonRegex = new(
         @"""(?:price|amount)""\s*:\s*(?<price>\d+(?:\.\d+)?)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private static readonly Regex ImageJsonRegex = new(
-        @"""(?:thumbnail|secure_thumbnail|image)""\s*:\s*""(?<img>https:[^""]+)""",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex HtmlTagRegex = new("<[^>]+>", RegexOptions.Compiled);
 
     public static IReadOnlyList<OfficialCatalogProductDto> ParseSearchResults(string? html)
     {
@@ -46,75 +67,150 @@ public static class MercadoLivreHtmlParser
         var items = new List<OfficialCatalogProductDto>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (Match match in PermalinkJsonRegex.Matches(decoded))
+        foreach (var card in SplitLayoutCards(decoded))
         {
-            var url = UnescapeJsonUrl(match.Groups["url"].Value);
-            if (!TryAdd(items, seen, url, decoded, match.Index, match.Length))
+            if (!TryAddFromCard(items, seen, card) || items.Count < MaxResults)
             {
                 continue;
             }
 
-            if (items.Count >= MaxResults)
+            return items;
+        }
+
+        foreach (Match match in PermalinkJsonRegex.Matches(decoded))
+        {
+            var url = UnescapeJsonUrl(match.Groups["url"].Value);
+            var window = Slice(decoded, match.Index, match.Length, 900);
+            var title = ReadGroup(TitleJsonRegex, window, "title");
+            if (!TryAdd(items, seen, url, title, TryReadJsonPrice(window), ReadImage(window))
+                || items.Count < MaxResults)
             {
-                return items;
+                continue;
             }
+
+            return items;
         }
 
         foreach (Match match in AnchorRegex.Matches(decoded))
         {
-            var url = match.Groups["url"].Value;
-            var titleMatch = TitleAttrRegex.Match(match.Value);
-            var title = titleMatch.Success ? WebUtility.HtmlDecode(titleMatch.Groups["title"].Value) : null;
-            if (!TryAdd(items, seen, url, decoded, match.Index, match.Length, title))
+            var title = FirstNonEmpty(
+                ReadGroup(TitleAttrRegex, match.Value, "title"),
+                StripTags(ReadGroup(HeadingRegex, Slice(decoded, match.Index, match.Length, 400), "title")));
+            if (!TryAdd(items, seen, match.Groups["url"].Value, title, TryReadFractionPrice(Slice(decoded, match.Index, match.Length, 800)), ReadImage(Slice(decoded, match.Index, match.Length, 800)))
+                || items.Count < MaxResults)
             {
                 continue;
             }
 
-            if (items.Count >= MaxResults)
-            {
-                break;
-            }
+            return items;
         }
 
         return items;
+    }
+
+    internal static IReadOnlyList<string> SplitLayoutCards(string html)
+    {
+        var starts = new List<int>();
+        foreach (var marker in CardMarkers)
+        {
+            var index = 0;
+            while ((index = html.IndexOf(marker, index, StringComparison.OrdinalIgnoreCase)) >= 0)
+            {
+                starts.Add(index);
+                index += marker.Length;
+            }
+        }
+
+        starts.Sort();
+        var unique = new List<int>();
+        foreach (var start in starts)
+        {
+            if (unique.Count == 0 || start - unique[^1] > 80)
+            {
+                unique.Add(start);
+            }
+        }
+
+        var cards = new List<string>(unique.Count);
+        for (var i = 0; i < unique.Count; i++)
+        {
+            var from = unique[i];
+            var to = i + 1 < unique.Count ? unique[i + 1] : Math.Min(html.Length, from + 8000);
+            cards.Add(html[from..to]);
+        }
+
+        return cards;
+    }
+
+    private static bool TryAddFromCard(
+        List<OfficialCatalogProductDto> items,
+        HashSet<string> seen,
+        string card)
+    {
+        var hrefMatch = HrefRegex.Match(card);
+        if (!hrefMatch.Success)
+        {
+            return false;
+        }
+
+        var title = FirstNonEmpty(
+            StripTags(ReadGroup(HeadingRegex, card, "title")),
+            ReadGroup(TitleAttrRegex, card, "title"));
+        var price = TryReadFractionPrice(card) ?? TryReadJsonPrice(card);
+        return TryAdd(items, seen, hrefMatch.Groups["url"].Value, title, price, ReadImage(card));
     }
 
     private static bool TryAdd(
         List<OfficialCatalogProductDto> items,
         HashSet<string> seen,
         string rawUrl,
-        string html,
-        int matchIndex,
-        int matchLength,
-        string? titleHint = null)
+        string? title,
+        decimal? price,
+        string? image)
     {
         var url = NormalizeProductUrl(rawUrl);
-        if (string.IsNullOrWhiteSpace(url) || !seen.Add(url))
+        if (string.IsNullOrWhiteSpace(url)
+            || string.IsNullOrWhiteSpace(title)
+            || !IsMercadoLivreProductUrl(url)
+            || !seen.Add(CanonicalKey(url)))
         {
             return false;
         }
 
-        if (!MercadoLivreProductUrlParser.TryParse(url, out var itemId)
-            && !url.Contains("MLB", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var window = Slice(html, matchIndex, matchLength, 900);
-        var title = FirstNonEmpty(titleHint, ReadGroup(TitleJsonRegex, window, "title"), itemId);
-        var image = UnescapeJsonUrl(ReadGroup(ImageJsonRegex, window, "img"));
+        MercadoLivreProductUrlParser.TryParse(url, out var itemId);
         items.Add(new OfficialCatalogProductDto
         {
             Platform = "Mercado Livre",
             PlatformType = MarketplaceType.MercadoLivre,
             ProductId = string.IsNullOrWhiteSpace(itemId) ? null : itemId,
-            ProductName = title,
-            Price = TryReadPrice(window),
-            ImageUrl = string.IsNullOrWhiteSpace(image) ? null : image.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
+            ProductName = title.Trim(),
+            Price = price,
+            ImageUrl = NormalizeImageUrl(image),
             SourceUrl = url,
             Source = "Web"
         });
         return true;
+    }
+
+    private static bool IsMercadoLivreProductUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host;
+        if (!host.Contains("mercadolivre", StringComparison.OrdinalIgnoreCase)
+            && !host.Contains("mercadolibre", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var path = uri.AbsolutePath ?? string.Empty;
+        return path.Contains("MLB", StringComparison.OrdinalIgnoreCase)
+            || path.Contains("/p/", StringComparison.OrdinalIgnoreCase)
+            || path.Contains("/_JM", StringComparison.OrdinalIgnoreCase)
+            || path.Count(ch => ch == '/') >= 2;
     }
 
     private static string NormalizeProductUrl(string? raw)
@@ -125,13 +221,48 @@ public static class MercadoLivreHtmlParser
             return string.Empty;
         }
 
-        var cut = url.IndexOfAny(['#', ' ']);
-        if (cut >= 0)
+        if (url.StartsWith("//", StringComparison.Ordinal))
         {
-            url = url[..cut];
+            url = "https:" + url;
+        }
+        else if (url.StartsWith('/'))
+        {
+            url = "https://www.mercadolivre.com.br" + url;
+        }
+
+        var hash = url.IndexOf('#', StringComparison.Ordinal);
+        if (hash >= 0)
+        {
+            url = url[..hash];
         }
 
         return url.Trim();
+    }
+
+    private static string CanonicalKey(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return url;
+        }
+
+        return uri.GetLeftPart(UriPartial.Path).TrimEnd('/').ToLowerInvariant();
+    }
+
+    private static string? NormalizeImageUrl(string? image)
+    {
+        var url = UnescapeJsonUrl(image);
+        if (string.IsNullOrWhiteSpace(url) || url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (url.StartsWith("//", StringComparison.Ordinal))
+        {
+            url = "https:" + url;
+        }
+
+        return url.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string UnescapeJsonUrl(string? value)
@@ -160,7 +291,32 @@ public static class MercadoLivreHtmlParser
         return match.Success ? match.Groups[group].Value : null;
     }
 
-    private static decimal? TryReadPrice(string window)
+    private static string? ReadImage(string card)
+    {
+        var match = ImgRegex.Match(card);
+        return match.Success ? match.Groups["img"].Value : null;
+    }
+
+    private static decimal? TryReadFractionPrice(string card)
+    {
+        var match = PriceFractionRegex.Match(card);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var raw = match.Groups["price"].Value.Trim();
+        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.GetCultureInfo("pt-BR"), out var ptBr))
+        {
+            return ptBr;
+        }
+
+        return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant)
+            ? invariant
+            : null;
+    }
+
+    private static decimal? TryReadJsonPrice(string window)
     {
         var match = PriceJsonRegex.Match(window);
         if (!match.Success)
@@ -175,6 +331,17 @@ public static class MercadoLivreHtmlParser
             out var price)
             ? price
             : null;
+    }
+
+    private static string? StripTags(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var text = HtmlTagRegex.Replace(value, " ");
+        return WebUtility.HtmlDecode(text).Trim();
     }
 
     private static string? FirstNonEmpty(params string?[] values)

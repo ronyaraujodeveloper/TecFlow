@@ -23,6 +23,9 @@ public static class AffiliateTrackingIdSanitizer
 
     public static bool IsShortenerUrl(string? value) => AffiliateTrackingIdValidator.IsShortenerUrl(value);
 
+    public static bool NeedsMercadoLivreUrlExpansion(string? value) =>
+        AffiliateTrackingIdValidator.NeedsMercadoLivreUrlExpansion(value);
+
     public static bool TryExtractPlatformAffiliateId(MarketplaceType platform, string? input, out string id) =>
         AffiliateTrackingIdValidator.TryExtractPlatformAffiliateId(platform, input, out id);
 

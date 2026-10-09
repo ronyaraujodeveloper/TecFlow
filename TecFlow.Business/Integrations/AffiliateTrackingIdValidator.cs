@@ -46,10 +46,15 @@ public static class AffiliateTrackingIdValidator
         "telegram.me"
     ];
 
+    private static readonly Regex MercadoLivreMattToolRegex = new(
+        @"matt_tool=([0-9]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly (string Host, string PathPrefix)[] ShortenerPathPrefixes =
     [
         ("mercadolivre.com", "/sec/"),
-        ("mercadolivre.com.br", "/sec/")
+        ("mercadolivre.com.br", "/sec/"),
+        ("mercadolibre.com", "/sec/")
     ];
 
     private static readonly (string Host, MarketplaceType Platform)[] DetectionHosts =
@@ -166,6 +171,11 @@ public static class AffiliateTrackingIdValidator
                     return Truncate(digits);
                 }
 
+                continue;
+            }
+
+            if (marketplace is MarketplaceType.MercadoLivre && !IsNumericAffiliateId(value))
+            {
                 continue;
             }
 
@@ -372,8 +382,75 @@ public static class AffiliateTrackingIdValidator
             return true;
         }
 
+        if (platform is MarketplaceType.MercadoLivre)
+        {
+            return TryParseMercadoLivreTrackingId(input, out id);
+        }
+
         id = ExtractAffiliateIdFromUrl(input, platform.ToString());
         return !LooksLikeUrl(id);
+    }
+
+    public static bool TryParseMercadoLivreTrackingId(string? input, out string trackingId)
+    {
+        trackingId = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return true;
+        }
+
+        var trimmed = input.Trim().Trim('"', '\'');
+        if (trimmed.Length > 0 && trimmed.All(char.IsDigit))
+        {
+            trackingId = Truncate(trimmed);
+            return true;
+        }
+
+        var match = MercadoLivreMattToolRegex.Match(trimmed);
+        if (match.Success)
+        {
+            trackingId = Truncate(match.Groups[1].Value);
+            return true;
+        }
+
+        if (TryExtractMercadoLivreAffiliateId(trimmed, out var extracted)
+            && IsNumericAffiliateId(extracted))
+        {
+            trackingId = Truncate(extracted);
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool NeedsMercadoLivreUrlExpansion(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || TryParseMercadoLivreTrackingId(input, out _))
+        {
+            return false;
+        }
+
+        var absolute = EnsureAbsoluteHttpUrl(input);
+        if (IsShortenerUrl(absolute))
+        {
+            return true;
+        }
+
+        foreach (var candidate in AbsoluteUrlCandidates(absolute))
+        {
+            if (!TryParseAbsoluteUri(candidate, out var uri))
+            {
+                continue;
+            }
+
+            var path = uri.AbsolutePath ?? string.Empty;
+            if (path.Contains("/sec/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static bool LooksLikeUrl(string? value)
@@ -926,14 +1003,25 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
-        foreach (var key in new[] { "matt_tool", "matt_word", "penn", "penn_id" })
+        var trimmed = input.Trim().Trim('"', '\'');
+        if (trimmed.Length > 0 && trimmed.All(char.IsDigit))
         {
-            if (!TryReadParam(input, key, out var value))
-            {
-                continue;
-            }
+            id = trimmed;
+            return true;
+        }
 
-            if (IsBooleanLiteral(value))
+        var match = MercadoLivreMattToolRegex.Match(trimmed);
+        if (match.Success)
+        {
+            id = match.Groups[1].Value;
+            return true;
+        }
+
+        foreach (var key in new[] { "matt_tool", "penn", "penn_id" })
+        {
+            if (!TryReadParam(trimmed, key, out var value)
+                || IsBooleanLiteral(value)
+                || !IsNumericAffiliateId(value))
             {
                 continue;
             }

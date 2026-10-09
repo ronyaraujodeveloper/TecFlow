@@ -124,13 +124,29 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
-    public void ExtractAffiliateIdFromUrl_ShouldReadMattWordWhenMattToolIsMissing()
+    public void ExtractAffiliateIdFromUrl_ShouldIgnoreMattWordWhenMattToolIsMissing()
     {
         var id = AffiliateTrackingIdSanitizer.ExtractAffiliateIdFromUrl(
             "https://www.mercadolivre.com.br/p/MLB123?matt_word=minhaloja",
             "Mercado Livre");
 
-        Assert.Equal("minhaloja", id);
+        Assert.NotEqual("minhaloja", id);
+        Assert.False(AffiliateTrackingIdSanitizer.TryNormalize(
+            MarketplaceType.MercadoLivre,
+            "https://www.mercadolivre.com.br/p/MLB123?matt_word=minhaloja",
+            out _));
+    }
+
+    [Fact]
+    public void Extract_ShouldKeepPlainMercadoLivreNumericId()
+    {
+        var id = AffiliateTrackingIdSanitizer.Extract(
+            MarketplaceType.MercadoLivre,
+            "12345678");
+
+        Assert.Equal("12345678", id);
+        Assert.True(AffiliateTrackingIdSanitizer.TryNormalize(MarketplaceType.MercadoLivre, "12345678", out var normalized));
+        Assert.Equal("12345678", normalized);
     }
 
     [Fact]

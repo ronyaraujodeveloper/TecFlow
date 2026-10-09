@@ -1263,6 +1263,77 @@ html, body {
     line-height: 1.35;
 }
 
+.how-to-store-id {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.75rem;
+    background: var(--bs-light, #f8f9fa);
+    padding: 0.75rem 0.85rem;
+}
+
+.how-to-store-id-channels {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 576px) {
+    .how-to-store-id-channels {
+        grid-template-columns: 1fr auto 1fr;
+        align-items: stretch;
+    }
+
+    .how-to-store-id-separator {
+        width: 1px;
+        background: var(--bs-border-color, #dee2e6);
+        align-self: stretch;
+    }
+}
+
+.how-to-store-id-separator {
+    display: none;
+}
+
+@media (min-width: 576px) {
+    .how-to-store-id-separator {
+        display: block;
+    }
+}
+
+.how-to-store-id-channel {
+    background: #fff;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.65rem;
+    padding: 0.75rem;
+}
+
+.how-to-store-id-channel__icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bs-primary-bg-subtle, #e7f1ff);
+    color: var(--bs-primary, #0d6efd);
+    margin-bottom: 0.4rem;
+}
+
+.how-to-store-id-channel__icon i {
+    font-size: 1.15rem;
+}
+
+.how-to-store-id-channel__title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.how-to-store-id-steps {
+    padding-left: 1.1rem;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1.4;
+}
+
 .affiliate-id-paste-hint {
     color: var(--bs-secondary-color, #6c757d);
     line-height: 1.35;

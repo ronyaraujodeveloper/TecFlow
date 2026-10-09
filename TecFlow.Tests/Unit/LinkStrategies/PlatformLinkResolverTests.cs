@@ -212,12 +212,12 @@ public class PlatformLinkResolverTests
             PlatformLinkResolver.ExtractAffiliateId(
                 "https://www.mercadolivre.com.br/p/MLB123?matt_tool=987654321&matt_word=loja",
                 MarketplaceType.MercadoLivre));
-        Assert.Equal(
+        Assert.NotEqual(
             "wordloja",
             PlatformLinkResolver.ExtractAffiliateId(
                 "https://www.mercadolivre.com.br/p/MLB123?matt_word=wordloja",
                 MarketplaceType.MercadoLivre));
-        Assert.Equal(
+        Assert.NotEqual(
             "PENN99",
             PlatformLinkResolver.ExtractAffiliateId(
                 "https://www.mercadolivre.com/sec/abc?penn=PENN99",

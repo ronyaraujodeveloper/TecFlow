@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using TecFlow.Business.Integrations;
 using TecFlow.Core.Enums;
 
 namespace TecFlow.SharedUi.Services.Integrations;
@@ -76,6 +77,24 @@ public static class ConnectStoreManualLinkForm
             ? shopIdParsed.ToString(CultureInfo.InvariantCulture)
             : shopIdInput;
 
+        return true;
+    }
+
+    public static bool TryExtractMercadoLivreTrackingId(string? input, out string trackingId)
+    {
+        trackingId = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        if (!AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(input, out var parsed)
+            || string.IsNullOrWhiteSpace(parsed))
+        {
+            return false;
+        }
+
+        trackingId = parsed;
         return true;
     }
 }

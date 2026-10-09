@@ -90,4 +90,35 @@ public class ConnectStoreManualLinkFormTests
         Assert.False(ok);
         Assert.Contains("authorization code", error, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldReadMattToolFromAffiliateLink()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(
+            "https://www.mercadolivre.com.br/p/MLB123?matt_tool=12345678&matt_word=loja",
+            out var trackingId);
+
+        Assert.True(ok);
+        Assert.Equal("12345678", trackingId);
+    }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldKeepDigitsOnly()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(" 12345678 ", out var trackingId);
+
+        Assert.True(ok);
+        Assert.Equal("12345678", trackingId);
+    }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldFailWhenLinkHasNoNumericId()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(
+            "https://meli.la/abc",
+            out var trackingId);
+
+        Assert.False(ok);
+        Assert.Equal(string.Empty, trackingId);
+    }
 }

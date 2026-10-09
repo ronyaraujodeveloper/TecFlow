@@ -2,10 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Mappings;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.Entity;
 
@@ -125,5 +128,45 @@ public sealed class MarketplaceAccountService
         return await _userAccountRepository.GetFirstIgnoringFiltersAsync()
             ?? await _userAccountRepository.GetByIdIgnoringFiltersAsync(1)
             ?? await _userAccountRepository.GetByIdAsync(1);
+    }
+
+    public static string? NormalizeMercadoLivreTrackingId(string? input)
+    {
+        if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(input, out var trackingId))
+        {
+            return string.IsNullOrWhiteSpace(trackingId) ? null : trackingId;
+        }
+
+        return string.IsNullOrWhiteSpace(input) ? null : input.Trim();
+    }
+
+    public static async Task<string?> ResolveMercadoLivreTrackingIdAsync(
+        string? input,
+        IUrlExpansionService? expansionService,
+        CancellationToken cancellationToken = default)
+    {
+        if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(input, out var trackingId)
+            && !string.IsNullOrWhiteSpace(trackingId))
+        {
+            return trackingId;
+        }
+
+        if (expansionService is null || !AffiliateTrackingIdValidator.NeedsMercadoLivreUrlExpansion(input))
+        {
+            return NormalizeMercadoLivreTrackingId(input);
+        }
+
+        var expanded = await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+            input!.Trim(),
+            expansionService,
+            cancellationToken);
+
+        if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(expanded, out trackingId)
+            && !string.IsNullOrWhiteSpace(trackingId))
+        {
+            return trackingId;
+        }
+
+        return NormalizeMercadoLivreTrackingId(expanded);
     }
 }

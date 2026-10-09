@@ -121,19 +121,26 @@
                         </p>
                         @if (_showIdHelp)
                         {
-                            <div id="tracking-id-help"
-                                 class="affiliate-id-help mt-2"
-                                 role="region"
-                                 aria-label="Como obter o ID de afiliado">
-                                <p class="small mb-2">@AffiliateTrackingIdHelp.GetFormatHint(_platform)</p>
-                                <a class="btn btn-sm btn-outline-primary"
-                                   href="@AffiliateTrackingIdHelp.GetOfficialPanelUrl(_platform)"
-                                   target="_blank"
-                                   rel="noopener noreferrer">
-                                    Ir para o painel oficial
-                                    <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
-                                </a>
-                            </div>
+                            @if (_platform == MarketplaceType.MercadoLivre)
+                            {
+                                <HowToGetStoreIdModal Visible="true" OnClose="CloseIdHelp" />
+                            }
+                            else
+                            {
+                                <div id="tracking-id-help"
+                                     class="affiliate-id-help mt-2"
+                                     role="region"
+                                     aria-label="Como obter o ID de afiliado">
+                                    <p class="small mb-2">@AffiliateTrackingIdHelp.GetFormatHint(_platform)</p>
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="@AffiliateTrackingIdHelp.GetOfficialPanelUrl(_platform)"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        Ir para o painel oficial
+                                        <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            }
                         }
                     </div>
 
@@ -216,7 +223,7 @@
     private string _platformLabel => _platform.GetDisplayName();
     private string TrackingIdLabel => _platform switch
     {
-        MarketplaceType.MercadoLivre => "ID de Afiliado / Matt Tool ID",
+        MarketplaceType.MercadoLivre => "Link de Afiliado ou ID do Mercado Livre",
         MarketplaceType.Amazon => "Tag de Associado / Tracking ID",
         MarketplaceType.MagazineLuiza => "ID de Afiliado / Nome da Loja Parceira",
         MarketplaceType.Kabum => "ID de Afiliado / Tracking ID",
@@ -225,7 +232,7 @@
     };
     private string TrackingIdPlaceholder => _platform switch
     {
-        MarketplaceType.MercadoLivre => "123456789",
+        MarketplaceType.MercadoLivre => "Cole aqui o seu link de afiliado do Mercado Livre (ex: https://mercadolivre.com/...)",
         MarketplaceType.Amazon => "sualoja-20",
         MarketplaceType.MagazineLuiza => "magazinematos",
         MarketplaceType.Kabum => "tecflow_kabum",
@@ -236,6 +243,7 @@
         or MarketplaceType.MagazineLuiza
         or MarketplaceType.Kabum
         or MarketplaceType.CasasBahia
+        or MarketplaceType.MercadoLivre
         ? "text"
         : "numeric";
     private string _friendlyName = string.Empty;
@@ -283,6 +291,8 @@
 
     private void ToggleIdHelp() => _showIdHelp = !_showIdHelp;
 
+    private void CloseIdHelp() => _showIdHelp = false;
+
     private async Task OnTrackingIdInput(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString() ?? string.Empty;
@@ -296,7 +306,8 @@
 
         var absolute = AffiliateTrackingIdSanitizer.EnsureAbsoluteHttpUrl(raw);
         DetectSelectedPlatform(absolute);
-        if (AffiliateTrackingIdSanitizer.IsShortenerUrl(absolute))
+        if (AffiliateTrackingIdSanitizer.IsShortenerUrl(absolute)
+            || AffiliateTrackingIdSanitizer.NeedsMercadoLivreUrlExpansion(absolute))
         {
             fromShortener = true;
             _expanding = true;
@@ -335,7 +346,10 @@
 
     private void ApplyTrackingId(string input, bool fromShortener = false)
     {
-        var extracted = ExtractAffiliateIdFromUrl(input, SelectedPlatform.ToString());
+        var extracted = SelectedPlatform is MarketplaceType.MercadoLivre
+            && ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(input, out var mercadoLivreId)
+            ? mercadoLivreId
+            : ExtractAffiliateIdFromUrl(input, SelectedPlatform.ToString());
         if (AffiliateTrackingIdSanitizer.IsBooleanLiteral(extracted))
         {
             extracted = string.Empty;

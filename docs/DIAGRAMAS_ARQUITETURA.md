@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
+**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. No Mercado Livre o campo aceita link de afiliado ou só o número; `ConnectStoreManualLinkForm` / `MarketplaceAccountService` extraem `matt_tool` (ou expandem `meli.la`/`/sec/` com `UrlUnshortenerService`) e gravam o ID numérico em `TrackingId`. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
 
 ```mermaid
 flowchart LR
@@ -1344,11 +1344,11 @@ sequenceDiagram
   participant API as MarketplaceAuthController
   participant SVC as IntegracaoLojaService
   participant DB as MarketplaceAccounts
-  UI->>UI: "Como pegar meu ID?" (formato + painel oficial target=_blank)
+  UI->>UI: "Como pegar meu ID?" (HowToGetStoreIdModal: Computador / Telemóvel)
   UI->>UI: Detect plataforma pelo domínio (vt.tiktok / onelink / meli.la / shp.ee)
-  UI->>UI: ExtractAffiliateIdFromUrl + validação (rejeita ://, / e literal "true")
-  UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / vt.tiktok.com / magazineluiza.onelink.me / meli.la)
-  SVC->>SVC: UrlExpansion Chrome + Accept-Language pt-BR; unwrap login redirect_url; unique_id TikTok / promoter_id Magalu / matt_tool
+  UI->>UI: ExtractAffiliateIdFromUrl / TryExtractMercadoLivreTrackingId (dígitos ou matt_tool=)
+  UI->>API: POST expand-affiliate-url (s.shopee.com.br / br.shp.ee / shope.ee / vt.tiktok.com / magazineluiza.onelink.me / meli.la /sec/)
+  SVC->>SVC: UrlUnshortenerService + UrlExpansion; unique_id TikTok / promoter_id Magalu / matt_tool ML
   SVC->>DB: UNIQUE MarketplaceType+TrackingId (IsActive)
   UI->>API: POST /api/marketplace-auth/lojas/{id}/desconectar
   API->>SVC: UnlinkAsync → InativarContaAsync (AppDbContext SaveChanges IsActive=false)

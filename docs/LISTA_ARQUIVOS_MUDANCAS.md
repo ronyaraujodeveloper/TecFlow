@@ -1000,6 +1000,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreApiService.cs** — Bearer da conta do tenant, client_credentials e 401/403 como conta ausente.
 - [x] **BuscaGlobal.razor** — `⚠️ Requer conta conectada no painel`.
 - [x] **BuscaGlobal.razor** / **MinhasLojas.razor** / **ConnectStoreModal.razor** — botão Conectar abre `/minhas-lojas?conectar=mercadolivre`.
+- [x] **ConnectStoreModal.razor** — rótulo `Link de Afiliado ou ID do Mercado Livre` e placeholder para colar o link.
+- [x] **HowToGetStoreIdModal.razor** — ajuda Desktop (`bi-laptop`) e Telemóvel (`bi-phone`) sem termos técnicos.
+- [x] **ConnectStoreManualLinkForm.cs** — `TryExtractMercadoLivreTrackingId` (dígitos ou `matt_tool=`).
+- [x] **MarketplaceAccountService.cs** / **IntegracaoLojaService.cs** — normaliza TrackingId ML e expande `meli.la`/`/sec/` com `UrlUnshortenerService`.
+- [x] **AffiliateTrackingIdValidator.cs** — `TryParseMercadoLivreTrackingId` e `NeedsMercadoLivreUrlExpansion`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

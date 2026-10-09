@@ -267,5 +267,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Botão Conectar no badge do ML:**
   - Redireciona para `/minhas-lojas?conectar=mercadolivre` e abre o modal com Mercado Livre pré-selecionado.
 
+  ## 💡 Descomplicação da Conexão de Lojas (UX - Mercado Livre Onboarding)
+
+- [x] **Simplificação de Onboarding do Mercado Livre (`MLAffiliateUX`):**
+  - Permissão para colar diretamente qualquer link de afiliado do Mercado Livre no formulário de conexão.
+  - Extração automática do `matt_tool` no backend via Regex/URL Parser sem exigir digitação de IDs técnicos pelo utilizador.
+- [x] **Modal Didático e Passo a Passo Responsivo:**
+  - Instruções ilustradas separadas para computador e aplicação móvel.
+
+## 🐞 Correção de Leitura de Loja Ativa no Live Search (`PlatformEnumResolution`)
+
+- [ ] **Mapeamento Unificado de Plataformas:**
+  - Padronização da consulta de contas ativas (`MarketplaceAccounts`) utilizando estritamente o `PlatformType` enum para evitar falha por divergência de espaço ou string ("Mercado Livre" vs "MercadoLivre").
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

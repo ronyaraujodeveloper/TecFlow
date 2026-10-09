@@ -6,6 +6,7 @@ using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Mappings;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -118,6 +119,14 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
 
         ApplyHomologFallbacks(dto);
+
+        if (dto.PlatformType is MarketplaceType.MercadoLivre)
+        {
+            dto.TrackingId = await MarketplaceAccountService.ResolveMercadoLivreTrackingIdAsync(
+                dto.TrackingId,
+                _urlExpansionService,
+                cancellationToken);
+        }
 
         if (!AffiliateTrackingIdValidator.TryNormalize(dto.PlatformType, dto.TrackingId, out var normalizedTracking))
         {
@@ -364,9 +373,15 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         try
         {
             if (_urlExpansionService is not null
-                && AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl))
+                && (AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)
+                    || AffiliateTrackingIdValidator.NeedsMercadoLivreUrlExpansion(workingUrl)))
             {
-                workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+                workingUrl = marketplace is MarketplaceType.MercadoLivre
+                    ? await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+                        workingUrl,
+                        _urlExpansionService,
+                        cancellationToken)
+                    : await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
             }
         }
         catch (Exception ex)

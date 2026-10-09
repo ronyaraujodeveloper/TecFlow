@@ -14,7 +14,7 @@ public static class AffiliateTrackingIdHelp
         MarketplaceType.TikTokShop =>
             "Use o unique_id do criador TikTok Shop (ex.: amz.indica). Cole o ID, unique_id=, user_id= ou um link vt.tiktok.com / shop.tiktok.com.",
         MarketplaceType.MercadoLivre =>
-            "Use o Matt Tool ID (número do parâmetro matt_tool, ex.: 123456789). Cole o ID ou um link de afiliado do Mercado Livre.",
+            "Cole o link de afiliado do Mercado Livre ou só o número da sua conta. O TecFlow identifica automaticamente.",
         MarketplaceType.MagazineLuiza =>
             "Use o promoter_id numérico da Magalu (ex.: 5321952). Cole o ID, um link magazineluiza.com.br/onelink ou o slug Magazine Você.",
         MarketplaceType.Kabum =>

@@ -1,0 +1,56 @@
+﻿@using TecFlow.SharedUi.Services.Integrations
+
+<div id="tracking-id-help"
+     class="how-to-store-id mt-2"
+     role="dialog"
+     aria-labelledby="how-to-store-id-title">
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+        <h3 class="h6 fw-bold mb-0" id="how-to-store-id-title">Como pegar meu ID?</h3>
+        <button type="button"
+                class="btn-close btn-close-sm"
+                aria-label="Fechar ajuda"
+                @onclick="CloseAsync"></button>
+    </div>
+    <p class="small text-muted mb-3">
+        Copie um link de divulgação do Mercado Livre e cole no campo acima. Se preferir, cole só o número da sua conta.
+    </p>
+    <div class="how-to-store-id-channels">
+        <section class="how-to-store-id-channel">
+            <div class="how-to-store-id-channel__icon" aria-hidden="true">
+                <i class="bi bi-laptop"></i>
+            </div>
+            <h4 class="how-to-store-id-channel__title">Computador</h4>
+            <ol class="how-to-store-id-steps small mb-0">
+                <li>Abra o painel de afiliados do Mercado Livre no navegador.</li>
+                <li>Escolha um produto e copie o link de divulgação.</li>
+                <li>Cole o link no campo da conexão.</li>
+            </ol>
+        </section>
+        <div class="how-to-store-id-separator" aria-hidden="true"></div>
+        <section class="how-to-store-id-channel">
+            <div class="how-to-store-id-channel__icon" aria-hidden="true">
+                <i class="bi bi-phone"></i>
+            </div>
+            <h4 class="how-to-store-id-channel__title">Telemóvel (App)</h4>
+            <ol class="how-to-store-id-steps small mb-0">
+                <li>Abra o aplicativo do Mercado Livre no telemóvel.</li>
+                <li>Abra um produto e partilhe o link de afiliado.</li>
+                <li>Cole o link no campo da conexão.</li>
+            </ol>
+        </section>
+    </div>
+    <a class="btn btn-sm btn-outline-primary mt-3"
+       href="@AffiliateTrackingIdHelp.GetOfficialPanelUrl(TecFlow.Core.Enums.MarketplaceType.MercadoLivre)"
+       target="_blank"
+       rel="noopener noreferrer">
+        Ir para o painel oficial
+        <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+    </a>
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+}

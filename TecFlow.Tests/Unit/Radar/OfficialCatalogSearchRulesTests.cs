@@ -57,5 +57,16 @@ public class OfficialCatalogSearchRulesTests
             true,
             OfficialCatalogSearchRules.AmazonMissingPaApiMessage);
         Assert.Equal("PA-API não configurada", amazon.Message);
+
+        var error = OfficialCatalogSearchRules.BuildChannelStatus(
+            "MercadoLivre",
+            "Mercado Livre",
+            true,
+            0,
+            false,
+            string.Empty,
+            "Erro HTTP 403 (Forbidden)");
+        Assert.Equal("error", error.State);
+        Assert.Equal("Erro HTTP 403 (Forbidden)", error.Message);
     }
 }

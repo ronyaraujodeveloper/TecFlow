@@ -45,7 +45,8 @@ public static class OfficialCatalogSearchRules
         bool included,
         int productCount,
         bool missingCredentials,
-        string missingMessage)
+        string missingMessage,
+        string? errorMessage = null)
     {
         if (!included)
         {
@@ -57,6 +58,19 @@ public static class OfficialCatalogSearchRules
                 ProductCount = 0,
                 State = "skipped",
                 Message = "Não consultada"
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            return new OfficialCatalogChannelStatusDto
+            {
+                Key = key,
+                Label = label,
+                Included = true,
+                ProductCount = 0,
+                State = "error",
+                Message = errorMessage.Trim()
             };
         }
 

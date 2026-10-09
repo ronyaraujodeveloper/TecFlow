@@ -33,9 +33,14 @@ public class OfficialCatalogChannelResult
 
     public bool MissingCredentials { get; init; }
 
+    public string? ErrorMessage { get; init; }
+
     public static OfficialCatalogChannelResult Empty { get; } = new();
 
     public static OfficialCatalogChannelResult Unconfigured() => new() { MissingCredentials = true };
+
+    public static OfficialCatalogChannelResult Failed(string errorMessage) =>
+        new() { ErrorMessage = errorMessage };
 
     public static OfficialCatalogChannelResult From(IReadOnlyList<OfficialCatalogProductDto> items) =>
         new() { Items = items };

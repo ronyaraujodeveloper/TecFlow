@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
@@ -59,7 +60,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var limit = OfficialCatalogSearchRules.ClampLimit(filter.Limit);
         var skipped = Task.FromResult(OfficialCatalogChannelResult.Empty);
         var mlTask = includeMl
-            ? _mercadoLivre.SearchProductsAsync(keyword, limit, cancellationToken)
+            ? SearchMercadoLivreSafeAsync(keyword, limit, cancellationToken)
             : skipped;
         var shopeeTask = includeShopee
             ? _shopee.SearchProductsAsync(userId, keyword, limit, cancellationToken)
@@ -117,7 +118,8 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     includeMl,
                     mlItems.Count,
                     false,
-                    string.Empty),
+                    string.Empty,
+                    mlTask.Result.ErrorMessage),
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Shopee",
                     "Shopee",
@@ -141,6 +143,26 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     string.Empty)
             ]
         };
+    }
+
+    private async Task<OfficialCatalogChannelResult> SearchMercadoLivreSafeAsync(
+        string keyword,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _mercadoLivre.SearchProductsAsync(keyword, limit, cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return OfficialCatalogChannelResult.Failed("Erro de Desserialização");
+        }
+        catch (Exception ex)
+        {
+            return OfficialCatalogChannelResult.Failed(
+                string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado" : ex.Message);
+        }
     }
 
     private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchLocalProductsAsync(

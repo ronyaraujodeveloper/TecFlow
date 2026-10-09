@@ -77,3 +77,4 @@
 [2026-10-08 20:34:29]fix(busca): isola AppDbContext no WhenAll via IDbContextFactory
 [2026-10-08 21:05:11]feat(busca): badges por loja, MLB publico e log estruturado
 [2026-10-08 21:18:53]fix(busca): User-Agent e DTO results na busca publica do MLB
+[2026-10-08 21:34:17]fix(busca): diagnostico HTTP do MLB no badge da /busca

@@ -54,6 +54,35 @@ public class OfficialCatalogSearchServiceTests
         Assert.Equal("0 produtos", result.Channels.Single(c => c.Key == "Local").Message);
     }
 
+    [Fact]
+    public async Task SearchAsync_ShouldSurfaceMercadoLivreHttpErrorOnChannelBadge()
+    {
+        var ml = new Mock<IMercadoLivreApiService>();
+        ml.Setup(x => x.SearchProductsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.Failed("Erro HTTP 403 (Forbidden)"));
+        var shopee = new Mock<IShopeeAffiliateOfferService>();
+        shopee.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.Empty);
+        var amazon = new Mock<IAmazonPaApiService>();
+        amazon.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.Empty);
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDbContext);
+
+        var sut = new OfficialCatalogSearchService(
+            ml.Object,
+            shopee.Object,
+            amazon.Object,
+            factory.Object,
+            NullLogger<OfficialCatalogSearchService>.Instance);
+
+        var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter { Keyword = "dell i7" });
+        var mlStatus = result.Channels.Single(c => c.Key == "MercadoLivre");
+        Assert.Equal("error", mlStatus.State);
+        Assert.Equal("Erro HTTP 403 (Forbidden)", mlStatus.Message);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var encryption = new Mock<IEncryptionService>();

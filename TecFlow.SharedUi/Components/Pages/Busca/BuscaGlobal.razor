@@ -64,6 +64,19 @@
         <div class="alert alert-success py-2 small">@_info</div>
     }
 
+    @if (_searched && _channels.Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-2 justify-content-center mb-3" aria-label="Status da busca por loja">
+            @foreach (var channel in _channels.Where(item => item.Included))
+            {
+                <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2">
+                    <span class="fw-semibold">@channel.Label:</span>
+                    @ChannelGlyph(channel.State) @channel.Message
+                </span>
+            }
+        </div>
+    }
+
     @if (_items.Count == 0 && _searched && !_busy)
     {
         <div class="alert alert-light border">Nenhum produto retornado. Confira as lojas marcadas e as chaves da Amazon/Shopee.</div>
@@ -134,12 +147,28 @@
     private string? _info;
     private string? _convertingUrl;
     private List<OfficialCatalogProductDto> _items = [];
+    private List<OfficialCatalogChannelStatusDto> _channels = [];
+
+    private static string ChannelGlyph(string? state) => state switch
+    {
+        "ok" => "🟢",
+        "missing" => "⚠️",
+        _ => "⚪"
+    };
+
+    private static string ChannelBadgeClass(string? state) => state switch
+    {
+        "ok" => "text-bg-success",
+        "missing" => "text-bg-warning text-dark",
+        _ => "text-bg-secondary"
+    };
 
     private async Task SearchAsync()
     {
         _busy = true;
         _error = null;
         _info = null;
+        _channels = [];
         try
         {
             var result = await SearchApi.SearchAsync(new OfficialCatalogSearchFilter
@@ -161,6 +190,7 @@
             }
 
             _items = result.Data.DataList ?? [];
+            _channels = result.Data.Channels ?? [];
             if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
             {
                 _error = result.Data.Descricao;

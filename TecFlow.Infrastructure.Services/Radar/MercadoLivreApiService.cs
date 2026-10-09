@@ -42,34 +42,41 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
     }
 
-    public async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    public async Task<OfficialCatalogChannelResult> SearchProductsAsync(
         string query,
         int limit = 20,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
 
         try
         {
             var size = OfficialCatalogSearchRules.ClampLimit(limit);
-            var path = $"sites/MLB/search?q={Uri.EscapeDataString(query.Trim())}&limit={size}";
-            using var response = await _http.GetAsync(path, cancellationToken);
+            var uri = new Uri(
+                $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query.Trim())}&limit={size}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Authorization = null;
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
+            using var response = await _http.SendAsync(request, cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebug("Mercado Livre /search falhou. Status={Status}", (int)response.StatusCode);
-                return [];
+                _logger.LogWarning(
+                    "Mercado Livre /sites/MLB/search falhou sem token. Status={Status} Query={Query}",
+                    (int)response.StatusCode,
+                    query);
+                return OfficialCatalogChannelResult.Empty;
             }
 
-            return MercadoLivreItemParser.ParseSearch(json);
+            return OfficialCatalogChannelResult.From(MercadoLivreItemParser.ParseSearch(json));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha na busca Mercado Livre. Query={Query}", query);
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
     }
 }

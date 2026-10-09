@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
@@ -14,17 +15,20 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     private readonly IShopeeAffiliateOfferService _shopee;
     private readonly IAmazonPaApiService _amazon;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger<OfficialCatalogSearchService> _logger;
 
     public OfficialCatalogSearchService(
         IMercadoLivreApiService mercadoLivre,
         IShopeeAffiliateOfferService shopee,
         IAmazonPaApiService amazon,
-        IDbContextFactory<AppDbContext> dbContextFactory)
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ILogger<OfficialCatalogSearchService> logger)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
         _amazon = amazon;
         _dbContextFactory = dbContextFactory;
+        _logger = logger;
     }
 
     public async Task<OfficialCatalogSearchResponseDto> SearchAsync(
@@ -39,7 +43,8 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             {
                 Status = false,
                 Descricao = "Informe ao menos 2 caracteres para buscar nas lojas oficiais.",
-                DataList = []
+                DataList = [],
+                Channels = []
             };
         }
 
@@ -52,22 +57,36 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         }
 
         var limit = OfficialCatalogSearchRules.ClampLimit(filter.Limit);
+        var skipped = Task.FromResult(OfficialCatalogChannelResult.Empty);
         var mlTask = includeMl
             ? _mercadoLivre.SearchProductsAsync(keyword, limit, cancellationToken)
-            : Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([]);
+            : skipped;
         var shopeeTask = includeShopee
             ? _shopee.SearchProductsAsync(userId, keyword, limit, cancellationToken)
-            : Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([]);
+            : skipped;
         var amazonTask = includeAmazon
             ? _amazon.SearchProductsAsync(userId, keyword, limit, cancellationToken)
-            : Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([]);
+            : skipped;
         var internalTask = SearchLocalProductsAsync(keyword, limit, cancellationToken);
         await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask);
 
-        var merged = mlTask.Result
-            .Concat(shopeeTask.Result)
-            .Concat(amazonTask.Result)
-            .Concat(internalTask.Result)
+        var mlItems = mlTask.Result.Items;
+        var shopeeItems = shopeeTask.Result.Items;
+        var amazonItems = amazonTask.Result.Items;
+        var localItems = internalTask.Result;
+
+        _logger.LogInformation(
+            "Busca concluída para '{query}': ML={mlCount}, Shopee={shopeeCount}, Amazon={amazonCount}, Local={localCount}",
+            keyword,
+            mlItems.Count,
+            shopeeItems.Count,
+            amazonItems.Count,
+            localItems.Count);
+
+        var merged = mlItems
+            .Concat(shopeeItems)
+            .Concat(amazonItems)
+            .Concat(localItems)
             .Where(item => LiveSearchRules.Matches(
                 item.ProductName,
                 item.Price,
@@ -89,7 +108,38 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             Descricao = merged.Count == 0
                 ? "Nenhuma oferta encontrada nas APIs oficiais para este termo."
                 : $"{merged.Count} oferta(s) encontradas.",
-            DataList = merged
+            DataList = merged,
+            Channels =
+            [
+                OfficialCatalogSearchRules.BuildChannelStatus(
+                    "MercadoLivre",
+                    "Mercado Livre",
+                    includeMl,
+                    mlItems.Count,
+                    false,
+                    string.Empty),
+                OfficialCatalogSearchRules.BuildChannelStatus(
+                    "Shopee",
+                    "Shopee",
+                    includeShopee,
+                    shopeeItems.Count,
+                    shopeeTask.Result.MissingCredentials,
+                    OfficialCatalogSearchRules.ShopeeMissingApiKeyMessage),
+                OfficialCatalogSearchRules.BuildChannelStatus(
+                    "Amazon",
+                    "Amazon",
+                    includeAmazon,
+                    amazonItems.Count,
+                    amazonTask.Result.MissingCredentials,
+                    OfficialCatalogSearchRules.AmazonMissingPaApiMessage),
+                OfficialCatalogSearchRules.BuildChannelStatus(
+                    "Local",
+                    "Base Local (Grupos)",
+                    true,
+                    localItems.Count,
+                    false,
+                    string.Empty)
+            ]
         };
     }
 

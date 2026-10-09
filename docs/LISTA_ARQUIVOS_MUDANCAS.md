@@ -988,6 +988,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **appsettings.json** — nó `Integrations:AmazonPaApi`.
 - [x] **InfrastructureDataServiceRegistrationExtensions.cs** — `AddDbContextFactory<AppDbContext>` scoped.
 - [x] **OfficialCatalogSearchService.cs** / **ShopeeAffiliateOfferService.cs** / **AmazonPaApiService.cs** — contexto isolado por task no `WhenAll`.
+- [x] **OfficialCatalogChannelStatusDto** / **BuscaGlobal.razor** — badges por loja (ML/Shopee/Amazon/local).
+- [x] **MercadoLivreApiService.cs** — `GET https://api.mercadolibre.com/sites/MLB/search` sem Authorization.
+- [x] **OfficialCatalogSearchService.cs** — log `Busca concluída para '{query}': ML=…`.
+- [x] **OfficialCatalogSearchRulesTests.cs** / **MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchServiceTests.cs**.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

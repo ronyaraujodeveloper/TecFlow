@@ -247,12 +247,12 @@ As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 
-  ## 🐞 Correção de Concorrência de DbContext na Busca (`IDbContextFactory` Fix)
+  ## 🔍 Transparência de Status e Logs no Live Search (`SearchTelemetryUI`)
 
-- [x] **Isolamento de Thread no Live Search Paralelo:**
-  - Substituição da injeção direta de `DbContext` scoped por `IDbContextFactory<AppDbContext>` nas consultas simultâneas da tela `/busca`.
-- [x] **Execução Segura em Parallel Tasks:**
-  - Garantia de escopos de banco independentes para cada task concorrente no motor de busca omnichannel.
+- [x] **Indicador de Status por Plataforma na Tela de Busca:**
+  - Exibição de badges de progresso/sucesso (ex: Mercado Livre: 12 itens | Shopee: Sem credencial | Amazon: 0 itens) em vez de apenas uma mensagem genérica de lista vazia.
+- [x] **Logs de Auditoria de Busca:**
+  - Registro no `ILogger` dos parâmetros de busca e contagem de itens retornados por cada canal de integração.
 
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

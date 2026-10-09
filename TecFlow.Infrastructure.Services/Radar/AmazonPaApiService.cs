@@ -83,7 +83,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         }
     }
 
-    public async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    public async Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,
         string query,
         int limit = 20,
@@ -91,7 +91,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
 
         var access = _options.AccessKey;
@@ -107,7 +107,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
 
         if (string.IsNullOrWhiteSpace(access) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(tag))
         {
-            return [];
+            return OfficialCatalogChannelResult.Unconfigured();
         }
 
         try
@@ -139,15 +139,15 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogDebug("Amazon PA-API SearchItems falhou. Status={Status}", (int)response.StatusCode);
-                return [];
+                return OfficialCatalogChannelResult.Empty;
             }
 
-            return ParseSearch(json);
+            return OfficialCatalogChannelResult.From(ParseSearch(json));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha no SearchItems. Query={Query}", query);
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
     }
 

@@ -200,8 +200,8 @@ flowchart LR
   TREND -->|5 creditos UTC midnight| CRED[(TenantCredits)]
   LIVE[LiveCheckSearchService] -->|ML /items + Shopee HMAC + PA-API| APIEXT[APIs oficiais]
   LIVE -->|fallback HTML ValidateAsync| VAL
-  BUSCAUI[BuscaGlobal /busca] -->|GET api/busca WhenAll| CAT[OfficialCatalogSearchService]
-  CAT -->|sites/MLB/search| APIEXT
+  BUSCAUI[BuscaGlobal /busca] -->|GET api/busca WhenAll + Channels| CAT[OfficialCatalogSearchService]
+  CAT -->|sites/MLB/search público sem token| APIEXT
   CAT -->|productOfferV2 keyword| APIEXT
   CAT -->|PA-API SearchItems| APIEXT
   CAT -->|IDbContextFactory CreateDbContext por task| SQL

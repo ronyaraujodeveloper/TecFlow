@@ -1,4 +1,6 @@
-﻿namespace TecFlow.Business.Service.Radar;
+﻿using TecFlow.Business.Dto;
+
+namespace TecFlow.Business.Service.Radar;
 
 public static class OfficialCatalogSearchRules
 {
@@ -31,5 +33,67 @@ public static class OfficialCatalogSearchRules
 
         return !key.Contains("homolog", StringComparison.OrdinalIgnoreCase)
             && !key.Contains("sandbox", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public const string ShopeeMissingApiKeyMessage = "Chave de API não configurada";
+
+    public const string AmazonMissingPaApiMessage = "PA-API não configurada";
+
+    public static OfficialCatalogChannelStatusDto BuildChannelStatus(
+        string key,
+        string label,
+        bool included,
+        int productCount,
+        bool missingCredentials,
+        string missingMessage)
+    {
+        if (!included)
+        {
+            return new OfficialCatalogChannelStatusDto
+            {
+                Key = key,
+                Label = label,
+                Included = false,
+                ProductCount = 0,
+                State = "skipped",
+                Message = "Não consultada"
+            };
+        }
+
+        if (missingCredentials)
+        {
+            return new OfficialCatalogChannelStatusDto
+            {
+                Key = key,
+                Label = label,
+                Included = true,
+                ProductCount = 0,
+                State = "missing",
+                Message = missingMessage
+            };
+        }
+
+        if (productCount > 0)
+        {
+            return new OfficialCatalogChannelStatusDto
+            {
+                Key = key,
+                Label = label,
+                Included = true,
+                ProductCount = productCount,
+                State = "ok",
+                Message = $"{productCount} produtos encontrados"
+            };
+        }
+
+        return new OfficialCatalogChannelStatusDto
+        {
+            Key = key,
+            Label = label,
+            Included = true,
+            ProductCount = 0,
+            State = "empty",
+            Message = "0 produtos"
+        };
     }
 }

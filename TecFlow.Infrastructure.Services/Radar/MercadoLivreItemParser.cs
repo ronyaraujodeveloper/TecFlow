@@ -75,7 +75,10 @@ public static class MercadoLivreItemParser
                 continue;
             }
 
-            var image = item.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null;
+            var image = item.TryGetProperty("secure_thumbnail", out var secureThumb)
+                ? secureThumb.GetString()
+                : null;
+            image ??= item.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null;
             var free = item.TryGetProperty("shipping", out var shipping)
                 && shipping.TryGetProperty("free_shipping", out var freeEl)
                 && freeEl.ValueKind == JsonValueKind.True;

@@ -9,7 +9,7 @@ public interface IMercadoLivreApiService
 {
     Task<OfficialOfferSnapshotDto?> GetItemAsync(string itemId, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    Task<OfficialCatalogChannelResult> SearchProductsAsync(
         string query,
         int limit = 20,
         CancellationToken cancellationToken = default);
@@ -23,7 +23,7 @@ public interface IShopeeAffiliateOfferService
         string itemId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,
         string query,
         int limit = 20,
@@ -37,7 +37,7 @@ public interface IAmazonPaApiService
         string asin,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,
         string query,
         int limit = 20,

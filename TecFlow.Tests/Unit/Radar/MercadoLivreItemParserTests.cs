@@ -15,6 +15,7 @@ public class MercadoLivreItemParserTests
         Assert.Equal("Notebook Gamer", item.ProductName);
         Assert.Equal(1999.9m, item.Price);
         Assert.Equal("https://produto.mercadolivre.com.br/MLB-123", item.SourceUrl);
+        Assert.Equal("https://http2.mlstatic.com/x.jpg", item.ImageUrl);
         Assert.Equal("Frete grátis", item.Shipping);
     }
 }

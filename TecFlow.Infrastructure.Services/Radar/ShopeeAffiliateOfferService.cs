@@ -82,7 +82,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
         }
     }
 
-    public async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchProductsAsync(
+    public async Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,
         string query,
         int limit = 20,
@@ -90,7 +90,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
 
         var appId = _options.ResolveAffiliateAppId();
@@ -104,7 +104,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
 
         if (!OfficialCatalogSearchRules.HasRealAffiliateCredentials(appId, secret))
         {
-            return [];
+            return OfficialCatalogChannelResult.Unconfigured();
         }
 
         try
@@ -126,15 +126,15 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogDebug("Shopee productOfferV2 keyword falhou. Status={Status}", (int)response.StatusCode);
-                return [];
+                return OfficialCatalogChannelResult.Empty;
             }
 
-            return ParseSearch(json);
+            return OfficialCatalogChannelResult.From(ParseSearch(json));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha na busca Shopee. Query={Query}", query);
-            return [];
+            return OfficialCatalogChannelResult.Empty;
         }
     }
 

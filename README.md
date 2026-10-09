@@ -277,7 +277,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 ## 🐞 Correção de Leitura de Loja Ativa no Live Search (`PlatformEnumResolution`)
 
-- [ ] **Mapeamento Unificado de Plataformas:**
+- [x] **Mapeamento Unificado de Plataformas:**
   - Padronização da consulta de contas ativas (`MarketplaceAccounts`) utilizando estritamente o `PlatformType` enum para evitar falha por divergência de espaço ou string ("Mercado Livre" vs "MercadoLivre").
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

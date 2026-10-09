@@ -1005,6 +1005,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreManualLinkForm.cs** — `TryExtractMercadoLivreTrackingId` (dígitos ou `matt_tool=`).
 - [x] **MarketplaceAccountService.cs** / **IntegracaoLojaService.cs** — normaliza TrackingId ML e expande `meli.la`/`/sec/` com `UrlUnshortenerService`.
 - [x] **AffiliateTrackingIdValidator.cs** — `TryParseMercadoLivreTrackingId` e `NeedsMercadoLivreUrlExpansion`.
+- [x] **OfficialCatalogSearchRules.cs** — `MatchesMercadoLivreAccount` / `ResolveMercadoLivreAffiliateId` (espaço em "Mercado Livre").
+- [x] **MercadoLivreApiService.cs** — loja ativa por enum ou nome compacto; Affiliate ID habilita busca sem OAuth e injeta `matt_tool`.
+- [x] **BuscaGlobal.razor** — botão Conectar só no estado `missing`; badge 🟢 quando a loja cadastrada retorna produtos.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

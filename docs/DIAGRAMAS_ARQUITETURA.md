@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Minhas Lojas:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. No Mercado Livre o campo aceita link de afiliado ou só o número; `ConnectStoreManualLinkForm` / `MarketplaceAccountService` extraem `matt_tool` (ou expandem `meli.la`/`/sec/` com `UrlUnshortenerService`) e gravam o ID numérico em `TrackingId`. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
+**Minhas Lojas / Busca:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. No Mercado Livre o campo aceita link de afiliado ou só o número; `ConnectStoreManualLinkForm` / `MarketplaceAccountService` extraem `matt_tool` (ou expandem `meli.la`/`/sec/` com `UrlUnshortenerService`) e gravam o ID numérico em `TrackingId`. A `/busca` localiza a loja ativa por `MarketplaceType.MercadoLivre` ou nome compacto (`Mercado Livre` → `MercadoLivre`); com Affiliate ID a pesquisa MLB segue mesmo sem OAuth e injeta `matt_tool` nos permalinks. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
 
 ```mermaid
 flowchart LR

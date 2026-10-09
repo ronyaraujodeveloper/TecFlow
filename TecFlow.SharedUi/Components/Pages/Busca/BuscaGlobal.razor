@@ -179,11 +179,7 @@
 
     private static bool NeedsMercadoLivreConnect(OfficialCatalogChannelStatusDto channel) =>
         string.Equals(channel.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase)
-        && (channel.State is "missing"
-            || channel.Message.Contains("403", StringComparison.OrdinalIgnoreCase)
-            || channel.Message.Contains("401", StringComparison.OrdinalIgnoreCase)
-            || channel.Message.Contains("Forbidden", StringComparison.OrdinalIgnoreCase)
-            || channel.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase));
+        && channel.State is "missing";
 
     private static string ChannelDisplayMessage(OfficialCatalogChannelStatusDto channel)
     {

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Options;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -87,29 +89,37 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         _ = limit;
         try
         {
-            var accessToken = await ResolveAccessTokenAsync(userId, cancellationToken);
-            if (string.IsNullOrWhiteSpace(accessToken))
+            var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
+            var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
+                account?.TrackingId,
+                account?.AffiliateTrackingId);
+            var connectedByAffiliate = !string.IsNullOrWhiteSpace(affiliateId);
+            var accessToken = await ResolveAccessTokenAsync(account, cancellationToken);
+            if (string.IsNullOrWhiteSpace(accessToken) && !connectedByAffiliate)
             {
                 return OfficialCatalogChannelResult.Unconfigured();
             }
 
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            ApplyBrowserHeaders(request);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            var searchUri =
+                $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20";
+            var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
+            if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                && !string.IsNullOrWhiteSpace(accessToken))
             {
-                _logger.LogError("Erro API ML [{StatusCode}]: {Body}", response.StatusCode, body);
-                if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                (statusCode, body) = await SendSearchAsync(searchUri, accessToken: null, cancellationToken);
+            }
+
+            if (statusCode != HttpStatusCode.OK)
+            {
+                _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
+                if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                    && !connectedByAffiliate)
                 {
                     return OfficialCatalogChannelResult.Unconfigured();
                 }
 
                 return OfficialCatalogChannelResult.Failed(
-                    $"Erro HTTP {(int)response.StatusCode} ({response.StatusCode})");
+                    $"Erro HTTP {(int)statusCode} ({statusCode})");
             }
 
             MercadoLivreSearchResponse? payload;
@@ -128,6 +138,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 return OfficialCatalogChannelResult.Empty;
             }
 
+            var mattWord = string.IsNullOrWhiteSpace(account?.FriendlyName)
+                ? affiliateId ?? string.Empty
+                : account.FriendlyName.Trim();
             var items = payload.Results
                 .Select(item => new OfficialCatalogProductDto
                 {
@@ -140,9 +153,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                     ImageUrl = string.IsNullOrWhiteSpace(item.SecureThumbnail)
                         ? item.Thumbnail?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase)
                         : item.SecureThumbnail.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
-                    SourceUrl = string.IsNullOrWhiteSpace(item.Permalink)
-                        ? string.Empty
-                        : item.Permalink,
+                    SourceUrl = ApplyAffiliateToPermalink(item.Permalink, affiliateId, mattWord),
                     Shipping = item.Shipping?.FreeShipping == true ? "Frete grátis" : null,
                     Source = "Api"
                 })
@@ -173,9 +184,27 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
     }
 
-    private async Task<string?> ResolveAccessTokenAsync(int userId, CancellationToken cancellationToken)
+    private async Task<(HttpStatusCode StatusCode, string Body)> SendSearchAsync(
+        string searchUri,
+        string? accessToken,
+        CancellationToken cancellationToken)
     {
-        var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, searchUri);
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+
+        ApplyBrowserHeaders(request);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response.StatusCode, body);
+    }
+
+    private async Task<string?> ResolveAccessTokenAsync(
+        MarketplaceAccount? account,
+        CancellationToken cancellationToken)
+    {
         if (account is not null && IsTokenFresh(account))
         {
             return account.AccessToken!.Trim();
@@ -218,13 +247,54 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private async Task<MarketplaceAccount?> LoadMercadoLivreAccountAsync(int userId, CancellationToken cancellationToken)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.MarketplaceAccounts.AsNoTracking()
-            .Where(item => item.IsActive
-                && item.MarketplaceType == MarketplaceType.MercadoLivre
-                && item.UserId == userId.ToString()
-                && item.AccessToken != null)
-            .OrderByDescending(item => item.ExpiresAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        var userKey = userId.ToString(CultureInfo.InvariantCulture);
+        var accounts = await dbContext.MarketplaceAccounts
+            .AsNoTracking()
+            .Where(x => x.IsActive
+                && (x.MarketplaceType == MarketplaceType.MercadoLivre
+                    || (x.FriendlyName != null && x.FriendlyName.Replace(" ", "") == "MercadoLivre")
+                    || (x.ShopName != null && x.ShopName.Replace(" ", "") == "MercadoLivre")))
+            .ToListAsync(cancellationToken);
+
+        return accounts
+            .Where(item => OfficialCatalogSearchRules.MatchesMercadoLivreAccount(
+                item.MarketplaceType,
+                item.FriendlyName,
+                item.ShopName))
+            .OrderByDescending(item => OwnsAccount(item, userKey))
+            .ThenByDescending(item =>
+                !string.IsNullOrWhiteSpace(
+                    OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
+                        item.TrackingId,
+                        item.AffiliateTrackingId)))
+            .ThenByDescending(item => item.ExpiresAt)
+            .FirstOrDefault();
+    }
+
+    private static bool OwnsAccount(MarketplaceAccount account, string userKey) =>
+        string.IsNullOrWhiteSpace(account.UserId)
+        || string.Equals(account.UserId.Trim(), userKey, StringComparison.Ordinal);
+
+    private static string ApplyAffiliateToPermalink(string? permalink, string? affiliateId, string mattWord)
+    {
+        if (string.IsNullOrWhiteSpace(permalink))
+        {
+            return string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(affiliateId))
+        {
+            return permalink;
+        }
+
+        try
+        {
+            return MercadoLivreCommissionUrlBuilder.ApplyMattParams(permalink, affiliateId, mattWord);
+        }
+        catch (Exception)
+        {
+            return permalink;
+        }
     }
 
     private async Task<string?> RequestOAuthTokenAsync(

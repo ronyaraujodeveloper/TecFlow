@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Integrations.MercadoLivre;
+using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Infrastructure.Services.Radar;
 using TecFlow.Util.Security;
@@ -54,12 +56,51 @@ public class MercadoLivreApiServiceTests
         Assert.Empty(result.Items);
     }
 
-    private static MercadoLivreApiService CreateSut(HttpMessageHandler handler, MercadoLivreIntegrationOptions options)
+    [Fact]
+    public async Task SearchProductsAsync_ShouldSearchWhenAffiliateIdIsRegisteredWithoutOAuth()
+    {
+        var handler = new CaptureHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db =>
+            {
+                db.MarketplaceAccounts.Add(new MarketplaceAccount
+                {
+                    TenantId = Guid.NewGuid(),
+                    UserId = "9",
+                    MarketplaceType = MarketplaceType.Amazon,
+                    FriendlyName = "Mercado Livre",
+                    TrackingId = "14343296",
+                    IsActive = true
+                });
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.False(result.MissingCredentials);
+        Assert.Null(handler.LastRequest!.Headers.Authorization);
+        var item = Assert.Single(result.Items);
+        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static MercadoLivreApiService CreateSut(
+        HttpMessageHandler handler,
+        MercadoLivreIntegrationOptions options,
+        Action<AppDbContext>? seed = null)
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.mercadolibre.com/") };
+        var dbName = Guid.NewGuid().ToString();
+        if (seed is not null)
+        {
+            using var seedContext = CreateDbContext(dbName);
+            seed(seedContext);
+            seedContext.SaveChanges();
+        }
+
         var factory = new Mock<IDbContextFactory<AppDbContext>>();
         factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateDbContext);
+            .ReturnsAsync(() => CreateDbContext(dbName));
         return new MercadoLivreApiService(
             http,
             Options.Create(options),
@@ -67,13 +108,13 @@ public class MercadoLivreApiServiceTests
             NullLogger<MercadoLivreApiService>.Instance);
     }
 
-    private static AppDbContext CreateDbContext()
+    private static AppDbContext CreateDbContext(string? name = null)
     {
         var encryption = new Mock<IEncryptionService>();
         encryption.Setup(e => e.Encrypt(It.IsAny<string>())).Returns<string>(s => s);
         encryption.Setup(e => e.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(name ?? Guid.NewGuid().ToString())
             .Options;
         return new AppDbContext(dbOptions, encryption.Object, new TecFlow.Database.MultiTenancy.NullCurrentTenantService());
     }

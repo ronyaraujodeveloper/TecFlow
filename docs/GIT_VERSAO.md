@@ -81,3 +81,4 @@
 [2026-10-08 21:55:52]fix(busca): token OAuth do MLB e aviso de conta conectada
 [2026-10-08 22:12:18]feat(busca): botao Conectar no badge do Mercado Livre
 [2026-10-08 22:46:49] feat(lojas): simplifica conexao ML com link de afiliado
+[2026-10-08 22:58:38] fix(busca): reconhece loja ML pelo Affiliate ID

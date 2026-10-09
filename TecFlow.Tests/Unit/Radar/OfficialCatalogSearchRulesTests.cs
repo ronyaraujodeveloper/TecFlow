@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Service.Radar;
+using TecFlow.Core.Enums;
 
 namespace TecFlow.Tests.Unit.Radar;
 
@@ -78,5 +79,22 @@ public class OfficialCatalogSearchRulesTests
             "Erro HTTP 403 (Forbidden)");
         Assert.Equal("error", error.State);
         Assert.Equal("Erro HTTP 403 (Forbidden)", error.Message);
+    }
+
+    [Fact]
+    public void MatchesMercadoLivreAccount_ShouldIgnoreSpacesInStoreName()
+    {
+        Assert.True(OfficialCatalogSearchRules.MatchesMercadoLivreAccount(
+            MarketplaceType.MercadoLivre, "Loja", null));
+        Assert.True(OfficialCatalogSearchRules.IsMercadoLivreLabel("Mercado Livre"));
+        Assert.True(OfficialCatalogSearchRules.HasConnectedMercadoLivreStore(
+            MarketplaceType.Shopee,
+            "Mercado Livre",
+            null,
+            "14343296",
+            null));
+        Assert.Equal(
+            "14343296",
+            OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(null, "14343296"));
     }
 }

@@ -796,5 +796,10 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Campo de conexão:** rótulo `Link de Afiliado ou ID do Mercado Livre` e placeholder para colar o link de divulgação.
 - [x] **Parser automático:** dígitos puros, `matt_tool=([0-9]+)` em links `http(s)` e expansão de `meli.la` / `/sec/` via `UrlUnshortenerService`.
 - [x] **Como pegar meu ID?:** `HowToGetStoreIdModal.razor` com passos para Computador e Telemóvel (App), sem jargão técnico.
+
+## 🐞 Leitura de loja ativa no Live Search (`PlatformEnumResolution`)
+
+- [x] **Consulta de `MarketplaceAccounts`:** enum `MarketplaceType.MercadoLivre` ou nome sem espaços (`Mercado Livre` → `MercadoLivre`).
+- [x] **Affiliate ID:** `TrackingId` / `AffiliateTrackingId` (ex.: `14343296`) considera a loja conectada e parametriza `matt_tool` nos permalinks da `/busca`.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

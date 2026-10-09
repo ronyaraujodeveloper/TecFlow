@@ -21,6 +21,28 @@ public static class MercadoLivreCommissionUrlBuilder
         return ApplyMattParams($"{CatalogProductBase}{catalogId}", mattTool, mattWord);
     }
 
+    public static string InjectMattTool(string? productUrl, string? trackingId)
+    {
+        if (string.IsNullOrWhiteSpace(productUrl))
+        {
+            return string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(trackingId))
+        {
+            return productUrl.Trim();
+        }
+
+        try
+        {
+            return ApplyMattParams(productUrl, trackingId, trackingId);
+        }
+        catch (Exception)
+        {
+            return productUrl.Trim();
+        }
+    }
+
     public static string ApplyMattParams(string url, string mattTool, string mattWord)
     {
         var sanitized = MercadoLivreProductUrlParser.Sanitize(url);

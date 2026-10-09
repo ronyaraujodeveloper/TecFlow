@@ -1008,6 +1008,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **OfficialCatalogSearchRules.cs** — `MatchesMercadoLivreAccount` / `ResolveMercadoLivreAffiliateId` (espaço em "Mercado Livre").
 - [x] **MercadoLivreApiService.cs** — loja ativa por enum ou nome compacto; Affiliate ID habilita busca sem OAuth e injeta `matt_tool`.
 - [x] **BuscaGlobal.razor** — botão Conectar só no estado `missing`; badge 🟢 quando a loja cadastrada retorna produtos.
+- [x] **MercadoLivreHtmlParser.cs** / **MercadoLivreHtmlParserTests.cs** — cards da vitrine `lista.mercadolivre.com.br`.
+- [x] **MercadoLivreApiService.cs** — fallback web em HTTP 403 e `InjectMattTool` no permalink.
+- [x] **OfficialCatalogSearchFilter** / **BuscaGlobal.razor** — envia `MercadoLivreTrackingId` da loja ativa.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

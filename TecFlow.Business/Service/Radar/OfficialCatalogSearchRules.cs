@@ -63,6 +63,14 @@ public static class OfficialCatalogSearchRules
             StringComparison.OrdinalIgnoreCase);
     }
 
+    public static string BuildMercadoLivreListaUrl(string query)
+    {
+        var slug = string.Join(
+            "-",
+            query.Trim().Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries));
+        return "https://lista.mercadolivre.com.br/" + Uri.EscapeDataString(slug);
+    }
+
     public static string? ResolveMercadoLivreAffiliateId(string? trackingId, string? affiliateTrackingId)
     {
         if (!string.IsNullOrWhiteSpace(trackingId))

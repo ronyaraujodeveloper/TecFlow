@@ -13,6 +13,7 @@ public interface IMercadoLivreApiService
         int userId,
         string query,
         int limit = 20,
+        string? trackingId = null,
         CancellationToken cancellationToken = default);
 }
 

@@ -279,5 +279,13 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 - [x] **Mapeamento Unificado de Plataformas:**
   - Padronização da consulta de contas ativas (`MarketplaceAccounts`) utilizando estritamente o `PlatformType` enum para evitar falha por divergência de espaço ou string ("Mercado Livre" vs "MercadoLivre").
+
+  ## 🛠️ Resiliência no Live Search do Mercado Livre (`MLBScraperSearchFallback`)
+
+- [x] **Bypass do Bloqueio HTTP 403 da API de Busca:**
+  - Implementação de fallback resiliênte para busca HTML/OpenGraph na vitrine do Mercado Livre quando a chamada da API sem Bearer Token retornar HTTP 403.
+- [x] **Preservação do TrackingId:**
+  - Garantia de que todos os produtos encontrados na busca (seja via API ou Fallback Scraper) tenham o `matt_tool` do tenant (`14343296`) injetado no link final de comissão.
+  
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

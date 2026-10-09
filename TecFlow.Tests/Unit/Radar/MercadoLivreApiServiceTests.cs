@@ -84,6 +84,41 @@ public class MercadoLivreApiServiceTests
         Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task SearchProductsAsync_ShouldFallbackToPublicListWhenApiReturnsForbidden()
+    {
+        var handler = new CaptureHandler
+        {
+            StatusCode = HttpStatusCode.Forbidden,
+            HtmlBody = """
+                <a title="Notebook Dell i7" href="https://www.mercadolivre.com.br/notebook-dell-i7/p/MLB1234567890">Dell</a>
+                """
+        };
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db =>
+            {
+                db.MarketplaceAccounts.Add(new MarketplaceAccount
+                {
+                    TenantId = Guid.NewGuid(),
+                    UserId = "1",
+                    MarketplaceType = MarketplaceType.MercadoLivre,
+                    TrackingId = "14343296",
+                    IsActive = true
+                });
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20, "14343296");
+
+        Assert.False(result.MissingCredentials);
+        Assert.Null(result.ErrorMessage);
+        var item = Assert.Single(result.Items);
+        Assert.Equal("Web", item.Source);
+        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("lista.mercadolivre.com.br", handler.LastRequest!.RequestUri!.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static MercadoLivreApiService CreateSut(
         HttpMessageHandler handler,
         MercadoLivreIntegrationOptions options,
@@ -128,14 +163,19 @@ public class MercadoLivreApiServiceTests
         public string Body { get; set; } =
             """{"results":[{"id":"MLB1","title":"Dell i7","price":10,"permalink":"https://produto.mercadolivre.com.br/MLB-1","thumbnail":"https://http2.mlstatic.com/t.jpg"}]}""";
 
+        public string HtmlBody { get; set; } = "<html></html>";
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult(new HttpResponseMessage(StatusCode)
+            var isLista = request.RequestUri?.Host.Contains("lista.mercadolivre", StringComparison.OrdinalIgnoreCase) == true;
+            var status = isLista ? HttpStatusCode.OK : StatusCode;
+            var body = isLista ? HtmlBody : Body;
+            return Task.FromResult(new HttpResponseMessage(status)
             {
-                Content = new StringContent(Body)
+                Content = new StringContent(body)
             });
         }
     }

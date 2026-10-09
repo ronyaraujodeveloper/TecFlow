@@ -801,5 +801,10 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 
 - [x] **Consulta de `MarketplaceAccounts`:** enum `MarketplaceType.MercadoLivre` ou nome sem espaços (`Mercado Livre` → `MercadoLivre`).
 - [x] **Affiliate ID:** `TrackingId` / `AffiliateTrackingId` (ex.: `14343296`) considera a loja conectada e parametriza `matt_tool` nos permalinks da `/busca`.
+
+## 🛠️ Fallback HTML da busca MLB (`MLBScraperSearchFallback`)
+
+- [x] **HTTP 403:** se `sites/MLB/search` falhar, consulta `https://lista.mercadolivre.com.br/{query}` com User-Agent Chrome.
+- [x] **TrackingId:** `matt_tool` da loja ativa injetado nos links da API e do scraper; badge 🟢 com a contagem de produtos.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

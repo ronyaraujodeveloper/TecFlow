@@ -60,7 +60,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var limit = OfficialCatalogSearchRules.ClampLimit(filter.Limit);
         var skipped = Task.FromResult(OfficialCatalogChannelResult.Empty);
         var mlTask = includeMl
-            ? SearchMercadoLivreSafeAsync(userId, keyword, limit, cancellationToken)
+            ? SearchMercadoLivreSafeAsync(userId, keyword, limit, filter, cancellationToken)
             : skipped;
         var shopeeTask = includeShopee
             ? _shopee.SearchProductsAsync(userId, keyword, limit, cancellationToken)
@@ -149,11 +149,17 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         int userId,
         string keyword,
         int limit,
+        OfficialCatalogSearchFilter filter,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await _mercadoLivre.SearchProductsAsync(userId, keyword, limit, cancellationToken);
+            return await _mercadoLivre.SearchProductsAsync(
+                userId,
+                keyword,
+                limit,
+                filter.MercadoLivreTrackingId,
+                cancellationToken);
         }
         catch (JsonException)
         {

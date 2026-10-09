@@ -16,7 +16,7 @@ public class OfficialCatalogSearchServiceTests
     public async Task SearchAsync_ShouldExposeChannelStatusAndKeepPublicMlResults()
     {
         var ml = new Mock<IMercadoLivreApiService>();
-        ml.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        ml.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(OfficialCatalogChannelResult.From(
             [
                 new OfficialCatalogProductDto
@@ -58,7 +58,7 @@ public class OfficialCatalogSearchServiceTests
     public async Task SearchAsync_ShouldSurfaceMercadoLivreHttpErrorOnChannelBadge()
     {
         var ml = new Mock<IMercadoLivreApiService>();
-        ml.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        ml.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(OfficialCatalogChannelResult.Unconfigured());
         var shopee = new Mock<IShopeeAffiliateOfferService>();
         shopee.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))

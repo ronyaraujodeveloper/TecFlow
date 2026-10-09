@@ -12,6 +12,8 @@ public class OfficialCatalogSearchFilter
 
     public bool MercadoLivre { get; set; } = true;
 
+    public string? MercadoLivreTrackingId { get; set; }
+
     public bool Shopee { get; set; } = true;
 
     public bool Amazon { get; set; } = true;

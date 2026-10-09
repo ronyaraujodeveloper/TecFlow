@@ -7,9 +7,11 @@
 @using TecFlow.Core.Enums
 @using TecFlow.Database.Filter
 @using TecFlow.SharedUi.Helpers
+@using TecFlow.SharedUi.Services.Integrations
 @using TecFlow.SharedUi.Services.LinkGenerator
 @using TecFlow.SharedUi.Services.Radar
 @inject IOfficialCatalogSearchApiService SearchApi
+@inject IIntegracaoLojaApiService IntegracaoApi
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject NavigationManager Navigation
 @inject ILogger<BuscaGlobal> Logger
@@ -73,8 +75,9 @@
             {
                 <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2 d-inline-flex align-items-center gap-2">
                     <span>
+                        @ChannelGlyph(channel.State)
                         <span class="fw-semibold">@channel.Label:</span>
-                        @ChannelGlyph(channel.State) @ChannelDisplayMessage(channel)
+                        @ChannelDisplayMessage(channel)
                     </span>
                     @if (NeedsMercadoLivreConnect(channel))
                     {
@@ -160,6 +163,35 @@
     private string? _convertingUrl;
     private List<OfficialCatalogProductDto> _items = [];
     private List<OfficialCatalogChannelStatusDto> _channels = [];
+    private string? _mlTrackingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMercadoLivreTrackingIdAsync();
+    }
+
+    private async Task LoadMercadoLivreTrackingIdAsync()
+    {
+        try
+        {
+            var response = await IntegracaoApi.ListAsync();
+            var store = response.DataList?
+                .Where(item => item.Status != MarketplaceIntegrationStatus.Inactive
+                    && OfficialCatalogSearchRules.MatchesMercadoLivreAccount(
+                        item.PlatformType,
+                        item.FriendlyName,
+                        item.ShopName))
+                .Select(item => OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
+                    item.TrackingId,
+                    item.AffiliateTrackingId))
+                .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+            _mlTrackingId = store;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Não foi possível carregar o TrackingId do Mercado Livre para a busca.");
+        }
+    }
 
     private static string ChannelGlyph(string? state) => state switch
     {
@@ -209,6 +241,7 @@
                 MaxPrice = _maxPrice,
                 HasCoupon = _couponOnly ? true : null,
                 MercadoLivre = _ml,
+                MercadoLivreTrackingId = _mlTrackingId,
                 Shopee = _shopee,
                 Amazon = _amazon
             });

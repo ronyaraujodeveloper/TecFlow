@@ -1,80 +1,81 @@
 ﻿using System.Net;
 using System.Net.Http;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
+using TecFlow.Business.Integrations.MercadoLivre;
+using TecFlow.Database;
 using TecFlow.Infrastructure.Services.Radar;
+using TecFlow.Util.Security;
 
 namespace TecFlow.Tests.Unit.Radar;
 
 public class MercadoLivreApiServiceTests
 {
     [Fact]
-    public async Task SearchProductsAsync_ShouldCallPublicMlbSearchWithChromeUserAgent()
+    public async Task SearchProductsAsync_ShouldAskForConnectedAccountWhenTokenIsMissing()
     {
         var handler = new CaptureHandler();
-        using var http = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://api.mercadolibre.com/")
-        };
-        var sut = new MercadoLivreApiService(http, NullLogger<MercadoLivreApiService>.Instance);
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions());
 
-        var result = await sut.SearchProductsAsync("dell i7", 20);
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.True(result.MissingCredentials);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldSendBearerTokenFromAppSettings()
+    {
+        var handler = new CaptureHandler();
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token" });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
         Assert.NotNull(handler.LastRequest);
+        Assert.Equal("Bearer", handler.LastRequest!.Headers.Authorization?.Scheme);
+        Assert.Equal("ml-app-token", handler.LastRequest.Headers.Authorization?.Parameter);
         Assert.Equal(
             "https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20",
-            handler.LastRequest!.RequestUri!.AbsoluteUri);
-        Assert.Contains("Chrome/120.0.0.0", CombinedUserAgent(handler.LastRequest));
-        Assert.Contains("application/json", string.Join(' ', handler.LastRequest.Headers.GetValues("Accept")));
-        var item = Assert.Single(result.Items);
-        Assert.Equal("Dell i7", item.ProductName);
-        Assert.Equal(10m, item.Price);
-        Assert.Equal("https://http2.mlstatic.com/t.jpg", item.ImageUrl);
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-1", item.SourceUrl);
-        Assert.Null(result.ErrorMessage);
+            handler.LastRequest.RequestUri!.AbsoluteUri);
+        Assert.Equal("Dell i7", Assert.Single(result.Items).ProductName);
     }
 
     [Fact]
-    public async Task SearchProductsAsync_ShouldReturnHttpErrorMessageWhenMlbForbidden()
+    public async Task SearchProductsAsync_ShouldTreatForbiddenAsMissingAccount()
     {
-        var handler = new CaptureHandler
-        {
-            StatusCode = HttpStatusCode.Forbidden,
-            Body = """{"message":"forbidden","error":"forbidden","status":403}"""
-        };
-        using var http = new HttpClient(handler);
-        var logger = new Mock<ILogger<MercadoLivreApiService>>();
-        var sut = new MercadoLivreApiService(http, logger.Object);
+        var handler = new CaptureHandler { StatusCode = HttpStatusCode.Forbidden };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "expired" });
 
-        var result = await sut.SearchProductsAsync("dell i7");
+        var result = await sut.SearchProductsAsync(1, "dell i7");
 
+        Assert.True(result.MissingCredentials);
         Assert.Empty(result.Items);
-        Assert.Equal("Erro HTTP 403 (Forbidden)", result.ErrorMessage);
-        logger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Erro API ML")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
-    [Fact]
-    public async Task SearchProductsAsync_ShouldThrowOnInvalidJson()
+    private static MercadoLivreApiService CreateSut(HttpMessageHandler handler, MercadoLivreIntegrationOptions options)
     {
-        var handler = new CaptureHandler { Body = "{not-json" };
-        using var http = new HttpClient(handler);
-        var sut = new MercadoLivreApiService(http, NullLogger<MercadoLivreApiService>.Instance);
-
-        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => sut.SearchProductsAsync("dell i7"));
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.mercadolibre.com/") };
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDbContext);
+        return new MercadoLivreApiService(
+            http,
+            Options.Create(options),
+            factory.Object,
+            NullLogger<MercadoLivreApiService>.Instance);
     }
 
-    private static string CombinedUserAgent(HttpRequestMessage request)
+    private static AppDbContext CreateDbContext()
     {
-        request.Headers.TryGetValues("User-Agent", out var values);
-        return request.Headers.UserAgent + " " + string.Join(' ', values ?? []);
+        var encryption = new Mock<IEncryptionService>();
+        encryption.Setup(e => e.Encrypt(It.IsAny<string>())).Returns<string>(s => s);
+        encryption.Setup(e => e.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
+        var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new AppDbContext(dbOptions, encryption.Object, new TecFlow.Database.MultiTenancy.NullCurrentTenantService());
     }
 
     private sealed class CaptureHandler : HttpMessageHandler

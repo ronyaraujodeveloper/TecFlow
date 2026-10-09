@@ -996,6 +996,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreApiService.cs** — User-Agent `TecFlowApp/1.0`, `GET sites/MLB/search?q=&limit=20` e `Erro na API ML: {status}`.
 - [x] **MercadoLivreApiService.cs** — Chrome/120, `SendAsync`, log do body e `OfficialCatalogChannelResult.Failed`.
 - [x] **BuscaGlobal.razor** — badge `error` com ❌ e mensagem HTTP/JSON.
+- [x] **MercadoLivreIntegrationOptions.cs** / **appsettings.json** — `Integrations:MercadoLivre` AppId/SecretKey/AccessToken.
+- [x] **MercadoLivreApiService.cs** — Bearer da conta do tenant, client_credentials e 401/403 como conta ausente.
+- [x] **BuscaGlobal.razor** — `⚠️ Requer conta conectada no painel`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

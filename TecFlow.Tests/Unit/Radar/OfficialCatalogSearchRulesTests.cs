@@ -58,6 +58,16 @@ public class OfficialCatalogSearchRulesTests
             OfficialCatalogSearchRules.AmazonMissingPaApiMessage);
         Assert.Equal("PA-API não configurada", amazon.Message);
 
+        var mlMissing = OfficialCatalogSearchRules.BuildChannelStatus(
+            "MercadoLivre",
+            "Mercado Livre",
+            true,
+            0,
+            true,
+            OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage);
+        Assert.Equal("missing", mlMissing.State);
+        Assert.Equal("Requer conta conectada no painel", mlMissing.Message);
+
         var error = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre",
             "Mercado Livre",

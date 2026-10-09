@@ -3,6 +3,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using TecFlow.Business.Dto
 @using TecFlow.Business.Service.LinkStrategies
+@using TecFlow.Business.Service.Radar
 @using TecFlow.Core.Enums
 @using TecFlow.Database.Filter
 @using TecFlow.SharedUi.Helpers
@@ -71,7 +72,7 @@
             {
                 <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2">
                     <span class="fw-semibold">@channel.Label:</span>
-                    @ChannelGlyph(channel.State) @channel.Message
+                    @ChannelGlyph(channel.State) @ChannelDisplayMessage(channel)
                 </span>
             }
         </div>
@@ -164,6 +165,25 @@
         "error" => "text-bg-danger",
         _ => "text-bg-secondary"
     };
+
+    private static string ChannelDisplayMessage(OfficialCatalogChannelStatusDto channel)
+    {
+        if (!string.Equals(channel.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase))
+        {
+            return channel.Message;
+        }
+
+        if (channel.State is "missing"
+            || channel.Message.Contains("403", StringComparison.OrdinalIgnoreCase)
+            || channel.Message.Contains("401", StringComparison.OrdinalIgnoreCase)
+            || channel.Message.Contains("Forbidden", StringComparison.OrdinalIgnoreCase)
+            || channel.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+        {
+            return OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage;
+        }
+
+        return channel.Message;
+    }
 
     private async Task SearchAsync()
     {

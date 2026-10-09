@@ -60,7 +60,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var limit = OfficialCatalogSearchRules.ClampLimit(filter.Limit);
         var skipped = Task.FromResult(OfficialCatalogChannelResult.Empty);
         var mlTask = includeMl
-            ? SearchMercadoLivreSafeAsync(keyword, limit, cancellationToken)
+            ? SearchMercadoLivreSafeAsync(userId, keyword, limit, cancellationToken)
             : skipped;
         var shopeeTask = includeShopee
             ? _shopee.SearchProductsAsync(userId, keyword, limit, cancellationToken)
@@ -117,9 +117,9 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     "Mercado Livre",
                     includeMl,
                     mlItems.Count,
-                    false,
-                    string.Empty,
-                    mlTask.Result.ErrorMessage),
+                    mlTask.Result.MissingCredentials,
+                    OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage,
+                    mlTask.Result.MissingCredentials ? null : mlTask.Result.ErrorMessage),
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Shopee",
                     "Shopee",
@@ -146,13 +146,14 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     }
 
     private async Task<OfficialCatalogChannelResult> SearchMercadoLivreSafeAsync(
+        int userId,
         string keyword,
         int limit,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await _mercadoLivre.SearchProductsAsync(keyword, limit, cancellationToken);
+            return await _mercadoLivre.SearchProductsAsync(userId, keyword, limit, cancellationToken);
         }
         catch (JsonException)
         {

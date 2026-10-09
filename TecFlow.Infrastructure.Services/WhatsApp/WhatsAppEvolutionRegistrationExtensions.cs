@@ -63,6 +63,8 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddSingleton<TecFlow.Infrastructure.Services.Radar.GlobalTrendingDealsHost>();
         services.Configure<TecFlow.Business.Integrations.Amazon.AmazonPaApiOptions>(
             configuration.GetSection(TecFlow.Business.Integrations.Amazon.AmazonPaApiOptions.SectionName));
+        services.Configure<TecFlow.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions>(
+            configuration.GetSection(TecFlow.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions.SectionName));
         services.AddHttpClient<IMercadoLivreApiService, TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService>(client =>
         {
             client.BaseAddress = new Uri("https://api.mercadolibre.com/");

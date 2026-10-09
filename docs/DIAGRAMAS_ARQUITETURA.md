@@ -201,7 +201,7 @@ flowchart LR
   LIVE[LiveCheckSearchService] -->|ML /items + Shopee HMAC + PA-API| APIEXT[APIs oficiais]
   LIVE -->|fallback HTML ValidateAsync| VAL
   BUSCAUI[BuscaGlobal /busca] -->|GET api/busca WhenAll + Channels| CAT[OfficialCatalogSearchService]
-  CAT -->|sites/MLB/search Chrome UA + badge erro HTTP| APIEXT
+  CAT -->|sites/MLB/search Bearer token ou badge conta conectada| APIEXT
   CAT -->|productOfferV2 keyword| APIEXT
   CAT -->|PA-API SearchItems| APIEXT
   CAT -->|IDbContextFactory CreateDbContext por task| SQL

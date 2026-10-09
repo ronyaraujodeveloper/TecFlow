@@ -10,6 +10,7 @@ public interface IMercadoLivreApiService
     Task<OfficialOfferSnapshotDto?> GetItemAsync(string itemId, CancellationToken cancellationToken = default);
 
     Task<OfficialCatalogChannelResult> SearchProductsAsync(
+        int userId,
         string query,
         int limit = 20,
         CancellationToken cancellationToken = default);

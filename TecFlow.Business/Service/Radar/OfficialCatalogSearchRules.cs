@@ -39,6 +39,8 @@ public static class OfficialCatalogSearchRules
 
     public const string AmazonMissingPaApiMessage = "PA-API não configurada";
 
+    public const string MercadoLivreMissingAccountMessage = "Requer conta conectada no painel";
+
     public static OfficialCatalogChannelStatusDto BuildChannelStatus(
         string key,
         string label,

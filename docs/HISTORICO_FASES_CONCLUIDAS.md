@@ -750,6 +750,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Criação da página Blazor `/busca` integrada ao menu principal para exibição da vitrine unificada de resultados das lojas oficiais + base interna.
 - [x] **Isolamento de DbContext na busca paralela:** `IDbContextFactory<AppDbContext>` scoped por task no `WhenAll`.
 - [x] **SearchTelemetryUI:** badges por plataforma (encontrados / 0 / chave ausente) e log estruturado `ML/Shopee/Amazon/Local`.
+- [x] **MercadoLivreSearchFix:** User-Agent obrigatório, DTO `results` e log `Erro na API ML: {status}`.
 
     
 

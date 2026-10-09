@@ -1,19 +1,22 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
-using TecFlow.Business.Service.Radar;
 
 namespace TecFlow.Infrastructure.Services.Radar;
 
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
-    private readonly HttpClient _http;
+    public const string PublicUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TecFlowApp/1.0";
+
+    private readonly HttpClient _httpClient;
     private readonly ILogger<MercadoLivreApiService> _logger;
 
-    public MercadoLivreApiService(HttpClient http, ILogger<MercadoLivreApiService> logger)
+    public MercadoLivreApiService(HttpClient httpClient, ILogger<MercadoLivreApiService> logger)
     {
-        _http = http;
+        _httpClient = httpClient;
         _logger = logger;
+        EnsurePublicUserAgent(_httpClient);
     }
 
     public async Task<OfficialOfferSnapshotDto?> GetItemAsync(string itemId, CancellationToken cancellationToken = default)
@@ -25,11 +28,11 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
         try
         {
-            using var response = await _http.GetAsync($"items/{Uri.EscapeDataString(itemId.Trim())}", cancellationToken);
+            using var response = await _httpClient.GetAsync($"items/{Uri.EscapeDataString(itemId.Trim())}", cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebug("Mercado Livre /items falhou. Status={Status} Item={Item}", (int)response.StatusCode, itemId);
+                _logger.LogWarning("Erro na API ML: {status}", response.StatusCode);
                 return null;
             }
 
@@ -52,31 +55,45 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             return OfficialCatalogChannelResult.Empty;
         }
 
+        query = query.Trim();
+        _ = limit;
         try
         {
-            var size = OfficialCatalogSearchRules.ClampLimit(limit);
-            var uri = new Uri(
-                $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query.Trim())}&limit={size}");
-            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            request.Headers.Authorization = null;
-            request.Headers.TryAddWithoutValidation("Accept", "application/json");
-            using var response = await _http.SendAsync(request, cancellationToken);
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var response = await _httpClient.GetAsync(
+                $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20",
+                cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning(
-                    "Mercado Livre /sites/MLB/search falhou sem token. Status={Status} Query={Query}",
-                    (int)response.StatusCode,
-                    query);
+                _logger.LogWarning("Erro na API ML: {status}", response.StatusCode);
                 return OfficialCatalogChannelResult.Empty;
             }
 
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
             return OfficialCatalogChannelResult.From(MercadoLivreItemParser.ParseSearch(json));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Falha na busca Mercado Livre. Query={Query}", query);
             return OfficialCatalogChannelResult.Empty;
+        }
+    }
+
+    internal static void EnsurePublicUserAgent(HttpClient httpClient)
+    {
+        httpClient.DefaultRequestHeaders.UserAgent.Clear();
+        httpClient.DefaultRequestHeaders.Remove("User-Agent");
+        try
+        {
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(PublicUserAgent);
+        }
+        catch (FormatException)
+        {
+            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", PublicUserAgent);
+        }
+
+        if (!httpClient.DefaultRequestHeaders.Accept.Any(item => item.MediaType == "application/json"))
+        {
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
     }
 }

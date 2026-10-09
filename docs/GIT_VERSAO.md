@@ -76,3 +76,4 @@
 [2026-10-08 20:13:32]feat(busca): vitrine omnichannel /busca com SearchItems e MLB search
 [2026-10-08 20:34:29]fix(busca): isola AppDbContext no WhenAll via IDbContextFactory
 [2026-10-08 21:05:11]feat(busca): badges por loja, MLB publico e log estruturado
+[2026-10-08 21:18:53]fix(busca): User-Agent e DTO results na busca publica do MLB

@@ -254,5 +254,12 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Logs de Auditoria de Busca:**
   - Registro no `ILogger` dos parâmetros de busca e contagem de itens retornados por cada canal de integração.
 
+  ## 🛠️ Ajuste no Consumo da API Pública do Mercado Livre (`MercadoLivreSearchFix`)
+
+- [x] **Configuração do Header `User-Agent`:**
+  - Adição do header `User-Agent` obrigatório no `HttpClient` de integração com a API pública do Mercado Livre.
+- [x] **Desserialização Correta do JSON (`MLB Search DTO`):**
+  - Mapeamento explícito da propriedade `results` e tratamento de exceção HTTP para log detalhado no C#.
+
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

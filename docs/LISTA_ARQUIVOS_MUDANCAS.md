@@ -992,6 +992,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreApiService.cs** — `GET https://api.mercadolibre.com/sites/MLB/search` sem Authorization.
 - [x] **OfficialCatalogSearchService.cs** — log `Busca concluída para '{query}': ML=…`.
 - [x] **OfficialCatalogSearchRulesTests.cs** / **MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchServiceTests.cs**.
+- [x] **MercadoLivreSearchDtos.cs** — `results` / `title` / `price` / `permalink` / `thumbnail`.
+- [x] **MercadoLivreApiService.cs** — User-Agent `TecFlowApp/1.0`, `GET sites/MLB/search?q=&limit=20` e `Erro na API ML: {status}`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

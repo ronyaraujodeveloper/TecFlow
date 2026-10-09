@@ -54,17 +54,20 @@ public static class MercadoLivreItemParser
             return list;
         }
 
-        using var doc = JsonDocument.Parse(json);
-        if (!doc.RootElement.TryGetProperty("results", out var results)
-            || results.ValueKind != JsonValueKind.Array)
+        MercadoLivreSearchResponse? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<MercadoLivreSearchResponse>(json, SearchJsonOptions);
+        }
+        catch (JsonException)
         {
             return list;
         }
 
-        foreach (var item in results.EnumerateArray())
+        foreach (var item in payload?.Results ?? [])
         {
-            var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
-            var permalink = item.TryGetProperty("permalink", out var linkEl) ? linkEl.GetString() : null;
+            var id = item.Id;
+            var permalink = item.Permalink;
             if (string.IsNullOrWhiteSpace(permalink) && !string.IsNullOrWhiteSpace(id))
             {
                 permalink = "https://produto.mercadolivre.com.br/" + id.Replace("MLB", "MLB-", StringComparison.OrdinalIgnoreCase);
@@ -75,30 +78,29 @@ public static class MercadoLivreItemParser
                 continue;
             }
 
-            var image = item.TryGetProperty("secure_thumbnail", out var secureThumb)
-                ? secureThumb.GetString()
-                : null;
-            image ??= item.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null;
-            var free = item.TryGetProperty("shipping", out var shipping)
-                && shipping.TryGetProperty("free_shipping", out var freeEl)
-                && freeEl.ValueKind == JsonValueKind.True;
+            var image = string.IsNullOrWhiteSpace(item.SecureThumbnail) ? item.Thumbnail : item.SecureThumbnail;
             list.Add(new OfficialCatalogProductDto
             {
                 Platform = nameof(MarketplaceType.MercadoLivre),
                 PlatformType = MarketplaceType.MercadoLivre,
-                ProductId = id,
-                ProductName = item.TryGetProperty("title", out var title) ? title.GetString() : null,
-                Price = ReadDecimal(item, "price"),
-                OriginalPrice = ReadDecimal(item, "original_price"),
-                ImageUrl = image,
+                ProductId = string.IsNullOrWhiteSpace(id) ? null : id,
+                ProductName = string.IsNullOrWhiteSpace(item.Title) ? null : item.Title,
+                Price = item.Price,
+                OriginalPrice = item.OriginalPrice,
+                ImageUrl = string.IsNullOrWhiteSpace(image) ? null : image,
                 SourceUrl = permalink,
-                Shipping = free ? "Frete grátis" : null,
+                Shipping = item.Shipping?.FreeShipping == true ? "Frete grátis" : null,
                 Source = "Api"
             });
         }
 
         return list;
     }
+
+    private static readonly JsonSerializerOptions SearchJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private static decimal? ReadDecimal(JsonElement root, string name)
     {

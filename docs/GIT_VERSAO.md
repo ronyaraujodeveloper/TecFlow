@@ -84,3 +84,4 @@
 [2026-10-08 22:58:38] fix(busca): reconhece loja ML pelo Affiliate ID
 [2026-10-08 23:14:03] fix(busca): fallback HTML MLB em HTTP 403
 [2026-10-08 23:29:04] fix(busca): renderiza todos os cards HTML do MLB
+[2026-10-12 18:50:40]fix(busca): expoe erro HTTP ML e parser HAP

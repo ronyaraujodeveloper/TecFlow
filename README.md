@@ -261,7 +261,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Desserialização Correta do JSON (`MLB Search DTO`):**
   - Mapeamento explícito da propriedade `results` e tratamento de exceção HTTP para log detalhado no C#.
 - [x] **Headers Chrome + diagnóstico no badge:**
-  - `User-Agent` Chrome/120, `Accept: application/json`, log `Erro API ML [{StatusCode}]: {Body}` e badge `❌ Erro HTTP 403 (Forbidden)` / `Erro de Desserialização`.
+  - `User-Agent` Chrome/122, `Accept: application/json`, log `Erro API ML [{StatusCode}]: {Body}` e badge `❌` com `ML HTTP {status}`.
 - [x] **Bearer OAuth na busca MLB:**
   - Token da conta conectada, `Integrations:MercadoLivre` (AppId/SecretKey) e badge `⚠️ Requer conta conectada no painel`.
 - [x] **Botão Conectar no badge do ML:**
@@ -290,6 +290,10 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Percorre cada `ui-search-layout__item` / `ui-search-result__content` (título, preço, link e imagem).
 - [x] **Grid Blazor reativa:**
   - Unifica `DataList` e chama `InvokeAsync(StateHasChanged)` sem filtro de palavra-chave que ocultava os itens.
+- [x] **Erro rastreável (sem lista vazia silenciosa):**
+  - HTTP ≠ 200 e exceções geram `LogError` + `OfficialCatalogChannelResult.Failed`; `/busca` mostra a mensagem no badge vermelho e no alerta.
+- [x] **Parser HtmlAgilityPack da vitrine:**
+  - Seletores `ui-search-layout__item` / `ui-search-result`, headers de browser e `matt_tool` no permalink.
 
 ---
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

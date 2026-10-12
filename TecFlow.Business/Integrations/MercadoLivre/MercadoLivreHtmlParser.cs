@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 using TecFlow.Business.Dto;
 using TecFlow.Core.Enums;
 
@@ -66,6 +67,12 @@ public static class MercadoLivreHtmlParser
         var decoded = WebUtility.HtmlDecode(html);
         var items = new List<OfficialCatalogProductDto>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        TryAddFromHtmlDocument(items, seen, decoded);
+        if (items.Count >= MaxResults)
+        {
+            return items;
+        }
 
         foreach (var card in SplitLayoutCards(decoded))
         {
@@ -140,6 +147,49 @@ public static class MercadoLivreHtmlParser
         }
 
         return cards;
+    }
+
+    private static void TryAddFromHtmlDocument(
+        List<OfficialCatalogProductDto> items,
+        HashSet<string> seen,
+        string html)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        var nodes = doc.DocumentNode.SelectNodes("//li[contains(@class, 'ui-search-layout__item')]")
+            ?? doc.DocumentNode.SelectNodes("//div[contains(@class, 'ui-search-result')]");
+        if (nodes is null)
+        {
+            return;
+        }
+
+        foreach (var node in nodes)
+        {
+            if (items.Count >= MaxResults)
+            {
+                return;
+            }
+
+            var titleNode = node.SelectSingleNode(".//h2")
+                ?? node.SelectSingleNode(".//a[contains(@class, 'title')]");
+            var linkNode = node.SelectSingleNode(".//a[contains(@class, 'ui-search-link')]")
+                ?? node.SelectSingleNode(".//a");
+            var priceNode = node.SelectSingleNode(".//span[contains(@class, 'andes-money-amount__fraction')]");
+            var imgNode = node.SelectSingleNode(".//img");
+            if (titleNode is null || linkNode is null)
+            {
+                continue;
+            }
+
+            var title = FirstNonEmpty(
+                StripTags(titleNode.InnerText),
+                titleNode.GetAttributeValue("title", null),
+                linkNode.GetAttributeValue("title", null));
+            var image = FirstNonEmpty(
+                imgNode?.GetAttributeValue("src", null),
+                imgNode?.GetAttributeValue("data-src", null));
+            TryAdd(items, seen, linkNode.GetAttributeValue("href", string.Empty), title, ParsePriceFraction(priceNode?.InnerText), image);
+        }
     }
 
     private static bool TryAddFromCard(
@@ -305,13 +355,29 @@ public static class MercadoLivreHtmlParser
             return null;
         }
 
-        var raw = match.Groups["price"].Value.Trim();
-        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.GetCultureInfo("pt-BR"), out var ptBr))
+        return ParsePriceFraction(match.Groups["price"].Value);
+    }
+
+    private static decimal? ParsePriceFraction(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var value = raw.Trim();
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.GetCultureInfo("pt-BR"), out var ptBr))
         {
             return ptBr;
         }
 
-        return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant)
+        var digits = value.Replace(".", string.Empty, StringComparison.Ordinal);
+        if (decimal.TryParse(digits, NumberStyles.Number, CultureInfo.InvariantCulture, out var compact))
+        {
+            return compact;
+        }
+
+        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant)
             ? invariant
             : null;
     }

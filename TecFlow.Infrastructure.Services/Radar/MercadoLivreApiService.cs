@@ -19,7 +19,7 @@ namespace TecFlow.Infrastructure.Services.Radar;
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
     public const string PublicUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
     private static readonly JsonSerializerOptions SearchJsonOptions = new()
     {
@@ -99,6 +99,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             return OfficialCatalogChannelResult.Unconfigured();
         }
 
+        string? tracedError = null;
         try
         {
             var apiItems = await SearchViaApiAsync(query, accessToken, affiliateId, cancellationToken);
@@ -109,13 +110,29 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API ML retornou 403. Disparando Fallback Scraper para a query '{Query}'", query);
+            tracedError = string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado na API ML" : ex.Message;
+            _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
         }
 
-        var webItems = await SearchViaWebFallbackAsync(query, affiliateId, cancellationToken);
-        if (webItems.Count > 0)
+        try
         {
-            return OfficialCatalogChannelResult.From(webItems);
+            var webItems = await SearchViaWebFallbackAsync(query, affiliateId, cancellationToken);
+            if (webItems.Count > 0)
+            {
+                return OfficialCatalogChannelResult.From(webItems);
+            }
+        }
+        catch (Exception ex)
+        {
+            var webError = string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado no fallback ML" : ex.Message;
+            _logger.LogError(ex, "Erro no fallback HTML do Mercado Livre para '{Query}': {Error}", query, webError);
+            tracedError = string.IsNullOrWhiteSpace(tracedError) ? webError : $"{tracedError}; {webError}";
+            return OfficialCatalogChannelResult.Failed(tracedError);
+        }
+
+        if (!string.IsNullOrWhiteSpace(tracedError))
+        {
+            return OfficialCatalogChannelResult.Failed(tracedError);
         }
 
         return connectedByAffiliate
@@ -152,13 +169,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
             _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
-            throw new HttpRequestException($"Erro HTTP {(int)statusCode} ({statusCode})");
+            throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
         }
 
         if (statusCode != HttpStatusCode.OK)
         {
             _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
-            return [];
+            throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
         }
 
         var payload = JsonSerializer.Deserialize<MercadoLivreSearchResponse>(body, SearchJsonOptions);
@@ -195,19 +212,22 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var searchUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
         using var request = new HttpRequestMessage(HttpMethod.Get, searchUrl);
         ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
-        ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-        ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+        ApplyHeader(
+            request.Headers,
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
         using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var html = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning(
-                "Fallback web ML falhou. Status={Status} Url={Url}",
-                (int)response.StatusCode,
-                searchUrl);
-            return [];
+            _logger.LogError(
+                "Erro HTTP {Status} ao acessar vitrine do Mercado Livre. Url={Url} Body={Body}",
+                response.StatusCode,
+                searchUrl,
+                html);
+            throw new InvalidOperationException($"ML HTTP {response.StatusCode}");
         }
-
-        var html = await response.Content.ReadAsStringAsync(cancellationToken);
         var items = MercadoLivreHtmlParser.ParseSearchResults(html);
         foreach (var item in items)
         {

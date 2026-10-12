@@ -1014,6 +1014,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreHtmlParser.cs** — itera todos os `ui-search-layout__item` / `ui-search-result__content`.
 - [x] **OfficialCatalogSearchService.cs** — `PassesOptionalFilters` (preço/cupom) sem exigir a keyword no título.
 - [x] **BuscaGlobal.razor** — grid com `_items.Count > 0` e `InvokeAsync(StateHasChanged)`.
+- [x] **MercadoLivreApiService.cs** — não devolve lista vazia em HTTP ≠ 200; `LogError` e `Failed("ML HTTP …")`.
+- [x] **MercadoLivreHtmlParser.cs** — HtmlAgilityPack (`ui-search-layout__item` / `ui-search-result`) + regex de fallback.
+- [x] **TecFlow.Business.csproj** — pacote `HtmlAgilityPack` 1.11.72.
+- [x] **BuscaGlobal.razor** — alerta vermelho com `ex.Message` / mensagem do canal `error`; `StateHasChanged` no `finally`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

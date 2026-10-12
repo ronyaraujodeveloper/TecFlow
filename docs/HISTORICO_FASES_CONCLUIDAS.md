@@ -807,5 +807,6 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **HTTP 403:** se `sites/MLB/search` falhar, consulta `https://lista.mercadolivre.com.br/{query}` com User-Agent Chrome.
 - [x] **TrackingId:** `matt_tool` da loja ativa injetado nos links da API e do scraper; badge 🟢 com a contagem de produtos.
 - [x] **Cards completos:** parser percorre todos os nós da listagem; a `/busca` renderiza a `DataList` unificada com `StateHasChanged`.
+- [x] **Erro rastreável + HAP:** HTTP ≠ 200 não devolve lista vazia; `LogError`/`Failed("ML HTTP …")` no badge vermelho; parser HtmlAgilityPack com Chrome/122.
 ---
 *Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*

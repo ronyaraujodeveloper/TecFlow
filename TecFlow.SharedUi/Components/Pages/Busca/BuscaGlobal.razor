@@ -257,15 +257,22 @@
 
             _items = [.. result.Data.DataList ?? []];
             _channels = result.Data.Channels ?? [];
-            if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
+            var channelError = _channels.FirstOrDefault(item =>
+                string.Equals(item.State, "error", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(item.Message));
+            if (channelError is not null)
+            {
+                _error = channelError.Message;
+            }
+            else if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
             {
                 _error = result.Data.Descricao;
             }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Falha na busca omnichannel.");
-            _error = "Falha inesperada na busca.";
+            Logger.LogError(ex, "Falha na busca omnichannel.");
+            _error = string.IsNullOrWhiteSpace(ex.Message) ? "Falha inesperada na busca." : ex.Message;
             _items = [];
         }
         finally

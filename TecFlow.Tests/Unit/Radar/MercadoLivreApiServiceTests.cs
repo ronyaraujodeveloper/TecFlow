@@ -45,15 +45,17 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
-    public async Task SearchProductsAsync_ShouldTreatForbiddenAsMissingAccount()
+    public async Task SearchProductsAsync_ShouldTreatForbiddenAsTraceableErrorWhenListaIsEmpty()
     {
         var handler = new CaptureHandler { StatusCode = HttpStatusCode.Forbidden };
         var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "expired" });
 
         var result = await sut.SearchProductsAsync(1, "dell i7");
 
-        Assert.True(result.MissingCredentials);
+        Assert.False(result.MissingCredentials);
         Assert.Empty(result.Items);
+        Assert.Contains("ML HTTP", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("403", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -117,6 +119,27 @@ public class MercadoLivreApiServiceTests
         Assert.Equal("Web", item.Source);
         Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("lista.mercadolivre.com.br", handler.LastRequest!.RequestUri!.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            handler.LastRequest.Headers.UserAgent.ToString());
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldExposeListaHttpErrorInsteadOfEmptyList()
+    {
+        var handler = new CaptureHandler
+        {
+            StatusCode = HttpStatusCode.Forbidden,
+            ListaStatusCode = HttpStatusCode.Forbidden,
+            HtmlBody = "<html></html>"
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "expired" });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7");
+
+        Assert.False(result.MissingCredentials);
+        Assert.Empty(result.Items);
+        Assert.Contains("ML HTTP", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     private static MercadoLivreApiService CreateSut(
@@ -160,6 +183,8 @@ public class MercadoLivreApiServiceTests
 
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
 
+        public HttpStatusCode ListaStatusCode { get; set; } = HttpStatusCode.OK;
+
         public string Body { get; set; } =
             """{"results":[{"id":"MLB1","title":"Dell i7","price":10,"permalink":"https://produto.mercadolivre.com.br/MLB-1","thumbnail":"https://http2.mlstatic.com/t.jpg"}]}""";
 
@@ -171,7 +196,7 @@ public class MercadoLivreApiServiceTests
         {
             LastRequest = request;
             var isLista = request.RequestUri?.Host.Contains("lista.mercadolivre", StringComparison.OrdinalIgnoreCase) == true;
-            var status = isLista ? HttpStatusCode.OK : StatusCode;
+            var status = isLista ? ListaStatusCode : StatusCode;
             var body = isLista ? HtmlBody : Body;
             return Task.FromResult(new HttpResponseMessage(status)
             {

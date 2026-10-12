@@ -16,13 +16,14 @@ public class IntegracaoLojaPendingLinkStore : IIntegracaoLojaPendingLinkStore
         _memoryCache = memoryCache;
     }
 
-    public string Create(MarketplaceType platformType, string friendlyName)
+    public string Create(MarketplaceType platformType, string friendlyName, string? callbackUri)
     {
         var ticketId = Guid.NewGuid().ToString("N");
         var payload = new IntegracaoLojaPendingLink
         {
             PlatformType = platformType,
-            FriendlyName = friendlyName.Trim()
+            FriendlyName = friendlyName.Trim(),
+            CallbackUri = string.IsNullOrWhiteSpace(callbackUri) ? null : callbackUri.Trim()
         };
 
         _memoryCache.Set(
@@ -36,20 +37,26 @@ public class IntegracaoLojaPendingLinkStore : IIntegracaoLojaPendingLinkStore
         return ticketId;
     }
 
-    public IntegracaoLojaPendingLink? Consume(string ticketId)
+    public IntegracaoLojaPendingLink? Peek(string ticketId)
     {
         if (string.IsNullOrWhiteSpace(ticketId))
         {
             return null;
         }
 
-        var cacheKey = BuildCacheKey(ticketId.Trim());
-        if (!_memoryCache.TryGetValue(cacheKey, out IntegracaoLojaPendingLink? payload))
+        return _memoryCache.TryGetValue(BuildCacheKey(ticketId.Trim()), out IntegracaoLojaPendingLink? payload)
+            ? payload
+            : null;
+    }
+
+    public IntegracaoLojaPendingLink? Consume(string ticketId)
+    {
+        var payload = Peek(ticketId);
+        if (payload is not null)
         {
-            return null;
+            _memoryCache.Remove(BuildCacheKey(ticketId.Trim()));
         }
 
-        _memoryCache.Remove(cacheKey);
         return payload;
     }
 

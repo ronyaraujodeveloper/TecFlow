@@ -63,7 +63,7 @@ public class MarketplaceAuthController : ControllerBase
         return GenerateAuthorizeResult(type, redirectUri, state);
     }
 
-    /// <summary>Gera URL OAuth por slug da plataforma (shopee / tiktok).</summary>
+    /// <summary>Gera URL OAuth por slug da plataforma (shopee / tiktok / mercadolivre).</summary>
     [HttpGet("{plataforma}/authorize-url")]
     [AllowAnonymous]
     public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetPlatformAuthorizationUrl(
@@ -75,7 +75,7 @@ public class MarketplaceAuthController : ControllerBase
     {
         if (!MarketplacePlatformRoute.TryParse(plataforma, out var type))
         {
-            return BadRequest(new { error = "Plataforma inválida. Use shopee ou tiktok." });
+            return BadRequest(new { error = "Plataforma inválida. Use shopee, tiktok ou mercadolivre." });
         }
 
         if (string.IsNullOrWhiteSpace(redirectUri))
@@ -101,6 +101,11 @@ public class MarketplaceAuthController : ControllerBase
             }
 
             return Ok(ToAuthorizeDto(type, url));
+        }
+        catch (InvalidOperationException ex) when (type == MarketplaceType.MercadoLivre)
+        {
+            _logger.LogWarning(ex, "OAuth Mercado Livre não configurado.");
+            return BadRequest(new { error = ex.Message });
         }
         catch (Exception ex)
         {

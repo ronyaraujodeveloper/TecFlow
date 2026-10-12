@@ -65,7 +65,7 @@ public sealed class MarketplaceOAuthConnectService : IMarketplaceOAuthConnectSer
             return MarketplaceOAuthStartResult.Fail("Callback OAuth inválido.");
         }
 
-        var ticket = _pendingLinkStore.Create(platform, friendlyName.Trim());
+        var ticket = _pendingLinkStore.Create(platform, friendlyName.Trim(), callbackUri);
         var response = await _integracaoApi.GetAuthorizationUrlAsync(
             platform,
             callbackUri,

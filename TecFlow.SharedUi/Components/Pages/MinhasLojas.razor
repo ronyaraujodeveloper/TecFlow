@@ -21,7 +21,7 @@
         <div>
             <h1 class="h3 fw-bold mb-1">Minhas Lojas / Integrações</h1>
             <p class="text-muted small mb-0">
-                Gerencie contas TikTok Shop e Shopee. A Shopee opera em Universal Link, sem App Key nem App Secret.
+                Gerencie suas contas de marketplace. Afiliados usam Universal Link; o Mercado Livre exige autorização OAuth para a busca de ofertas.
             </p>
         </div>
         <div class="dashboard-toolbar d-grid d-sm-flex gap-2">
@@ -79,7 +79,8 @@
             {
                 <MarketplaceStoreCard Store="store"
                                       IsBusy="@_isBusy"
-                                      OnUnlink="ConfirmarDesconexaoAsync" />
+                                      OnUnlink="ConfirmarDesconexaoAsync"
+                                      OnAuthorizeOAuth="AuthorizeStoreOAuthAsync" />
             }
         </section>
     }
@@ -246,9 +247,19 @@
 
             if (!result.Success || string.IsNullOrWhiteSpace(result.AuthorizeUrl))
             {
-                _connectModalError = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                var error = string.IsNullOrWhiteSpace(result.ErrorMessage)
                     ? "Não foi possível gerar a URL de autorização."
                     : result.ErrorMessage;
+                if (_connectModalVisible)
+                {
+                    _connectModalError = error;
+                }
+                else
+                {
+                    _pageMessage = error;
+                    _pageMessageIsError = true;
+                }
+
                 return;
             }
 
@@ -262,8 +273,12 @@
         finally
         {
             _isBusy = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
+
+    private Task AuthorizeStoreOAuthAsync(MarketplaceAccountDto store) =>
+        StartOAuthAsync((store.PlatformType, store.FriendlyName));
 
     private async Task OnLojaVinculadaAsync()
     {

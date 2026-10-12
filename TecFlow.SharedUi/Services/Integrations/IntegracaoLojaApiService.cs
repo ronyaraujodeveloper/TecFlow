@@ -163,7 +163,10 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
             if (!response.IsSuccessStatusCode)
             {
-                return (false, null, $"Não foi possível gerar a URL de autorização ({(int)response.StatusCode}).");
+                var apiError = TryReadErrorField(content);
+                return (false, null, string.IsNullOrWhiteSpace(apiError)
+                    ? $"Não foi possível gerar a URL de autorização ({(int)response.StatusCode})."
+                    : apiError);
             }
 
             var payload = TryDeserialize<MarketplaceAuthorizeUrlResponseDto>(content);
@@ -209,6 +212,23 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
 
     private static string? FirstNonEmpty(params string?[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+    private static string? TryReadErrorField(string content)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("error", out var error)
+                && error.ValueKind == JsonValueKind.String
+                    ? error.GetString()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private async Task<IntegracaoLojaResponseDto> SendEnvelopeAsync(
         HttpMethod method,

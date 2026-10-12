@@ -525,19 +525,39 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             _ => "ul"
         };
         var shopKey = $"{shopPrefix}-{persistUserId}-{Slug(dto.FriendlyName)}";
-        dto.ShopId = shopKey;
 
-        var expiresAt = DateTime.UtcNow.AddYears(10);
-        var placeholderToken = HomologMarketplaceAuth.StubAccessToken;
-
-        var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, platform)
-            ?? new MarketplaceAccount
+        MarketplaceOAuthExchangeResult? oauth = null;
+        if (platform == MarketplaceType.MercadoLivre && !string.IsNullOrWhiteSpace(dto.AuthorizationCode))
+        {
+            oauth = await _marketplaceAuthService.ExchangeMercadoLivreCodeAsync(
+                dto.AuthorizationCode.Trim(),
+                dto.RedirectUri,
+                cancellationToken);
+            if (!oauth.Success)
             {
-                TenantId = user.TenantId,
-                UserId = persistUserKey,
-                ShopId = shopKey,
-                MarketplaceType = platform
-            };
+                return Fail(oauth.ErrorMessage ?? "Não foi possível autorizar o Mercado Livre.");
+            }
+        }
+
+        var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, platform);
+        if (marketplaceAccount is null && oauth is not null && string.IsNullOrWhiteSpace(affiliateTrackingId))
+        {
+            marketplaceAccount = await FindLatestUserAccountAsync(persistUserKey, platform, cancellationToken);
+            if (marketplaceAccount is not null)
+            {
+                shopKey = marketplaceAccount.ShopId;
+                dto.FriendlyName = FirstNonEmpty(marketplaceAccount.FriendlyName, dto.FriendlyName);
+            }
+        }
+
+        dto.ShopId = shopKey;
+        marketplaceAccount ??= new MarketplaceAccount
+        {
+            TenantId = user.TenantId,
+            UserId = persistUserKey,
+            ShopId = shopKey,
+            MarketplaceType = platform
+        };
 
         marketplaceAccount.UserId = persistUserKey;
         marketplaceAccount.TenantId = user.TenantId;
@@ -548,10 +568,22 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             ? marketplaceAccount.AffiliateTrackingId
             : affiliateTrackingId;
         marketplaceAccount.TrackingId = marketplaceAccount.AffiliateTrackingId;
-        marketplaceAccount.AccessToken = string.IsNullOrWhiteSpace(marketplaceAccount.AccessToken)
-            ? placeholderToken
-            : marketplaceAccount.AccessToken;
-        marketplaceAccount.ExpiresAt = expiresAt;
+        if (oauth is not null)
+        {
+            marketplaceAccount.AccessToken = oauth.AccessToken;
+            marketplaceAccount.RefreshToken = oauth.RefreshToken;
+            marketplaceAccount.ExpiresAt = oauth.ExpiresAt;
+            marketplaceAccount.RefreshExpiresAt = oauth.RefreshExpiresAt;
+        }
+        else if (string.IsNullOrWhiteSpace(marketplaceAccount.AccessToken)
+                 || HomologMarketplaceAuth.IsStubToken(marketplaceAccount.AccessToken))
+        {
+            marketplaceAccount.AccessToken = HomologMarketplaceAuth.StubAccessToken;
+            marketplaceAccount.ExpiresAt = DateTime.UtcNow.AddYears(10);
+        }
+
+        var accessToken = marketplaceAccount.AccessToken ?? string.Empty;
+        var expiresAt = marketplaceAccount.ExpiresAt;
         marketplaceAccount.IsActive = true;
         marketplaceAccount.MarketplaceType = platform;
         marketplaceAccount.Touch();
@@ -590,7 +622,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             existing.AffiliateTrackingId = string.IsNullOrWhiteSpace(affiliateTrackingId)
                 ? existing.AffiliateTrackingId
                 : affiliateTrackingId;
-            existing.AccessToken = placeholderToken;
+            existing.AccessToken = accessToken;
+            existing.RefreshToken = marketplaceAccount.RefreshToken;
             existing.ExpiresAt = expiresAt;
             existing.Status = MarketplaceIntegrationStatus.Active;
             existing.Touch();
@@ -599,7 +632,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             return new IntegracaoLojaResponseDto
             {
                 Status = true,
-                Descricao = $"Conta {platformLabel} vinculada no modo Universal Link.",
+                Descricao = ResolveUniversalLinkMessage(platformLabel, oauth),
                 Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, existing)
             };
         }
@@ -611,8 +644,11 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             PlatformType = platform,
             ShopId = shopKey,
             FriendlyName = dto.FriendlyName.Trim(),
-            AffiliateTrackingId = affiliateTrackingId,
-            AccessToken = placeholderToken,
+            AffiliateTrackingId = string.IsNullOrWhiteSpace(affiliateTrackingId)
+                ? marketplaceAccount.AffiliateTrackingId
+                : affiliateTrackingId,
+            AccessToken = accessToken,
+            RefreshToken = marketplaceAccount.RefreshToken,
             ExpiresAt = expiresAt,
             Status = MarketplaceIntegrationStatus.Active,
             CreatedAt = DateTime.UtcNow
@@ -623,9 +659,26 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return new IntegracaoLojaResponseDto
         {
             Status = true,
-            Descricao = $"Conta {platformLabel} vinculada no modo Universal Link.",
+            Descricao = ResolveUniversalLinkMessage(platformLabel, oauth),
             Data = MarketplaceAccountMapper.ToDto(marketplaceAccount, integration)
         };
+    }
+
+    private static string ResolveUniversalLinkMessage(string platformLabel, MarketplaceOAuthExchangeResult? oauth) =>
+        oauth is null
+            ? $"Conta {platformLabel} vinculada no modo Universal Link."
+            : $"Conta {platformLabel} autorizada via OAuth. A busca de ofertas já pode usar a API oficial.";
+
+    private async Task<MarketplaceAccount?> FindLatestUserAccountAsync(
+        string userKey,
+        MarketplaceType platform,
+        CancellationToken cancellationToken)
+    {
+        var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(userKey, cancellationToken);
+        return accounts
+            .Where(account => account.MarketplaceType == platform && account.IsActive)
+            .OrderByDescending(account => account.CreatedAt)
+            .FirstOrDefault();
     }
 
     private async Task<UserAccount?> ResolvePersistableUserAsync(int claimedUserId)

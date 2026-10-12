@@ -107,7 +107,7 @@ public class MarketplaceOAuthConnectServiceTests
     {
         var api = new Mock<IIntegracaoLojaApiService>();
         var pending = new Mock<IIntegracaoLojaPendingLinkStore>();
-        pending.Setup(store => store.Create(MarketplaceType.TikTokShop, "Loja TikTok"))
+        pending.Setup(store => store.Create(MarketplaceType.TikTokShop, "Loja TikTok", CallbackUri))
             .Returns("ticket-xyz");
         api.Setup(service => service.GetAuthorizationUrlAsync(
                 MarketplaceType.TikTokShop,
@@ -123,7 +123,7 @@ public class MarketplaceOAuthConnectServiceTests
 
         Assert.True(result.Success);
         Assert.Equal("https://auth.tiktok.test/oauth", result.AuthorizeUrl);
-        pending.Verify(store => store.Create(MarketplaceType.TikTokShop, "Loja TikTok"), Times.Once);
+        pending.Verify(store => store.Create(MarketplaceType.TikTokShop, "Loja TikTok", CallbackUri), Times.Once);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class MarketplaceOAuthConnectServiceTests
     {
         var api = new Mock<IIntegracaoLojaApiService>();
         var pending = new Mock<IIntegracaoLojaPendingLinkStore>();
-        pending.Setup(store => store.Create(It.IsAny<MarketplaceType>(), It.IsAny<string>()))
+        pending.Setup(store => store.Create(It.IsAny<MarketplaceType>(), It.IsAny<string>(), It.IsAny<string?>()))
             .Returns("ticket");
         api.Setup(service => service.GetAuthorizationUrlAsync(
                 It.IsAny<MarketplaceType>(),

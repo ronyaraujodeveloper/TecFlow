@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
@@ -52,6 +53,72 @@ public class MercadoLivreApiServiceTests
         Assert.True(result.MissingCredentials);
         Assert.Empty(result.Items);
         Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldIgnoreUniversalLinkPlaceholderToken()
+    {
+        var handler = new CaptureHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db =>
+            {
+                db.MarketplaceAccounts.Add(new MarketplaceAccount
+                {
+                    TenantId = Guid.NewGuid(),
+                    UserId = "1",
+                    MarketplaceType = MarketplaceType.MercadoLivre,
+                    TrackingId = "14343296",
+                    AccessToken = HomologMarketplaceAuth.StubAccessToken,
+                    ExpiresAt = DateTime.UtcNow.AddYears(10),
+                    IsActive = true
+                });
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.True(result.MissingCredentials);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldRefreshAndPersistRotatedToken_WhenAccessTokenExpired()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var handler = new CaptureHandler
+        {
+            Responder = request => request.RequestUri!.AbsolutePath.Contains("oauth/token", StringComparison.Ordinal)
+                ? """{"access_token":"APP_USR-new","refresh_token":"TG-new","expires_in":21600}"""
+                : null
+        };
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "123", SecretKey = "secret" },
+            db =>
+            {
+                db.MarketplaceAccounts.Add(new MarketplaceAccount
+                {
+                    TenantId = Guid.NewGuid(),
+                    UserId = "1",
+                    MarketplaceType = MarketplaceType.MercadoLivre,
+                    AccessToken = "APP_USR-old",
+                    RefreshToken = "TG-old",
+                    ExpiresAt = DateTime.UtcNow.AddHours(-1),
+                    IsActive = true
+                });
+            },
+            dbName);
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Single(result.Items);
+        Assert.Equal("APP_USR-new", handler.LastRequest!.Headers.Authorization?.Parameter);
+        await using var verify = CreateDbContext(dbName);
+        var account = await verify.MarketplaceAccounts.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal("APP_USR-new", account.AccessToken);
+        Assert.Equal("TG-new", account.RefreshToken);
+        Assert.True(account.ExpiresAt > DateTime.UtcNow.AddHours(5));
     }
 
     [Fact]
@@ -118,10 +185,11 @@ public class MercadoLivreApiServiceTests
     private static MercadoLivreApiService CreateSut(
         HttpMessageHandler handler,
         MercadoLivreIntegrationOptions options,
-        Action<AppDbContext>? seed = null)
+        Action<AppDbContext>? seed = null,
+        string? dbName = null)
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.mercadolibre.com/") };
-        var dbName = Guid.NewGuid().ToString();
+        dbName ??= Guid.NewGuid().ToString();
         if (seed is not null)
         {
             using var seedContext = CreateDbContext(dbName);
@@ -159,6 +227,8 @@ public class MercadoLivreApiServiceTests
         public string Body { get; set; } =
             """{"results":[{"id":"MLB1","title":"Dell i7","price":10,"permalink":"https://produto.mercadolivre.com.br/MLB-1","thumbnail":"https://http2.mlstatic.com/t.jpg"}]}""";
 
+        public Func<HttpRequestMessage, string?>? Responder { get; set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -166,7 +236,7 @@ public class MercadoLivreApiServiceTests
             LastRequest = request;
             return Task.FromResult(new HttpResponseMessage(StatusCode)
             {
-                Content = new StringContent(Body)
+                Content = new StringContent(Responder?.Invoke(request) ?? Body)
             });
         }
     }

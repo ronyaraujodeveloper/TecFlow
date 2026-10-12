@@ -16,6 +16,13 @@ public static class HomologMarketplaceAuth
 
     public static bool IsStubAuthorizationCode(string? code) => IsHomologStubCode(code);
 
+    public static bool IsStubToken(string? token)
+    {
+        var value = token?.Trim();
+        return string.Equals(value, StubAccessToken, StringComparison.Ordinal)
+            || string.Equals(value, StubRefreshToken, StringComparison.Ordinal);
+    }
+
     public static bool IsHomologStubCode(string? code)
     {
         var value = code?.Trim();

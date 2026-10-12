@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
@@ -202,6 +203,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
         if (account is not null
             && !string.IsNullOrWhiteSpace(account.RefreshToken)
+            && !HomologMarketplaceAuth.IsStubToken(account.RefreshToken)
             && TryResolveAppCredentials(account, out var refreshAppId, out var refreshSecret))
         {
             var refreshed = await RequestOAuthTokenAsync(
@@ -210,9 +212,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 refreshSecret,
                 account.RefreshToken,
                 cancellationToken);
-            if (!string.IsNullOrWhiteSpace(refreshed))
+            if (!string.IsNullOrWhiteSpace(refreshed?.AccessToken))
             {
-                return refreshed;
+                await PersistRefreshedTokenAsync(account.Id, refreshed, cancellationToken);
+                return refreshed.AccessToken.Trim();
             }
         }
 
@@ -223,15 +226,48 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
         if (_options.HasAppCredentials)
         {
-            return await RequestOAuthTokenAsync(
+            var appToken = await RequestOAuthTokenAsync(
                 "client_credentials",
                 _options.AppId.Trim(),
                 _options.SecretKey.Trim(),
                 refreshToken: null,
                 cancellationToken);
+            return string.IsNullOrWhiteSpace(appToken?.AccessToken) ? null : appToken.AccessToken.Trim();
         }
 
         return null;
+    }
+
+    private async Task PersistRefreshedTokenAsync(
+        int accountId,
+        MercadoLivreTokenResponse refreshed,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var tracked = await dbContext.MarketplaceAccounts
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(item => item.Id == accountId, cancellationToken);
+            if (tracked is null)
+            {
+                return;
+            }
+
+            tracked.AccessToken = refreshed.AccessToken!.Trim();
+            if (!string.IsNullOrWhiteSpace(refreshed.RefreshToken))
+            {
+                tracked.RefreshToken = refreshed.RefreshToken.Trim();
+            }
+
+            tracked.ExpiresAt = DateTime.UtcNow.AddSeconds(refreshed.ExpiresIn is > 0 ? refreshed.ExpiresIn.Value : 21600);
+            tracked.Touch();
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Token ML renovado, mas não foi possível persistir na conta {AccountId}.", accountId);
+        }
     }
 
     private async Task<MarketplaceAccount?> LoadMercadoLivreAccountAsync(int userId, CancellationToken cancellationToken)
@@ -265,7 +301,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         string.IsNullOrWhiteSpace(account.UserId)
         || string.Equals(account.UserId.Trim(), userKey, StringComparison.Ordinal);
 
-    private async Task<string?> RequestOAuthTokenAsync(
+    private async Task<MercadoLivreTokenResponse?> RequestOAuthTokenAsync(
         string grantType,
         string appId,
         string secret,
@@ -299,7 +335,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             }
 
             var payload = JsonSerializer.Deserialize<MercadoLivreTokenResponse>(json, SearchJsonOptions);
-            return string.IsNullOrWhiteSpace(payload?.AccessToken) ? null : payload.AccessToken.Trim();
+            return string.IsNullOrWhiteSpace(payload?.AccessToken) ? null : payload;
         }
         catch (Exception ex)
         {
@@ -317,7 +353,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private static bool IsTokenFresh(MarketplaceAccount account)
     {
-        if (string.IsNullOrWhiteSpace(account.AccessToken))
+        if (string.IsNullOrWhiteSpace(account.AccessToken) || HomologMarketplaceAuth.IsStubToken(account.AccessToken))
         {
             return false;
         }
@@ -363,5 +399,11 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     {
         [JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
+
+        [JsonPropertyName("refresh_token")]
+        public string? RefreshToken { get; set; }
+
+        [JsonPropertyName("expires_in")]
+        public int? ExpiresIn { get; set; }
     }
 }

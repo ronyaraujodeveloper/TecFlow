@@ -40,8 +40,8 @@ public static class IntegracoesEndpointExtensions
             return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Informe um apelido para a loja."));
         }
 
-        var ticket = pendingLinkStore.Create(platform, friendlyName);
         var redirectUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}/integracoes/oauth/callback";
+        var ticket = pendingLinkStore.Create(platform, friendlyName, redirectUri);
 
         try
         {
@@ -84,11 +84,6 @@ public static class IntegracoesEndpointExtensions
     {
         var logger = loggerFactory.CreateLogger("TecFlow.WebUi.Integracoes");
 
-        if (httpContext.User.Identity?.IsAuthenticated != true)
-        {
-            return Results.Redirect("/?login=required");
-        }
-
         var query = httpContext.Request.Query;
         var state = query["state"].ToString();
         var code = query["code"].ToString();
@@ -99,15 +94,29 @@ public static class IntegracoesEndpointExtensions
             shopId = query["shopId"].ToString();
         }
 
+        if (httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            var bounce = ResolveOriginBounce(httpContext, pendingLinkStore.Peek(state));
+            return bounce is null ? Results.Redirect("/?login=required") : Results.Redirect(bounce);
+        }
+
         var pending = pendingLinkStore.Consume(state);
         if (pending is null)
         {
             return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Sessão OAuth expirada. Tente novamente."));
         }
 
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(shopId))
+        if (!string.IsNullOrWhiteSpace(query["error"].ToString()))
         {
-            return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Callback OAuth incompleto (code/shopId)."));
+            var reason = FirstNonEmpty(query["error_description"].ToString(), query["error"].ToString());
+            return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString($"Autorização recusada: {reason}"));
+        }
+
+        var requiresShopId = pending.PlatformType != MarketplaceType.MercadoLivre;
+        if (string.IsNullOrWhiteSpace(code) || (requiresShopId && string.IsNullOrWhiteSpace(shopId)))
+        {
+            return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString(
+                requiresShopId ? "Callback OAuth incompleto (code/shopId)." : "Callback OAuth incompleto (code)."));
         }
 
         var jwt = httpContext.User.FindFirstValue(TecFlowClaimTypes.AccessToken);
@@ -127,7 +136,8 @@ public static class IntegracoesEndpointExtensions
                 PlatformType = pending.PlatformType,
                 AuthorizationCode = code,
                 ShopId = shopId,
-                FriendlyName = pending.FriendlyName
+                FriendlyName = pending.FriendlyName,
+                RedirectUri = pending.CallbackUri
             });
 
             using var response = await client.SendAsync(request, httpContext.RequestAborted);
@@ -143,7 +153,9 @@ public static class IntegracoesEndpointExtensions
                 (int)response.StatusCode,
                 content);
 
-            return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Não foi possível vincular a loja."));
+            var apiMessage = TryReadDescricao(content);
+            return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString(
+                string.IsNullOrWhiteSpace(apiMessage) ? "Não foi possível vincular a loja." : apiMessage));
         }
         catch (Exception ex)
         {
@@ -151,6 +163,42 @@ public static class IntegracoesEndpointExtensions
             return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Erro inesperado ao vincular loja."));
         }
     }
+
+    /// <summary>
+    /// O callback pode chegar por outro host (ex.: túnel HTTPS cadastrado no Mercado Livre) sem o cookie
+    /// de sessão; nesse caso reenvia code/state para o callback da origem onde o OAuth foi iniciado.
+    /// </summary>
+    private static string? ResolveOriginBounce(HttpContext httpContext, IntegracaoLojaPendingLink? pending)
+    {
+        if (pending is null
+            || !Uri.TryCreate(pending.CallbackUri, UriKind.Absolute, out var origin)
+            || string.Equals(origin.Authority, httpContext.Request.Host.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return origin.GetLeftPart(UriPartial.Path) + httpContext.Request.QueryString.Value;
+    }
+
+    private static string? TryReadDescricao(string content)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("descricao", out var descricao)
+                && descricao.ValueKind == JsonValueKind.String
+                    ? descricao.GetString()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
     private sealed class AuthorizationUrlResponse
     {

@@ -17,4 +17,10 @@ public interface IMarketplaceAuthService
         string shopId,
         MarketplaceType type,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Troca o authorization code do Mercado Livre por access/refresh token (sem persistir).</summary>
+    Task<MarketplaceOAuthExchangeResult> ExchangeMercadoLivreCodeAsync(
+        string code,
+        string? redirectUri,
+        CancellationToken cancellationToken = default);
 }

@@ -1025,6 +1025,19 @@ API / Orquestrador / Worker / WebUi
 - [x] **BuscaGlobal.razor** — `_error = null` quando a grid recebe ofertas.
 - [x] **MercadoLivreApiService.cs** — busca MLB só com OAuth (`Bearer` + `access_token`); ID de afiliado não dispara API anônima nem HTML da vitrine.
 - [x] **OfficialCatalogSearchRules.cs** — mensagens `Requer OAuth...` e `API MLB recusou a busca (HTTP 403)...`.
+- [x] **MercadoLivreIntegrationOptions.cs** — `AuthorizeUrl` e `RedirectUri` (HTTPS cadastrada no app ML).
+- [x] **MarketplaceOAuthExchangeResult.cs** (novo) / **IMarketplaceAuthService.cs** — `ExchangeMercadoLivreCodeAsync`.
+- [x] **MarketplaceAuthService.cs** — URL `auth.mercadolivre.com.br/authorization` e troca `authorization_code` no `oauth/token`.
+- [x] **IntegracaoLojaService.cs** — code ML grava token real na loja ML existente, preservando `TrackingId`.
+- [x] **HomologMarketplaceAuth.cs** — `IsStubToken`; **MercadoLivreApiService.cs** ignora o placeholder e persiste refresh rotacionado.
+- [x] **MarketplaceAccountDto.cs** / **MarketplaceAccountMapper.cs** — `HasOAuthToken` (sem expor token).
+- [x] **IntegracaoLojaDto.cs** — `RedirectUri` enviada na troca do code.
+- [x] **IIntegracaoLojaPendingLinkStore.cs** / **IntegracaoLojaPendingLinkStore.cs** — `CallbackUri` + `Peek`.
+- [x] **IntegracoesEndpointExtensions.cs** — callback ML sem `shopId`; reenvia do túnel HTTPS para a origem autenticada.
+- [x] **MarketplaceStoreCard.razor** / **MinhasLojas.razor** / **ConnectStoreModal.razor** — botão OAuth do Mercado Livre e status da API de busca.
+- [x] **MarketplaceAuthController.cs** / **IntegracaoLojaApiService.cs** — erro de configuração ML exibido na tela.
+- [x] **appsettings.json** / **appsettings.Homologacao.json** (API) — `AuthorizeUrl` e `RedirectUri` do Mercado Livre.
+- [x] **MarketplaceAuthServiceTests.cs** / **IntegracaoLojaServiceTests.cs** / **MercadoLivreApiServiceTests.cs** / **MarketplaceOAuthConnectServiceTests.cs**.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

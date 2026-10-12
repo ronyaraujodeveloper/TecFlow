@@ -251,6 +251,9 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **OAuth obrigatório:** `sites/MLB/search` com `Bearer` + `access_token`; ID de afiliado não autentica a busca.
 - [x] **Sem scrap da vitrine:** `lista.mercadolivre.com.br` cai em `account-verification` no IIS e foi removido do fluxo.
 - [x] **Badge:** `⚠️ Requer OAuth...` sem token; `❌ API MLB recusou a busca (HTTP 403)...` com token recusado.
+- [x] **OAuth em Minhas Lojas:** botão **Autorizar Mercado Livre (OAuth)** no card e **Conectar via OAuth** na modal; `auth.mercadolivre.com.br/authorization` ➔ `/integracoes/oauth/callback` ➔ `authorization_code` grava `APP_USR-…` + refresh na loja ML existente (preserva o ID de afiliado).
+- [x] **Placeholder ignorado:** `homolog-test-access-token` do Universal Link não é enviado à API; refresh rotacionado é persistido na conta.
+- [ ] **Credenciais do app ML:** preencher `Integrations:MercadoLivre:AppId`/`SecretKey` e cadastrar a Redirect URI HTTPS (`…ngrok-free.dev/integracoes/oauth/callback`) em developers.mercadolivre.com.br.
 
 
 

@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -38,9 +39,13 @@ public static class MarketplaceAccountMapper
             Status = status,
             CreatedAt = account.CreatedAt,
             RequiresTrackingIdCorrection = AffiliateTrackingIdValidator.LooksLikeUrl(trackingId)
-                || AffiliateTrackingIdValidator.ContainsHttp(trackingId)
+                || AffiliateTrackingIdValidator.ContainsHttp(trackingId),
+            HasOAuthToken = IsRealToken(Coalesce(account.AccessToken, integration?.AccessToken))
         };
     }
+
+    private static bool IsRealToken(string? token) =>
+        !string.IsNullOrWhiteSpace(token) && !HomologMarketplaceAuth.IsStubToken(token);
 
     public static MarketplaceAccountDto ToDto(IntegracaoLoja? item)
     {
@@ -65,7 +70,8 @@ public static class MarketplaceAccountMapper
             Status = ResolveStatus(item.ExpiresAt, item.Status),
             CreatedAt = item.CreatedAt,
             RequiresTrackingIdCorrection = AffiliateTrackingIdValidator.LooksLikeUrl(trackingId)
-                || AffiliateTrackingIdValidator.ContainsHttp(trackingId)
+                || AffiliateTrackingIdValidator.ContainsHttp(trackingId),
+            HasOAuthToken = IsRealToken(item.AccessToken)
         };
     }
 

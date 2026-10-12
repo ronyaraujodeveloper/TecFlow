@@ -42,4 +42,7 @@ public class MarketplaceAccountDto
     public DateTime CreatedAt { get; set; }
 
     public bool RequiresTrackingIdCorrection { get; set; }
+
+    /// <summary>True quando a loja possui token OAuth real (não o placeholder do Universal Link).</summary>
+    public bool HasOAuthToken { get; set; }
 }

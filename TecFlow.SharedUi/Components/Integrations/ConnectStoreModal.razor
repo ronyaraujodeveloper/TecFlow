@@ -189,7 +189,7 @@
                             @onclick="VincularManualmenteDirect">
                         @(_linking ? "Salvando..." : (_platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
                     </button>
-                    @if (!_platform.IsUniversalAffiliatePlatform())
+                    @if (SupportsOAuth)
                     {
                         <button type="button" class="btn btn-outline-primary" disabled="@_linking" @onclick="StartOAuthAsync">
                             @(_linking ? "Redirecionando..." : "Conectar via OAuth")
@@ -259,6 +259,7 @@
     private bool _trackingInvalid;
 
     private string? DisplayError => ErrorMessage ?? _formError;
+    private bool SupportsOAuth => !_platform.IsUniversalAffiliatePlatform() || _platform == MarketplaceType.MercadoLivre;
     private bool CanSaveAccount => !_linking && !_expanding && !_trackingInvalid;
 
     protected override void OnParametersSet()

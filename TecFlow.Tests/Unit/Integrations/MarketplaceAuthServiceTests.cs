@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Integrations.Auth;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
@@ -296,6 +297,106 @@ public class MarketplaceAuthServiceTests
         // Assert
         Assert.Equal("new-token", token);
         _tokenRepository.Verify(r => r.UpsertAsync(It.Is<MarketplaceToken>(t => t.AccessToken == "new-token")), Times.Once);
+    }
+
+    private MarketplaceAuthService CreateMercadoLivreService(MercadoLivreIntegrationOptions options) =>
+        new(
+            _tokenRepository.Object,
+            _accountRepository.Object,
+            _db,
+            _currentTenant.Object,
+            _signatureService,
+            _httpClientFactory.Object,
+            MarketplaceTestOptionsFactory.TikTokOptions(),
+            MarketplaceTestOptionsFactory.ShopeeOptions(),
+            NullLogger<MarketplaceAuthService>.Instance,
+            _hostEnvironment.Object,
+            _tenants.Object,
+            Options.Create(options));
+
+    [Fact]
+    public void GenerateAuthorizationUrl_ShouldUseConfiguredRedirect_WhenMarketplaceIsMercadoLivre()
+    {
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions
+        {
+            AppId = "123456",
+            SecretKey = "secret",
+            RedirectUri = "https://tunnel.test/integracoes/oauth/callback"
+        });
+
+        var url = service.GenerateAuthorizationUrl(
+            MarketplaceType.MercadoLivre,
+            "http://localhost:5000/integracoes/oauth/callback",
+            "ticket-ml");
+
+        Assert.StartsWith("https://auth.mercadolivre.com.br/authorization?", url, StringComparison.Ordinal);
+        Assert.Contains("response_type=code", url);
+        Assert.Contains("client_id=123456", url);
+        Assert.Contains("redirect_uri=https%3A%2F%2Ftunnel.test%2Fintegracoes%2Foauth%2Fcallback", url);
+        Assert.Contains("state=ticket-ml", url);
+    }
+
+    [Fact]
+    public void GenerateAuthorizationUrl_ShouldExplainMissingAppId_WhenMercadoLivreIsNotConfigured()
+    {
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions());
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            service.GenerateAuthorizationUrl(MarketplaceType.MercadoLivre, "https://tunnel.test/cb", "s"));
+
+        Assert.Equal(MarketplaceAuthService.MercadoLivreMissingCredentialsMessage, ex.Message);
+    }
+
+    [Fact]
+    public async Task ExchangeMercadoLivreCodeAsync_ShouldPostAuthorizationCodeGrant()
+    {
+        string? body = null;
+        HttpRequestMessage? captured = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            captured = request;
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"access_token":"APP_USR-1","token_type":"Bearer","expires_in":21600,"refresh_token":"TG-r","user_id":99}""")
+            };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("TecFlow.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions
+        {
+            AppId = "123456",
+            SecretKey = "secret"
+        });
+
+        var result = await service.ExchangeMercadoLivreCodeAsync(
+            "TG-code",
+            "https://tunnel.test/integracoes/oauth/callback");
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal("APP_USR-1", result.AccessToken);
+        Assert.Equal("TG-r", result.RefreshToken);
+        Assert.True(result.ExpiresAt > DateTime.UtcNow.AddHours(5));
+        Assert.Equal("https://api.mercadolibre.com/oauth/token", captured!.RequestUri!.AbsoluteUri);
+        Assert.Contains("grant_type=authorization_code", body);
+        Assert.Contains("client_id=123456", body);
+        Assert.Contains("client_secret=secret", body);
+        Assert.Contains("code=TG-code", body);
+        Assert.Contains("redirect_uri=https%3A%2F%2Ftunnel.test%2Fintegracoes%2Foauth%2Fcallback", body);
+    }
+
+    [Fact]
+    public async Task ExchangeMercadoLivreCodeAsync_ShouldFailWithoutCallingApi_WhenCredentialsAreMissing()
+    {
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions());
+
+        var result = await service.ExchangeMercadoLivreCodeAsync("TG-code", "https://tunnel.test/cb");
+
+        Assert.False(result.Success);
+        Assert.Equal(MarketplaceAuthService.MercadoLivreMissingCredentialsMessage, result.ErrorMessage);
+        _httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

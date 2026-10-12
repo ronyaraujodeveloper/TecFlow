@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Microsoft.Extensions.Options;
 using TecFlow.Business.Integrations.Auth;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Integrations.TikTokShop;
 using TecFlow.Business.Interfaces.Repositories;
@@ -31,6 +32,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TikTokShopIntegrationOptions _tikTokOptions;
     private readonly ShopeeIntegrationOptions _shopeeOptions;
+    private readonly MercadoLivreIntegrationOptions _mercadoLivreOptions;
     private readonly ILogger<MarketplaceAuthService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly ITenantProvisioningService _tenantProvisioning;
@@ -46,8 +48,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         IOptions<ShopeeIntegrationOptions> shopeeOptions,
         ILogger<MarketplaceAuthService> logger,
         IHostEnvironment hostEnvironment,
-        ITenantProvisioningService tenantProvisioning)
+        ITenantProvisioningService tenantProvisioning,
+        IOptions<MercadoLivreIntegrationOptions>? mercadoLivreOptions = null)
     {
+        _mercadoLivreOptions = mercadoLivreOptions?.Value ?? new MercadoLivreIntegrationOptions();
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
         _context = context;
@@ -76,9 +80,106 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         {
             MarketplaceType.TikTokShop => BuildTikTokAuthorizationUrl(redirectUri, stateValue),
             MarketplaceType.Shopee => BuildShopeeAuthorizationUrl(redirectUri, stateValue),
+            MarketplaceType.MercadoLivre => BuildMercadoLivreAuthorizationUrl(redirectUri, stateValue),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Marketplace não suportado.")
         };
     }
+
+    public async Task<MarketplaceOAuthExchangeResult> ExchangeMercadoLivreCodeAsync(
+        string code,
+        string? redirectUri,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return MarketplaceOAuthExchangeResult.Fail("Código de autorização do Mercado Livre ausente.");
+        }
+
+        if (HomologMarketplaceAuth.IsStubAuthorizationCode(code))
+        {
+            return new MarketplaceOAuthExchangeResult
+            {
+                Success = true,
+                AccessToken = HomologMarketplaceAuth.StubAccessToken,
+                RefreshToken = HomologMarketplaceAuth.StubRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(HomologMarketplaceAuth.StubAccessTokenLifetimeSeconds)
+            };
+        }
+
+        if (!_mercadoLivreOptions.HasAppCredentials)
+        {
+            return MarketplaceOAuthExchangeResult.Fail(MercadoLivreMissingCredentialsMessage);
+        }
+
+        var redirect = ResolveMercadoLivreRedirectUri(redirectUri);
+        if (string.IsNullOrWhiteSpace(redirect))
+        {
+            return MarketplaceOAuthExchangeResult.Fail("Redirect URI do OAuth Mercado Livre não informada.");
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, _mercadoLivreOptions.TokenUrl)
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["client_id"] = _mercadoLivreOptions.AppId.Trim(),
+                    ["client_secret"] = _mercadoLivreOptions.SecretKey.Trim(),
+                    ["code"] = code.Trim(),
+                    ["redirect_uri"] = redirect
+                })
+            };
+            request.Headers.Accept.ParseAdd("application/json");
+
+            var payload = await SendTokenRequestAsync(request, cancellationToken);
+            if (string.IsNullOrWhiteSpace(payload.AccessToken))
+            {
+                return MarketplaceOAuthExchangeResult.Fail("Mercado Livre não retornou access token.");
+            }
+
+            return new MarketplaceOAuthExchangeResult
+            {
+                Success = true,
+                AccessToken = payload.AccessToken,
+                RefreshToken = payload.RefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(payload.AccessTokenLifetimeSeconds),
+                RefreshExpiresAt = DateTime.UtcNow.AddDays(MercadoLivreRefreshTokenLifetimeDays)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao trocar code OAuth do Mercado Livre.");
+            return MarketplaceOAuthExchangeResult.Fail(
+                $"Mercado Livre recusou a autorização: {ex.Message}");
+        }
+    }
+
+    public const string MercadoLivreMissingCredentialsMessage =
+        "Configure Integrations:MercadoLivre:AppId e SecretKey (app do developers.mercadolivre.com.br).";
+
+    private const int MercadoLivreRefreshTokenLifetimeDays = 180;
+
+    private string BuildMercadoLivreAuthorizationUrl(string redirectUri, string state)
+    {
+        if (string.IsNullOrWhiteSpace(_mercadoLivreOptions.AppId))
+        {
+            throw new InvalidOperationException(MercadoLivreMissingCredentialsMessage);
+        }
+
+        return AppendQuery(_mercadoLivreOptions.AuthorizeUrl, new Dictionary<string, string?>
+        {
+            ["response_type"] = "code",
+            ["client_id"] = _mercadoLivreOptions.AppId.Trim(),
+            ["redirect_uri"] = ResolveMercadoLivreRedirectUri(redirectUri),
+            ["state"] = state
+        });
+    }
+
+    private string ResolveMercadoLivreRedirectUri(string? redirectUri) =>
+        string.IsNullOrWhiteSpace(_mercadoLivreOptions.RedirectUri)
+            ? redirectUri?.Trim() ?? string.Empty
+            : _mercadoLivreOptions.RedirectUri.Trim();
 
     public async Task<MarketplaceTokenResult> CallbackAndGenerateTokensAsync(
         MarketplaceType type,

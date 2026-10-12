@@ -28,4 +28,8 @@ public class IntegracaoLojaDto
     [JsonPropertyName("trackingId")]
     [JsonConverter(typeof(FlexibleJsonStringConverter))]
     public string? TrackingId { get; set; }
+
+    /// <summary>Redirect URI usada na autorização OAuth (obrigatória na troca do code do Mercado Livre).</summary>
+    [JsonPropertyName("redirectUri")]
+    public string? RedirectUri { get; set; }
 }

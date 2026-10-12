@@ -733,6 +733,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **32.2. Ingestão Gratuita via APIs Oficiais de Afiliados:**
   - **Mercado Livre Developers API (`MercadoLivreApiService`):**
     - Consulta de endpoints públicos `/items/{Item_ID}` e `/offers` sem necessidade de token de usuário final.
+    - Busca `sites/MLB/search` com token OAuth obtido em **Minhas Lojas** (`authorization_code` ➔ `APP_USR-…` + refresh persistido na loja ML; placeholder do Universal Link ignorado).
     - Captura automática de `original_price`, `price`, `status`, estoque disponível e condições de frete.
   - **Shopee Affiliate Open API (`ShopeeApiService`):**
     - Integração via `AppKey` / `AppSecret` com assinatura HMAC-SHA256 no header da requisição.

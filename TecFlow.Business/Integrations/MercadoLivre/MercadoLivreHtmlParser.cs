@@ -16,7 +16,8 @@ public static class MercadoLivreHtmlParser
     [
         "ui-search-layout__item",
         "ui-search-result__content",
-        "ui-search-result__wrapper"
+        "ui-search-result__wrapper",
+        "poly-card"
     ];
 
     private static readonly Regex PermalinkJsonRegex = new(
@@ -156,9 +157,8 @@ public static class MercadoLivreHtmlParser
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
-        var nodes = doc.DocumentNode.SelectNodes("//li[contains(@class, 'ui-search-layout__item')]")
-            ?? doc.DocumentNode.SelectNodes("//div[contains(@class, 'ui-search-result')]");
-        if (nodes is null)
+        var nodes = SelectVitrineNodes(doc);
+        if (nodes.Count == 0)
         {
             return;
         }
@@ -171,6 +171,8 @@ public static class MercadoLivreHtmlParser
             }
 
             var titleNode = node.SelectSingleNode(".//h2")
+                ?? node.SelectSingleNode(".//h3")
+                ?? node.SelectSingleNode(".//*[contains(@class, 'poly-component__title')]")
                 ?? node.SelectSingleNode(".//a[contains(@class, 'title')]");
             var linkNode = node.SelectSingleNode(".//a[contains(@class, 'ui-search-link')]")
                 ?? node.SelectSingleNode(".//a");
@@ -189,6 +191,32 @@ public static class MercadoLivreHtmlParser
                 imgNode?.GetAttributeValue("src", null),
                 imgNode?.GetAttributeValue("data-src", null));
             TryAdd(items, seen, linkNode.GetAttributeValue("href", string.Empty), title, ParsePriceFraction(priceNode?.InnerText), image);
+        }
+    }
+
+    private static List<HtmlNode> SelectVitrineNodes(HtmlDocument doc)
+    {
+        var nodes = new List<HtmlNode>();
+        var seen = new HashSet<HtmlNode>();
+        AppendNodes(seen, nodes, doc.DocumentNode.SelectNodes("//li[contains(@class, 'ui-search-layout__item')]"));
+        AppendNodes(seen, nodes, doc.DocumentNode.SelectNodes("//*[contains(@class, 'poly-card')]"));
+        AppendNodes(seen, nodes, doc.DocumentNode.SelectNodes("//div[contains(@class, 'ui-search-result')]"));
+        return nodes;
+    }
+
+    private static void AppendNodes(HashSet<HtmlNode> seen, List<HtmlNode> target, HtmlNodeCollection? source)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        foreach (var node in source)
+        {
+            if (seen.Add(node))
+            {
+                target.Add(node);
+            }
         }
     }
 

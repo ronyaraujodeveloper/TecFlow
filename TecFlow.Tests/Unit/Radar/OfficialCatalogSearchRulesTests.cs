@@ -35,7 +35,7 @@ public class OfficialCatalogSearchRulesTests
         var ok = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre", "Mercado Livre", true, 15, false, string.Empty);
         Assert.Equal("ok", ok.State);
-        Assert.Equal("15 produtos encontrados", ok.Message);
+        Assert.Equal("15 produtos", ok.Message);
 
         var empty = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre", "Mercado Livre", true, 0, false, string.Empty);
@@ -81,6 +81,17 @@ public class OfficialCatalogSearchRulesTests
             "Erro HTTP 403 (Forbidden)");
         Assert.Equal("error", error.State);
         Assert.Equal("Erro HTTP 403 (Forbidden)", error.Message);
+
+        var recovered = OfficialCatalogSearchRules.BuildChannelStatus(
+            "MercadoLivre",
+            "Mercado Livre",
+            true,
+            12,
+            false,
+            string.Empty,
+            "ML HTTP 403 (Forbidden)");
+        Assert.Equal("ok", recovered.State);
+        Assert.Equal("12 produtos", recovered.Message);
     }
 
     [Fact]

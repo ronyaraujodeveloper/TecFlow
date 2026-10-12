@@ -257,16 +257,23 @@
 
             _items = [.. result.Data.DataList ?? []];
             _channels = result.Data.Channels ?? [];
-            var channelError = _channels.FirstOrDefault(item =>
-                string.Equals(item.State, "error", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(item.Message));
-            if (channelError is not null)
+            if (_items.Count > 0)
             {
-                _error = channelError.Message;
+                _error = null;
             }
-            else if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
+            else
             {
-                _error = result.Data.Descricao;
+                var channelError = _channels.FirstOrDefault(item =>
+                    string.Equals(item.State, "error", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(item.Message));
+                if (channelError is not null)
+                {
+                    _error = channelError.Message;
+                }
+                else if (!result.Data.Status && !string.IsNullOrWhiteSpace(result.Data.Descricao))
+                {
+                    _error = result.Data.Descricao;
+                }
             }
         }
         catch (Exception ex)

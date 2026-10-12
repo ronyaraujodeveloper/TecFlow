@@ -18,6 +18,8 @@ namespace TecFlow.Infrastructure.Services.Radar;
 
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
+    public const string ListaHttpClientName = "MercadoLivreLista";
+
     public const string PublicUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
@@ -27,17 +29,20 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     };
 
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _listaHttpClient;
     private readonly MercadoLivreIntegrationOptions _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<MercadoLivreApiService> logger)
     {
         _httpClient = httpClient;
+        _listaHttpClient = httpClientFactory.CreateClient(ListaHttpClientName);
         _options = options.Value;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
@@ -140,6 +145,14 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             : OfficialCatalogChannelResult.Unconfigured();
     }
 
+    public static HttpClientHandler CreateListaHttpClientHandler() =>
+        new()
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+            UseCookies = true,
+            CookieContainer = new CookieContainer()
+        };
+
     internal static void EnsurePublicUserAgent(HttpClient httpClient)
     {
         httpClient.DefaultRequestHeaders.UserAgent.Clear();
@@ -211,13 +224,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     {
         var searchUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
         using var request = new HttpRequestMessage(HttpMethod.Get, searchUrl);
-        ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
-        ApplyHeader(
-            request.Headers,
-            "Accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        ApplyListaBrowserHeaders(request);
+        using var response = await _listaHttpClient.SendAsync(request, cancellationToken);
         var html = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
@@ -415,6 +423,23 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
         ApplyHeader(request.Headers, "Accept", "application/json");
         ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+    }
+
+    private static void ApplyListaBrowserHeaders(HttpRequestMessage request)
+    {
+        request.Headers.TryAddWithoutValidation("User-Agent", PublicUserAgent);
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
+        request.Headers.TryAddWithoutValidation("sec-ch-ua", "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"");
+        request.Headers.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+        request.Headers.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "none");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-User", "?1");
+        request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
     }
 
     private static void ApplyHeader(HttpHeaders headers, string name, string value)

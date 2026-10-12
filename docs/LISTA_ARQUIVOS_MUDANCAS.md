@@ -1018,6 +1018,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreHtmlParser.cs** — HtmlAgilityPack (`ui-search-layout__item` / `ui-search-result`) + regex de fallback.
 - [x] **TecFlow.Business.csproj** — pacote `HtmlAgilityPack` 1.11.72.
 - [x] **BuscaGlobal.razor** — alerta vermelho com `ex.Message` / mensagem do canal `error`; `StateHasChanged` no `finally`.
+- [x] **MercadoLivreApiService.cs** — `HttpClient` `MercadoLivreLista` com cookies, descompressão e headers Chrome para a vitrine.
+- [x] **WhatsAppEvolutionRegistrationExtensions.cs** — registro do named client `MercadoLivreLista`.
+- [x] **MercadoLivreHtmlParser.cs** — seletor `poly-card` / `poly-component__title`.
+- [x] **OfficialCatalogSearchRules.cs** — badge `ok` com `{n} produtos` mesmo se houver erro HTTP prévio.
+- [x] **BuscaGlobal.razor** — `_error = null` quando a grid recebe ofertas.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

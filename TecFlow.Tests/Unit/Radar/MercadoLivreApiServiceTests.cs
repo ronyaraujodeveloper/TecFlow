@@ -16,6 +16,16 @@ namespace TecFlow.Tests.Unit.Radar;
 public class MercadoLivreApiServiceTests
 {
     [Fact]
+    public void CreateListaHttpClientHandler_ShouldEnableCookiesAndDecompression()
+    {
+        var handler = MercadoLivreApiService.CreateListaHttpClientHandler();
+        Assert.True(handler.UseCookies);
+        Assert.Equal(
+            DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+            handler.AutomaticDecompression);
+    }
+
+    [Fact]
     public async Task SearchProductsAsync_ShouldAskForConnectedAccountWhenTokenIsMissing()
     {
         var handler = new CaptureHandler();
@@ -122,6 +132,10 @@ public class MercadoLivreApiServiceTests
         Assert.Equal(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             handler.LastRequest.Headers.UserAgent.ToString());
+        Assert.True(handler.LastRequest.Headers.TryGetValues("sec-ch-ua", out var secChUa));
+        Assert.Contains("Google Chrome", string.Join(" ", secChUa), StringComparison.OrdinalIgnoreCase);
+        Assert.True(handler.LastRequest.Headers.TryGetValues("Sec-Fetch-Mode", out var fetchMode));
+        Assert.Contains("navigate", fetchMode);
     }
 
     [Fact]
@@ -159,8 +173,11 @@ public class MercadoLivreApiServiceTests
         var factory = new Mock<IDbContextFactory<AppDbContext>>();
         factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => CreateDbContext(dbName));
+        var httpFactory = new Mock<IHttpClientFactory>();
+        httpFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(http);
         return new MercadoLivreApiService(
             http,
+            httpFactory.Object,
             Options.Create(options),
             factory.Object,
             NullLogger<MercadoLivreApiService>.Instance);

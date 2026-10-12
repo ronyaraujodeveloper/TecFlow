@@ -58,6 +58,26 @@ public class MercadoLivreHtmlParserTests
     }
 
     [Fact]
+    public void ParseSearchResults_ShouldReadPolyCardLayout()
+    {
+        const string html = """
+            <div class="poly-card poly-card--grid">
+              <a href="https://www.mercadolivre.com.br/fone-bt/p/MLB444">
+                <h3 class="poly-component__title">Fone Bluetooth</h3>
+              </a>
+              <span class="andes-money-amount__fraction">89</span>
+              <img src="https://http2.mlstatic.com/fone.jpg" />
+            </div>
+            """;
+
+        var item = Assert.Single(MercadoLivreHtmlParser.ParseSearchResults(html));
+        Assert.Equal("Fone Bluetooth", item.ProductName);
+        Assert.Equal(89m, item.Price);
+        Assert.Equal("MLB444", item.ProductId);
+        Assert.Equal("Web", item.Source);
+    }
+
+    [Fact]
     public void InjectMattTool_ShouldAppendTrackingId()
     {
         var url = MercadoLivreCommissionUrlBuilder.InjectMattTool(

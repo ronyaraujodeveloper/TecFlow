@@ -808,5 +808,53 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **TrackingId:** `matt_tool` da loja ativa injetado nos links da API e do scraper; badge 🟢 com a contagem de produtos.
 - [x] **Cards completos:** parser percorre todos os nós da listagem; a `/busca` renderiza a `DataList` unificada com `StateHasChanged`.
 - [x] **Erro rastreável + HAP:** HTTP ≠ 200 não devolve lista vazia; `LogError`/`Failed("ML HTTP …")` no badge vermelho; parser HtmlAgilityPack com Chrome/122.
----
-*Nota para a IA: Sempre siga este roadmap passo a passo e use a nova estrutura de pastas estabelecida. Não pule etapas e preze pela preservação do código de validação já existente.*
+- [x] **Anti-403 da vitrine:** `HttpClientHandler` nativo (cookies + Brotli) e headers `sec-ch-ua`/`Sec-Fetch-*`; badge `{n} produtos` quando o HTML mapeia ofertas.
+
+  ## 🔍 Transparência de Status e Logs no Live Search (`SearchTelemetryUI`)
+
+- [x] **Indicador de Status por Plataforma na Tela de Busca:**
+  - Exibição de badges de progresso/sucesso (ex: Mercado Livre: 12 itens | Shopee: Sem credencial | Amazon: 0 itens) em vez de apenas uma mensagem genérica de lista vazia.
+- [x] **Logs de Auditoria de Busca:**
+  - Registro no `ILogger` dos parâmetros de busca e contagem de itens retornados por cada canal de integração.
+
+  ## 🛠️ Ajuste no Consumo da API Pública do Mercado Livre (`MercadoLivreSearchFix`)
+
+- [x] **Configuração do Header `User-Agent`:**
+  - Adição do header `User-Agent` obrigatório no `HttpClient` de integração com a API pública do Mercado Livre.
+- [x] **Desserialização Correta do JSON (`MLB Search DTO`):**
+  - Mapeamento explícito da propriedade `results` e tratamento de exceção HTTP para log detalhado no C#.
+- [x] **Headers Chrome + diagnóstico no badge:**
+  - `User-Agent` Chrome/122, `Accept: application/json`, log `Erro API ML [{StatusCode}]: {Body}` e badge `❌` com `ML HTTP {status}`.
+- [x] **Bearer OAuth na busca MLB:**
+  - Token da conta conectada, `Integrations:MercadoLivre` (AppId/SecretKey) e badge `⚠️ Requer conta conectada no painel`.
+- [x] **Botão Conectar no badge do ML:**
+  - Redireciona para `/minhas-lojas?conectar=mercadolivre` e abre o modal com Mercado Livre pré-selecionado.
+
+  ## 💡 Descomplicação da Conexão de Lojas (UX - Mercado Livre Onboarding)
+
+- [x] **Simplificação de Onboarding do Mercado Livre (`MLAffiliateUX`):**
+  - Permissão para colar diretamente qualquer link de afiliado do Mercado Livre no formulário de conexão.
+  - Extração automática do `matt_tool` no backend via Regex/URL Parser sem exigir digitação de IDs técnicos pelo utilizador.
+- [x] **Modal Didático e Passo a Passo Responsivo:**
+  - Instruções ilustradas separadas para computador e aplicação móvel.
+
+## 🐞 Correção de Leitura de Loja Ativa no Live Search (`PlatformEnumResolution`)
+
+- [x] **Mapeamento Unificado de Plataformas:**
+  - Padronização da consulta de contas ativas (`MarketplaceAccounts`) utilizando estritamente o `PlatformType` enum para evitar falha por divergência de espaço ou string ("Mercado Livre" vs "MercadoLivre").
+
+  ## 🛠️ Resiliência no Live Search do Mercado Livre (`MLBScraperSearchFallback`)
+
+- [x] **Bypass do Bloqueio HTTP 403 da API de Busca:**
+  - Implementação de fallback resiliênte para busca HTML/OpenGraph na vitrine do Mercado Livre quando a chamada da API sem Bearer Token retornar HTTP 403.
+- [x] **Preservação do TrackingId:**
+  - Garantia de que todos os produtos encontrados na busca (seja via API ou Fallback Scraper) tenham o `matt_tool` do tenant (`14343296`) injetado no link final de comissão.
+- [x] **Parser de todos os cards da vitrine:**
+  - Percorre cada `ui-search-layout__item` / `ui-search-result__content` (título, preço, link e imagem).
+- [x] **Grid Blazor reativa:**
+  - Unifica `DataList` e chama `InvokeAsync(StateHasChanged)` sem filtro de palavra-chave que ocultava os itens.
+- [x] **Erro rastreável (sem lista vazia silenciosa):**
+  - HTTP ≠ 200 e exceções geram `LogError` + `OfficialCatalogChannelResult.Failed`; `/busca` mostra a mensagem no badge vermelho e no alerta.
+- [x] **Parser HtmlAgilityPack da vitrine:**
+  - Seletores `ui-search-layout__item` / `ui-search-result`, headers de browser e `matt_tool` no permalink.
+  

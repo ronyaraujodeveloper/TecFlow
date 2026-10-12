@@ -130,6 +130,19 @@ public static class OfficialCatalogSearchRules
             };
         }
 
+        if (productCount > 0)
+        {
+            return new OfficialCatalogChannelStatusDto
+            {
+                Key = key,
+                Label = label,
+                Included = true,
+                ProductCount = productCount,
+                State = "ok",
+                Message = $"{productCount} produtos"
+            };
+        }
+
         if (!string.IsNullOrWhiteSpace(errorMessage))
         {
             return new OfficialCatalogChannelStatusDto
@@ -153,19 +166,6 @@ public static class OfficialCatalogSearchRules
                 ProductCount = 0,
                 State = "missing",
                 Message = missingMessage
-            };
-        }
-
-        if (productCount > 0)
-        {
-            return new OfficialCatalogChannelStatusDto
-            {
-                Key = key,
-                Label = label,
-                Included = true,
-                ProductCount = productCount,
-                State = "ok",
-                Message = $"{productCount} produtos encontrados"
             };
         }
 

@@ -1023,6 +1023,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **MercadoLivreHtmlParser.cs** — seletor `poly-card` / `poly-component__title`.
 - [x] **OfficialCatalogSearchRules.cs** — badge `ok` com `{n} produtos` mesmo se houver erro HTTP prévio.
 - [x] **BuscaGlobal.razor** — `_error = null` quando a grid recebe ofertas.
+- [x] **MercadoLivreApiService.cs** — busca MLB só com OAuth (`Bearer` + `access_token`); ID de afiliado não dispara API anônima nem HTML da vitrine.
+- [x] **OfficialCatalogSearchRules.cs** — mensagens `Requer OAuth...` e `API MLB recusou a busca (HTTP 403)...`.
 
 ### Fase 33 README — Expurgo e retenção de dados
 

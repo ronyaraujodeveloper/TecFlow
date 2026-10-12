@@ -246,11 +246,11 @@ As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para
 
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
-  ## 🛠️ Resiliência da vitrine MLB (`MLBScraperSearchFallback`)
+  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)
 
-- [x] **HttpClient nativo anti-403:** named client `MercadoLivreLista` com cookies, GZip/Deflate/Brotli e headers Chrome/122 (`sec-ch-ua`, `Sec-Fetch-*`).
-- [x] **Parser HAP:** `ui-search-layout__item` / `poly-card` / `ui-search-result` + `matt_tool` no permalink.
-- [x] **Badge `/busca`:** com ofertas, `_error = null` e `Mercado Livre: N produtos`.
+- [x] **OAuth obrigatório:** `sites/MLB/search` com `Bearer` + `access_token`; ID de afiliado não autentica a busca.
+- [x] **Sem scrap da vitrine:** `lista.mercadolivre.com.br` cai em `account-verification` no IIS e foi removido do fluxo.
+- [x] **Badge:** `⚠️ Requer OAuth...` sem token; `❌ API MLB recusou a busca (HTTP 403)...` com token recusado.
 
 
 

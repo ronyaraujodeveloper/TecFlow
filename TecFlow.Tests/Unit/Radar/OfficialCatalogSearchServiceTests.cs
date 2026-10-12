@@ -126,7 +126,7 @@ public class OfficialCatalogSearchServiceTests
         var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter { Keyword = "dell i7" });
         var mlStatus = result.Channels.Single(c => c.Key == "MercadoLivre");
         Assert.Equal("missing", mlStatus.State);
-        Assert.Equal("Requer conta conectada no painel", mlStatus.Message);
+        Assert.Equal("Requer OAuth do Mercado Livre para buscar ofertas", mlStatus.Message);
     }
 
     private static AppDbContext CreateDbContext()

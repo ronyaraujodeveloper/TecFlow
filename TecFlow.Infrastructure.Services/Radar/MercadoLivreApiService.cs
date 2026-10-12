@@ -18,8 +18,6 @@ namespace TecFlow.Infrastructure.Services.Radar;
 
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
-    public const string ListaHttpClientName = "MercadoLivreLista";
-
     public const string PublicUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
@@ -29,20 +27,17 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     };
 
     private readonly HttpClient _httpClient;
-    private readonly HttpClient _listaHttpClient;
     private readonly MercadoLivreIntegrationOptions _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
-        IHttpClientFactory httpClientFactory,
         IOptions<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<MercadoLivreApiService> logger)
     {
         _httpClient = httpClient;
-        _listaHttpClient = httpClientFactory.CreateClient(ListaHttpClientName);
         _options = options.Value;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
@@ -97,61 +92,28 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
-        var connectedByAffiliate = !string.IsNullOrWhiteSpace(affiliateId);
         var accessToken = await ResolveAccessTokenAsync(account, cancellationToken);
-        if (string.IsNullOrWhiteSpace(accessToken) && !connectedByAffiliate)
+        if (string.IsNullOrWhiteSpace(accessToken))
         {
             return OfficialCatalogChannelResult.Unconfigured();
         }
 
-        string? tracedError = null;
         try
         {
-            var apiItems = await SearchViaApiAsync(query, accessToken, affiliateId, cancellationToken);
-            if (apiItems.Count > 0)
-            {
-                return OfficialCatalogChannelResult.From(apiItems);
-            }
+            var apiItems = await SearchViaApiAsync(query, accessToken.Trim(), affiliateId, cancellationToken);
+            return apiItems.Count > 0
+                ? OfficialCatalogChannelResult.From(apiItems)
+                : OfficialCatalogChannelResult.Empty;
         }
         catch (Exception ex)
         {
-            tracedError = string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado na API ML" : ex.Message;
+            var tracedError = string.IsNullOrWhiteSpace(ex.Message)
+                ? OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage
+                : ex.Message;
             _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
-        }
-
-        try
-        {
-            var webItems = await SearchViaWebFallbackAsync(query, affiliateId, cancellationToken);
-            if (webItems.Count > 0)
-            {
-                return OfficialCatalogChannelResult.From(webItems);
-            }
-        }
-        catch (Exception ex)
-        {
-            var webError = string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado no fallback ML" : ex.Message;
-            _logger.LogError(ex, "Erro no fallback HTML do Mercado Livre para '{Query}': {Error}", query, webError);
-            tracedError = string.IsNullOrWhiteSpace(tracedError) ? webError : $"{tracedError}; {webError}";
             return OfficialCatalogChannelResult.Failed(tracedError);
         }
-
-        if (!string.IsNullOrWhiteSpace(tracedError))
-        {
-            return OfficialCatalogChannelResult.Failed(tracedError);
-        }
-
-        return connectedByAffiliate
-            ? OfficialCatalogChannelResult.Empty
-            : OfficialCatalogChannelResult.Unconfigured();
     }
-
-    public static HttpClientHandler CreateListaHttpClientHandler() =>
-        new()
-        {
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
-            UseCookies = true,
-            CookieContainer = new CookieContainer()
-        };
 
     internal static void EnsurePublicUserAgent(HttpClient httpClient)
     {
@@ -166,23 +128,18 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaApiAsync(
         string query,
-        string? accessToken,
+        string accessToken,
         string? affiliateId,
         CancellationToken cancellationToken)
     {
         var searchUri =
-            $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20";
+            $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20"
+            + $"&access_token={Uri.EscapeDataString(accessToken)}";
         var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
-        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-            && !string.IsNullOrWhiteSpace(accessToken))
-        {
-            (statusCode, body) = await SendSearchAsync(searchUri, accessToken: null, cancellationToken);
-        }
-
         if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
             _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
-            throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
+            throw new HttpRequestException(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
 
         if (statusCode != HttpStatusCode.OK)
@@ -214,38 +171,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 Source = "Api"
             })
             .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
-            .ToList();
-    }
-
-    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaWebFallbackAsync(
-        string query,
-        string? trackingId,
-        CancellationToken cancellationToken)
-    {
-        var searchUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
-        using var request = new HttpRequestMessage(HttpMethod.Get, searchUrl);
-        ApplyListaBrowserHeaders(request);
-        using var response = await _listaHttpClient.SendAsync(request, cancellationToken);
-        var html = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError(
-                "Erro HTTP {Status} ao acessar vitrine do Mercado Livre. Url={Url} Body={Body}",
-                response.StatusCode,
-                searchUrl,
-                html);
-            throw new InvalidOperationException($"ML HTTP {response.StatusCode}");
-        }
-        var items = MercadoLivreHtmlParser.ParseSearchResults(html);
-        foreach (var item in items)
-        {
-            item.SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.SourceUrl, trackingId);
-            item.Source = "Web";
-        }
-
-        return items
-            .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl) && !string.IsNullOrWhiteSpace(item.ProductName))
-            .Take(MercadoLivreHtmlParser.MaxResults)
             .ToList();
     }
 
@@ -423,23 +348,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
         ApplyHeader(request.Headers, "Accept", "application/json");
         ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
-    }
-
-    private static void ApplyListaBrowserHeaders(HttpRequestMessage request)
-    {
-        request.Headers.TryAddWithoutValidation("User-Agent", PublicUserAgent);
-        request.Headers.TryAddWithoutValidation(
-            "Accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
-        request.Headers.TryAddWithoutValidation("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
-        request.Headers.TryAddWithoutValidation("sec-ch-ua", "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"");
-        request.Headers.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
-        request.Headers.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
-        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
-        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
-        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "none");
-        request.Headers.TryAddWithoutValidation("Sec-Fetch-User", "?1");
-        request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
     }
 
     private static void ApplyHeader(HttpHeaders headers, string name, string value)

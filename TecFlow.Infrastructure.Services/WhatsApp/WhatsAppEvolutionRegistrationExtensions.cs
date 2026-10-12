@@ -71,11 +71,6 @@ public static class WhatsAppEvolutionRegistrationExtensions
             client.Timeout = TimeSpan.FromSeconds(12);
             TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService.EnsurePublicUserAgent(client);
         });
-        services.AddHttpClient(TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService.ListaHttpClientName, client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(10);
-        }).ConfigurePrimaryHttpMessageHandler(
-            TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService.CreateListaHttpClientHandler);
         services.AddHttpClient<IShopeeAffiliateOfferService, TecFlow.Infrastructure.Services.Radar.ShopeeAffiliateOfferService>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<TecFlow.Business.Integrations.Shopee.ShopeeIntegrationOptions>>().Value;

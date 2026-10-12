@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using TecFlow.Business.Integrations.MercadoLivre;
+using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -16,17 +17,7 @@ namespace TecFlow.Tests.Unit.Radar;
 public class MercadoLivreApiServiceTests
 {
     [Fact]
-    public void CreateListaHttpClientHandler_ShouldEnableCookiesAndDecompression()
-    {
-        var handler = MercadoLivreApiService.CreateListaHttpClientHandler();
-        Assert.True(handler.UseCookies);
-        Assert.Equal(
-            DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
-            handler.AutomaticDecompression);
-    }
-
-    [Fact]
-    public async Task SearchProductsAsync_ShouldAskForConnectedAccountWhenTokenIsMissing()
+    public async Task SearchProductsAsync_ShouldAskForOAuthWhenTokenIsMissing()
     {
         var handler = new CaptureHandler();
         var sut = CreateSut(handler, new MercadoLivreIntegrationOptions());
@@ -38,74 +29,9 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
-    public async Task SearchProductsAsync_ShouldSendBearerTokenFromAppSettings()
+    public async Task SearchProductsAsync_ShouldNotTreatAffiliateIdAsSearchCredential()
     {
         var handler = new CaptureHandler();
-        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token" });
-
-        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
-
-        Assert.NotNull(handler.LastRequest);
-        Assert.Equal("Bearer", handler.LastRequest!.Headers.Authorization?.Scheme);
-        Assert.Equal("ml-app-token", handler.LastRequest.Headers.Authorization?.Parameter);
-        Assert.Equal(
-            "https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20",
-            handler.LastRequest.RequestUri!.AbsoluteUri);
-        Assert.Equal("Dell i7", Assert.Single(result.Items).ProductName);
-    }
-
-    [Fact]
-    public async Task SearchProductsAsync_ShouldTreatForbiddenAsTraceableErrorWhenListaIsEmpty()
-    {
-        var handler = new CaptureHandler { StatusCode = HttpStatusCode.Forbidden };
-        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "expired" });
-
-        var result = await sut.SearchProductsAsync(1, "dell i7");
-
-        Assert.False(result.MissingCredentials);
-        Assert.Empty(result.Items);
-        Assert.Contains("ML HTTP", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("403", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task SearchProductsAsync_ShouldSearchWhenAffiliateIdIsRegisteredWithoutOAuth()
-    {
-        var handler = new CaptureHandler();
-        var sut = CreateSut(
-            handler,
-            new MercadoLivreIntegrationOptions(),
-            db =>
-            {
-                db.MarketplaceAccounts.Add(new MarketplaceAccount
-                {
-                    TenantId = Guid.NewGuid(),
-                    UserId = "9",
-                    MarketplaceType = MarketplaceType.Amazon,
-                    FriendlyName = "Mercado Livre",
-                    TrackingId = "14343296",
-                    IsActive = true
-                });
-            });
-
-        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
-
-        Assert.False(result.MissingCredentials);
-        Assert.Null(handler.LastRequest!.Headers.Authorization);
-        var item = Assert.Single(result.Items);
-        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task SearchProductsAsync_ShouldFallbackToPublicListWhenApiReturnsForbidden()
-    {
-        var handler = new CaptureHandler
-        {
-            StatusCode = HttpStatusCode.Forbidden,
-            HtmlBody = """
-                <a title="Notebook Dell i7" href="https://www.mercadolivre.com.br/notebook-dell-i7/p/MLB1234567890">Dell</a>
-                """
-        };
         var sut = CreateSut(
             handler,
             new MercadoLivreIntegrationOptions(),
@@ -123,37 +49,70 @@ public class MercadoLivreApiServiceTests
 
         var result = await sut.SearchProductsAsync(1, "dell i7", 20, "14343296");
 
-        Assert.False(result.MissingCredentials);
-        Assert.Null(result.ErrorMessage);
-        var item = Assert.Single(result.Items);
-        Assert.Equal("Web", item.Source);
-        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("lista.mercadolivre.com.br", handler.LastRequest!.RequestUri!.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            handler.LastRequest.Headers.UserAgent.ToString());
-        Assert.True(handler.LastRequest.Headers.TryGetValues("sec-ch-ua", out var secChUa));
-        Assert.Contains("Google Chrome", string.Join(" ", secChUa), StringComparison.OrdinalIgnoreCase);
-        Assert.True(handler.LastRequest.Headers.TryGetValues("Sec-Fetch-Mode", out var fetchMode));
-        Assert.Contains("navigate", fetchMode);
+        Assert.True(result.MissingCredentials);
+        Assert.Empty(result.Items);
+        Assert.Null(handler.LastRequest);
     }
 
     [Fact]
-    public async Task SearchProductsAsync_ShouldExposeListaHttpErrorInsteadOfEmptyList()
+    public async Task SearchProductsAsync_ShouldSendBearerTokenAndAccessTokenQuery()
     {
-        var handler = new CaptureHandler
-        {
-            StatusCode = HttpStatusCode.Forbidden,
-            ListaStatusCode = HttpStatusCode.Forbidden,
-            HtmlBody = "<html></html>"
-        };
+        var handler = new CaptureHandler();
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token" });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal("Bearer", handler.LastRequest!.Headers.Authorization?.Scheme);
+        Assert.Equal("ml-app-token", handler.LastRequest.Headers.Authorization?.Parameter);
+        Assert.Equal(
+            "https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20&access_token=ml-app-token",
+            handler.LastRequest.RequestUri!.AbsoluteUri);
+        Assert.Equal("Dell i7", Assert.Single(result.Items).ProductName);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldInjectMattToolWhenOAuthSearchSucceeds()
+    {
+        var handler = new CaptureHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token" },
+            db =>
+            {
+                db.MarketplaceAccounts.Add(new MarketplaceAccount
+                {
+                    TenantId = Guid.NewGuid(),
+                    UserId = "1",
+                    MarketplaceType = MarketplaceType.MercadoLivre,
+                    TrackingId = "14343296",
+                    AccessToken = "ml-app-token",
+                    ExpiresAt = DateTime.UtcNow.AddHours(4),
+                    IsActive = true
+                });
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20, "14343296");
+
+        Assert.False(result.MissingCredentials);
+        var item = Assert.Single(result.Items);
+        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Api", item.Source);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldExposeForbiddenWithoutHtmlFallback()
+    {
+        var handler = new CaptureHandler { StatusCode = HttpStatusCode.Forbidden };
         var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "expired" });
 
         var result = await sut.SearchProductsAsync(1, "dell i7");
 
         Assert.False(result.MissingCredentials);
         Assert.Empty(result.Items);
-        Assert.Contains("ML HTTP", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage, result.ErrorMessage);
+        Assert.Contains("api.mercadolibre.com", handler.LastRequest!.RequestUri!.Host, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("lista.mercadolivre", handler.LastRequest.RequestUri!.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
     }
 
     private static MercadoLivreApiService CreateSut(
@@ -173,11 +132,8 @@ public class MercadoLivreApiServiceTests
         var factory = new Mock<IDbContextFactory<AppDbContext>>();
         factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => CreateDbContext(dbName));
-        var httpFactory = new Mock<IHttpClientFactory>();
-        httpFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(http);
         return new MercadoLivreApiService(
             http,
-            httpFactory.Object,
             Options.Create(options),
             factory.Object,
             NullLogger<MercadoLivreApiService>.Instance);
@@ -200,24 +156,17 @@ public class MercadoLivreApiServiceTests
 
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
 
-        public HttpStatusCode ListaStatusCode { get; set; } = HttpStatusCode.OK;
-
         public string Body { get; set; } =
             """{"results":[{"id":"MLB1","title":"Dell i7","price":10,"permalink":"https://produto.mercadolivre.com.br/MLB-1","thumbnail":"https://http2.mlstatic.com/t.jpg"}]}""";
-
-        public string HtmlBody { get; set; } = "<html></html>";
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             LastRequest = request;
-            var isLista = request.RequestUri?.Host.Contains("lista.mercadolivre", StringComparison.OrdinalIgnoreCase) == true;
-            var status = isLista ? ListaStatusCode : StatusCode;
-            var body = isLista ? HtmlBody : Body;
-            return Task.FromResult(new HttpResponseMessage(status)
+            return Task.FromResult(new HttpResponseMessage(StatusCode)
             {
-                Content = new StringContent(body)
+                Content = new StringContent(Body)
             });
         }
     }

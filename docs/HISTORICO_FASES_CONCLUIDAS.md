@@ -809,6 +809,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Cards completos:** parser percorre todos os nós da listagem; a `/busca` renderiza a `DataList` unificada com `StateHasChanged`.
 - [x] **Erro rastreável + HAP:** HTTP ≠ 200 não devolve lista vazia; `LogError`/`Failed("ML HTTP …")` no badge vermelho; parser HtmlAgilityPack com Chrome/122.
 - [x] **Anti-403 da vitrine:** `HttpClientHandler` nativo (cookies + Brotli) e headers `sec-ch-ua`/`Sec-Fetch-*`; badge `{n} produtos` quando o HTML mapeia ofertas.
+- [x] **Busca só via OAuth:** a vitrine HTML é classificada como bot (`account-verification`); `/busca` exige token OAuth e trata 403 CloudFront sem scrap.
 
   ## 🔍 Transparência de Status e Logs no Live Search (`SearchTelemetryUI`)
 

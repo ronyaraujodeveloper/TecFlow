@@ -41,7 +41,11 @@ public static class OfficialCatalogSearchRules
 
     public const string AmazonMissingPaApiMessage = "PA-API não configurada";
 
-    public const string MercadoLivreMissingAccountMessage = "Requer conta conectada no painel";
+    public const string MercadoLivreMissingAccountMessage =
+        "Requer OAuth do Mercado Livre para buscar ofertas";
+
+    public const string MercadoLivreSearchForbiddenMessage =
+        "API MLB recusou a busca (HTTP 403). O token OAuth da loja é obrigatório; o ID de afiliado não libera a API.";
 
     public static bool MatchesMercadoLivreAccount(
         MarketplaceType marketplaceType,

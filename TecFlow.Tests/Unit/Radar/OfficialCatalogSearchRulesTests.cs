@@ -69,7 +69,7 @@ public class OfficialCatalogSearchRulesTests
             true,
             OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage);
         Assert.Equal("missing", mlMissing.State);
-        Assert.Equal("Requer conta conectada no painel", mlMissing.Message);
+        Assert.Equal("Requer OAuth do Mercado Livre para buscar ofertas", mlMissing.Message);
 
         var error = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre",

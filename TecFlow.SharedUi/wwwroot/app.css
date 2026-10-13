@@ -2573,3 +2573,52 @@ html, body {
         display: block;
     }
 }
+
+/* ===== Matriz de menus: drag & drop (Fase 46) ===== */
+.menu-dnd-help {
+    padding: 0.6rem 0.85rem;
+    border: 1px dashed var(--tf-master-border, #334155);
+    border-radius: 0.5rem;
+    color: var(--tf-master-muted, #94a3b8);
+}
+
+.menu-matrix .menu-grip-col {
+    width: 2rem;
+}
+
+.menu-matrix tr[draggable="true"] {
+    cursor: grab;
+}
+
+.menu-matrix tr[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.menu-grip {
+    color: var(--tf-master-muted, #94a3b8);
+    font-size: 1rem;
+}
+
+.menu-matrix tr.menu-dragging {
+    opacity: 0.45;
+}
+
+.menu-matrix tr.menu-drop-before > td {
+    box-shadow: inset 0 3px 0 #ff9900;
+}
+
+.menu-matrix tr.menu-drop-after > td {
+    box-shadow: inset 0 -3px 0 #ff9900;
+}
+
+.menu-matrix tr.menu-drop-into > td {
+    box-shadow: inset 0 0 0 9999px rgba(255, 153, 0, 0.18);
+}
+
+.menu-matrix tr.menu-drop-into > td:first-child {
+    box-shadow: inset 3px 0 0 #ff9900, inset 0 0 0 9999px rgba(255, 153, 0, 0.18);
+}
+
+.menu-folder-modal {
+    background: rgba(2, 6, 23, 0.65);
+}

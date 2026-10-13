@@ -60,9 +60,11 @@ public class MenuPermissionServiceTests
         await service.EnsureCatalogAsync();
 
         Assert.Equal(DefaultMenuCatalog.All.Count, await context.MenuItems.CountAsync());
-        var hidden = await context.PlanMenuPermissions.Where(item => !item.IsVisible).ToListAsync();
+        var roadmap = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.Roadmap);
+        var hidden = await context.PlanMenuPermissions.Where(item => !item.IsVisible && item.MenuItemId != roadmap.Id).ToListAsync();
         Assert.Equal(2, hidden.Count);
         Assert.All(hidden, item => Assert.Equal(starter.Id, item.PlanId));
+        Assert.Equal(2, await context.PlanMenuPermissions.CountAsync(item => item.MenuItemId == roadmap.Id && !item.IsVisible));
         var radar = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.RadarOffers);
         var parent = await context.MenuItems.SingleAsync(item => item.Key == "integracoes.links");
         Assert.Equal(parent.Id, radar.ParentId);
@@ -73,9 +75,9 @@ public class MenuPermissionServiceTests
     {
         var (context, service, starter, _) = await SeedAsync();
         await using var scope = context;
-        var integracoes = new MenuItem { Key = "integracoes", Title = "Integrações", Icon = "bi-plug", Order = 50 };
-        var whatsapp = new MenuItem { Key = "whatsapp", Title = "WhatsApp", Icon = "bi-whatsapp", Order = 30 };
-        var radar = new MenuItem { Key = DefaultMenuCatalog.RadarOffers, Title = "Radar", Route = "/radar-ofertas", Icon = "bi-broadcast", Order = 40, Parent = integracoes };
+        var integracoes = new MenuItem { Key = "integracoes", Title = "Integrações", Icon = "bi-plug", OrderIndex = 50 };
+        var whatsapp = new MenuItem { Key = "whatsapp", Title = "WhatsApp", Icon = "bi-whatsapp", OrderIndex = 30 };
+        var radar = new MenuItem { Key = DefaultMenuCatalog.RadarOffers, Title = "Radar", Route = "/radar-ofertas", Icon = "bi-broadcast", OrderIndex = 40, Parent = integracoes };
         context.MenuItems.AddRange(integracoes, whatsapp, radar);
         context.PlanMenuPermissions.Add(new PlanMenuPermission { PlanId = starter.Id, MenuItem = radar, IsVisible = false });
         await context.SaveChangesAsync();
@@ -89,6 +91,187 @@ public class MenuPermissionServiceTests
         Assert.Equal(byKey["integracoes.links"].Id, byKey[DefaultMenuCatalog.RadarOffers].ParentId);
         Assert.Equal("Radar de Ofertas", byKey[DefaultMenuCatalog.RadarOffers].Title);
         Assert.Equal(1, await context.PlanMenuPermissions.CountAsync(item => item.MenuItemId == radar.Id));
+        Assert.True(byKey["canais"].IsFolder);
+    }
+
+    [Fact]
+    public async Task Matrix_ShouldListRoadmapFolderAndAllSubitemsWithBadge()
+    {
+        var (context, service, starter, pro) = await SeedAsync();
+        await using var scope = context;
+
+        var rows = (await service.GetMatrixAsync()).Rows;
+
+        var folder = rows.Single(row => row.Key == DefaultMenuCatalog.Roadmap);
+        Assert.True(folder.IsGroup);
+        Assert.Null(folder.Route);
+        Assert.False(folder.Visibility[starter.Id]);
+        Assert.False(folder.Visibility[pro.Id]);
+        var children = rows.Where(row => row.ParentId == folder.MenuItemId).ToList();
+        Assert.Equal(
+            ["/campanhas", "/metricas", "/fila-engajamento", "/conciliacao-financeira", "/produtos-propaganda", "/saude-sistema"],
+            children.Select(row => row.Route));
+        Assert.All(children, row => Assert.Equal(folder.Depth + 1, row.Depth));
+        Assert.Equal("EM BREVE", children.Single(row => row.Route == "/fila-engajamento").Badge);
+    }
+
+    [Fact]
+    public async Task ClientMenu_RoadmapShouldOnlyAppearInMasterView()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        context.UserAccounts.Add(new UserAccount { Id = 13, Name = "Sem plano", Email = "n@x.com", PasswordHash = "h", TenantId = Guid.NewGuid() });
+        await context.SaveChangesAsync();
+
+        Assert.DoesNotContain("/campanhas", AllRoutes(await service.GetClientMenuAsync(10)));
+        Assert.DoesNotContain("/campanhas", AllRoutes(await service.GetClientMenuAsync(13)));
+        Assert.Contains("/campanhas", AllRoutes(await service.GetClientMenuAsync(12)));
+        Assert.DoesNotContain("/campanhas", AllRoutes(await service.GetClientMenuAsync(12, clientView: true)));
+        Assert.Contains("/radar-ofertas", AllRoutes(await service.GetClientMenuAsync(12, clientView: true)));
+    }
+
+    private static async Task<Dictionary<string, MenuPermissionRowDto>> RowsByKeyAsync(MenuPermissionService service) =>
+        (await service.GetMatrixAsync()).Rows.ToDictionary(row => row.Key);
+
+    [Fact]
+    public async Task Move_BetweenRows_ShouldReorderSiblingsAndSurviveCatalogSync()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows["integracoes.busca"].MenuItemId,
+            TargetId = rows["integracoes.gerador"].MenuItemId,
+            Position = MenuDropPositions.Before
+        });
+        await service.EnsureCatalogAsync();
+
+        Assert.True(result.Success, result.Message);
+        var links = (await service.GetClientMenuAsync(11))
+            .Single(node => node.Key == "integracoes").Children
+            .Single(node => node.Key == "integracoes.links");
+        Assert.Equal(["/busca", "/gerador-links"], links.Children.Take(2).Select(node => node.Route));
+        Assert.True((await context.MenuItems.SingleAsync(item => item.Key == "integracoes.busca")).IsCustomized);
+    }
+
+    [Fact]
+    public async Task Move_IntoFolder_ShouldChangeParentAndAppendAtEnd()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows["novidades"].MenuItemId,
+            TargetId = rows["canais"].MenuItemId,
+            Position = MenuDropPositions.Into
+        });
+
+        Assert.True(result.Success, result.Message);
+        var canais = (await service.GetClientMenuAsync(11)).Single(node => node.Key == "canais");
+        Assert.Equal("novidades", canais.Children.Last().Key);
+        await service.EnsureCatalogAsync();
+        Assert.Equal(rows["canais"].MenuItemId, (await context.MenuItems.SingleAsync(item => item.Key == "novidades")).ParentId);
+    }
+
+    [Fact]
+    public async Task Move_FolderIntoItsOwnChild_ShouldBeRejected()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var intoChild = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows["canais"].MenuItemId,
+            TargetId = rows["whatsapp"].MenuItemId,
+            Position = MenuDropPositions.Into
+        });
+        var ontoItem = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows["novidades"].MenuItemId,
+            TargetId = rows["conta"].MenuItemId,
+            Position = MenuDropPositions.Into
+        });
+
+        Assert.False(intoChild.Success);
+        Assert.False(ontoItem.Success);
+        Assert.Contains("pasta", ontoItem.Message);
+    }
+
+    [Fact]
+    public async Task CreateFolder_ShouldGroupBothItemsAtTargetPositionAndAppearForClients()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.CreateFolderAsync(Actor, new MenuFolderCreateDto
+        {
+            Title = "  Minha área  ",
+            ItemId = rows["conta"].MenuItemId,
+            TargetId = rows["novidades"].MenuItemId
+        });
+
+        Assert.True(result.Success, result.Message);
+        var folder = await context.MenuItems.SingleAsync(item => item.Key.StartsWith(DefaultMenuCatalog.CustomFolderPrefix));
+        Assert.Equal("Minha área", folder.Title);
+        Assert.True(folder.IsFolder);
+        Assert.Null(folder.ParentId);
+        var tree = await service.GetClientMenuAsync(11);
+        var node = tree.Single(item => item.Key == folder.Key);
+        Assert.Equal(["novidades", "conta"], node.Children.Select(child => child.Key));
+        Assert.DoesNotContain(tree, item => item.Key == "novidades");
+    }
+
+    [Fact]
+    public async Task CreateFolder_WithoutTitle_ShouldFail()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.CreateFolderAsync(Actor, new MenuFolderCreateDto
+        {
+            Title = " ",
+            ItemId = rows["conta"].MenuItemId,
+            TargetId = rows["novidades"].MenuItemId
+        });
+
+        Assert.False(result.Success);
+        Assert.False(await context.MenuItems.AnyAsync(item => item.Key.StartsWith(DefaultMenuCatalog.CustomFolderPrefix)));
+    }
+
+    [Fact]
+    public async Task DeleteFolder_ShouldRequireEmptyCustomFolder()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+        await service.CreateFolderAsync(Actor, new MenuFolderCreateDto
+        {
+            Title = "Temporária",
+            ItemId = rows["conta"].MenuItemId,
+            TargetId = rows["novidades"].MenuItemId
+        });
+        var folder = await context.MenuItems.AsNoTracking().SingleAsync(item => item.Key.StartsWith(DefaultMenuCatalog.CustomFolderPrefix));
+
+        var notEmpty = await service.DeleteFolderAsync(Actor, folder.Id);
+        var catalogFolder = await service.DeleteFolderAsync(Actor, rows["canais"].MenuItemId);
+        foreach (var key in new[] { "novidades", "conta" })
+        {
+            await service.MoveAsync(Actor, new MenuMoveDto { ItemId = rows[key].MenuItemId, TargetId = rows["painel"].MenuItemId, Position = MenuDropPositions.After });
+        }
+
+        var deleted = await service.DeleteFolderAsync(Actor, folder.Id);
+
+        Assert.False(notEmpty.Success);
+        Assert.False(catalogFolder.Success);
+        Assert.True(deleted.Success, deleted.Message);
+        Assert.False(await context.MenuItems.AnyAsync(item => item.Id == folder.Id));
     }
 
     [Fact]

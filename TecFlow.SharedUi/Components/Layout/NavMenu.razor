@@ -37,56 +37,6 @@
 
                 @ParentItem(node)
             }
-
-            @if (MasterAccess.IsMasterView(context.User))
-            {
-                <div class="portal-nav-category" role="heading" aria-level="2">Roadmap (visão master)</div>
-                <div class="portal-nav-group">
-                    <button type="button"
-                            class="portal-nav-link portal-nav-parent portal-nav-group-toggle @ProximosActiveClass"
-                            aria-expanded="@isProximosOpen"
-                            @onclick="ToggleProximosSubmenu"
-                            @onclick:preventDefault="true"
-                            @onclick:stopPropagation="true">
-                        <span class="d-flex align-items-center gap-2">
-                            <i class="bi bi-rocket-takeoff portal-nav-icon" aria-hidden="true"></i>
-                            <span class="portal-nav-link-label">Próximos Desenvolvimentos</span>
-                        </span>
-                        <i class="bi bi-chevron-down portal-nav-caret transform transition-transform duration-200 @(isProximosOpen ? "rotate-180" : "")"
-                           aria-hidden="true"></i>
-                    </button>
-                    @if (isProximosOpen)
-                    {
-                        <div class="portal-nav-collapse portal-nav-submenu block transition-all">
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard#campanhas" @onclick="NotifyNavigate">
-                                <i class="bi bi-megaphone portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Campanhas</span>
-                            </NavLink>
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard#metricas" @onclick="NotifyNavigate">
-                                <i class="bi bi-graph-up portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Métricas / Comissões</span>
-                            </NavLink>
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/engajamento/fila" @onclick="NotifyNavigate">
-                                <i class="bi bi-inbox portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Fila de engajamento</span>
-                                <span class="portal-nav-soon">Em breve</span>
-                            </NavLink>
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/conciliacao/financeira" @onclick="NotifyNavigate">
-                                <i class="bi bi-cash-stack portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Conciliação financeira</span>
-                            </NavLink>
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/propaganda/produtos" @onclick="NotifyNavigate">
-                                <i class="bi bi-tag portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Produtos propaganda</span>
-                            </NavLink>
-                            <NavLink class="portal-nav-link portal-nav-sublink" href="/saude/painel" @onclick="NotifyNavigate">
-                                <i class="bi bi-heart-pulse portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">Saúde do sistema</span>
-                            </NavLink>
-                        </div>
-                    }
-                </div>
-            }
         </Authorized>
         <NotAuthorized>
             <a href="/" class="portal-nav-link @GetActiveClass("/")" @onclick="NotifyNavigate">
@@ -114,57 +64,59 @@
         ["/gerador-links"] = ["/comissao/gerar"],
         ["/minha-conta"] = ["/account/security"],
         ["/integracoes/conexoes"] = ["/integracoes/whatsapp", "/integracoes/telegram"],
-        ["/integracoes/whatsapp/grupos/monitorados"] = ["/integracoes/grupos/monitorados"]
+        ["/integracoes/whatsapp/grupos/monitorados"] = ["/integracoes/grupos/monitorados"],
+        ["/fila-engajamento"] = ["/engajamento/fila"],
+        ["/conciliacao-financeira"] = ["/conciliacao/financeira"],
+        ["/produtos-propaganda"] = ["/propaganda/produtos"],
+        ["/saude-sistema"] = ["/saude/painel"]
     };
-
-    private static readonly string[] ProximosExactPaths =
-    [
-        "/engajamento/fila",
-        "/conciliacao/financeira",
-        "/propaganda/produtos",
-        "/saude/painel"
-    ];
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private List<ClientMenuNodeDto> _menu = [];
     private readonly HashSet<string> _openGroups = new(StringComparer.OrdinalIgnoreCase) { DefaultOpenGroup };
-    private bool isProximosOpen;
-    private string? _proximosRouteWhenOpened;
+    private bool _authenticated;
+    private bool _clientView;
 
     protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
-        SyncProximosDesenvolvimentosFromRoute();
-
         var user = AuthenticationStateTask is null ? null : (await AuthenticationStateTask).User;
-        if (user?.Identity?.IsAuthenticated == true)
-        {
-            var result = await MenuApi.ClientMenuAsync();
-            _menu = result.Success && result.Data is { Count: > 0 } ? result.Data : DefaultMenuCatalog.BuildDefaultTree();
-        }
-
+        _authenticated = user?.Identity?.IsAuthenticated == true;
+        _clientView = MasterAccess.IsMaster(user) && !MasterAccess.IsMasterView(user);
+        await LoadMenuAsync();
         OpenGroupsForCurrentPath();
     }
 
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    /// <summary>Árvore vem de MenuItems + PlanMenuPermissions; o catálogo local só cobre falha da API.</summary>
+    private async Task LoadMenuAsync()
     {
-        OpenGroupsForCurrentPath();
-        if (IsProximosPath() && !string.Equals(_proximosRouteWhenOpened, CurrentPath(), StringComparison.OrdinalIgnoreCase))
+        if (!_authenticated)
         {
-            isProximosOpen = true;
-            _proximosRouteWhenOpened = CurrentPath();
-        }
-        else if (!IsProximosPath())
-        {
-            _proximosRouteWhenOpened = null;
+            return;
         }
 
-        _ = InvokeAsync(StateHasChanged);
+        var result = await MenuApi.ClientMenuAsync(_clientView);
+        if (result.Success && result.Data is { Count: > 0 })
+        {
+            _menu = result.Data;
+        }
+        else if (_menu.Count == 0)
+        {
+            _menu = DefaultMenuCatalog.BuildDefaultTree();
+        }
     }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            await LoadMenuAsync();
+            OpenGroupsForCurrentPath();
+            StateHasChanged();
+        });
 
     private void OpenGroupsForCurrentPath()
     {
@@ -177,29 +129,47 @@
     private static IEnumerable<ClientMenuNodeDto> AllNodes(IEnumerable<ClientMenuNodeDto> nodes) =>
         nodes.SelectMany(node => AllNodes(node.Children).Prepend(node));
 
-    /// <summary>Raiz sem rota = categoria (cabeçalho); os filhos dela são os menus pai.</summary>
+    /// <summary>Pasta na raiz = categoria (cabeçalho); os filhos dela são os menus pai.</summary>
     private bool IsCategory(ClientMenuNodeDto node) =>
-        string.IsNullOrWhiteSpace(node.Route) && node.Children.Count > 0 && _menu.Contains(node);
+        IsFolder(node) && _menu.Contains(node);
+
+    private static bool IsFolder(ClientMenuNodeDto node) =>
+        node.IsFolder || (string.IsNullOrWhiteSpace(node.Route) && node.Children.Count > 0);
+
+    private RenderFragment Badge(ClientMenuNodeDto node) => __builder =>
+    {
+        if (!string.IsNullOrWhiteSpace(node.Badge))
+        {
+            <span class="portal-nav-soon">@node.Badge</span>
+        }
+    };
 
     private RenderFragment ParentItem(ClientMenuNodeDto node) => __builder =>
     {
-        if (node.Children.Count == 0)
+        if (!IsFolder(node))
         {
             <a href="@node.Route" class="portal-nav-link portal-nav-parent @GetActiveClass(node.Route)" @onclick="NotifyNavigate">
                 <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
                 <span class="portal-nav-link-label">@node.Title</span>
+                @Badge(node)
             </a>
             return;
         }
 
+        @GroupItem(node, "portal-nav-parent")
+    };
+
+    private RenderFragment GroupItem(ClientMenuNodeDto node, string levelClass) => __builder =>
+    {
         var open = _openGroups.Contains(node.Key);
         <div class="portal-nav-group">
             <button type="button"
-                    class="portal-nav-link portal-nav-parent portal-nav-group-toggle @(IsGroupActive(node) ? "active" : string.Empty)"
+                    class="portal-nav-link @levelClass portal-nav-group-toggle @(IsGroupActive(node) ? "active" : string.Empty)"
                     aria-expanded="@open"
                     @onclick="() => ToggleGroup(node.Key)">
-                <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
+                <i class="bi @(node.Icon ?? "bi-folder2") portal-nav-icon" aria-hidden="true"></i>
                 <span class="portal-nav-link-label">@node.Title</span>
+                @Badge(node)
                 <i class="bi bi-chevron-down portal-nav-caret transform transition-transform @(open ? "rotate-180" : string.Empty)" aria-hidden="true"></i>
             </button>
             @if (open)
@@ -207,9 +177,16 @@
                 <div class="portal-nav-submenu">
                     @foreach (var child in node.Children)
                     {
+                        if (IsFolder(child))
+                        {
+                            @GroupItem(child, "portal-nav-sublink")
+                            continue;
+                        }
+
                         <a href="@child.Route" class="portal-nav-link portal-nav-sublink @GetActiveClass(child.Route)" @onclick="NotifyNavigate">
                             <i class="bi @child.Icon portal-nav-icon" aria-hidden="true"></i>
                             <span class="portal-nav-link-label">@child.Title</span>
+                            @Badge(child)
                         </a>
                     }
                 </div>
@@ -217,31 +194,11 @@
         </div>
     };
 
-    private void SyncProximosDesenvolvimentosFromRoute()
-    {
-        if (!IsProximosPath())
-        {
-            return;
-        }
-
-        isProximosOpen = true;
-        _proximosRouteWhenOpened = CurrentPath();
-    }
-
     private void ToggleGroup(string key)
     {
         if (!_openGroups.Remove(key))
         {
             _openGroups.Add(key);
-        }
-    }
-
-    private void ToggleProximosSubmenu()
-    {
-        isProximosOpen = !isProximosOpen;
-        if (isProximosOpen && IsProximosPath())
-        {
-            _proximosRouteWhenOpened = CurrentPath();
         }
     }
 
@@ -258,15 +215,6 @@
 
     private bool IsGroupActive(ClientMenuNodeDto group) =>
         group.Children.Any(child => IsRouteActive(child.Route) || IsGroupActive(child));
-
-    private bool IsProximosPath()
-    {
-        var current = CurrentPath();
-        return ProximosExactPaths.Any(path => current.Equals(path, StringComparison.OrdinalIgnoreCase))
-            || current.StartsWith("/conciliacao/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string ProximosActiveClass => IsProximosPath() ? "active" : string.Empty;
 
     private string CurrentPath()
     {

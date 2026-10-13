@@ -257,6 +257,8 @@ public class ClientMenuNodeDto
     public string Title { get; set; } = string.Empty;
     public string? Route { get; set; }
     public string? Icon { get; set; }
+    public string? Badge { get; set; }
+    public bool IsFolder { get; set; }
     public List<ClientMenuNodeDto> Children { get; set; } = [];
 }
 
@@ -280,11 +282,37 @@ public class MenuPermissionRowDto
     public string Title { get; set; } = string.Empty;
     public string? Route { get; set; }
     public string? Icon { get; set; }
+    public string? Badge { get; set; }
+    public int? ParentId { get; set; }
     public int Depth { get; set; }
     public bool IsGroup { get; set; }
+    /// <summary>Pasta criada no Master (pode ser excluída quando vazia).</summary>
+    public bool IsCustomFolder { get; set; }
     public bool IsActive { get; set; }
     /// <summary>PlanId → visível.</summary>
     public Dictionary<int, bool> Visibility { get; set; } = [];
+}
+
+public static class MenuDropPositions
+{
+    public const string Before = "before";
+    public const string After = "after";
+    /// <summary>Sobre uma pasta: entra nela. Sobre um item: exige criar uma nova pasta (MenuFolderCreateDto).</summary>
+    public const string Into = "into";
+}
+
+public class MenuMoveDto
+{
+    public int ItemId { get; set; }
+    public int TargetId { get; set; }
+    public string Position { get; set; } = MenuDropPositions.After;
+}
+
+public class MenuFolderCreateDto
+{
+    public string Title { get; set; } = string.Empty;
+    public int ItemId { get; set; }
+    public int TargetId { get; set; }
 }
 
 public class MenuPermissionSaveDto

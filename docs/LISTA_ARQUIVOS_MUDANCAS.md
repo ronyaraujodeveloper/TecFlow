@@ -1272,6 +1272,34 @@ API / Orquestrador / Worker / WebUi
 **Testes**
 - [x] **MasterPhase42To44RulesTests.cs** / **MasterPhase42To44ServicesTests.cs** — hierarquia do catálogo, migração de itens legados, contas de teste e `GlobalCredentialHealthService`.
 
+### Fase 46 — Menu dinâmico com drag & drop e roadmap no banco
+
+**Core / Database / Data**
+- [x] **MenuItem.cs** — `OrderIndex` (antigo `Order`), `IsFolder`, `Badge`, `IsCustomized`.
+- [x] **AppDbContext.cs** — `Badge` (30) e índice `(ParentId, OrderIndex)`.
+- [x] **Migrations/20261013225515_MenuDragDropAndRoadmapPhase46.cs** — rename `Order`→`OrderIndex`, novas colunas e `IsFolder = 1` para itens sem rota.
+
+**Business**
+- [x] **Service/Master/MenuCatalog.cs** — pasta "Próximos Desenvolvimentos" + 6 subitens (`HiddenForAllPlans`, selo "EM BREVE"), `MenuTreeEditRules` (ciclos, reordenação, título de pasta).
+- [x] **Dto/MasterDtos.cs** — `Badge`/`IsFolder` no nó do cliente, `ParentId`/`IsCustomFolder` na linha da matriz, `MenuMoveDto`, `MenuFolderCreateDto`, `MenuDropPositions`.
+- [x] **Interfaces/Services/IMasterServices.cs** — `MoveAsync`, `CreateFolderAsync`, `DeleteFolderAsync`, `GetClientMenuAsync(clientView)`.
+
+**Infrastructure / API**
+- [x] **Master/MenuPermissionService.cs** — mover/agrupar/excluir pasta, sincronização do catálogo respeitando `IsCustomized`, visão cliente para masters.
+- [x] **Master/MasterAuditActions.cs** — `menu.estrutura`.
+- [x] **Controllers/Master/MasterMenuPermissionsController.cs** — `POST mover`, `POST pastas`, `DELETE pastas/{id}`.
+- [x] **Controllers/SystemCommunicationController.cs** — `GET api/sistema/menu?visao=cliente`.
+
+**SharedUi**
+- [x] **Pages/Master/MasterMenuPermissions.razor** — linhas arrastáveis, modal "Nova pasta", exclusão de pasta vazia.
+- [x] **Components/Layout/NavMenu.razor** — árvore do banco (sem accordion fixo), pastas aninhadas, selos, recarga por navegação.
+- [x] **wwwroot/app-interop.js** — `tecFlowMenuDnd` (zona antes/dentro/depois e indicadores visuais); **wwwroot/app.css** — estilos do drag & drop.
+- [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs** — clientes das novas rotas.
+- [x] **Pages/Dashboard.razor**, **EngajamentoFila.razor**, **ConciliacaoFinanceira.razor**, **ProdutosPropaganda.razor**, **PainelSaude.razor** — rotas novas do roadmap (`/campanhas`, `/metricas`, `/fila-engajamento`, `/conciliacao-financeira`, `/produtos-propaganda`, `/saude-sistema`).
+
+**Testes**
+- [x] **MasterPhase42To44RulesTests.cs** (`MenuTreeEditRulesTests`, roadmap no catálogo) / **MasterPhase42To44ServicesTests.cs** (matriz com roadmap, visão cliente, mover, agrupar, excluir pasta).
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

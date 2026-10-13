@@ -1,9 +1,46 @@
 ﻿using System.Security.Claims;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Service.Master;
 using TecFlow.SharedUi.Services.Auth;
 using TecFlow.SharedUi.Services.Navigation;
 
 namespace TecFlow.Tests.Unit.Master;
+
+public class MenuTreeEditRulesTests
+{
+    [Theory]
+    [InlineData(4, 1, false, new[] { 4, 1, 2, 3 })]
+    [InlineData(4, 1, true, new[] { 1, 4, 2, 3 })]
+    [InlineData(1, 3, true, new[] { 2, 3, 1 })]
+    [InlineData(3, 1, false, new[] { 3, 1, 2 })]
+    public void InsertRelativeTo_ShouldPlaceItemAroundTarget(int itemId, int targetId, bool after, int[] expected)
+    {
+        var siblings = new[] { 1, 2, 3 };
+
+        Assert.Equal(expected, MenuTreeEditRules.InsertRelativeTo(siblings, itemId, targetId, after));
+    }
+
+    [Fact]
+    public void IsSelfOrDescendant_ShouldDetectCycles()
+    {
+        var parents = new Dictionary<int, int?> { [1] = null, [2] = 1, [3] = 2, [4] = null };
+
+        Assert.True(MenuTreeEditRules.IsSelfOrDescendant(parents, 3, 1));
+        Assert.True(MenuTreeEditRules.IsSelfOrDescendant(parents, 1, 1));
+        Assert.False(MenuTreeEditRules.IsSelfOrDescendant(parents, 4, 1));
+        Assert.False(MenuTreeEditRules.IsSelfOrDescendant(parents, 1, 3));
+    }
+
+    [Theory]
+    [InlineData(null, "Informe")]
+    [InlineData("   ", "Informe")]
+    public void ValidateFolderTitle_ShouldRequireTitle(string? title, string expected)
+    {
+        Assert.Contains(expected, MenuTreeEditRules.ValidateFolderTitle(title));
+        Assert.Null(MenuTreeEditRules.ValidateFolderTitle("Ferramentas"));
+        Assert.NotNull(MenuTreeEditRules.ValidateFolderTitle(new string('x', MenuTreeEditRules.FolderTitleMaxLength + 1)));
+    }
+}
 
 public class MasterRoutesTests
 {
@@ -73,14 +110,21 @@ public class MenuCatalogTests
     [Fact]
     public void Catalog_ShouldNotExposeRoadmapItemsToClients()
     {
-        var routes = DefaultMenuCatalog.All.Select(item => item.Route).ToList();
+        var roadmap = DefaultMenuCatalog.Find(DefaultMenuCatalog.Roadmap)!;
+        var fallbackRoutes = AllRoutes(DefaultMenuCatalog.BuildDefaultTree()).ToList();
 
-        Assert.DoesNotContain("/engajamento/fila", routes);
-        Assert.DoesNotContain("/conciliacao/financeira", routes);
-        Assert.DoesNotContain("/propaganda/produtos", routes);
-        Assert.Contains("/dashboard", routes);
-        Assert.Contains("/minha-conta", routes);
+        Assert.True(roadmap.IsFolder);
+        Assert.True(roadmap.HiddenForAllPlans);
+        Assert.Equal(6, DefaultMenuCatalog.All.Count(item => item.ParentKey == DefaultMenuCatalog.Roadmap));
+        Assert.Equal("EM BREVE", DefaultMenuCatalog.All.Single(item => item.Route == "/fila-engajamento").Badge);
+        Assert.DoesNotContain("/campanhas", fallbackRoutes);
+        Assert.DoesNotContain("/saude-sistema", fallbackRoutes);
+        Assert.Contains("/dashboard", fallbackRoutes);
+        Assert.Contains("/minha-conta", fallbackRoutes);
     }
+
+    private static IEnumerable<string> AllRoutes(IEnumerable<ClientMenuNodeDto> nodes) =>
+        nodes.SelectMany(node => new[] { node.Route }.Concat(AllRoutes(node.Children))).OfType<string>();
 
     [Fact]
     public void Radar_ShouldBeHiddenByDefaultOnlyForStarter()

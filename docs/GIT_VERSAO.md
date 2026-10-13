@@ -91,3 +91,4 @@
 [2026-10-12 21:50:10]feat(master): backoffice SaaS fases 35-41
 [2026-10-12 22:39:17]feat(master): rotas master, contas de desenvolvedor e menu por plano (fases 42-44)
 [2026-10-12 23:31:38]feat(ui): reset de scroll, sidebar hierarquica, paletas master/cliente e vault segregado (fase 45)
+[2026-10-13 20:11:38]feat(master): drag & drop da arvore de menus e roadmap no banco (fase 46)

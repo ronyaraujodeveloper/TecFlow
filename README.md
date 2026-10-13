@@ -92,6 +92,17 @@ PRINCIPIO DE PRESERVAÇÃO TOTAL (REGRA INVIOLÁVEL):
 4. Salve todos os arquivos na codificação UTF-8 com BOM (REGRA 1).
 ---
 
+  ### 📜 Regra Estrita de Registro de Novas Telas e Árvore Dinâmica de Menus
+
+1. **Obrigatoriedade de Registro no Banco de Dados (`MenuItems`):**
+   - É **estritamente proibido** codificar links e submenus fixos no arquivo `NavMenu.razor`.
+   - Toda nova página, rota ou componente do sistema DEVE obrigatoriamente possuir um registro correspondente na tabela `MenuItems` do SQL Server (incluindo `Title`, `Route`, `Icon`, `OrderIndex` e `ParentId`).
+   - O seeding automático deve garimpar todas as rotas e garantir que o item apareça imediatamente no painel `/master/menu-permissions` para atribuição de permissões por plano.
+
+2. **Hierarquia Dinâmica & Drag & Drop (`OrderIndex` & `ParentId`):**
+   - O `NavMenu.razor` do cliente deve consultar as tabelas `MenuItems` e `PlanMenuPermissions` e renderizar os componentes estritamente respeitando a ordenação (`OrderIndex`) e os agrupamentos (`ParentId`) definidos pelo Master.
+ ---  
+
 ## 🛠️ ROADMAP DE PLATAFORMAS (MULTI-MARKETPLACE)
 
 O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a adição plug-and-play de novas plataformas de afiliados e marketplaces.
@@ -387,6 +398,18 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Cliente: paleta clara e neutra, foco em legibilidade e bordas suaves.
 - [x] **45.4. Segregação Vault × Contas de teste:**
   - `/master/vault` isolado para as chaves globais (AppId/SecretKey, Evolution, Telegram, OpenAI, ASAAS) com diagnóstico das chaves em uso; `/master/marketplace-accounts` exclusivo para contas corporativas de teste/dev (sem publicação no cofre); `/marketplace-accounts` preservado para o afiliado cliente.
+
+---
+
+### 🧲 Fase 46: Menu Dinâmico com Drag & Drop e Roadmap no Banco (`MenuDragDrop`)
+
+- [x] **46.1. Seeding de "Próximos Desenvolvimentos" em `MenuItems`:**
+  - Pasta `Próximos Desenvolvimentos` (`IsFolder = true`, `Route = null`) com Campanhas (`/campanhas`), Métricas / Comissões (`/metricas`), Fila de engajamento (`/fila-engajamento`, selo "EM BREVE"), Conciliação financeira (`/conciliacao-financeira`), Produtos propaganda (`/produtos-propaganda`) e Saúde do sistema (`/saude-sistema`), oculta por padrão em todos os planos e listada na matriz `/master/menu-permissions`.
+- [x] **46.2. Drag & Drop na matriz `/master/menu-permissions`:**
+  - Arrasto entre linhas atualiza `OrderIndex`; arrasto para o centro de uma pasta atualiza `ParentId`; arrasto item sobre item abre modal para o título e cria uma nova pasta com os dois itens. Pastas criadas vazias podem ser excluídas.
+- [x] **46.3. Sidebar do cliente sincronizada com `MenuItems` + `PlanMenuPermissions`:**
+  - `NavMenu.razor` 100% dirigido pelo banco (sem accordion fixo), com pastas aninhadas, selos e recarga da árvore a cada navegação; master na visão cliente vê exatamente o que os clientes veem.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

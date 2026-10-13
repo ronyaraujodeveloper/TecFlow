@@ -9,7 +9,12 @@ public sealed record MenuItemDefinition(
     string Icon,
     string? ParentKey,
     int Order,
-    IReadOnlyList<string>? HiddenForPlans = null);
+    IReadOnlyList<string>? HiddenForPlans = null,
+    string? Badge = null,
+    bool HiddenForAllPlans = false)
+{
+    public bool IsFolder => Route is null;
+}
 
 /// <summary>
 /// Árvore padrão da sidebar do cliente: Categoria (raiz sem rota) → Menu pai (link ou grupo) → Submenu.
@@ -58,13 +63,26 @@ public static class DefaultMenuCatalog
         new("integracoes.lucro-grupo", "Lucro por grupo", "/atribuicao/grupos", "bi-pie-chart", "integracoes.resultados", 30),
 
         new("novidades", "Novidades", "/novidades", "bi-megaphone", null, 60),
-        new("conta", "Minha conta / Segurança", "/minha-conta", "bi-shield-lock", null, 70)
+        new("conta", "Minha conta / Segurança", "/minha-conta", "bi-shield-lock", null, 70),
+
+        new(Roadmap, "Próximos Desenvolvimentos", null, "bi-rocket-takeoff", null, 80, HiddenForAllPlans: true),
+        new("proximos.campanhas", "Campanhas", "/campanhas", "bi-megaphone", Roadmap, 10),
+        new("proximos.metricas", "Métricas / Comissões", "/metricas", "bi-graph-up", Roadmap, 20),
+        new("proximos.fila-engajamento", "Fila de engajamento", "/fila-engajamento", "bi-inbox", Roadmap, 30, Badge: "EM BREVE"),
+        new("proximos.conciliacao", "Conciliação financeira", "/conciliacao-financeira", "bi-cash-stack", Roadmap, 40),
+        new("proximos.propaganda", "Produtos propaganda", "/produtos-propaganda", "bi-tag", Roadmap, 50),
+        new("proximos.saude-sistema", "Saúde do sistema", "/saude-sistema", "bi-heart-pulse", Roadmap, 60)
     ];
+
+    public const string Roadmap = "proximos";
+
+    /// <summary>Prefixo das chaves de pastas criadas no Master (fora do catálogo padrão).</summary>
+    public const string CustomFolderPrefix = "pasta.";
 
     public static MenuItemDefinition? Find(string key) =>
         All.FirstOrDefault(item => string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Árvore completa do catálogo (fallback da UI quando a API não responde).</summary>
+    /// <summary>Árvore do catálogo para clientes (fallback da UI quando a API não responde); omite o roadmap.</summary>
     public static List<ClientMenuNodeDto> BuildDefaultTree()
     {
         var ids = All
@@ -79,9 +97,12 @@ public static class DefaultMenuCatalog
                 item.Icon,
                 item.ParentKey is null ? null : ids[item.ParentKey],
                 item.Order,
-                true))
+                true,
+                item.IsFolder,
+                item.Badge))
             .ToList();
-        return MenuVisibilityRules.BuildTree(flat, new HashSet<int>());
+        var hidden = All.Where(item => item.HiddenForAllPlans).Select(item => ids[item.Key]).ToHashSet();
+        return MenuVisibilityRules.BuildTree(flat, hidden);
     }
 }
 
@@ -93,7 +114,59 @@ public sealed record MenuNodeSource(
     string? Icon,
     int? ParentId,
     int Order,
-    bool IsActive);
+    bool IsActive,
+    bool IsFolder = false,
+    string? Badge = null);
+
+/// <summary>Regras puras de edição da árvore pelo drag &amp; drop do Master.</summary>
+public static class MenuTreeEditRules
+{
+    public const int OrderStep = 10;
+    public const int FolderTitleMaxLength = 96;
+
+    /// <summary>True quando <paramref name="candidateId"/> é o próprio item ou está abaixo dele (mover criaria ciclo).</summary>
+    public static bool IsSelfOrDescendant(IReadOnlyDictionary<int, int?> parentById, int candidateId, int itemId)
+    {
+        var visited = new HashSet<int>();
+        int? current = candidateId;
+        while (current is int id && visited.Add(id))
+        {
+            if (id == itemId)
+            {
+                return true;
+            }
+
+            current = parentById.GetValueOrDefault(id);
+        }
+
+        return false;
+    }
+
+    /// <summary>Ordem final dos irmãos com o item inserido antes/depois do alvo (o item sai da posição antiga).</summary>
+    public static List<int> InsertRelativeTo(IReadOnlyList<int> siblingIds, int itemId, int targetId, bool after)
+    {
+        var ordered = siblingIds.Where(id => id != itemId).ToList();
+        var index = ordered.IndexOf(targetId);
+        if (index < 0)
+        {
+            ordered.Add(itemId);
+            return ordered;
+        }
+
+        ordered.Insert(after ? index + 1 : index, itemId);
+        return ordered;
+    }
+
+    public static string? ValidateFolderTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return "Informe o título da pasta.";
+        }
+
+        return title.Trim().Length > FolderTitleMaxLength ? $"O título deve ter no máximo {FolderTitleMaxLength} caracteres." : null;
+    }
+}
 
 /// <summary>Monta a árvore visível para um plano.</summary>
 public static class MenuVisibilityRules
@@ -126,6 +199,8 @@ public static class MenuVisibilityRules
                     Title = child.Title,
                     Route = child.Route,
                     Icon = child.Icon,
+                    Badge = child.Badge,
+                    IsFolder = child.IsFolder || string.IsNullOrWhiteSpace(child.Route),
                     Children = Build(child.Id)
                 };
 

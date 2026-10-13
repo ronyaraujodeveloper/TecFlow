@@ -1114,6 +1114,10 @@ namespace TecFlow.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Badge")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1126,12 +1130,18 @@ namespace TecFlow.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsCustomized")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFolder")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<int>("Order")
+                    b.Property<int>("OrderIndex")
                         .HasColumnType("int");
 
                     b.Property<int?>("ParentId")
@@ -1154,7 +1164,7 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.HasIndex("ParentId", "Order");
+                    b.HasIndex("ParentId", "OrderIndex");
 
                     b.ToTable("MenuItems", (string)null);
                 });

@@ -1473,6 +1473,38 @@ flowchart TB
 
 ---
 
+## Drag & drop da árvore de menus e sidebar dirigida pelo banco (Fase 46)
+
+```mermaid
+sequenceDiagram
+  participant M as Master (MasterMenuPermissions.razor)
+  participant JS as tecFlowMenuDnd (app-interop.js)
+  participant API as MasterMenuPermissionsController
+  participant S as MenuPermissionService
+  participant DB as MenuItems / PlanMenuPermissions
+  participant C as NavMenu (cliente)
+  M->>JS: dragover → zona antes / dentro / depois
+  M->>JS: drop → zone()
+  alt borda superior/inferior
+    M->>API: POST mover (before/after)
+    API->>S: MoveAsync → OrderIndex dos irmãos
+  else centro de uma pasta
+    M->>API: POST mover (into)
+    API->>S: MoveAsync → ParentId = pasta
+  else centro de um item
+    M->>M: modal "Nova pasta"
+    M->>API: POST pastas
+    API->>S: CreateFolderAsync → pasta.{id} + 2 filhos
+  end
+  S->>DB: SaveChanges (IsCustomized = true)
+  S->>S: invalida cache da sidebar
+  C->>API: GET api/sistema/menu[?visao=cliente] (a cada navegação)
+  API->>S: GetClientMenuAsync(plano)
+  S->>DB: árvore + ocultos do plano
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  

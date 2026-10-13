@@ -23,11 +23,14 @@ public sealed class SystemCommunicationController : ControllerBase
     }
 
     /// <summary>Sidebar do usuário logado conforme o plano contratado pelo inquilino.</summary>
+    /// <param name="visao">"cliente" quando um master está na visão de cliente (vê o que os clientes veem).</param>
+    /// <param name="cancellationToken">Cancelamento da requisição.</param>
     [HttpGet("menu")]
-    public async Task<ActionResult<IReadOnlyList<ClientMenuNodeDto>>> MenuAsync(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ClientMenuNodeDto>>> MenuAsync([FromQuery] string? visao, CancellationToken cancellationToken)
     {
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
-        return Ok(await _menus.GetClientMenuAsync(userId, cancellationToken));
+        var clientView = string.Equals(visao, "cliente", StringComparison.OrdinalIgnoreCase);
+        return Ok(await _menus.GetClientMenuAsync(userId, clientView, cancellationToken));
     }
 
     [HttpGet("avisos")]

@@ -39,6 +39,9 @@ public interface IMasterApiService
     Task<ApiResult<List<DeveloperAccountCheckDto>>> CheckGlobalKeysAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MenuPermissionMatrixDto>> MenuPermissionsAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> SaveMenuPermissionsAsync(MenuPermissionSaveDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> MoveMenuItemAsync(MenuMoveDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> CreateMenuFolderAsync(MenuFolderCreateDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> DeleteMenuFolderAsync(int folderId, CancellationToken cancellationToken = default);
 }
 
 public sealed class MasterApiService : IMasterApiService
@@ -149,6 +152,15 @@ public sealed class MasterApiService : IMasterApiService
 
     public Task<ApiResult<MasterOperationResultDto>> SaveMenuPermissionsAsync(MenuPermissionSaveDto request, CancellationToken cancellationToken = default) =>
         WithLoading("Salvando matriz de menus...", () => _http.PutAsync<MenuPermissionSaveDto, MasterOperationResultDto>("api/master/menu-permissions", request, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> MoveMenuItemAsync(MenuMoveDto request, CancellationToken cancellationToken = default) =>
+        _http.PostAsync<MenuMoveDto, MasterOperationResultDto>("api/master/menu-permissions/mover", request, cancellationToken);
+
+    public Task<ApiResult<MasterOperationResultDto>> CreateMenuFolderAsync(MenuFolderCreateDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Criando pasta...", () => _http.PostAsync<MenuFolderCreateDto, MasterOperationResultDto>("api/master/menu-permissions/pastas", request, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> DeleteMenuFolderAsync(int folderId, CancellationToken cancellationToken = default) =>
+        _http.DeleteAsync<MasterOperationResultDto>($"api/master/menu-permissions/pastas/{folderId}", cancellationToken: cancellationToken);
 
     private async Task<T> WithLoading<T>(string message, Func<Task<T>> action)
     {

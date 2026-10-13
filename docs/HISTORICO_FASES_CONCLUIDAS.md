@@ -879,3 +879,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ## 🎨 Navegação, Usabilidade e Paletas (Fase 45)
 
 - [x] **Fase 45 — UX Master × Cliente:** reset de scroll ao trocar de rota (`NavigationScrollReset` + `tecFlowAppInterop.resetScroll`), sidebar do cliente em três níveis (Categoria → Menu pai → Submenu, com "Minhas Lojas / Integrações" fixo em Integrações), console Master em slate escuro com laranja `#FF9900`, paleta clara do cliente e segregação `/master/vault` (chaves globais + diagnóstico) × `/master/marketplace-accounts` (somente contas corporativas de teste/dev).
+
+## 🧲 Menu Dinâmico com Drag & Drop (Fase 46)
+
+- [x] **Fase 46 — Árvore de menus editável:** pasta "Próximos Desenvolvimentos" e seus 6 subitens semeados em `MenuItems` (ocultos por padrão em todos os planos, selo "EM BREVE" na fila de engajamento), drag & drop na matriz `/master/menu-permissions` (reordenar via `OrderIndex`, mover para pasta via `ParentId`, item sobre item cria pasta com modal) e `NavMenu` lendo apenas o banco, com pastas aninhadas e recarga a cada navegação.

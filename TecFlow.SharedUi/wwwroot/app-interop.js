@@ -132,6 +132,96 @@
 
 window.scrollToTop = window.tecFlowAppInterop.scrollToTop;
 
+/* Drag & drop da matriz de menus (/master/menu-permissions): linhas com data-menu-row.
+   Faixa superior = antes, inferior = depois, centro = dentro (pasta) ou nova pasta (item). */
+window.tecFlowMenuDnd = (function () {
+    const zoneClasses = ["menu-drop-before", "menu-drop-after", "menu-drop-into"];
+    let lastZone = "after";
+
+    const rowOf = function (target) {
+        return target && typeof target.closest === "function" ? target.closest("[data-menu-row]") : null;
+    };
+
+    const clearZones = function () {
+        document.querySelectorAll("[data-menu-row][data-zone]").forEach(function (row) {
+            row.classList.remove.apply(row.classList, zoneClasses);
+            delete row.dataset.zone;
+        });
+    };
+
+    const zoneFor = function (row, clientY) {
+        const rect = row.getBoundingClientRect();
+        const ratio = (clientY - rect.top) / Math.max(rect.height, 1);
+        if (ratio < 0.3) {
+            return "before";
+        }
+
+        return ratio > 0.7 ? "after" : "into";
+    };
+
+    const endDrag = function () {
+        clearZones();
+        document.querySelectorAll("[data-menu-row].menu-dragging").forEach(function (row) {
+            row.classList.remove("menu-dragging");
+        });
+    };
+
+    document.addEventListener("dragstart", function (event) {
+        const row = rowOf(event.target);
+        if (!row || row.getAttribute("draggable") !== "true") {
+            return;
+        }
+
+        event.dataTransfer.effectAllowed = "move";
+        try {
+            event.dataTransfer.setData("text/plain", row.dataset.menuRow || "");
+        } catch (error) {
+            /* alguns navegadores bloqueiam setData fora de contexto seguro */
+        }
+        row.classList.add("menu-dragging");
+    });
+
+    document.addEventListener("dragover", function (event) {
+        const row = rowOf(event.target);
+        if (!row || !document.querySelector("[data-menu-row].menu-dragging") || row.classList.contains("menu-dragging")) {
+            return;
+        }
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        const zone = zoneFor(row, event.clientY);
+        lastZone = zone;
+        if (row.dataset.zone !== zone) {
+            clearZones();
+            row.classList.add("menu-drop-" + zone);
+            row.dataset.zone = zone;
+        }
+    });
+
+    document.addEventListener("dragleave", function (event) {
+        const row = rowOf(event.target);
+        if (row && !row.contains(event.relatedTarget)) {
+            row.classList.remove.apply(row.classList, zoneClasses);
+            delete row.dataset.zone;
+        }
+    });
+
+    document.addEventListener("drop", function (event) {
+        if (rowOf(event.target)) {
+            event.preventDefault();
+            window.setTimeout(endDrag, 0);
+        }
+    });
+
+    document.addEventListener("dragend", endDrag);
+
+    return {
+        zone: function () {
+            return lastZone;
+        }
+    };
+})();
+
 (function registerEnhancedNavigationScrollReset() {
     let lastPath = window.location.pathname;
     const attach = function () {

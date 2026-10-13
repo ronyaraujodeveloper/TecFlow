@@ -707,9 +707,10 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Title).HasMaxLength(96).IsRequired();
             entity.Property(item => item.Route).HasMaxLength(160);
             entity.Property(item => item.Icon).HasMaxLength(64);
+            entity.Property(item => item.Badge).HasMaxLength(30);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
             entity.HasIndex(item => item.Key).IsUnique();
-            entity.HasIndex(item => new { item.ParentId, item.Order });
+            entity.HasIndex(item => new { item.ParentId, item.OrderIndex });
             entity.HasOne(item => item.Parent).WithMany().HasForeignKey(item => item.ParentId);
         });
 

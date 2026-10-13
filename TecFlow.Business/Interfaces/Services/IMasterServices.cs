@@ -136,8 +136,20 @@ public interface IMenuPermissionService
 
     Task<MasterOperationResultDto> SaveMatrixAsync(MasterActor actor, MenuPermissionSaveDto request, CancellationToken cancellationToken = default);
 
-    /// <summary>Sidebar do usuário conforme o plano do inquilino (masters e usuários sem plano veem tudo).</summary>
-    Task<IReadOnlyList<ClientMenuNodeDto>> GetClientMenuAsync(int userId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Sidebar do usuário conforme o plano do inquilino. Masters e usuários sem plano veem tudo, exceto
+    /// quando <paramref name="clientView"/> está ativo: aí itens ocultos em todos os planos também somem.
+    /// </summary>
+    Task<IReadOnlyList<ClientMenuNodeDto>> GetClientMenuAsync(int userId, bool clientView = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Reordena (antes/depois de um item) ou move o item para dentro de uma pasta.</summary>
+    Task<MasterOperationResultDto> MoveAsync(MasterActor actor, MenuMoveDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>Cria uma pasta na posição do item alvo e vincula os dois itens a ela.</summary>
+    Task<MasterOperationResultDto> CreateFolderAsync(MasterActor actor, MenuFolderCreateDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>Exclui uma pasta criada no Master, desde que esteja vazia.</summary>
+    Task<MasterOperationResultDto> DeleteFolderAsync(MasterActor actor, int folderId, CancellationToken cancellationToken = default);
 }
 
 public sealed record DeveloperCredentialCheck(bool Success, string Message, long LatencyMs);

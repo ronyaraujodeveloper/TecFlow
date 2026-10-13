@@ -48,6 +48,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMasterRouteGuard();
 app.UseAntiforgery();
 
 app.MapWebUiAuthEndpoints();

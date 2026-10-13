@@ -57,7 +57,7 @@ public class MasterPermissionMatrixTests
     [Fact]
     public void PolicyConstants_ShouldMatchPolicyName()
     {
-        Assert.Equal(MasterPermissions.PolicyName(MasterPermissions.ViewAudit), MasterPolicies.ViewAudit);
+        Assert.Equal(MasterPolicies.ViewAudit, MasterPermissions.PolicyName(MasterPermissions.ViewAudit));
     }
 }
 

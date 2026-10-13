@@ -32,6 +32,14 @@ public interface IMasterApiService
     Task<ApiResult<List<ProductChangelogDto>>> ChangelogAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<ProductChangelogDto>> SaveChangelogAsync(ProductChangelogDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> DeleteChangelogAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApiResult<List<DeveloperAccountDto>>> DeveloperAccountsAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<DeveloperAccountDto>> SaveDeveloperAccountAsync(DeveloperAccountDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> DeleteDeveloperAccountAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> PublishDeveloperAccountAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApiResult<DeveloperAccountCheckDto>> CheckDeveloperAccountAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApiResult<List<DeveloperAccountCheckDto>>> CheckGlobalCredentialsAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MenuPermissionMatrixDto>> MenuPermissionsAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> SaveMenuPermissionsAsync(MenuPermissionSaveDto request, CancellationToken cancellationToken = default);
 }
 
 public sealed class MasterApiService : IMasterApiService
@@ -121,6 +129,30 @@ public sealed class MasterApiService : IMasterApiService
 
     public Task<ApiResult<MasterOperationResultDto>> DeleteChangelogAsync(int id, CancellationToken cancellationToken = default) =>
         _http.DeleteAsync<MasterOperationResultDto>($"api/master/changelog/{id}", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<List<DeveloperAccountDto>>> DeveloperAccountsAsync(CancellationToken cancellationToken = default) =>
+        _http.GetAsync<List<DeveloperAccountDto>>("api/master/marketplace-accounts", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<DeveloperAccountDto>> SaveDeveloperAccountAsync(DeveloperAccountDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Criptografando e salvando conta...", () => _http.PutAsync<DeveloperAccountDto, DeveloperAccountDto>("api/master/marketplace-accounts", request, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> DeleteDeveloperAccountAsync(int id, CancellationToken cancellationToken = default) =>
+        _http.DeleteAsync<MasterOperationResultDto>($"api/master/marketplace-accounts/{id}", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<MasterOperationResultDto>> PublishDeveloperAccountAsync(int id, CancellationToken cancellationToken = default) =>
+        WithLoading("Publicando credenciais no cofre global...", () => _http.PostAsync<object, MasterOperationResultDto>($"api/master/marketplace-accounts/{id}/publicar", new { }, cancellationToken));
+
+    public Task<ApiResult<DeveloperAccountCheckDto>> CheckDeveloperAccountAsync(int id, CancellationToken cancellationToken = default) =>
+        WithLoading("Testando conexão com o marketplace...", () => _http.PostAsync<object, DeveloperAccountCheckDto>($"api/master/marketplace-accounts/{id}/testar", new { }, cancellationToken));
+
+    public Task<ApiResult<List<DeveloperAccountCheckDto>>> CheckGlobalCredentialsAsync(CancellationToken cancellationToken = default) =>
+        WithLoading("Testando credenciais globais...", () => _http.PostAsync<object, List<DeveloperAccountCheckDto>>("api/master/marketplace-accounts/saude-global", new { }, cancellationToken));
+
+    public Task<ApiResult<MenuPermissionMatrixDto>> MenuPermissionsAsync(CancellationToken cancellationToken = default) =>
+        _http.GetAsync<MenuPermissionMatrixDto>("api/master/menu-permissions", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<MasterOperationResultDto>> SaveMenuPermissionsAsync(MenuPermissionSaveDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Salvando matriz de menus...", () => _http.PutAsync<MenuPermissionSaveDto, MasterOperationResultDto>("api/master/menu-permissions", request, cancellationToken));
 
     private async Task<T> WithLoading<T>(string message, Func<Task<T>> action)
     {

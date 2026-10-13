@@ -870,3 +870,8 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Fase 40 — Dashboard executivo:** MRR, ARR, ARPU, receita líquida, conversão de trial, churn 30d, novos assinantes por mês e uso 24h (links, cliques, disparos WhatsApp/Telegram, requisições à API).
 - [x] **Fase 41 — Comunicação:** banners globais agendados, notificações segmentadas (todos / status / plano / tenant) e changelog "O que há de novo" (`/novidades`).
 
+## 🧭 Console Master, Contas de Desenvolvedor e Menu por Plano (Fases 42 a 44)
+
+- [x] **Fase 42 — Rotas e layout master:** convenção `/master/*` (`MasterRoutes`; `/master/usuarios`, `/master/planos`, `/master/marketplace-accounts`), `MasterMainLayout` com identidade executiva própria, guard `UseMasterRouteGuard` que redireciona não-masters para `/` e accordion "Próximos Desenvolvimentos" oculto na visão cliente.
+- [x] **Fase 43 — Contas de desenvolvedor:** `/master/marketplace-accounts` com App Credentials (ML AppId/Secret, Shopee AppKey/Secret, Amazon PA-API) e contas de teste internas em `SystemDeveloperAccounts` (segredos criptografados), teste de conectividade real por plataforma, status de validade do segredo e publicação como credencial global no cofre.
+- [x] **Fase 44 — Menu por plano:** tabelas `MenuItems` / `PlanMenuPermissions`, matriz `/master/menu-permissions` (planos × itens, ativo/inativo) e `NavMenu` dinâmico via `GET api/sistema/menu` conforme o plano do tenant (Radar oculto no Starter por padrão).

@@ -25,6 +25,13 @@ public static class MasterBackofficeRegistrationExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(20);
         });
+        services.AddScoped<IMenuPermissionService, MenuPermissionService>();
+        services.AddScoped<IDeveloperAccountService, DeveloperAccountService>();
+        services.AddHttpClient<IDeveloperAccountHealthChecker, DeveloperAccountHealthChecker>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TecFlow-HealthCheck/1.0");
+        });
         return services;
     }
 }

@@ -1,0 +1,163 @@
+﻿@page "/master/menu-permissions"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout TecFlow.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Menus por plano — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Matriz de menus por plano</h1>
+            <p class="text-muted small mb-0">
+                Marque o que cada plano enxerga na sidebar. Desmarcar um grupo esconde todos os itens dele; desativar um item o remove para todos.
+            </p>
+        </div>
+        <button type="button" class="btn btn-primary btn-touch" disabled="@(!_canManage || PendingChanges == 0)" @onclick="SaveAsync">
+            Salvar @(PendingChanges > 0 ? $"({PendingChanges})" : string.Empty)
+        </button>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_matrix is not null)
+    {
+        <div class="table-responsive card shadow-sm">
+            <table class="table table-sm align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Item do menu</th>
+                        <th class="text-center">Ativo</th>
+                        @foreach (var plan in _matrix.Plans)
+                        {
+                            <th class="text-center">
+                                @plan.Name
+                                <div>
+                                    <button type="button" class="btn btn-link btn-sm p-0" disabled="@(!_canManage)" @onclick="() => SetColumn(plan.Id, true)">todos</button>
+                                    ·
+                                    <button type="button" class="btn btn-link btn-sm p-0" disabled="@(!_canManage)" @onclick="() => SetColumn(plan.Id, false)">nenhum</button>
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _matrix.Rows)
+                    {
+                        <tr class="@(row.IsGroup ? "table-secondary fw-semibold" : string.Empty) @(row.IsActive ? string.Empty : "text-muted")">
+                            <td style="padding-left: @(0.5 + row.Depth * 1.5)rem;">
+                                <i class="bi @row.Icon me-1" aria-hidden="true"></i>@row.Title
+                                @if (!string.IsNullOrWhiteSpace(row.Route))
+                                {
+                                    <span class="text-muted ms-1"><code>@row.Route</code></span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input" checked="@row.IsActive" disabled="@(!_canManage)"
+                                       @onchange="args => ToggleActive(row, (bool)args.Value!)" />
+                            </td>
+                            @foreach (var plan in _matrix.Plans)
+                            {
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" checked="@IsVisible(row, plan.Id)" disabled="@(!_canManage || !row.IsActive)"
+                                           aria-label="@($"{row.Title} no plano {plan.Name}")"
+                                           @onchange="args => ToggleCell(row, plan.Id, (bool)args.Value!)" />
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private MenuPermissionMatrixDto? _matrix;
+    private readonly Dictionary<(int PlanId, int ItemId), bool> _cells = [];
+    private readonly Dictionary<int, bool> _active = [];
+    private bool _canManage;
+
+    private int PendingChanges => _cells.Count + _active.Count;
+
+    protected override async Task LoadAsync()
+    {
+        _canManage = Can(MasterPermissions.ManagePlans);
+        if (!_canManage)
+        {
+            Error = "Seu papel não permite alterar menus por plano.";
+            return;
+        }
+
+        var result = await Api.MenuPermissionsAsync();
+        if (Accept(result))
+        {
+            _matrix = result.Data;
+            _cells.Clear();
+            _active.Clear();
+        }
+    }
+
+    private bool IsVisible(MenuPermissionRowDto row, int planId) =>
+        _cells.TryGetValue((planId, row.MenuItemId), out var pending)
+            ? pending
+            : row.Visibility.GetValueOrDefault(planId, true);
+
+    private void ToggleCell(MenuPermissionRowDto row, int planId, bool visible)
+    {
+        if (row.Visibility.GetValueOrDefault(planId, true) == visible)
+        {
+            _cells.Remove((planId, row.MenuItemId));
+        }
+        else
+        {
+            _cells[(planId, row.MenuItemId)] = visible;
+        }
+    }
+
+    private void ToggleActive(MenuPermissionRowDto row, bool active)
+    {
+        if (!_active.Remove(row.MenuItemId))
+        {
+            _active[row.MenuItemId] = active;
+        }
+
+        row.IsActive = active;
+    }
+
+    private void SetColumn(int planId, bool visible)
+    {
+        if (_matrix is null)
+        {
+            return;
+        }
+
+        foreach (var row in _matrix.Rows)
+        {
+            ToggleCell(row, planId, visible);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        var request = new MenuPermissionSaveDto
+        {
+            Cells = _cells.Select(pair => new MenuPermissionCellDto
+            {
+                PlanId = pair.Key.PlanId,
+                MenuItemId = pair.Key.ItemId,
+                IsVisible = pair.Value
+            }).ToList(),
+            ActiveItems = new Dictionary<int, bool>(_active)
+        };
+
+        if (AcceptOperation(await Api.SaveMenuPermissionsAsync(request)))
+        {
+            var message = Info;
+            await LoadAsync();
+            Info = message;
+        }
+    }
+}

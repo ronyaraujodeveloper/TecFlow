@@ -2209,3 +2209,81 @@ html, body {
     pointer-events: none;
     user-select: none;
 }
+
+/* ===== Master Console (Fase 42) ===== */
+.master-shell {
+    background: #eef1f6;
+}
+
+.master-header {
+    background: linear-gradient(90deg, #0b1220 0%, #1b2a4a 100%);
+    color: #fff;
+    border-bottom: 3px solid #f5b301;
+}
+
+.master-brand {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+}
+
+.master-brand span {
+    color: #f5b301;
+    font-weight: 600;
+}
+
+.master-brand:hover {
+    color: #fff;
+}
+
+.master-sidebar {
+    background: #111a2e;
+    padding: 0.75rem 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+}
+
+.master-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #c8d1e3;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 0.92rem;
+}
+
+.master-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.master-nav-link.active {
+    background: #f5b301;
+    color: #111a2e;
+    font-weight: 600;
+}
+
+.master-sidebar-footer {
+    display: none;
+    color: #7f8aa3;
+    padding: 0.75rem;
+    margin-top: auto;
+}
+
+@media (min-width: 992px) {
+    .master-sidebar {
+        flex-direction: column;
+        width: 250px;
+        min-height: calc(100vh - 58px);
+        overflow-x: visible;
+    }
+
+    .master-sidebar-footer {
+        display: block;
+    }
+}

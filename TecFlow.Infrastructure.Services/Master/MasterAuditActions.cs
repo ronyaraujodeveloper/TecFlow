@@ -19,4 +19,8 @@ public static class MasterAuditActions
     public const string NotificationSent = "notificacao.enviada";
     public const string ChangelogSaved = "changelog.salvo";
     public const string ChangelogDeleted = "changelog.excluido";
+    public const string DeveloperAccountSaved = "conta-dev.salva";
+    public const string DeveloperAccountDeleted = "conta-dev.excluida";
+    public const string DeveloperAccountPublished = "conta-dev.publicada";
+    public const string MenuPermissionsSaved = "menu.permissoes";
 }

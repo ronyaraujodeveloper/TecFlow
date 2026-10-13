@@ -251,6 +251,93 @@ public class ImpersonationResultDto
     public string TargetEmail { get; set; } = string.Empty;
 }
 
+public class ClientMenuNodeDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Route { get; set; }
+    public string? Icon { get; set; }
+    public List<ClientMenuNodeDto> Children { get; set; } = [];
+}
+
+public class MenuPermissionMatrixDto
+{
+    public List<MenuPlanColumnDto> Plans { get; set; } = [];
+    public List<MenuPermissionRowDto> Rows { get; set; } = [];
+}
+
+public class MenuPlanColumnDto
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+public class MenuPermissionRowDto
+{
+    public int MenuItemId { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Route { get; set; }
+    public string? Icon { get; set; }
+    public int Depth { get; set; }
+    public bool IsGroup { get; set; }
+    public bool IsActive { get; set; }
+    /// <summary>PlanId → visível.</summary>
+    public Dictionary<int, bool> Visibility { get; set; } = [];
+}
+
+public class MenuPermissionSaveDto
+{
+    public List<MenuPermissionCellDto> Cells { get; set; } = [];
+    /// <summary>MenuItemId → ativo (desativar remove o item para todos os planos).</summary>
+    public Dictionary<int, bool> ActiveItems { get; set; } = [];
+}
+
+public class MenuPermissionCellDto
+{
+    public int PlanId { get; set; }
+    public int MenuItemId { get; set; }
+    public bool IsVisible { get; set; }
+}
+
+public class DeveloperAccountDto
+{
+    public int Id { get; set; }
+    public string Platform { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string Environment { get; set; } = string.Empty;
+    public string? ClientId { get; set; }
+    /// <summary>Mascarado na listagem; na gravação, valor mascarado ou vazio mantém o atual.</summary>
+    public string? ClientSecret { get; set; }
+    public bool HasSecret { get; set; }
+    public string? Extra { get; set; }
+    public string? TestUsername { get; set; }
+    public string? TestPassword { get; set; }
+    public bool HasTestPassword { get; set; }
+    public string? Notes { get; set; }
+    public DateTime? SecretExpiresAt { get; set; }
+    public string ExpirationStatus { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public bool IsGlobalDefault { get; set; }
+    public DateTime? LastCheckAt { get; set; }
+    public bool? LastCheckOk { get; set; }
+    public string? LastCheckMessage { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string? UpdatedBy { get; set; }
+}
+
+public class DeveloperAccountCheckDto
+{
+    public string Platform { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public long LatencyMs { get; set; }
+    public DateTime CheckedAt { get; set; }
+}
+
 public class AsaasWebhookPayloadDto
 {
     public string? Event { get; set; }

@@ -1423,6 +1423,30 @@ sequenceDiagram
 
 ---
 
+## Rotas Master, contas de desenvolvedor e menu por plano (Fases 42 a 44)
+
+```mermaid
+flowchart LR
+  REQ[Requisição /master/*] --> GUARD{UseMasterRouteGuard<br/>MasterAccess.IsMaster?}
+  GUARD -- não --> HOME[Redirect /]
+  GUARD -- sim --> ML[MasterMainLayout]
+  ML --> DEV[/master/marketplace-accounts/]
+  ML --> MENU[/master/menu-permissions/]
+  DEV --> MDA[MasterDeveloperAccountsController]
+  MDA --> DAS[DeveloperAccountService]
+  DAS --> HC[DeveloperAccountHealthChecker]
+  HC --> EXT[(ML oauth/token · Shopee GraphQL · Amazon PA-API SigV4)]
+  DAS -->|publicar| SSS[SystemSettingsService] --> VAULT[(SystemSettings ENC)]
+  DAS --> SDA[(SystemDeveloperAccounts ENC)]
+  MENU --> MMP[MasterMenuPermissionsController] --> MPS[MenuPermissionService]
+  MPS --> MI[(MenuItems)]
+  MPS --> PMP[(PlanMenuPermissions)]
+  NAV[NavMenu cliente] -->|GET api/sistema/menu| SCC[SystemCommunicationController] --> MPS
+  MPS -->|plano do tenant| PLANS[(SaasPlans / Tenants)]
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  

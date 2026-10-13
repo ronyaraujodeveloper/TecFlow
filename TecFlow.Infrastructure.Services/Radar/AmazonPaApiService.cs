@@ -283,18 +283,38 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
         return list;
     }
 
+    public const string DefaultHost = "webservices.amazon.com.br";
+    public const string DefaultRegion = "us-east-1";
+
     private HttpRequestMessage BuildSignedRequest(
         string accessKey,
         string secretKey,
         string payload,
         string path,
-        string target)
+        string target) =>
+        CreateSignedRequest(
+            accessKey,
+            secretKey,
+            string.IsNullOrWhiteSpace(_options.Host) ? DefaultHost : _options.Host.Trim(),
+            string.IsNullOrWhiteSpace(_options.Region) ? DefaultRegion : _options.Region.Trim(),
+            payload,
+            path,
+            target,
+            DateTime.UtcNow);
+
+    /// <summary>Requisição POST assinada com AWS Signature V4 para a PA-API 5.</summary>
+    internal static HttpRequestMessage CreateSignedRequest(
+        string accessKey,
+        string secretKey,
+        string host,
+        string region,
+        string payload,
+        string path,
+        string target,
+        DateTime now)
     {
-        var now = DateTime.UtcNow;
         var amzDate = now.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
         var dateStamp = now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-        var host = string.IsNullOrWhiteSpace(_options.Host) ? "webservices.amazon.com.br" : _options.Host.Trim();
-        var region = string.IsNullOrWhiteSpace(_options.Region) ? "us-east-1" : _options.Region.Trim();
         const string service = "ProductAdvertisingAPI";
         var payloadHash = Sha256Hex(payload);
         var canonicalHeaders =

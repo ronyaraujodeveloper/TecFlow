@@ -1106,6 +1106,59 @@ namespace TecFlow.Data.Migrations
                     b.ToTable("MasterAuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.MenuItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(96)
+                        .HasColumnType("nvarchar(96)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("ParentId", "Order");
+
+                    b.ToTable("MenuItems", (string)null);
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>
                 {
                     b.Property<int>("Id")
@@ -1304,6 +1357,39 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("UserId", "OriginalUrl", "ReceivedAt");
 
                     b.ToTable("OfferRadarItems", (string)null);
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.PlanMenuPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVisible")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.HasIndex("PlanId", "MenuItemId")
+                        .IsUnique();
+
+                    b.ToTable("PlanMenuPermissions", (string)null);
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.PreFlightNotification", b =>
@@ -2079,6 +2165,92 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("IsActive", "StartsAt", "EndsAt");
 
                     b.ToTable("SystemBanners", (string)null);
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.SystemDeveloperAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ClientSecret")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Extra")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsGlobalDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("LastCheckAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastCheckMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool?>("LastCheckOk")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("SecretExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TestPassword")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TestUsername")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Platform", "Kind");
+
+                    b.ToTable("SystemDeveloperAccounts", (string)null);
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.SystemSetting", b =>
@@ -3104,6 +3276,16 @@ namespace TecFlow.Data.Migrations
                     b.Navigation("MarketplaceOrder");
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.MenuItem", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.MenuItem", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Metric", b =>
                 {
                     b.HasOne("TecFlow.Core.Entities.Campaign", "Campaign")
@@ -3131,6 +3313,25 @@ namespace TecFlow.Data.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("TecFlow.Core.Entities.PlanMenuPermission", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TecFlow.Core.Entities.SaasPlan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MenuItem");
+
+                    b.Navigation("Plan");
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.Product", b =>

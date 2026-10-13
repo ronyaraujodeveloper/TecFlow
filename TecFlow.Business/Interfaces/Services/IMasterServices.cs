@@ -130,6 +130,44 @@ public interface ISaasPaymentGateway
         CancellationToken cancellationToken = default);
 }
 
+public interface IMenuPermissionService
+{
+    Task<MenuPermissionMatrixDto> GetMatrixAsync(CancellationToken cancellationToken = default);
+
+    Task<MasterOperationResultDto> SaveMatrixAsync(MasterActor actor, MenuPermissionSaveDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>Sidebar do usuário conforme o plano do inquilino (masters e usuários sem plano veem tudo).</summary>
+    Task<IReadOnlyList<ClientMenuNodeDto>> GetClientMenuAsync(int userId, CancellationToken cancellationToken = default);
+}
+
+public sealed record DeveloperCredentialCheck(bool Success, string Message, long LatencyMs);
+
+public interface IDeveloperAccountHealthChecker
+{
+    Task<DeveloperCredentialCheck> CheckAsync(
+        string platform,
+        string? clientId,
+        string? secret,
+        string? extra,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IDeveloperAccountService
+{
+    Task<IReadOnlyList<DeveloperAccountDto>> ListAsync(CancellationToken cancellationToken = default);
+
+    Task<(DeveloperAccountDto? Item, string? Error)> SaveAsync(MasterActor actor, DeveloperAccountDto request, CancellationToken cancellationToken = default);
+
+    Task<MasterOperationResultDto> DeleteAsync(MasterActor actor, int id, CancellationToken cancellationToken = default);
+
+    Task<MasterOperationResultDto> PublishAsGlobalAsync(MasterActor actor, int id, CancellationToken cancellationToken = default);
+
+    Task<DeveloperAccountCheckDto> CheckAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Testa as credenciais globais em uso pela API (cofre + appsettings).</summary>
+    Task<IReadOnlyList<DeveloperAccountCheckDto>> CheckGlobalCredentialsAsync(CancellationToken cancellationToken = default);
+}
+
 public interface IAsaasWebhookService
 {
     Task<bool> ValidateTokenAsync(string? token, CancellationToken cancellationToken = default);

@@ -1,0 +1,52 @@
+﻿@inherits LayoutComponentBase
+
+@* Layout executivo do backoffice: identidade visual própria e navegação restrita às rotas /master/*. *@
+<div class="master-shell min-vh-100 d-flex flex-column">
+    <header class="master-header py-2">
+        <div class="container-fluid d-flex align-items-center gap-3 flex-wrap">
+            <a href="@MasterRoutes.Dashboard" class="master-brand text-decoration-none">
+                <i class="bi bi-shield-shaded" aria-hidden="true"></i>
+                TecFlow <span>Master Console</span>
+            </a>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <MasterProfileSwitcher />
+                <a href="/dashboard" class="btn btn-sm btn-outline-light" data-enhance-nav="false">
+                    <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Sair do console
+                </a>
+                <SessionStatusBadge />
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-grow-1 d-flex flex-column flex-lg-row">
+        <nav class="master-sidebar" aria-label="Navegação do Painel Master">
+            <AuthorizeView>
+                <Authorized>
+                    @foreach (var link in MasterRoutes.Links.Where(item => item.Permission is null || MasterAccess.Has(context.User, item.Permission)))
+                    {
+                        <NavLink class="master-nav-link" href="@link.Href" Match="@(link.Href == MasterRoutes.Dashboard ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                            <i class="bi @link.Icon" aria-hidden="true"></i>
+                            <span>@link.Label</span>
+                        </NavLink>
+                    }
+                    <div class="master-sidebar-footer small">
+                        @MasterRoles.Label(MasterAccess.Role(context.User))
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </nav>
+
+        <main class="master-main flex-grow-1 container-fluid py-3 py-md-4">
+            @Body
+        </main>
+    </div>
+</div>
+
+<LoadingOverlay />
+<ConfirmDialogHost />
+
+<div id="blazor-error-ui" class="blazor-error-ui-custom">
+    Ocorreu um erro inesperado.
+    <a href="" class="reload">Recarregar</a>
+    <button type="button" class="btn-close btn-close-white float-end btn-touch" aria-label="Fechar"></button>
+</div>

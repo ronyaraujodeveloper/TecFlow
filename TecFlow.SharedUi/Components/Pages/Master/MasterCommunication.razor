@@ -1,5 +1,6 @@
 ﻿@page "/master/comunicacao"
 @attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout TecFlow.SharedUi.Components.Layout.MasterMainLayout
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inherits MasterPageBase
 @inject IMasterApiService Api

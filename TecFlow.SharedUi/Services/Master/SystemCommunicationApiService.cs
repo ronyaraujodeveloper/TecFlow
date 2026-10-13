@@ -10,6 +10,7 @@ public interface ISystemCommunicationApiService
     Task<ApiResult<List<TenantNotificationDto>>> NotificationsAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> MarkReadAsync(int id, CancellationToken cancellationToken = default);
     Task<ApiResult<List<ProductChangelogDto>>> ChangelogAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<List<ClientMenuNodeDto>>> ClientMenuAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class SystemCommunicationApiService : ISystemCommunicationApiService
@@ -32,4 +33,7 @@ public sealed class SystemCommunicationApiService : ISystemCommunicationApiServi
 
     public Task<ApiResult<List<ProductChangelogDto>>> ChangelogAsync(CancellationToken cancellationToken = default) =>
         _http.GetAsync<List<ProductChangelogDto>>("api/sistema/novidades", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<List<ClientMenuNodeDto>>> ClientMenuAsync(CancellationToken cancellationToken = default) =>
+        _http.GetAsync<List<ClientMenuNodeDto>>("api/sistema/menu", cancellationToken: cancellationToken);
 }

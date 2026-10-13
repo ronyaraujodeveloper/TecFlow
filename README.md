@@ -336,7 +336,42 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **41.3. Central de Changelog e Novidades do Produto (`ProductChangelog`):**
   - Módulo para publicação de atualizações do sistema (*What's New*), permitindo que os clientes leiam as melhorias recém-lançadas no TecFlow.
 
+## 👑 Módulo Backoffice Master: Isolamento de Rotas, Contas de Desenvolvedor e Menu por Plano (Fases 42 a 44)
 
+---
+
+### 🌐 Fase 42: Segregação de Módulos e Rotas Master (`MasterRouteIsolation & Layout`)
+
+- [x] **42.1. Padrão de Roteamento `/master/*` (`MasterRouteConvention`):**
+  - Isolamento de todos os componentes e páginas de administração global sob o prefixo `/master/` (ex: `/master/marketplace-accounts`, `/master/planos`, `/master/usuarios`).
+- [x] **42.2. Layout e Guard de Segurança Master (`MasterLayout` & `MasterAuthorize`):**
+  - Criação do layout dedicado `MasterMainLayout.razor` com identidade visual executiva (distinta da visão do cliente).
+  - Interceptador/Guard de autorização que bloqueia o acesso a qualquer rota `/master/*` para usuários que não possuem o papel `SuperAdmin` (redirecionando para `/` em tentativas de acesso não autorizado).
+- [x] **42.3. Ocultação do Accordion "Próximos Desenvolvimentos" na Visão Cliente:**
+  - Remoção/bloqueio definitivo do menu de roadmaps e protótipos na visão do cliente comum, tornando a Sidebar do tenant 100% focada em recursos produtivos e liberados.
+
+---
+
+### 🔑 Fase 43: Gerenciamento Master de Contas de Desenvolvedor e Testes (`MasterMarketplaceAccounts`)
+
+- [x] **43.1. Tela Específica de Infraestrutura `/master/marketplace-accounts`:**
+  - Desenvolvimento do painel Master para gerenciamento das **Contas de Desenvolvedor / App Credentials** (Mercado Livre AppId/SecretKey, Shopee AppKey/AppSecret, Amazon PA-API Keys) e contas de teste internas da empresa TecFlow.
+- [x] **43.2. Segregação Total de Escopo (`DeveloperAccountIsolation`):**
+  - Isolamento do serviço para garantir que as credenciais globais e contas de homologação cadastradas no `/master/marketplace-accounts` fiquem armazenadas em tabela/escopo de sistema (`SystemDeveloperAccounts`), sem interferir nas contas de afiliados do cliente (`/marketplace-accounts`).
+- [x] **43.3. Teste de Conectividade e Saúde das APIs Globais:**
+  - Painel com botões de diagnóstico direto na tela master para validar status de tokens de app, expiração de secrets e status das conexões com os servidores do Mercado Livre, Shopee e Amazon.
+
+---
+
+### 📜 Fase 44: Matriz Dinâmica de Menus por Plano e Banco de Dados (`DynamicPlanMenuPermissions`)
+
+- [x] **44.1. Persistência de Menus no Banco de Dados (`MenuItems` & `PlanMenuPermissions`):**
+  - Criação das tabelas `MenuItems` (cadastrando toda a árvore de menus com `Id`, `Title`, `Route`, `Icon`, `ParentId`, `Order`) e `PlanMenuPermissions` (mapeando a relação entre `PlanId` e `MenuItemId` com `IsVisible`).
+- [x] **44.2. Interface Master de Controle de Árvore `/master/menu-permissions`:**
+  - Desenvolvimento da tela Master exibindo a árvore hierárquica completa do menu do TecFlow em formato de matriz/tabela com colunas para cada plano (*Starter, Pro, Agency, Enterprise*).
+  - Toggles/Checkboxes dinâmicos para você marcar ou desmarcar visualmente quais itens do menu cada plano enxergará na plataforma.
+- [x] **44.3. Renderização Dinâmica da Sidebar do Cliente (`DynamicNavMenu`):**
+  - Refatoração do `NavMenu.razor` para carregar a estrutura de navegação diretamente da tabela de permissões com base no plano ativo do tenant logado, omitindo automaticamente rotas não contratadas ou indisponíveis.
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

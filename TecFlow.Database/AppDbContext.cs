@@ -75,6 +75,9 @@ public class AppDbContext : DbContext
     public DbSet<SystemBanner> SystemBanners { get; set; } = null!;
     public DbSet<TenantNotification> TenantNotifications { get; set; } = null!;
     public DbSet<ProductChangelogEntry> ProductChangelogEntries { get; set; } = null!;
+    public DbSet<MenuItem> MenuItems { get; set; } = null!;
+    public DbSet<PlanMenuPermission> PlanMenuPermissions { get; set; } = null!;
+    public DbSet<SystemDeveloperAccount> SystemDeveloperAccounts { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -696,6 +699,43 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Body).IsRequired();
             entity.HasIndex(item => new { item.IsPublished, item.PublishedAt });
         });
+
+        modelBuilder.Entity<MenuItem>(entity =>
+        {
+            entity.ToTable("MenuItems");
+            entity.Property(item => item.Key).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.Title).HasMaxLength(96).IsRequired();
+            entity.Property(item => item.Route).HasMaxLength(160);
+            entity.Property(item => item.Icon).HasMaxLength(64);
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => item.Key).IsUnique();
+            entity.HasIndex(item => new { item.ParentId, item.Order });
+            entity.HasOne(item => item.Parent).WithMany().HasForeignKey(item => item.ParentId);
+        });
+
+        modelBuilder.Entity<PlanMenuPermission>(entity =>
+        {
+            entity.ToTable("PlanMenuPermissions");
+            entity.HasIndex(item => new { item.PlanId, item.MenuItemId }).IsUnique();
+            entity.HasOne(item => item.Plan).WithMany().HasForeignKey(item => item.PlanId);
+            entity.HasOne(item => item.MenuItem).WithMany().HasForeignKey(item => item.MenuItemId);
+        });
+
+        modelBuilder.Entity<SystemDeveloperAccount>(entity =>
+        {
+            entity.ToTable("SystemDeveloperAccounts");
+            entity.Property(item => item.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Kind).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Label).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Environment).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.ClientId).HasMaxLength(256);
+            entity.Property(item => item.Extra).HasMaxLength(512);
+            entity.Property(item => item.TestUsername).HasMaxLength(256);
+            entity.Property(item => item.Notes).HasMaxLength(1000);
+            entity.Property(item => item.LastCheckMessage).HasMaxLength(1000);
+            entity.Property(item => item.UpdatedBy).HasMaxLength(256);
+            entity.HasIndex(item => new { item.Platform, item.Kind });
+        });
     }
 
     /// <summary>
@@ -849,5 +889,9 @@ public class AppDbContext : DbContext
         telegram.Property(item => item.UserBotApiHash).HasConversion(encryptedNullableString);
 
         modelBuilder.Entity<SystemSetting>().Property(item => item.Value).HasConversion(encryptedString);
+
+        var developerAccount = modelBuilder.Entity<SystemDeveloperAccount>();
+        developerAccount.Property(item => item.ClientSecret).HasConversion(encryptedNullableString);
+        developerAccount.Property(item => item.TestPassword).HasConversion(encryptedNullableString);
     }
 }

@@ -1209,6 +1209,44 @@ API / Orquestrador / Worker / WebUi
 **Testes**
 - [x] **Unit/Master/MasterRulesTests.cs** / **MasterInfrastructureTests.cs** / **MasterServicesTests.cs** — RBAC, ciclo de vida, métricas, limites, cofre, auditoria imutável.
 
+### Fases 42 a 44 — Rotas Master, contas de desenvolvedor e menu por plano
+
+**Core / Database / Data**
+- [x] **MenuItem.cs** / **PlanMenuPermission.cs** — árvore de menus e visibilidade por plano (sem registro = visível).
+- [x] **SystemDeveloperAccount.cs** — App Credentials e contas de teste em escopo de sistema (segredos criptografados).
+- [x] **AppDbContext.cs** — DbSets `MenuItems`, `PlanMenuPermissions`, `SystemDeveloperAccounts`; `ClientSecret`/`TestPassword` com `EncryptedStringConverter`.
+- [x] **Migrations/20261013012520_AddMasterRoutesDevAccountsMenuPhase42to44.cs** — criação das 3 tabelas.
+
+**Business**
+- [x] **Service/Master/MenuCatalog.cs** — `DefaultMenuCatalog` (árvore produtiva do cliente, Radar oculto no Starter) e `MenuVisibilityRules` (BuildTree / Flatten).
+- [x] **Service/Master/DeveloperAccountRules.cs** — plataformas, tipos, ambientes, validade do segredo e mapeamento para o cofre global.
+- [x] **Dto/MasterDtos.cs** — `ClientMenuNodeDto`, `MenuPermissionMatrixDto`, `MenuPermissionSaveDto`, `DeveloperAccountDto`, `DeveloperAccountCheckDto`.
+- [x] **Interfaces/Services/IMasterServices.cs** — `IMenuPermissionService`, `IDeveloperAccountService`, `IDeveloperAccountHealthChecker`.
+
+**Infrastructure**
+- [x] **Master/MenuPermissionService.cs** — seed idempotente do catálogo, matriz por plano, menu do cliente com cache de 60s.
+- [x] **Master/DeveloperAccountService.cs** — CRUD, publicação como credencial global (via `ISystemSettingsService`), diagnóstico por conta e das chaves em uso.
+- [x] **Master/DeveloperAccountHealthChecker.cs** — testes reais: OAuth client_credentials (ML), GraphQL Afiliados (Shopee), SearchItems SigV4 (Amazon).
+- [x] **Radar/AmazonPaApiService.cs** — assinatura SigV4 extraída para `CreateSignedRequest` (reuso no diagnóstico).
+- [x] **Master/MasterBackofficeRegistrationExtensions.cs** / **MasterAuditActions.cs** — DI e ações auditadas novas.
+
+**API**
+- [x] **Controllers/Master/MasterDeveloperAccountsController.cs** — `api/master/marketplace-accounts` (CRUD, `/publicar`, `/testar`, `/saude-global`).
+- [x] **Controllers/Master/MasterMenuPermissionsController.cs** — `api/master/menu-permissions` (GET/PUT).
+- [x] **Controllers/SystemCommunicationController.cs** — `GET api/sistema/menu` (sidebar por plano).
+
+**SharedUi / WebUi**
+- [x] **Services/Navigation/MasterRoutes.cs** — convenção `/master/*`, links do console e isenção da saída de emulação.
+- [x] **Components/Layout/MasterMainLayout.razor** + **wwwroot/app.css** (`.master-*`) — layout executivo do console.
+- [x] **Pages/Master/MasterDeveloperAccounts.razor** (`/master/marketplace-accounts`) / **MasterMenuPermissions.razor** (`/master/menu-permissions`).
+- [x] **Pages/Master/*.razor** — `@layout MasterMainLayout`; `MasterOperators` também em `/master/usuarios`.
+- [x] **Components/Layout/NavMenu.razor** — sidebar dinâmica via API; "Próximos Desenvolvimentos" só na visão master.
+- [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs** — clientes das novas rotas.
+- [x] **WebUi/Extensions/MasterRouteGuardExtensions.cs** / **Program.cs** — `UseMasterRouteGuard()` redireciona não-masters para `/`.
+
+**Testes**
+- [x] **Unit/Master/MasterPhase42To44RulesTests.cs** / **MasterPhase42To44ServicesTests.cs** — rotas, catálogo, visibilidade, matriz, contas de desenvolvedor e diagnóstico HTTP.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

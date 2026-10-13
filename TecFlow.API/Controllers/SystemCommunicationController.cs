@@ -14,10 +14,20 @@ namespace TecFlow.API.Controllers;
 public sealed class SystemCommunicationController : ControllerBase
 {
     private readonly ISystemCommunicationService _communication;
+    private readonly IMenuPermissionService _menus;
 
-    public SystemCommunicationController(ISystemCommunicationService communication)
+    public SystemCommunicationController(ISystemCommunicationService communication, IMenuPermissionService menus)
     {
         _communication = communication;
+        _menus = menus;
+    }
+
+    /// <summary>Sidebar do usuário logado conforme o plano contratado pelo inquilino.</summary>
+    [HttpGet("menu")]
+    public async Task<ActionResult<IReadOnlyList<ClientMenuNodeDto>>> MenuAsync(CancellationToken cancellationToken)
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
+        return Ok(await _menus.GetClientMenuAsync(userId, cancellationToken));
     }
 
     [HttpGet("avisos")]

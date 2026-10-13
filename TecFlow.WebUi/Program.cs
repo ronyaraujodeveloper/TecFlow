@@ -52,6 +52,7 @@ app.UseAntiforgery();
 
 app.MapWebUiAuthEndpoints();
 app.MapIntegracoesEndpoints();
+app.MapMasterEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddAdditionalAssemblies(typeof(ServiceCollectionExtensions).Assembly);

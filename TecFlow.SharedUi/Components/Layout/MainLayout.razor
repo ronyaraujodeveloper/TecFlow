@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="portal-shell min-vh-100 d-flex flex-column">
+    <ImpersonationBanner />
     <header class="portal-header py-2 py-md-3">
         <div class="container-fluid portal-header-inner d-flex align-items-center gap-2">
             <button type="button"
@@ -18,6 +19,7 @@
             <div class="d-flex align-items-center gap-2 flex-shrink-0">
                 <AuthorizeView>
                     <Authorized>
+                        <MasterProfileSwitcher />
                         <ActiveStoreScopeSelector />
                         <a href="/dashboard" class="btn btn-primary btn-touch d-none d-sm-inline-flex">
                             Painel
@@ -28,6 +30,11 @@
             </div>
         </div>
     </header>
+    <AuthorizeView>
+        <Authorized>
+            <GlobalAnnouncements />
+        </Authorized>
+    </AuthorizeView>
 
     <div class="portal-body flex-grow-1 d-flex">
         <aside id="portal-sidebar"

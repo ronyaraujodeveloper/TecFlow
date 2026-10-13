@@ -67,6 +67,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPreFlightApiService, PreFlightApiService>();
         services.AddScoped<IDealIntelligenceApiService, DealIntelligenceApiService>();
         services.AddScoped<IOfficialCatalogSearchApiService, OfficialCatalogSearchApiService>();
+        services.AddScoped<TecFlow.SharedUi.Services.Master.IMasterApiService, TecFlow.SharedUi.Services.Master.MasterApiService>();
+        services.AddScoped<TecFlow.SharedUi.Services.Master.ISystemCommunicationApiService, TecFlow.SharedUi.Services.Master.SystemCommunicationApiService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

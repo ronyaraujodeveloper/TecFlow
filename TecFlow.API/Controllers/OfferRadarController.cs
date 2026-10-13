@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TecFlow.API.Security;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Infrastructure.Interfaces;
@@ -9,6 +10,7 @@ namespace TecFlow.API.Controllers;
 
 [Authorize]
 [ApiController]
+[RadarPlanGate]
 [Route("api/radar")]
 public sealed class OfferRadarController : ControllerBase
 {

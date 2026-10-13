@@ -10,6 +10,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using TecFlow.API.Middlewares;
 using TecFlow.API.Extensions;
+using TecFlow.API.Security;
+using TecFlow.Infrastructure.Services.Master;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
@@ -21,6 +23,7 @@ using TecFlow.Observability;
 var builder = WebApplication.CreateBuilder(args);
 
 DatabaseUrlConfiguration.ApplyCloudDatabaseUrl(builder.Configuration);
+builder.Configuration.AddTecFlowDatabaseSettings();
 
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -54,7 +57,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 builder.Services.AddProblemDetails();
-builder.Services.AddAuthorization();
+builder.Services.AddTecFlowMasterAuthorization();
 builder.Services.AddCors(options => options.AddPolicy("AllowAll", builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -76,6 +79,7 @@ builder.Services.AddAffiliateLinkInfrastructureServices();
 builder.Services.AddAffiliateLinkStrategyServices();
 builder.Services.AddTecFlowEngagementMessaging(builder.Configuration, TecFlow.Infrastructure.Services.Messaging.TecFlowMessagingRole.Publisher);
 builder.Services.AddTecFlowTelemetry(builder.Configuration, "TecFlow.API", enableAspNetCoreInstrumentation: true);
+builder.Services.AddTecFlowMasterBackoffice();
 builder.Services.Configure<HostOptions>(options =>
 {
     options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
@@ -90,6 +94,7 @@ builder.Services.AddHostedService<TecFlow.API.Workers.PreFlightWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.GlobalTrendingDealsWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.ProductImageCleanupWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.DataPurgeWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.TenantBillingWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]
@@ -133,6 +138,17 @@ builder.Services.AddAuthentication(options =>
                 descricao = "Sessão expirada ou não autenticada. Entre novamente no TecFlow.",
                 errorCode = "UNAUTHORIZED"
             });
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json; charset=utf-8";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = false,
+                descricao = "Seu perfil não tem permissão para esta área do Painel Master.",
+                errorCode = "FORBIDDEN"
+            });
         }
     };
 });
@@ -164,7 +180,9 @@ staticTypes.Mappings[".webp"] = "image/webp";
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticTypes });
 app.UseRouting();
 app.UseCors("AllowAll");
+app.UseMiddleware<ApiRequestCounterMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<TenantAccessGuardMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 

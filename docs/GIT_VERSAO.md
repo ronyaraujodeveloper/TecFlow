@@ -88,3 +88,4 @@
 [2026-10-12 19:08:08]fix(busca): HttpClient nativo anti-403 na vitrine ML
 [2026-10-12 19:26:15]fix(busca): exige OAuth na busca MLB e remove scrap
 [2026-10-12 20:05:11]feat(lojas): OAuth do Mercado Livre em Minhas Lojas para busca MLB
+[2026-10-12 21:50:10]feat(master): backoffice SaaS fases 35-41

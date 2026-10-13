@@ -1154,6 +1154,61 @@ API / Orquestrador / Worker / WebUi
 - [x] **MonitoredGroupService.ListAsync** / **GruposMonitorados.razor** — lista e tela só aceitam oferta nova se ainda não estiver visível.
 - [x] **HomologDemoUserSeeder.cs** / **Program.cs** — seed de demo não aborta o start da API (evita IIS 500.30).
 
+### Fases 35 a 41 — Backoffice & Gestão Master SaaS
+
+**Core**
+- [x] **UserAccount.cs** — `Role` (SuperAdmin / SuporteTecnico / FinanceiroSaaS / TenantUser) e `IsActive`.
+- [x] **Tenant.cs** — `Status`, `StatusReason`, `PlanCode`, `BillingCycle`, `TrialEndsAt`, `RenewalAt`, `CanceledAt`, IDs do gateway.
+- [x] **MasterAuditLog.cs** / **SystemSetting.cs** / **SaasPlan.cs** / **SaasPayment.cs** / **SystemBanner.cs** / **TenantNotification.cs** / **ProductChangelogEntry.cs** — novas entidades do backoffice.
+- [x] **TecFlowClaimTypes.cs** — claims de emulação (`ImpersonatorId`, `ImpersonatorAccessToken`, `ImpersonatedTenantName`, `ViewMode`).
+
+**Business**
+- [x] **Service/Master/MasterRbac.cs** — `MasterRoles`, `MasterPermissions`, `MasterPolicies`, `MasterPermissionMatrix`.
+- [x] **Service/Master/TenantLifecycleRules.cs** — status, ações (pausar/suspender/reativar/cancelar/estender trial), carência de inadimplência.
+- [x] **Service/Master/SaasMetricsRules.cs** — MRR, ARR, ARPU, churn 30d, conversão de trial, novos assinantes por mês.
+- [x] **Service/Master/SystemSettingCatalog.cs** — catálogo de chaves globais (marketplaces, mensageria, cofre, ASAAS) e máscara.
+- [x] **Service/Master/PlanLimitRules.cs** — `PlanLimits`, `SaasPlanCodes`, limites de lojas/agendamentos/radar/cota VIP.
+- [x] **Dto/MasterDtos.cs** — DTOs do painel master, webhook ASAAS e comunicação.
+- [x] **Interfaces/Services/IMasterServices.cs** — contratos dos serviços master e do gateway de pagamento.
+
+**Database / Data**
+- [x] **AppDbContext.cs** — DbSets master, `SystemSetting.Value` criptografado e `GuardImmutableAuditTrail`.
+- [x] **Migrations/20261012234523_AddMasterBackofficePhase35to41.cs** — tabelas, índices, seed de planos e SuperAdmin.
+
+**Infrastructure**
+- [x] **Security/JwtTokenService.cs** — claim de papel e `GenerateImpersonationToken`.
+- [x] **Security/PlatformAuthService.cs** — bloqueia usuário inativo e tenant pausado/suspenso/cancelado no login.
+- [x] **Master/MasterAuditService.cs** / **MasterAuditActions.cs** — trilha imutável.
+- [x] **Master/MasterOperatorService.cs** — CRUD de operadores internos.
+- [x] **Master/DatabaseSettingsConfigurationProvider.cs** / **SystemSettingsService.cs** — cofre criptografado no banco como fonte de configuração.
+- [x] **Master/SaasPlanService.cs** / **PlanScheduleGuard.cs** — planos e enforcement de limites.
+- [x] **Master/TenantAdminService.cs** / **TenantAccessReader.cs** — Tenant 360°, ciclo de vida, créditos, armazenamento e purge.
+- [x] **Master/AsaasPaymentGateway.cs** / **AsaasWebhookService.cs** — assinatura recorrente e baixa/bloqueio automático.
+- [x] **Master/ImpersonationService.cs** — emulação auditada.
+- [x] **Master/MasterMetricsService.cs** / **ApiRequestCounter.cs** — dashboard executivo e uso 24h.
+- [x] **Master/SystemCommunicationService.cs** — banners, notificações segmentadas e changelog.
+- [x] **Master/MasterBackofficeRegistrationExtensions.cs** — DI do backoffice.
+- [x] **WhatsAppBroadcastService.cs** / **TelegramBroadcastService.cs** / **IntegracaoLojaService.cs** / **DealCreditsService.cs** — aplicam limites do plano.
+
+**API**
+- [x] **Controllers/Master/MasterControllerBase.cs** / **MasterAccessController.cs** / **MasterSettingsController.cs** / **MasterTenantsController.cs** / **MasterInsightsController.cs**.
+- [x] **Controllers/SystemCommunicationController.cs** / **AsaasWebhookController.cs**.
+- [x] **Security/MasterAuthorizationExtensions.cs** / **MasterScopeAttribute.cs** / **RadarPlanGateAttribute.cs**.
+- [x] **Middlewares/TenantAccessGuardMiddleware.cs** / **ApiRequestCounterMiddleware.cs**.
+- [x] **Workers/TenantBillingWorker.cs** — ciclo horário de trial vencido e suspensão por inadimplência.
+
+**SharedUi / WebUi**
+- [x] **Services/Auth/JwtPayloadReader.cs** / **MasterAccess.cs** — leitura de papel e emulação no cookie.
+- [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs**.
+- [x] **Components/Master/** — `MasterPageBase`, `MasterAlerts`, `MasterProfileSwitcher`, `ImpersonationBanner`, `GlobalAnnouncements`.
+- [x] **Pages/Master/** — `MasterDashboard`, `MasterTenants`, `MasterOperators`, `MasterAudit`, `MasterSettings`, `MasterPlans`, `MasterCommunication`.
+- [x] **Pages/Novidades.razor** — changelog para clientes.
+- [x] **MainLayout.razor** / **NavMenu.razor** — banner de emulação, alternância de perfil, avisos e grupo "Painel Master".
+- [x] **WebUi/Extensions/MasterEndpointExtensions.cs** / **AuthCookieService.cs** — troca de visão, entrar/sair da emulação.
+
+**Testes**
+- [x] **Unit/Master/MasterRulesTests.cs** / **MasterInfrastructureTests.cs** / **MasterServicesTests.cs** — RBAC, ciclo de vida, métricas, limites, cofre, auditoria imutável.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -1372,6 +1372,57 @@ sequenceDiagram
 
 ---
 
+## Backoffice Master SaaS (Fases 35 a 41)
+
+```mermaid
+flowchart LR
+  subgraph WebUi
+    NAV[NavMenu: Painel Master] --> PAGES[Pages/Master/*]
+    LAYOUT[MainLayout] --> BANNER[ImpersonationBanner]
+    LAYOUT --> SWITCH[MasterProfileSwitcher]
+    LAYOUT --> ANN[GlobalAnnouncements]
+    EP[MasterEndpointExtensions /master/emular, /master/visao] --> COOKIE[AuthCookieService]
+  end
+  PAGES --> MAS[MasterApiService]
+  ANN --> SCA[SystemCommunicationApiService]
+  MAS -->|JWT role| API
+  SCA --> API
+  subgraph API
+    GUARD[TenantAccessGuardMiddleware] --> CTRL[Master*Controller + MasterScope]
+    CNT[ApiRequestCounterMiddleware]
+    WH[AsaasWebhookController]
+    WORKER[TenantBillingWorker]
+  end
+  CTRL --> SVC[TenantAdmin / Operators / Settings / Plans / Metrics / Communication / Impersonation]
+  SVC --> AUDIT[MasterAuditService]
+  SVC --> GW[AsaasPaymentGateway]
+  WH --> AWS[AsaasWebhookService]
+  WORKER --> SVC
+  SVC --> DB[(AppDbContext: Tenants, Usuarios, MasterAuditLogs, SystemSettings ENC, SaasPlans, SaasPayments, SystemBanners, TenantNotifications, ProductChangelogEntries)]
+  AUDIT --> DB
+  AWS --> DB
+  DB -.->|DatabaseSettingsConfigurationProvider| CFG[IConfiguration da API]
+```
+
+```mermaid
+sequenceDiagram
+  participant M as Operador Master (WebUi)
+  participant W as /master/emular/{tenantId}
+  participant A as MasterAccessController
+  participant I as ImpersonationService
+  M->>W: clique "Emular"
+  W->>A: POST api/master/emular/{tenantId} (JWT master)
+  A->>I: valida permissão Impersonate + audita
+  I-->>W: JWT do dono do tenant (1h, claims do impersonator)
+  W->>W: re-assina cookie (guarda token master)
+  W-->>M: /dashboard com banner "Você está navegando como..."
+  M->>W: /master/emular/sair
+  W->>A: POST emular/encerrar (token master restaurado)
+  W-->>M: /master/tenants
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  

@@ -7,6 +7,7 @@ using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Mappings;
 using TecFlow.Business.Service.LinkStrategies;
+using TecFlow.Business.Service.Master;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Entity;
@@ -25,6 +26,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     private readonly MarketplaceAccountService _marketplaceAccountService;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IUrlExpansionService? _urlExpansionService;
+    private readonly IPlanLimitsService? _planLimits;
 
     public IntegracaoLojaService(
         IIntegracaoLojaRepository integracaoLojaRepository,
@@ -33,8 +35,10 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         IMarketplaceAuthService marketplaceAuthService,
         MarketplaceAccountService marketplaceAccountService,
         IHostEnvironment hostEnvironment,
-        IUrlExpansionService? urlExpansionService = null)
+        IUrlExpansionService? urlExpansionService = null,
+        IPlanLimitsService? planLimits = null)
     {
+        _planLimits = planLimits;
         _integracaoLojaRepository = integracaoLojaRepository;
         _userAccountRepository = userAccountRepository;
         _marketplaceAccountRepository = marketplaceAccountRepository;
@@ -108,6 +112,31 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
     }
 
+    private async Task<string?> CheckStoreLimitAsync(int userId, IntegracaoLojaDto dto, CancellationToken cancellationToken)
+    {
+        if (_planLimits is null)
+        {
+            return null;
+        }
+
+        var limits = await _planLimits.GetForUserAsync(userId, cancellationToken);
+        if (limits.IsUnlimited || limits.MaxStores <= 0)
+        {
+            return null;
+        }
+
+        var accounts = await _marketplaceAccountRepository.ListByUserIdAsync(
+            userId.ToString(CultureInfo.InvariantCulture),
+            cancellationToken);
+        var active = accounts.Where(item => item.IsActive).ToList();
+        var shopId = dto.ShopId?.Trim();
+        var isExisting = !string.IsNullOrEmpty(shopId)
+            && active.Any(item => item.MarketplaceType == dto.PlatformType && item.ShopId == shopId);
+        return !isExisting && PlanLimitRules.ExceedsCount(limits.MaxStores, active.Count)
+            ? PlanLimitRules.StoresLimitMessage(limits)
+            : null;
+    }
+
     public async Task<IntegracaoLojaResponseDto> LinkAsync(
         int userId,
         IntegracaoLojaDto dto,
@@ -142,6 +171,12 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         }
 
         var persistUserId = user.Id;
+
+        var storeLimitBlock = await CheckStoreLimitAsync(persistUserId, dto, cancellationToken);
+        if (storeLimitBlock is not null)
+        {
+            return Fail(storeLimitBlock);
+        }
 
         if (dto.PlatformType.IsUniversalAffiliatePlatform())
         {

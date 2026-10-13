@@ -1,0 +1,267 @@
+﻿@page "/master/comunicacao"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Comunicação global — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Comunicação global com inquilinos</h1>
+        <p class="text-muted small mb-0">Avisos no topo de todos os painéis, notificações segmentadas e changelog “O que há de novo”.</p>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-semibold">Avisos globais (banners)</div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-8"><input class="form-control form-control-sm" placeholder="Título" @bind="_banner.Title" /></div>
+                        <div class="col-4">
+                            <select class="form-select form-select-sm" @bind="_banner.Severity">
+                                <option value="info">Informativo</option>
+                                <option value="warning">Atenção</option>
+                                <option value="maintenance">Manutenção</option>
+                            </select>
+                        </div>
+                        <div class="col-12"><textarea class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_banner.Message"></textarea></div>
+                        <div class="col-6"><label class="form-label small mb-0">Início</label><input type="datetime-local" class="form-control form-control-sm" @bind="_banner.StartsAt" /></div>
+                        <div class="col-6"><label class="form-label small mb-0">Fim (opcional)</label><input type="datetime-local" class="form-control form-control-sm" @bind="_banner.EndsAt" /></div>
+                        <div class="col-12 d-flex gap-2 align-items-center">
+                            <div class="form-check me-auto">
+                                <input type="checkbox" class="form-check-input" id="banner-active" @bind="_banner.IsActive" />
+                                <label class="form-check-label small" for="banner-active">Ativo</label>
+                            </div>
+                            @if (_banner.Id > 0)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _banner = NewBanner()">Cancelar</button>
+                            }
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="SaveBannerAsync">Salvar aviso</button>
+                        </div>
+                    </div>
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var banner in _banners)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <span class="badge text-bg-light me-1">@banner.Severity</span>
+                                    <strong>@banner.Title</strong> @(banner.IsActive ? string.Empty : "(inativo)")
+                                    <div class="text-muted">@DateTimeText(banner.StartsAt) → @DateTimeText(banner.EndsAt)</div>
+                                </div>
+                                <div class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => EditBanner(banner)">Editar</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBannerAsync(banner)">Excluir</button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">Notificação segmentada</div>
+                <div class="card-body row g-2">
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" @bind="_segmentKind">
+                            <option value="todos">Todos os inquilinos</option>
+                            <option value="status">Por status</option>
+                            <option value="plano">Por plano</option>
+                            <option value="tenant">Tenant específico (ID)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        @if (_segmentKind == "status")
+                        {
+                            <select class="form-select form-select-sm" @bind="_segmentValue">
+                                @foreach (var status in TenantStatuses.All)
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </select>
+                        }
+                        else if (_segmentKind == "plano")
+                        {
+                            <select class="form-select form-select-sm" @bind="_segmentValue">
+                                @foreach (var plan in SaasPlanCodes.All)
+                                {
+                                    <option value="@plan">@plan</option>
+                                }
+                            </select>
+                        }
+                        else if (_segmentKind == "tenant")
+                        {
+                            <input class="form-control form-control-sm" placeholder="GUID do tenant" @bind="_segmentValue" />
+                        }
+                    </div>
+                    <div class="col-12"><input class="form-control form-control-sm" placeholder="Título" @bind="_notification.Title" /></div>
+                    <div class="col-12"><textarea class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_notification.Message"></textarea></div>
+                    <div class="col-12 text-end"><button type="button" class="btn btn-sm btn-primary" @onclick="NotifyAsync">Enviar notificação</button></div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header fw-semibold">Changelog / O que há de novo</div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-4"><input class="form-control form-control-sm" placeholder="Versão" @bind="_changelog.Version" /></div>
+                        <div class="col-8"><input class="form-control form-control-sm" placeholder="Título" @bind="_changelog.Title" /></div>
+                        <div class="col-12"><textarea class="form-control form-control-sm" rows="3" placeholder="Descrição (uma novidade por linha)" @bind="_changelog.Body"></textarea></div>
+                        <div class="col-12 d-flex gap-2 align-items-center">
+                            <div class="form-check me-auto">
+                                <input type="checkbox" class="form-check-input" id="changelog-published" @bind="_changelog.IsPublished" />
+                                <label class="form-check-label small" for="changelog-published">Publicado</label>
+                            </div>
+                            @if (_changelog.Id > 0)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _changelog = new ProductChangelogDto()">Cancelar</button>
+                            }
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="SaveChangelogAsync">Salvar novidade</button>
+                        </div>
+                    </div>
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var entry in _entries)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <span class="badge text-bg-primary me-1">@entry.Version</span>
+                                    <strong>@entry.Title</strong> @(entry.IsPublished ? string.Empty : "(rascunho)")
+                                    <div class="text-muted">@Date(entry.PublishedAt)</div>
+                                </div>
+                                <div class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => EditChangelog(entry)">Editar</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteChangelogAsync(entry)">Excluir</button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<SystemBannerDto> _banners = [];
+    private List<ProductChangelogDto> _entries = [];
+    private SystemBannerDto _banner = NewBanner();
+    private ProductChangelogDto _changelog = new();
+    private SegmentNotificationRequestDto _notification = new();
+    private string _segmentKind = "todos";
+    private string? _segmentValue;
+
+    protected override async Task LoadAsync()
+    {
+        var banners = await Api.BannersAsync();
+        if (Accept(banners))
+        {
+            _banners = banners.Data ?? [];
+        }
+
+        var entries = await Api.ChangelogAsync();
+        if (Accept(entries))
+        {
+            _entries = entries.Data ?? [];
+        }
+    }
+
+    private static SystemBannerDto NewBanner() => new() { StartsAt = DateTime.Now };
+
+    private void EditBanner(SystemBannerDto banner) => _banner = new SystemBannerDto
+    {
+        Id = banner.Id,
+        Title = banner.Title,
+        Message = banner.Message,
+        Severity = banner.Severity,
+        StartsAt = banner.StartsAt?.ToLocalTime(),
+        EndsAt = banner.EndsAt?.ToLocalTime(),
+        IsActive = banner.IsActive
+    };
+
+    private void EditChangelog(ProductChangelogDto entry) => _changelog = new ProductChangelogDto
+    {
+        Id = entry.Id,
+        Version = entry.Version,
+        Title = entry.Title,
+        Body = entry.Body,
+        PublishedAt = entry.PublishedAt,
+        IsPublished = entry.IsPublished
+    };
+
+    private async Task SaveBannerAsync()
+    {
+        var request = new SystemBannerDto
+        {
+            Id = _banner.Id,
+            Title = _banner.Title,
+            Message = _banner.Message,
+            Severity = _banner.Severity,
+            StartsAt = _banner.StartsAt?.ToUniversalTime(),
+            EndsAt = _banner.EndsAt?.ToUniversalTime(),
+            IsActive = _banner.IsActive
+        };
+
+        if (Accept(await Api.SaveBannerAsync(request)))
+        {
+            SetResult(true, "Aviso salvo.");
+            _banner = NewBanner();
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task DeleteBannerAsync(SystemBannerDto banner)
+    {
+        if (AcceptOperation(await Api.DeleteBannerAsync(banner.Id)))
+        {
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task NotifyAsync()
+    {
+        _notification.Segment = _segmentKind == "todos" || string.IsNullOrWhiteSpace(_segmentValue)
+            ? "todos"
+            : $"{_segmentKind}:{_segmentValue.Trim()}";
+
+        if (_segmentKind != "todos" && string.IsNullOrWhiteSpace(_segmentValue))
+        {
+            SetResult(false, "Escolha o valor do segmento.");
+            return;
+        }
+
+        if (AcceptOperation(await Api.NotifyAsync(_notification)))
+        {
+            _notification = new SegmentNotificationRequestDto();
+        }
+    }
+
+    private async Task SaveChangelogAsync()
+    {
+        if (Accept(await Api.SaveChangelogAsync(_changelog)))
+        {
+            SetResult(true, "Novidade salva.");
+            _changelog = new ProductChangelogDto();
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task DeleteChangelogAsync(ProductChangelogDto entry)
+    {
+        if (AcceptOperation(await Api.DeleteChangelogAsync(entry.Id)))
+        {
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task ReloadKeepingMessageAsync()
+    {
+        var info = Info;
+        await LoadAsync();
+        Info ??= info;
+    }
+}

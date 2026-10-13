@@ -24,6 +24,12 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     [Column("Plano")]
     public string Plan { get; set; } = "Free";
 
+    /// <summary>Papel no backoffice: TenantUser, SuperAdmin, SuporteTecnico ou FinanceiroSaaS.</summary>
+    [MaxLength(32)]
+    public string Role { get; set; } = "TenantUser";
+
+    public bool IsActive { get; set; } = true;
+
     /// <summary>Número de celular/WhatsApp normalizado (11 dígitos, DDD + 9 + número).</summary>
     [Column("TelefoneWhatsApp")]
     public string? WhatsAppPhone { get; set; }

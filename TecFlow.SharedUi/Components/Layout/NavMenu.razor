@@ -6,6 +6,35 @@
 <nav class="portal-sidebar-nav" aria-label="Menu principal">
     <AuthorizeView>
         <Authorized>
+            @if (MasterAccess.IsMasterView(context.User))
+            {
+                <div class="portal-nav-group">
+                    <button type="button"
+                            class="portal-nav-link portal-nav-group-toggle @MasterActiveClass"
+                            aria-expanded="@_masterOpen"
+                            @onclick="ToggleMaster">
+                        <i class="bi bi-shield-shaded portal-nav-icon" aria-hidden="true"></i>
+                        <span class="portal-nav-link-label">Painel Master</span>
+                        <i class="bi @(_masterOpen ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
+                    </button>
+                    @if (_masterOpen)
+                    {
+                        @foreach (var link in MasterLinks.Where(item => item.Permission is null || MasterAccess.Has(context.User, item.Permission)))
+                        {
+                            <a href="@link.Href" class="portal-nav-link portal-nav-sublink @GetActiveClass(link.Href)" @onclick="NotifyNavigate">
+                                <i class="bi @link.Icon portal-nav-icon" aria-hidden="true"></i>
+                                <span class="portal-nav-link-label">@link.Label</span>
+                            </a>
+                        }
+                    }
+                </div>
+            }
+
+            <a href="/novidades" class="portal-nav-link @GetActiveClass("/novidades")" @onclick="NotifyNavigate">
+                <i class="bi bi-stars portal-nav-icon" aria-hidden="true"></i>
+                <span class="portal-nav-link-label">Novidades</span>
+            </a>
+
             <div class="portal-nav-group">
                 <button type="button"
                         class="portal-nav-link portal-nav-group-toggle @MensageriaActiveClass"
@@ -270,6 +299,20 @@
         "/account/security"
     ];
 
+    private sealed record MasterLink(string Href, string Label, string Icon, string? Permission);
+
+    private static readonly MasterLink[] MasterLinks =
+    [
+        new("/master", "Dashboard executivo", "bi-graph-up-arrow", MasterPermissions.ViewMetrics),
+        new("/master/tenants", "Inquilinos (Tenants)", "bi-buildings", MasterPermissions.ViewTenants),
+        new("/master/planos", "Planos & assinaturas", "bi-credit-card", MasterPermissions.ManagePlans),
+        new("/master/configuracoes", "Chaves globais (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys),
+        new("/master/operadores", "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators),
+        new("/master/auditoria", "Trilha de auditoria", "bi-journal-lock", MasterPermissions.ViewAudit),
+        new("/master/comunicacao", "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication)
+    ];
+
+    private bool _masterOpen = true;
     private bool _mensageriaOpen;
     private bool _whatsAppOpen;
     private bool _telegramOpen;
@@ -346,6 +389,14 @@
         isProximosOpen = true;
         _proximosRouteWhenOpened = CurrentPath();
     }
+
+    private void ToggleMaster()
+    {
+        _masterOpen = !_masterOpen;
+        StateHasChanged();
+    }
+
+    private string MasterActiveClass => MasterLinks.Any(link => CurrentPath().Equals(link.Href, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
 
     private void ToggleMensageria()
     {

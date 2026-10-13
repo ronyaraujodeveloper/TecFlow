@@ -16,19 +16,22 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
     private readonly IWhatsAppBroadcastJobCoordinator _jobs;
     private readonly IPreFlightService _preFlight;
     private readonly ILogger<WhatsAppBroadcastService> _logger;
+    private readonly IPlanLimitsService? _planLimits;
 
     public WhatsAppBroadcastService(
         AppDbContext context,
         IEvolutionApiService evolution,
         IWhatsAppBroadcastJobCoordinator jobs,
         IPreFlightService preFlight,
-        ILogger<WhatsAppBroadcastService> logger)
+        ILogger<WhatsAppBroadcastService> logger,
+        IPlanLimitsService? planLimits = null)
     {
         _context = context;
         _evolution = evolution;
         _jobs = jobs;
         _preFlight = preFlight;
         _logger = logger;
+        _planLimits = planLimits;
     }
 
     public async Task<WhatsAppBroadcastResponseDto> ListGroupsAsync(
@@ -186,6 +189,12 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
                     IntervalSeconds = request.IntervalSeconds
                 },
                 cancellationToken);
+        }
+
+        var planBlock = await Master.PlanScheduleGuard.CheckAsync(_planLimits, _context, userId, scheduledAt, cancellationToken);
+        if (planBlock is not null)
+        {
+            return Fail(planBlock);
         }
 
         var campaign = new WhatsAppBroadcastCampaign { UserId = userId };

@@ -5,6 +5,7 @@ using TecFlow.Business.Dto.Auth;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Security;
+using TecFlow.Business.Service.Master;
 using TecFlow.Core.Entities;
 using TecFlow.Infrastructure.Security;
 using TecFlow.Util.Validation;
@@ -20,6 +21,7 @@ public class PlatformAuthService : IPlatformAuthService
     private readonly JwtTokenService _jwtTokenService;
     private readonly ITenantProvisioningService _tenantProvisioningService;
     private readonly ILogger<PlatformAuthService> _logger;
+    private readonly ITenantAccessReader? _tenantAccessReader;
 
     public PlatformAuthService(
         IUserAccountRepository userAccountRepository,
@@ -28,7 +30,8 @@ public class PlatformAuthService : IPlatformAuthService
         UserManager<UserAccount> userManager,
         JwtTokenService jwtTokenService,
         ITenantProvisioningService tenantProvisioningService,
-        ILogger<PlatformAuthService> logger)
+        ILogger<PlatformAuthService> logger,
+        ITenantAccessReader? tenantAccessReader = null)
     {
         _userAccountRepository = userAccountRepository;
         _userLoginRepository = userLoginRepository;
@@ -37,6 +40,29 @@ public class PlatformAuthService : IPlatformAuthService
         _jwtTokenService = jwtTokenService;
         _tenantProvisioningService = tenantProvisioningService;
         _logger = logger;
+        _tenantAccessReader = tenantAccessReader;
+    }
+
+    private async Task<(bool Success, AuthTokenDto? Token, string? ErrorMessage, string? ErrorCode)> IssueTokenAsync(
+        UserAccount user,
+        string platform,
+        CancellationToken cancellationToken)
+    {
+        if (!user.IsActive)
+        {
+            return (false, null, "Conta desativada. Fale com o suporte TecFlow.", "USER_INACTIVE");
+        }
+
+        if (_tenantAccessReader is not null && !MasterRoles.IsMaster(user.Role) && user.TenantId != Guid.Empty)
+        {
+            var status = await _tenantAccessReader.GetStatusAsync(user.TenantId, cancellationToken);
+            if (TenantLifecycleRules.IsAccessBlocked(status))
+            {
+                return (false, null, TenantLifecycleRules.FormatBlockedMessage(status), "TENANT_BLOCKED");
+            }
+        }
+
+        return (true, BuildAuthToken(user, platform), null, null);
     }
 
     public async Task<(bool Success, AuthTokenDto? Token, string? ErrorMessage, string? ErrorCode)> LoginAsync(
@@ -325,7 +351,7 @@ public class PlatformAuthService : IPlatformAuthService
             return (false, null, "Credenciais inválidas.", "INVALID_CREDENTIALS");
         }
 
-        return (true, BuildAuthToken(user, platform), null, null);
+        return await IssueTokenAsync(user, platform, cancellationToken);
     }
 
     private async Task<(bool Success, AuthTokenDto? Token, string? ErrorMessage, string? ErrorCode)> LoginWithSocialProviderAsync(
@@ -348,7 +374,7 @@ public class PlatformAuthService : IPlatformAuthService
         var existingByLogin = await _userManager.FindByLoginAsync(provider, payload.ProviderKey);
         if (existingByLogin is not null)
         {
-            return (true, BuildAuthToken(existingByLogin, platform), null, null);
+            return await IssueTokenAsync(existingByLogin, platform, cancellationToken);
         }
 
         var existingByEmail = await _userAccountRepository.GetByEmailAsync(payload.Email);
@@ -363,7 +389,7 @@ public class PlatformAuthService : IPlatformAuthService
                 existingByEmail,
                 new UserLoginInfo(provider, payload.ProviderKey, provider));
 
-            return (true, BuildAuthToken(existingByEmail, platform), null, null);
+            return await IssueTokenAsync(existingByEmail, platform, cancellationToken);
         }
 
         var newUser = new UserAccount

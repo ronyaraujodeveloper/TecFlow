@@ -116,6 +116,30 @@ public class AuthCookieService : IAuthCookieService
             claims.Add(new Claim("TecFlow:refresh_token", response.RefreshToken));
         }
 
+        claims.AddRange(ClaimsFromToken(response.Token));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+    }
+
+    /// <summary>Papel, e-mail e tenant do JWT da API, para menus e políticas na UI.</summary>
+    public static IEnumerable<Claim> ClaimsFromToken(string? token)
+    {
+        var payload = JwtPayloadReader.Read(token);
+        var role = JwtPayloadReader.Get(payload, JwtPayloadReader.RoleClaim, "role");
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            yield return new Claim(ClaimTypes.Role, role);
+        }
+
+        var email = JwtPayloadReader.Get(payload, JwtPayloadReader.EmailClaim, "email");
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            yield return new Claim(ClaimTypes.Email, email);
+        }
+
+        var tenantId = JwtPayloadReader.Get(payload, TecFlowClaimTypes.TenantId);
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            yield return new Claim(TecFlowClaimTypes.TenantId, tenantId);
+        }
     }
 }

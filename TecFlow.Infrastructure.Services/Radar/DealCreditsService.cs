@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Master;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
 using TecFlow.Database;
@@ -187,6 +188,14 @@ public sealed class DealCreditsService : IDealCreditsService
                 .AsNoTracking()
                 .Select(item => new { item.TenantId, item.Plan })
                 .ToListAsync(cancellationToken);
+            var tenantPlans = await _context.Tenants
+                .AsNoTracking()
+                .Where(item => item.PlanCode != null)
+                .ToDictionaryAsync(item => item.Id, item => item.PlanCode!, cancellationToken);
+            var plans = await _context.SaasPlans
+                .AsNoTracking()
+                .Where(item => item.IsActive)
+                .ToDictionaryAsync(item => item.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
             var granted = 0;
             foreach (var group in users.Where(item => item.TenantId != Guid.Empty).GroupBy(item => item.TenantId))
             {
@@ -201,13 +210,18 @@ public sealed class DealCreditsService : IDealCreditsService
                     continue;
                 }
 
-                wallet.DailyBalance = DealCreditRules.DailyQuota;
+                var planCode = tenantPlans.GetValueOrDefault(group.Key) ?? group.First().Plan;
+                var limits = plans.TryGetValue(planCode ?? string.Empty, out var plan)
+                    ? TecFlow.Infrastructure.Services.Master.SaasPlanService.ToLimits(plan)
+                    : PlanLimits.Unlimited;
+                var quota = PlanLimitRules.EffectiveDailyQuota(limits, DealCreditRules.DailyQuota);
+                wallet.DailyBalance = quota;
                 wallet.DailyGrantedOnUtc = now;
                 wallet.Touch();
                 _context.CreditTransactions.Add(new CreditTransaction
                 {
                     TenantId = group.Key,
-                    Amount = DealCreditRules.DailyQuota,
+                    Amount = quota,
                     Kind = DealCreditRules.KindDailyGrant,
                     ExpiresAt = DealCreditRules.DailyExpiry(now)
                 });

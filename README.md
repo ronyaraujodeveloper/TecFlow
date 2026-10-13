@@ -255,7 +255,86 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Placeholder ignorado:** `homolog-test-access-token` do Universal Link não é enviado à API; refresh rotacionado é persistido na conta.
 - [ ] **Credenciais do app ML:** preencher `Integrations:MercadoLivre:AppId`/`SecretKey` e cadastrar a Redirect URI HTTPS (`…ngrok-free.dev/integracoes/oauth/callback`) em developers.mercadolivre.com.br.
 
+## 👑 Módulo Backoffice & Gestão Master SaaS (Fases 35 a 41)
 
+---
+
+### 🛡️ Fase 35: Alternância Dinâmica de Perfil e Impersonation (`TenantImpersonationEngine`)
+
+- [x] **35.1. Mecanismo de Alternância Admin / Usuário Comum (`SwitchProfileService`):**
+  - Implementação do seletor global na barra superior para alternar instantaneamente da visão `SuperAdmin` para a visão `TenantUser` (Usuário Comum) sem perda de sessão.
+- [x] **35.2. Emulação de Contexto Real de Cliente (`ImpersonateTenantContext`):**
+  - Injeção temporária das Claims do tenant selecionado na memória do circuito Blazor (`ClaimsPrincipal`), permitindo testar a interface, limites de plano e buscas exatamente como o cliente enxerga.
+- [x] **35.3. Barra Indicativa de Modo Emulação (Feedback Visual Fixado):**
+  - Exibição de banner de alerta destacado no topo da tela: *"⚠️ Você está navegando como o tenant X. [Voltar ao Painel Master]"*.
+
+---
+
+### 🔐 Fase 36: Controle de Permissões e Gestão de Operadores Master (`MasterAdminRBAC`)
+
+- [x] **36.1. Cadastro e Gestão de Operadores Internos (`MasterUsersManagement`):**
+  - Tela dedicada para criação, edição e inativação de contas administradoras do TecFlow com controle de credenciais via ASP.NET Core Identity.
+- [x] **36.2. Matriz de Permissões por Papel (`RBACMatrix`):**
+  - Atribuição granular de papéis (`SuperAdmin`, `SuporteTecnico`, `FinanceiroSaaS`), restringindo quem pode alterar chaves globais, alterar planos ou alternar para o modo de emulação.
+- [x] **36.3. Trilha de Auditoria do Master (`MasterAuditTrail`):**
+  - Registro imutável em banco de todas as ações administrativas sensíveis (troca de chaves de API, alteração manual de saldo de créditos ou acesso via impersonation).
+
+---
+
+### ⚙️ Fase 37: Parametrização Global de APIs & Infraestrutura (`SystemSettingsEngine`)
+
+- [x] **37.1. Gestão Centralizada de App Keys de Marketplaces (`GlobalMarketplaceKeys`):**
+  - Painel para cadastro seguro do `AppId`/`ClientSecret` do Mercado Livre, `AppKey`/`AppSecret` da Shopee e `AccessKey`/`SecretKey`/`PartnerTag` da Amazon PA-API.
+- [x] **37.2. Configuração de Provedores de Mensageria e Conexões (`GlobalMessagingSettings`):**
+  - Gestão de endpoints da Evolution API (WhatsApp), tokens do Telegram e credenciais do MTProto UserBot.
+- [x] **37.3. Central de Chaves de IA, Encurtador e Secrets (`InfrastructureVault`):**
+  - Configuração de chaves globais da OpenAI e parametrização do domínio próprio do encurtador (`tflow.link`).
+  - Persistência das chaves criptografadas no banco/environment variables sem dependência de edições manuais em arquivos `appsettings.json`.
+
+---
+
+### 💳 Fase 38: Gestão Financeira, Planos & Feature Toggles (`SubscriptionEngine`)
+
+- [x] **38.1. Cadastro e Configuração de Planos SaaS (`SaaSPlansManagement`):**
+  - Gestão dos planos de assinatura (*Starter, Pro, Agency, Enterprise*) definindo valores, ciclo de cobrança (mensal/anual) e limites de cada plano.
+- [x] **38.2. Matriz de Recursos e Limites por Plano (`FeatureTogglesMatrix`):**
+  - Trava de recursos por plano: quantidade de lojas conectadas, cotas diárias de "Achadinhos VIP", acesso ao radar de ofertas e limite de agendamentos diários.
+- [x] **38.3. Integração com Gateway de Pagamentos e Gestão de Cotas (`PaymentGatewaySync`):**
+  - Conexão com gateway de pagamento (ASAAS/Mercado Pago/Stripe) para gestão de cobranças recorrentes, faturamento automático por Pix/Boleto/Cartão e bloqueio automático de inadimplentes.
+  - Painel de ajuste manual de créditos extras de Achadinhos por tenant.
+
+---
+
+### 👥 Fase 39: Gestão e Moderação de Inquilinos (`TenantManagement`)
+
+- [x] **39.1. Central 360° do Inquilino (`Tenant360View`):**
+  - Listagem completa dos clientes com filtros por status (*Ativo, Trial, Inadimplente, Suspenso, Cancelado*), plano contratado, consumo de disco e data de renovação.
+- [x] **39.2. Ações Moderativas e Controle de Ciclo de Vida (`TenantLifecycleControl`):**
+  - Botões de ação rápida para pausar, suspender, estender período de teste (trial) ou cancelar a conta de um tenant com motivo registrado.
+- [x] **39.3. Monitor de Consumo de Mídia e Armazenamento (`TenantStorageMonitor`):**
+  - Relatório detalhado da ocupação de disco por tenant (`wwwroot/uploads/products/{TenantId}`) com acionamento manual do expurgo de mídia para contas específicas.
+
+---
+
+### 📊 Fase 40: Dashboard Executivo do SaaS (`SaaSExecutiveMetrics`)
+
+- [x] **40.1. Indicadores de Receita Recorrente (`MRRDashboard`):**
+  - Painel gerencial exibindo métricas do SaaS: **MRR** (Receita Mensal Recorrente), **ARR** (Receita Anual Projetada), **ARPU** (Receita Média por Usuário) e faturamento líquido do mês.
+- [x] **40.2. Análise de Saúde da Base (`ChurnAndRetentionMetrics`):**
+  - Gráficos de crescimento de novos assinantes, conversão de contas Trial para Pagantes e taxa de **Churn** (cancelamentos).
+- [x] **40.3. Métricas Globais de Operação e Disparos (`PlatformUsageMetrics`):**
+  - Volume consolidado de links convertidos, disparos de mensagens enviados via WhatsApp/Telegram e total de requisições às APIs nas últimas 24h.
+
+---
+
+### 📢 Fase 41: Comunicação & Avisos em Massa (`GlobalBroadcastBanner Engine`)
+
+- [x] **41.1. Banners de Avisos Globais na Interface (`GlobalSystemBanners`):**
+  - Cadastro de avisos informativos, de manutenção ou comunicados importantes exibidos no topo do painel de todos os usuários (ex: *"A API da Shopee passará por manutenção hoje às 23h"*).
+- [x] **41.2. Disparo de Notificações Internas por Segmento (`TargetedNotifications`):**
+  - Envio de alertas direcionados dentro da plataforma para grupos específicos de tenants (ex.: apenas para inadimplentes ou apenas para assinantes do Plano Starter).
+- [x] **41.3. Central de Changelog e Novidades do Produto (`ProductChangelog`):**
+  - Módulo para publicação de atualizações do sistema (*What's New*), permitindo que os clientes leiam as melhorias recém-lançadas no TecFlow.
 
 
 ---

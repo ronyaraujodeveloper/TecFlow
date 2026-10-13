@@ -1,0 +1,60 @@
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject ISystemCommunicationApiService Api
+
+@foreach (var banner in _banners.Where(item => !_dismissed.Contains(item.Id)))
+{
+    <div class="alert @CssFor(banner.Severity) alert-dismissible rounded-0 border-0 mb-0 py-2 px-3 small" role="status">
+        <i class="bi @IconFor(banner.Severity) me-1" aria-hidden="true"></i>
+        <strong>@banner.Title</strong> — @banner.Message
+        <button type="button" class="btn-close btn-sm" aria-label="Fechar" @onclick="() => _dismissed.Add(banner.Id)"></button>
+    </div>
+}
+@foreach (var notification in _notifications)
+{
+    <div class="alert alert-primary alert-dismissible rounded-0 border-0 mb-0 py-2 px-3 small" role="status">
+        <i class="bi bi-bell me-1" aria-hidden="true"></i>
+        <strong>@notification.Title</strong> — @notification.Message
+        <button type="button" class="btn-close btn-sm" aria-label="Marcar como lida" @onclick="() => MarkReadAsync(notification)"></button>
+    </div>
+}
+
+@code {
+    private List<SystemBannerDto> _banners = [];
+    private List<TenantNotificationDto> _notifications = [];
+    private readonly HashSet<int> _dismissed = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var banners = await Api.ActiveBannersAsync();
+        if (banners.Success && banners.Data is not null)
+        {
+            _banners = banners.Data;
+        }
+
+        var notifications = await Api.NotificationsAsync();
+        if (notifications.Success && notifications.Data is not null)
+        {
+            _notifications = notifications.Data.Where(item => item.ReadAt is null).Take(3).ToList();
+        }
+    }
+
+    private async Task MarkReadAsync(TenantNotificationDto notification)
+    {
+        _notifications.Remove(notification);
+        await Api.MarkReadAsync(notification.Id);
+    }
+
+    private static string CssFor(string severity) => severity switch
+    {
+        "warning" => "alert-warning",
+        "maintenance" => "alert-danger",
+        _ => "alert-info"
+    };
+
+    private static string IconFor(string severity) => severity switch
+    {
+        "warning" => "bi-exclamation-triangle",
+        "maintenance" => "bi-tools",
+        _ => "bi-megaphone"
+    };
+}

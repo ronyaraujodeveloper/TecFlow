@@ -1,0 +1,101 @@
+﻿@page "/master/configuracoes"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Chaves globais — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Configurações globais e cofre de chaves</h1>
+            <p class="text-muted small mb-0">
+                Valores criptografados no banco (AES). Segredos aparecem mascarados; deixe o campo como está para manter o valor atual ou apague-o para remover.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="SaveAsync">Salvar</button>
+            <button type="button" class="btn btn-outline-warning btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="RestartAsync">Aplicar e reiniciar API</button>
+        </div>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @foreach (var group in _items.GroupBy(item => item.Category))
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header fw-semibold">@group.Key</div>
+            <div class="card-body row g-3">
+                @foreach (var item in group)
+                {
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">
+                            @item.Label
+                            @if (item.IsSecret)
+                            {
+                                <i class="bi bi-lock-fill text-muted ms-1" title="Segredo criptografado" aria-hidden="true"></i>
+                            }
+                        </label>
+                        <input type="@(item.IsSecret ? "password" : "text")"
+                               class="form-control"
+                               autocomplete="off"
+                               placeholder="@item.Placeholder"
+                               value="@_values[item.Key]"
+                               @onchange="args => _values[item.Key] = args.Value?.ToString()" />
+                        <div class="form-text">
+                            <code>@item.Key</code>
+                            @if (item.UpdatedAt is not null)
+                            {
+                                <span> · atualizado em @DateTimeText(item.UpdatedAt) por @(item.UpdatedBy ?? "—")</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<SystemSettingItemDto> _items = [];
+    private Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string?> _original = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task LoadAsync()
+    {
+        var result = await Api.SettingsAsync();
+        if (!Accept(result))
+        {
+            return;
+        }
+
+        _items = result.Data ?? [];
+        _values = _items.ToDictionary(item => item.Key, item => (string?)item.DisplayValue, StringComparer.OrdinalIgnoreCase);
+        _original = new Dictionary<string, string?>(_values, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task SaveAsync()
+    {
+        var changed = _values
+            .Where(pair => !string.Equals(pair.Value ?? string.Empty, _original.GetValueOrDefault(pair.Key) ?? string.Empty, StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        if (changed.Count == 0)
+        {
+            SetResult(true, "Nenhuma alteração para salvar.");
+            return;
+        }
+
+        if (AcceptOperation(await Api.SaveSettingsAsync(new SystemSettingSaveDto { Values = changed })))
+        {
+            var info = Info;
+            await LoadAsync();
+            Info = info;
+        }
+    }
+
+    private async Task RestartAsync()
+    {
+        AcceptOperation(await Api.RestartApiAsync());
+    }
+}

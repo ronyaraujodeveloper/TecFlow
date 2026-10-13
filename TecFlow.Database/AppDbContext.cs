@@ -68,6 +68,13 @@ public class AppDbContext : DbContext
     public DbSet<CreditTransaction> CreditTransactions { get; set; } = null!;
     public DbSet<GlobalTrendingDeal> GlobalTrendingDeals { get; set; } = null!;
     public DbSet<TenantDealUnlock> TenantDealUnlocks { get; set; } = null!;
+    public DbSet<MasterAuditLog> MasterAuditLogs { get; set; } = null!;
+    public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
+    public DbSet<SaasPlan> SaasPlans { get; set; } = null!;
+    public DbSet<SaasPayment> SaasPayments { get; set; } = null!;
+    public DbSet<SystemBanner> SystemBanners { get; set; } = null!;
+    public DbSet<TenantNotification> TenantNotifications { get; set; } = null!;
+    public DbSet<ProductChangelogEntry> ProductChangelogEntries { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema TecFlow (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -84,8 +91,22 @@ public class AppDbContext : DbContext
             relationship.DeleteBehavior = DeleteBehavior.Restrict;
         }
 
-        modelBuilder.Entity<Tenant>()
-            .HasIndex(t => t.Name);
+        modelBuilder.Entity<Tenant>(entity =>
+        {
+            entity.HasIndex(t => t.Name);
+            entity.HasIndex(t => t.Status);
+            entity.Property(t => t.Status).HasDefaultValue("Ativo");
+            entity.Property(t => t.BillingCycle).HasDefaultValue("Mensal");
+        });
+
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.Property(u => u.Role).HasDefaultValue("TenantUser");
+            entity.Property(u => u.IsActive).HasDefaultValue(true);
+            entity.HasIndex(u => u.Role);
+        });
+
+        ConfigureMasterBackoffice(modelBuilder);
 
         modelBuilder.Entity<MarketplaceAccount>(entity =>
         {
@@ -577,6 +598,7 @@ public class AppDbContext : DbContext
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        GuardImmutableAuditTrail();
         ApplyTenantIdentifiers();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -585,8 +607,95 @@ public class AppDbContext : DbContext
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
+        GuardImmutableAuditTrail();
         ApplyTenantIdentifiers();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void GuardImmutableAuditTrail()
+    {
+        if (ChangeTracker.Entries<MasterAuditLog>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("A trilha de auditoria master é imutável: registros não podem ser alterados ou excluídos.");
+        }
+    }
+
+    private static void ConfigureMasterBackoffice(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MasterAuditLog>(entity =>
+        {
+            entity.ToTable("MasterAuditLogs");
+            entity.Property(item => item.ActorEmail).HasMaxLength(256).IsRequired();
+            entity.Property(item => item.ActorRole).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Action).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.TargetType).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.TargetId).HasMaxLength(128);
+            entity.Property(item => item.IpAddress).HasMaxLength(64);
+            entity.HasIndex(item => item.CreatedAt);
+            entity.HasIndex(item => new { item.Action, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.ToTable("SystemSettings");
+            entity.Property(item => item.Key).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.Category).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.Value).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.UpdatedBy).HasMaxLength(256);
+            entity.HasIndex(item => item.Key).IsUnique();
+        });
+
+        modelBuilder.Entity<SaasPlan>(entity =>
+        {
+            entity.ToTable("SaasPlans");
+            entity.Property(item => item.Code).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Name).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.MonthlyPrice).HasPrecision(18, 2);
+            entity.Property(item => item.AnnualPrice).HasPrecision(18, 2);
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.HasIndex(item => item.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<SaasPayment>(entity =>
+        {
+            entity.ToTable("SaasPayments");
+            entity.Property(item => item.GatewayPaymentId).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.BillingType).HasMaxLength(24);
+            entity.Property(item => item.Amount).HasPrecision(18, 2);
+            entity.Property(item => item.NetAmount).HasPrecision(18, 2);
+            entity.HasIndex(item => item.GatewayPaymentId).IsUnique();
+            entity.HasIndex(item => new { item.TenantId, item.PaidAt });
+        });
+
+        modelBuilder.Entity<SystemBanner>(entity =>
+        {
+            entity.ToTable("SystemBanners");
+            entity.Property(item => item.Title).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Message).HasMaxLength(1000).IsRequired();
+            entity.Property(item => item.Severity).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.CreatedBy).HasMaxLength(256);
+            entity.HasIndex(item => new { item.IsActive, item.StartsAt, item.EndsAt });
+        });
+
+        modelBuilder.Entity<TenantNotification>(entity =>
+        {
+            entity.ToTable("TenantNotifications");
+            entity.Property(item => item.Title).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Message).HasMaxLength(2000).IsRequired();
+            entity.Property(item => item.Segment).HasMaxLength(64).IsRequired();
+            entity.HasIndex(item => new { item.TenantId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<ProductChangelogEntry>(entity =>
+        {
+            entity.ToTable("ProductChangelogEntries");
+            entity.Property(item => item.Version).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.Title).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.Body).IsRequired();
+            entity.HasIndex(item => new { item.IsPublished, item.PublishedAt });
+        });
     }
 
     /// <summary>
@@ -738,5 +847,7 @@ public class AppDbContext : DbContext
         telegram.Property(item => item.ApiKey).HasConversion(encryptedNullableString);
         telegram.Property(item => item.SessionData).HasConversion(encryptedNullableString);
         telegram.Property(item => item.UserBotApiHash).HasConversion(encryptedNullableString);
+
+        modelBuilder.Entity<SystemSetting>().Property(item => item.Value).HasConversion(encryptedString);
     }
 }

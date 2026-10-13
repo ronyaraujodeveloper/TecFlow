@@ -16,17 +16,20 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
     private readonly ITelegramApiService _telegramApi;
     private readonly IPreFlightService _preFlight;
     private readonly ILogger<TelegramBroadcastService> _logger;
+    private readonly IPlanLimitsService? _planLimits;
 
     public TelegramBroadcastService(
         AppDbContext context,
         ITelegramApiService telegramApi,
         IPreFlightService preFlight,
-        ILogger<TelegramBroadcastService> logger)
+        ILogger<TelegramBroadcastService> logger,
+        IPlanLimitsService? planLimits = null)
     {
         _context = context;
         _telegramApi = telegramApi;
         _preFlight = preFlight;
         _logger = logger;
+        _planLimits = planLimits;
     }
 
     public async Task<TelegramBroadcastResponseDto> ListCampaignsAsync(
@@ -180,6 +183,12 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         if (scheduledAt < DateTime.UtcNow.AddMinutes(-2))
         {
             scheduledAt = DateTime.UtcNow;
+        }
+
+        var planBlock = await Master.PlanScheduleGuard.CheckAsync(_planLimits, _context, userId, scheduledAt, cancellationToken);
+        if (planBlock is not null)
+        {
+            return Fail(planBlock);
         }
 
         var campaign = new TelegramBroadcastCampaign

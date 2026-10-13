@@ -859,4 +859,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - HTTP ≠ 200 e exceções geram `LogError` + `OfficialCatalogChannelResult.Failed`; `/busca` mostra a mensagem no badge vermelho e no alerta.
 - [x] **Parser HtmlAgilityPack da vitrine:**
   - Seletores `ui-search-layout__item` / `ui-search-result`, headers de browser e `matt_tool` no permalink.
-  
+
+## 👑 Backoffice & Gestão Master SaaS (Fases 35 a 41)
+
+- [x] **Fase 35 — Impersonation:** alternância de visão Master/Cliente (`/master/visao/{modo}`), emulação via JWT de 1h do dono do tenant (`ImpersonationService`, `/master/emular/{id}`) e banner fixo "Você está navegando como o tenant X" com retorno ao painel.
+- [x] **Fase 36 — RBAC:** papéis SuperAdmin / SuporteTecnico / FinanceiroSaaS (`MasterPermissionMatrix` + policies `master:*`), CRUD de operadores (`/master/operadores`) e trilha de auditoria imutável (`MasterAuditLogs`, bloqueio de UPDATE/DELETE no `AppDbContext`).
+- [x] **Fase 37 — Configurações globais:** chaves de marketplaces, mensageria, OpenAI, domínio `tflow.link` e ASAAS no cofre `SystemSettings` (criptografia `ENC1:`), lidas pela API via `DatabaseSettingsConfigurationProvider`; tela `/master/configuracoes` com "Aplicar e reiniciar API".
+- [x] **Fase 38 — Assinaturas:** planos Starter/Pro/Agency/Enterprise (`SaasPlans`, `/master/planos`), limites aplicados em lojas, agendamentos, Radar e cota VIP; gateway ASAAS (assinatura recorrente, webhook `/api/webhooks/asaas`, bloqueio automático por inadimplência via `TenantBillingWorker`) e créditos manuais.
+- [x] **Fase 39 — Inquilinos:** Tenant 360° com filtros (status, plano, renovação, disco), pausar/suspender/reativar/cancelar/estender trial com motivo obrigatório, `TenantAccessGuardMiddleware` e monitor de armazenamento com purge.
+- [x] **Fase 40 — Dashboard executivo:** MRR, ARR, ARPU, receita líquida, conversão de trial, churn 30d, novos assinantes por mês e uso 24h (links, cliques, disparos WhatsApp/Telegram, requisições à API).
+- [x] **Fase 41 — Comunicação:** banners globais agendados, notificações segmentadas (todos / status / plano / tenant) e changelog "O que há de novo" (`/novidades`).
+

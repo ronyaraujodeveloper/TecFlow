@@ -320,7 +320,6 @@ public class DeveloperAccountDto
     public DateTime? SecretExpiresAt { get; set; }
     public string ExpirationStatus { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
-    public bool IsGlobalDefault { get; set; }
     public DateTime? LastCheckAt { get; set; }
     public bool? LastCheckOk { get; set; }
     public string? LastCheckMessage { get; set; }

@@ -33,6 +33,14 @@
         return true;
     },
 
+    resetScroll: function () {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        document.querySelectorAll(".main-content").forEach(function (element) {
+            element.scrollTop = 0;
+        });
+        return true;
+    },
+
     scrollIntoViewById: function (elementId, block) {
         const element = document.getElementById(elementId);
         if (!element) {
@@ -123,3 +131,25 @@
 };
 
 window.scrollToTop = window.tecFlowAppInterop.scrollToTop;
+
+(function registerEnhancedNavigationScrollReset() {
+    let lastPath = window.location.pathname;
+    const attach = function () {
+        if (!window.Blazor || typeof window.Blazor.addEventListener !== "function") {
+            return false;
+        }
+
+        window.Blazor.addEventListener("enhancedload", function () {
+            if (window.location.pathname !== lastPath && !window.location.hash) {
+                window.tecFlowAppInterop.resetScroll();
+            }
+
+            lastPath = window.location.pathname;
+        });
+        return true;
+    };
+
+    if (!attach()) {
+        document.addEventListener("DOMContentLoaded", attach);
+    }
+})();

@@ -160,12 +160,13 @@ public interface IDeveloperAccountService
 
     Task<MasterOperationResultDto> DeleteAsync(MasterActor actor, int id, CancellationToken cancellationToken = default);
 
-    Task<MasterOperationResultDto> PublishAsGlobalAsync(MasterActor actor, int id, CancellationToken cancellationToken = default);
-
     Task<DeveloperAccountCheckDto> CheckAsync(int id, CancellationToken cancellationToken = default);
+}
 
-    /// <summary>Testa as credenciais globais em uso pela API (cofre + appsettings).</summary>
-    Task<IReadOnlyList<DeveloperAccountCheckDto>> CheckGlobalCredentialsAsync(CancellationToken cancellationToken = default);
+/// <summary>Diagnóstico das chaves globais do cofre (Vault) efetivamente em uso pela API.</summary>
+public interface IGlobalCredentialHealthService
+{
+    Task<IReadOnlyList<DeveloperAccountCheckDto>> CheckAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IAsaasWebhookService

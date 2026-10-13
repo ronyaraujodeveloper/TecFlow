@@ -9,51 +9,41 @@
         <Authorized>
             @if (MasterAccess.IsMasterView(context.User))
             {
-                <a href="@MasterRoutes.Dashboard" class="portal-nav-link" @onclick="NotifyNavigate">
+                <a href="@MasterRoutes.Dashboard" class="portal-nav-link portal-nav-parent" @onclick="NotifyNavigate">
                     <i class="bi bi-shield-shaded portal-nav-icon" aria-hidden="true"></i>
                     <span class="portal-nav-link-label">Painel Master</span>
                 </a>
             }
 
+            @{ var afterCategory = false; }
             @foreach (var node in _menu)
             {
-                if (node.Children.Count == 0)
+                if (IsCategory(node))
                 {
-                    <a href="@node.Route" class="portal-nav-link @GetActiveClass(node.Route)" @onclick="NotifyNavigate">
-                        <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">@node.Title</span>
-                    </a>
+                    <div class="portal-nav-category" role="heading" aria-level="2">@node.Title</div>
+                    @foreach (var parent in node.Children)
+                    {
+                        @ParentItem(parent)
+                    }
+                    afterCategory = true;
                     continue;
                 }
 
-                var open = _openGroups.Contains(node.Key);
-                <div class="portal-nav-group">
-                    <button type="button"
-                            class="portal-nav-link portal-nav-group-toggle @(IsGroupActive(node) ? "active" : string.Empty)"
-                            aria-expanded="@open"
-                            @onclick="() => ToggleGroup(node.Key)">
-                        <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
-                        <span class="portal-nav-link-label">@node.Title</span>
-                        <i class="bi @(open ? "bi-chevron-up" : "bi-chevron-down") portal-nav-caret" aria-hidden="true"></i>
-                    </button>
-                    @if (open)
-                    {
-                        @foreach (var child in node.Children)
-                        {
-                            <a href="@child.Route" class="portal-nav-link portal-nav-sublink @GetActiveClass(child.Route)" @onclick="NotifyNavigate">
-                                <i class="bi @child.Icon portal-nav-icon" aria-hidden="true"></i>
-                                <span class="portal-nav-link-label">@child.Title</span>
-                            </a>
-                        }
-                    }
-                </div>
+                if (afterCategory)
+                {
+                    <hr class="portal-nav-divider" />
+                    afterCategory = false;
+                }
+
+                @ParentItem(node)
             }
 
             @if (MasterAccess.IsMasterView(context.User))
             {
+                <div class="portal-nav-category" role="heading" aria-level="2">Roadmap (visão master)</div>
                 <div class="portal-nav-group">
                     <button type="button"
-                            class="portal-nav-link portal-nav-group-toggle @ProximosActiveClass"
+                            class="portal-nav-link portal-nav-parent portal-nav-group-toggle @ProximosActiveClass"
                             aria-expanded="@isProximosOpen"
                             @onclick="ToggleProximosSubmenu"
                             @onclick:preventDefault="true"
@@ -67,7 +57,7 @@
                     </button>
                     @if (isProximosOpen)
                     {
-                        <div class="portal-nav-collapse block transition-all">
+                        <div class="portal-nav-collapse portal-nav-submenu block transition-all">
                             <NavLink class="portal-nav-link portal-nav-sublink" href="/dashboard#campanhas" @onclick="NotifyNavigate">
                                 <i class="bi bi-megaphone portal-nav-icon" aria-hidden="true"></i>
                                 <span class="portal-nav-link-label">Campanhas</span>
@@ -116,7 +106,7 @@
 </nav>
 
 @code {
-    private const string DefaultOpenGroup = "integracoes";
+    private const string DefaultOpenGroup = "integracoes.links";
 
     private static readonly Dictionary<string, string[]> RouteAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -178,11 +168,54 @@
 
     private void OpenGroupsForCurrentPath()
     {
-        foreach (var group in _menu.Where(IsGroupActive))
+        foreach (var group in AllNodes(_menu).Where(node => !IsCategory(node) && IsGroupActive(node)))
         {
             _openGroups.Add(group.Key);
         }
     }
+
+    private static IEnumerable<ClientMenuNodeDto> AllNodes(IEnumerable<ClientMenuNodeDto> nodes) =>
+        nodes.SelectMany(node => AllNodes(node.Children).Prepend(node));
+
+    /// <summary>Raiz sem rota = categoria (cabeçalho); os filhos dela são os menus pai.</summary>
+    private bool IsCategory(ClientMenuNodeDto node) =>
+        string.IsNullOrWhiteSpace(node.Route) && node.Children.Count > 0 && _menu.Contains(node);
+
+    private RenderFragment ParentItem(ClientMenuNodeDto node) => __builder =>
+    {
+        if (node.Children.Count == 0)
+        {
+            <a href="@node.Route" class="portal-nav-link portal-nav-parent @GetActiveClass(node.Route)" @onclick="NotifyNavigate">
+                <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
+                <span class="portal-nav-link-label">@node.Title</span>
+            </a>
+            return;
+        }
+
+        var open = _openGroups.Contains(node.Key);
+        <div class="portal-nav-group">
+            <button type="button"
+                    class="portal-nav-link portal-nav-parent portal-nav-group-toggle @(IsGroupActive(node) ? "active" : string.Empty)"
+                    aria-expanded="@open"
+                    @onclick="() => ToggleGroup(node.Key)">
+                <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
+                <span class="portal-nav-link-label">@node.Title</span>
+                <i class="bi bi-chevron-down portal-nav-caret transform transition-transform @(open ? "rotate-180" : string.Empty)" aria-hidden="true"></i>
+            </button>
+            @if (open)
+            {
+                <div class="portal-nav-submenu">
+                    @foreach (var child in node.Children)
+                    {
+                        <a href="@child.Route" class="portal-nav-link portal-nav-sublink @GetActiveClass(child.Route)" @onclick="NotifyNavigate">
+                            <i class="bi @child.Icon portal-nav-icon" aria-hidden="true"></i>
+                            <span class="portal-nav-link-label">@child.Title</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    };
 
     private void SyncProximosDesenvolvimentosFromRoute()
     {
@@ -224,7 +257,7 @@
     }
 
     private bool IsGroupActive(ClientMenuNodeDto group) =>
-        group.Children.Any(child => IsRouteActive(child.Route));
+        group.Children.Any(child => IsRouteActive(child.Route) || IsGroupActive(child));
 
     private bool IsProximosPath()
     {

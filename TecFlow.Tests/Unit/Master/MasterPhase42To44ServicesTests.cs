@@ -64,8 +64,31 @@ public class MenuPermissionServiceTests
         Assert.Equal(2, hidden.Count);
         Assert.All(hidden, item => Assert.Equal(starter.Id, item.PlanId));
         var radar = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.RadarOffers);
-        var parent = await context.MenuItems.SingleAsync(item => item.Key == "integracoes");
+        var parent = await context.MenuItems.SingleAsync(item => item.Key == "integracoes.links");
         Assert.Equal(parent.Id, radar.ParentId);
+    }
+
+    [Fact]
+    public async Task EnsureCatalog_ShouldMoveLegacyFlatItemsIntoNewHierarchy()
+    {
+        var (context, service, starter, _) = await SeedAsync();
+        await using var scope = context;
+        var integracoes = new MenuItem { Key = "integracoes", Title = "Integrações", Icon = "bi-plug", Order = 50 };
+        var whatsapp = new MenuItem { Key = "whatsapp", Title = "WhatsApp", Icon = "bi-whatsapp", Order = 30 };
+        var radar = new MenuItem { Key = DefaultMenuCatalog.RadarOffers, Title = "Radar", Route = "/radar-ofertas", Icon = "bi-broadcast", Order = 40, Parent = integracoes };
+        context.MenuItems.AddRange(integracoes, whatsapp, radar);
+        context.PlanMenuPermissions.Add(new PlanMenuPermission { PlanId = starter.Id, MenuItem = radar, IsVisible = false });
+        await context.SaveChangesAsync();
+
+        await service.EnsureCatalogAsync();
+
+        var items = await context.MenuItems.AsNoTracking().ToListAsync();
+        var byKey = items.ToDictionary(item => item.Key);
+        Assert.Equal(DefaultMenuCatalog.All.Count, items.Count);
+        Assert.Equal(byKey["canais"].Id, byKey["whatsapp"].ParentId);
+        Assert.Equal(byKey["integracoes.links"].Id, byKey[DefaultMenuCatalog.RadarOffers].ParentId);
+        Assert.Equal("Radar de Ofertas", byKey[DefaultMenuCatalog.RadarOffers].Title);
+        Assert.Equal(1, await context.PlanMenuPermissions.CountAsync(item => item.MenuItemId == radar.Id));
     }
 
     [Fact]
@@ -137,14 +160,10 @@ public class DeveloperAccountServiceTests
 
     private static DeveloperAccountService CreateService(
         AppDbContext context,
-        Mock<ISystemSettingsService>? settings = null,
-        Mock<IDeveloperAccountHealthChecker>? checker = null,
-        IConfiguration? configuration = null) =>
+        Mock<IDeveloperAccountHealthChecker>? checker = null) =>
         new(
             context,
-            (settings ?? new Mock<ISystemSettingsService>()).Object,
             (checker ?? new Mock<IDeveloperAccountHealthChecker>()).Object,
-            configuration ?? new ConfigurationBuilder().Build(),
             new Mock<IMasterAuditService>().Object);
 
     private static DeveloperAccountDto MlApp() => new()
@@ -189,49 +208,23 @@ public class DeveloperAccountServiceTests
     }
 
     [Fact]
-    public async Task Publish_ShouldWriteVaultKeysAndMoveGlobalFlag()
+    public async Task Save_TestAccount_ShouldEncryptPasswordWithoutTouchingTheVault()
     {
         await using var context = CreateContext();
-        var settings = new Mock<ISystemSettingsService>();
-        SystemSettingSaveDto? sent = null;
-        settings.Setup(item => item.SaveAsync(Actor, It.IsAny<SystemSettingSaveDto>(), It.IsAny<CancellationToken>()))
-            .Callback<MasterActor, SystemSettingSaveDto, CancellationToken>((_, dto, _) => sent = dto)
-            .ReturnsAsync(new MasterOperationResultDto { Success = true, Message = "ok" });
-        var service = CreateService(context, settings);
-        var (first, _) = await service.SaveAsync(Actor, MlApp());
-        var second = MlApp();
-        second.Label = "App reserva";
-        second.ClientSecret = "outro-segredo";
-        var (backup, _) = await service.SaveAsync(Actor, second);
-
-        await service.PublishAsGlobalAsync(Actor, first!.Id);
-        var result = await service.PublishAsGlobalAsync(Actor, backup!.Id);
-
-        Assert.True(result.Success);
-        Assert.Equal("outro-segredo", sent!.Values["Integrations:MercadoLivre:SecretKey"]);
-        Assert.Equal("https://api.tecflow/cb", sent.Values["Integrations:MercadoLivre:RedirectUri"]);
-        var accounts = await context.SystemDeveloperAccounts.OrderBy(item => item.Id).ToListAsync();
-        Assert.False(accounts[0].IsGlobalDefault);
-        Assert.True(accounts[1].IsGlobalDefault);
-    }
-
-    [Fact]
-    public async Task Publish_TestAccount_ShouldBeRejected()
-    {
-        await using var context = CreateContext();
-        var service = CreateService(context);
-        var (account, _) = await service.SaveAsync(Actor, new DeveloperAccountDto
+        var (account, error) = await CreateService(context).SaveAsync(Actor, new DeveloperAccountDto
         {
             Platform = DeveloperPlatforms.Shopee,
             Kind = DeveloperAccountKinds.Test,
+            Environment = DeveloperEnvironments.Sandbox,
             Label = "Comprador QA",
             TestUsername = "qa@tecflow.com",
-            TestPassword = "senha"
+            TestPassword = "senha-de-teste"
         });
 
-        var result = await service.PublishAsGlobalAsync(Actor, account!.Id);
-
-        Assert.False(result.Success);
+        Assert.Null(error);
+        Assert.True(account!.HasTestPassword);
+        Assert.Equal("••••este", account.TestPassword);
+        Assert.Equal(0, await context.SystemSettings.CountAsync());
     }
 
     [Fact]
@@ -255,10 +248,13 @@ public class DeveloperAccountServiceTests
         Assert.NotNull(stored.LastCheckAt);
     }
 
+}
+
+public class GlobalCredentialHealthServiceTests
+{
     [Fact]
-    public async Task CheckGlobal_ShouldUseConfiguredKeysWithShopeeFallbacks()
+    public async Task Check_ShouldUseConfiguredVaultKeysWithShopeeFallbacks()
     {
-        await using var context = CreateContext();
         var checker = new Mock<IDeveloperAccountHealthChecker>();
         checker.Setup(item => item.CheckAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string platform, string? id, string? secret, string? extra, CancellationToken _) =>
@@ -273,7 +269,7 @@ public class DeveloperAccountServiceTests
             ["Integrations:AmazonPaApi:PartnerTag"] = "loja-20"
         }).Build();
 
-        var results = await CreateService(context, checker: checker, configuration: configuration).CheckGlobalCredentialsAsync();
+        var results = await new GlobalCredentialHealthService(checker.Object, configuration).CheckAsync();
 
         Assert.False(results.Single(item => item.Platform == DeveloperPlatforms.MercadoLivre).Success);
         Assert.Equal("Shopee:appkey:", results.Single(item => item.Platform == DeveloperPlatforms.Shopee).Message);

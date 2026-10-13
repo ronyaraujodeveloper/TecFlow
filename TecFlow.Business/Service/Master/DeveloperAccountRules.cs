@@ -72,39 +72,6 @@ public static class DeveloperAccountRules
             : SecretExpirationStatus.Valid;
     }
 
-    /// <summary>Chaves de SystemSettings preenchidas ao publicar a conta como credencial global.</summary>
-    public static IReadOnlyDictionary<string, string?> GlobalSettingValues(string platform, string? clientId, string? secret, string? extra)
-    {
-        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        switch (DeveloperPlatforms.Normalize(platform))
-        {
-            case DeveloperPlatforms.MercadoLivre:
-                values["Integrations:MercadoLivre:AppId"] = clientId;
-                values["Integrations:MercadoLivre:SecretKey"] = secret;
-                if (!string.IsNullOrWhiteSpace(extra))
-                {
-                    values["Integrations:MercadoLivre:RedirectUri"] = extra;
-                }
-
-                break;
-            case DeveloperPlatforms.Shopee:
-                values["Integrations:Shopee:AppKey"] = clientId;
-                values["Integrations:Shopee:AppSecret"] = secret;
-                break;
-            case DeveloperPlatforms.Amazon:
-                values["Integrations:AmazonPaApi:AccessKey"] = clientId;
-                values["Integrations:AmazonPaApi:SecretKey"] = secret;
-                if (!string.IsNullOrWhiteSpace(extra))
-                {
-                    values["Integrations:AmazonPaApi:PartnerTag"] = extra;
-                }
-
-                break;
-        }
-
-        return values;
-    }
-
     /// <summary>Retorna a mensagem de erro de validação ou null.</summary>
     public static string? Validate(string? platform, string? kind, string? label, string? clientId, bool hasSecret)
     {

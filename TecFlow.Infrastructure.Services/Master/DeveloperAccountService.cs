@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Master;
@@ -8,29 +7,26 @@ using TecFlow.Database;
 
 namespace TecFlow.Infrastructure.Services.Master;
 
-/// <summary>Contas de desenvolvedor e de teste da TecFlow (escopo de sistema, segregado das lojas dos clientes).</summary>
+/// <summary>
+/// Contas corporativas de teste/dev da TecFlow (escopo de sistema). Não escreve no cofre global (/master/vault)
+/// nem nas lojas dos afiliados (/marketplace-accounts).
+/// </summary>
 public sealed class DeveloperAccountService : IDeveloperAccountService
 {
     private const string MaskPrefix = "••••";
     private const string TargetType = "SystemDeveloperAccount";
 
     private readonly AppDbContext _context;
-    private readonly ISystemSettingsService _settings;
     private readonly IDeveloperAccountHealthChecker _checker;
-    private readonly IConfiguration _configuration;
     private readonly IMasterAuditService _audit;
 
     public DeveloperAccountService(
         AppDbContext context,
-        ISystemSettingsService settings,
         IDeveloperAccountHealthChecker checker,
-        IConfiguration configuration,
         IMasterAuditService audit)
     {
         _context = context;
-        _settings = settings;
         _checker = checker;
-        _configuration = configuration;
         _audit = audit;
     }
 
@@ -115,59 +111,7 @@ public sealed class DeveloperAccountService : IDeveloperAccountService
         await _context.SaveChangesAsync(cancellationToken);
         await _audit.LogAsync(actor, MasterAuditActions.DeveloperAccountDeleted, TargetType, id.ToString(),
             $"{entity.Platform} / {entity.Kind}: {entity.Label}", cancellationToken);
-        return new MasterOperationResultDto
-        {
-            Success = true,
-            Message = entity.IsGlobalDefault
-                ? "Conta removida. As chaves publicadas continuam no cofre global até serem substituídas."
-                : "Conta removida."
-        };
-    }
-
-    public async Task<MasterOperationResultDto> PublishAsGlobalAsync(MasterActor actor, int id, CancellationToken cancellationToken = default)
-    {
-        var entity = await _context.SystemDeveloperAccounts.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (entity is null)
-        {
-            return Fail("Conta não encontrada.");
-        }
-
-        if (entity.Kind != DeveloperAccountKinds.App || !entity.IsActive)
-        {
-            return Fail("Somente credenciais de app ativas podem ser publicadas como chave global.");
-        }
-
-        if (string.IsNullOrWhiteSpace(entity.ClientId) || string.IsNullOrWhiteSpace(entity.ClientSecret))
-        {
-            return Fail("A conta não tem ID e segredo preenchidos.");
-        }
-
-        var values = DeveloperAccountRules.GlobalSettingValues(entity.Platform, entity.ClientId, entity.ClientSecret, entity.Extra);
-        var saved = await _settings.SaveAsync(actor, new SystemSettingSaveDto { Values = values.ToDictionary(pair => pair.Key, pair => pair.Value) }, cancellationToken);
-        if (!saved.Success)
-        {
-            return saved;
-        }
-
-        var samePlatform = await _context.SystemDeveloperAccounts
-            .Where(item => item.Platform == entity.Platform && item.IsGlobalDefault && item.Id != entity.Id)
-            .ToListAsync(cancellationToken);
-        foreach (var other in samePlatform)
-        {
-            other.IsGlobalDefault = false;
-            other.Touch();
-        }
-
-        entity.IsGlobalDefault = true;
-        entity.Touch();
-        await _context.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync(actor, MasterAuditActions.DeveloperAccountPublished, TargetType, entity.Id.ToString(),
-            $"{entity.Platform}: {entity.Label} publicada como credencial global.", cancellationToken);
-        return new MasterOperationResultDto
-        {
-            Success = true,
-            Message = $"{DeveloperPlatforms.Label(entity.Platform)}: credenciais publicadas no cofre global. Reinicie a API para aplicar em todas as integrações."
-        };
+        return new MasterOperationResultDto { Success = true, Message = "Conta removida." };
     }
 
     public async Task<DeveloperAccountCheckDto> CheckAsync(int id, CancellationToken cancellationToken = default)
@@ -202,43 +146,6 @@ public sealed class DeveloperAccountService : IDeveloperAccountService
         };
     }
 
-    public async Task<IReadOnlyList<DeveloperAccountCheckDto>> CheckGlobalCredentialsAsync(CancellationToken cancellationToken = default)
-    {
-        var targets = new[]
-        {
-            (DeveloperPlatforms.MercadoLivre,
-                Config("Integrations:MercadoLivre:AppId"),
-                Config("Integrations:MercadoLivre:SecretKey"),
-                (string?)null),
-            (DeveloperPlatforms.Shopee,
-                Config("Integrations:Shopee:AffiliateAppId", "Integrations:Shopee:AppKey", "Integrations:Shopee:PartnerId"),
-                Config("Integrations:Shopee:AffiliateSecret", "Integrations:Shopee:AppSecret", "Integrations:Shopee:PartnerKey"),
-                null),
-            (DeveloperPlatforms.Amazon,
-                Config("Integrations:AmazonPaApi:AccessKey"),
-                Config("Integrations:AmazonPaApi:SecretKey"),
-                Config("Integrations:AmazonPaApi:PartnerTag"))
-        };
-
-        var checks = await Task.WhenAll(targets.Select(async target =>
-        {
-            var result = await _checker.CheckAsync(target.Item1, target.Item2, target.Item3, target.Item4, cancellationToken);
-            return new DeveloperAccountCheckDto
-            {
-                Platform = target.Item1,
-                Source = "Credencial global em uso pela API",
-                Success = result.Success,
-                Message = result.Message,
-                LatencyMs = result.LatencyMs,
-                CheckedAt = DateTime.UtcNow
-            };
-        }));
-        return checks;
-    }
-
-    private string? Config(params string[] keys) =>
-        keys.Select(key => _configuration[key]).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
-
     private static string? KeepOrReplace(string? incoming, string? current)
     {
         if (string.IsNullOrWhiteSpace(incoming) || incoming.StartsWith(MaskPrefix, StringComparison.Ordinal))
@@ -271,7 +178,6 @@ public sealed class DeveloperAccountService : IDeveloperAccountService
         SecretExpiresAt = item.SecretExpiresAt,
         ExpirationStatus = DeveloperAccountRules.ExpirationStatus(item.SecretExpiresAt, now),
         IsActive = item.IsActive,
-        IsGlobalDefault = item.IsGlobalDefault,
         LastCheckAt = item.LastCheckAt,
         LastCheckOk = item.LastCheckOk,
         LastCheckMessage = item.LastCheckMessage,

@@ -23,14 +23,74 @@ html, body {
     background: var(--tecso-bg);
 }
 
+/* ===== Área do Cliente: paleta clara, neutra e de alta legibilidade ===== */
 .portal-shell {
-    background: linear-gradient(160deg, #f4f6fb 0%, #e8eef8 45%, #f8f9fc 100%);
+    --tf-client-bg: #f8fafc;
+    --tf-client-surface: #ffffff;
+    --tf-client-border: #e2e8f0;
+    --tf-client-text: #0f172a;
+    --tf-client-muted: #64748b;
+    --tf-client-accent: #2563eb;
+    --tf-client-accent-soft: #eff6ff;
+    --bs-body-color: var(--tf-client-text);
+    --bs-secondary-color: var(--tf-client-muted);
+    --bs-border-color: var(--tf-client-border);
+    --bs-border-radius: 0.625rem;
+    --bs-border-radius-lg: 0.875rem;
+    --bs-primary: #2563eb;
+    --bs-primary-rgb: 37, 99, 235;
+    --bs-link-color: #2563eb;
+    --bs-link-color-rgb: 37, 99, 235;
+    --bs-link-hover-color: #1d4ed8;
+    --bs-link-hover-color-rgb: 29, 78, 216;
+    background: var(--tf-client-bg);
+    color: var(--tf-client-text);
+}
+
+.portal-shell .btn-primary {
+    --bs-btn-bg: #2563eb;
+    --bs-btn-border-color: #2563eb;
+    --bs-btn-hover-bg: #1d4ed8;
+    --bs-btn-hover-border-color: #1d4ed8;
+    --bs-btn-active-bg: #1e40af;
+    --bs-btn-active-border-color: #1e40af;
+    --bs-btn-disabled-bg: #2563eb;
+    --bs-btn-disabled-border-color: #2563eb;
+}
+
+.portal-shell .btn-outline-primary {
+    --bs-btn-color: #2563eb;
+    --bs-btn-border-color: #2563eb;
+    --bs-btn-hover-bg: #2563eb;
+    --bs-btn-hover-border-color: #2563eb;
+    --bs-btn-active-bg: #1d4ed8;
+    --bs-btn-active-border-color: #1d4ed8;
+}
+
+.portal-main .card {
+    --bs-card-border-color: var(--tf-client-border);
+    --bs-card-border-radius: 0.875rem;
+    --bs-card-inner-border-radius: calc(0.875rem - 1px);
+    --bs-card-cap-bg: #f8fafc;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.portal-main .table {
+    --bs-table-border-color: var(--tf-client-border);
+}
+
+.portal-main .table > thead th {
+    color: var(--tf-client-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .portal-header {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--tf-client-border);
 }
 
 .home-hero {
@@ -328,8 +388,8 @@ html, body {
 .portal-sidebar {
     width: var(--portal-sidebar-width);
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.96);
-    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
     padding: 1rem 0.75rem;
     z-index: 1050;
 }
@@ -337,31 +397,73 @@ html, body {
 .portal-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.15rem;
+}
+
+/* Categoria: cabeçalho em caixa alta, cinza suave, sem interação. */
+.portal-nav-category {
+    margin: 1rem 0.5rem 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    user-select: none;
+}
+
+.portal-nav-divider {
+    margin: 0.75rem 0.5rem;
+    border-color: #e2e8f0;
+    opacity: 1;
 }
 
 .portal-nav-link {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.55rem;
     min-height: var(--touch-target-min);
-    padding: 0.625rem 1rem;
+    padding: 0.55rem 0.75rem;
     border-radius: 0.5rem;
-    color: #212529;
+    color: #334155;
     text-decoration: none;
     font-weight: 500;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.portal-nav-link:hover,
-.portal-nav-link.active {
-    background: rgba(13, 110, 253, 0.12);
-    color: #0d6efd;
+.portal-nav-link:hover {
+    background: #f1f5f9;
+    color: #0f172a;
 }
 
 .portal-nav-link.active {
+    background: #eff6ff;
+    color: #1d4ed8;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 #0d6efd;
+    box-shadow: inset 3px 0 0 #2563eb;
+}
+
+/* Menu pai: ícone em destaque (badge) + texto em negrito. */
+.portal-nav-parent {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.portal-nav-parent > .portal-nav-icon {
+    width: 1.85rem;
+    height: 1.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: #eef2ff;
+    color: #2563eb;
+    opacity: 1;
+    font-size: 1rem;
+}
+
+.portal-nav-parent.active > .portal-nav-icon {
+    background: #2563eb;
+    color: #ffffff;
 }
 
 .portal-nav-group-toggle {
@@ -373,15 +475,37 @@ html, body {
 }
 
 .portal-nav-group-toggle.active {
-    background: rgba(13, 110, 253, 0.12);
-    color: #0d6efd;
-    font-weight: 600;
+    background: transparent;
+    color: #1d4ed8;
+    box-shadow: none;
+}
+
+/* Submenu: recuo de 1.5rem, linha guia discreta e ícone menor. */
+.portal-nav-submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin: 0.15rem 0 0.35rem 1.5rem;
+    padding-left: 0.5rem;
+    border-left: 1px solid #e2e8f0;
 }
 
 .portal-nav-sublink {
-    padding-left: 1.65rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.65rem;
     font-weight: 500;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.portal-nav-sublink .portal-nav-icon {
+    width: 0.95rem;
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.portal-nav-sublink.active {
+    box-shadow: inset 2px 0 0 #2563eb;
 }
 
 .portal-nav-icon {
@@ -902,6 +1026,9 @@ html, body {
         top: 0;
         left: 0;
         bottom: 0;
+        max-width: 85vw;
+        overflow-y: auto;
+        overscroll-behavior: contain;
         transform: translateX(-100%);
         transition: transform 0.25s ease;
         box-shadow: 0 0 2rem rgba(0, 0, 0, 0.12);
@@ -2210,15 +2337,54 @@ html, body {
     user-select: none;
 }
 
-/* ===== Master Console (Fase 42) ===== */
+@media (min-width: 992px) {
+    .portal-sidebar {
+        position: sticky;
+        top: 0;
+        align-self: flex-start;
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+}
+
+/* ===== Master Console: identidade preta/laranja (Fases 42 e 45) =====
+   O shell usa data-bs-theme="dark"; aqui só ajustamos a paleta slate + laranja #FF9900. */
 .master-shell {
-    background: #eef1f6;
+    --tf-master-bg: #0f172a;
+    --tf-master-surface: #1e293b;
+    --tf-master-surface-2: #172033;
+    --tf-master-border: #334155;
+    --tf-master-text: #e2e8f0;
+    --tf-master-muted: #94a3b8;
+    --tf-master-accent: #ff9900;
+    --tf-master-accent-hover: #ffad33;
+    --bs-body-bg: var(--tf-master-bg);
+    --bs-body-bg-rgb: 15, 23, 42;
+    --bs-body-color: var(--tf-master-text);
+    --bs-body-color-rgb: 226, 232, 240;
+    --bs-emphasis-color: #ffffff;
+    --bs-secondary-color: var(--tf-master-muted);
+    --bs-secondary-bg: var(--tf-master-surface);
+    --bs-tertiary-bg: var(--tf-master-surface-2);
+    --bs-border-color: var(--tf-master-border);
+    --bs-primary: #ff9900;
+    --bs-primary-rgb: 255, 153, 0;
+    --bs-primary-text-emphasis: #ffc266;
+    --bs-primary-bg-subtle: rgba(255, 153, 0, 0.12);
+    --bs-primary-border-subtle: rgba(255, 153, 0, 0.4);
+    --bs-link-color: #ffad33;
+    --bs-link-color-rgb: 255, 173, 51;
+    --bs-link-hover-color: #ffc266;
+    --bs-link-hover-color-rgb: 255, 194, 102;
+    --bs-focus-ring-color: rgba(255, 153, 0, 0.35);
+    background: var(--tf-master-bg);
+    color: var(--tf-master-text);
 }
 
 .master-header {
-    background: linear-gradient(90deg, #0b1220 0%, #1b2a4a 100%);
+    background: #020617;
     color: #fff;
-    border-bottom: 3px solid #f5b301;
+    border-bottom: 3px solid var(--tf-master-accent);
 }
 
 .master-brand {
@@ -2228,8 +2394,9 @@ html, body {
     letter-spacing: 0.02em;
 }
 
+.master-brand i,
 .master-brand span {
-    color: #f5b301;
+    color: var(--tf-master-accent);
     font-weight: 600;
 }
 
@@ -2238,7 +2405,8 @@ html, body {
 }
 
 .master-sidebar {
-    background: #111a2e;
+    background: #020617;
+    border-right: 1px solid #1e293b;
     padding: 0.75rem 0.5rem;
     display: flex;
     gap: 0.25rem;
@@ -2251,28 +2419,146 @@ html, body {
     gap: 0.6rem;
     padding: 0.55rem 0.75rem;
     border-radius: 0.5rem;
-    color: #c8d1e3;
+    color: #cbd5e1;
     text-decoration: none;
     white-space: nowrap;
     font-size: 0.92rem;
 }
 
 .master-nav-link:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 153, 0, 0.1);
     color: #fff;
 }
 
 .master-nav-link.active {
-    background: #f5b301;
-    color: #111a2e;
+    background: var(--tf-master-accent);
+    color: #020617;
     font-weight: 600;
 }
 
 .master-sidebar-footer {
     display: none;
-    color: #7f8aa3;
+    color: #64748b;
     padding: 0.75rem;
     margin-top: auto;
+}
+
+.master-main {
+    background: var(--tf-master-bg);
+}
+
+.master-main h1,
+.master-main .h3 {
+    color: #fff;
+}
+
+.master-main .card {
+    --bs-card-bg: var(--tf-master-surface);
+    --bs-card-border-color: var(--tf-master-border);
+    --bs-card-cap-bg: var(--tf-master-surface-2);
+    --bs-card-cap-color: #fff;
+    --bs-card-color: var(--tf-master-text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.master-main .card-header {
+    border-bottom: 1px solid var(--tf-master-border);
+    border-left: 3px solid var(--tf-master-accent);
+}
+
+.master-main .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--tf-master-text);
+    --bs-table-border-color: var(--tf-master-border);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-hover-bg: rgba(255, 153, 0, 0.06);
+    --bs-table-hover-color: #fff;
+}
+
+.master-main .table-light,
+.master-main .table > thead {
+    --bs-table-bg: var(--tf-master-surface-2);
+    --bs-table-color: var(--tf-master-muted);
+    --bs-table-border-color: var(--tf-master-border);
+}
+
+.master-main .table > thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--tf-master-accent);
+}
+
+.master-main .table-secondary {
+    --bs-table-bg: rgba(255, 153, 0, 0.08);
+    --bs-table-color: #fff;
+    --bs-table-border-color: var(--tf-master-border);
+}
+
+.master-main .form-control,
+.master-main .form-select {
+    background-color: var(--tf-master-surface-2);
+    border-color: var(--tf-master-border);
+    color: #fff;
+}
+
+.master-main .form-control:focus,
+.master-main .form-select:focus {
+    border-color: var(--tf-master-accent);
+    box-shadow: 0 0 0 0.2rem rgba(255, 153, 0, 0.25);
+}
+
+.master-main .form-check-input:checked {
+    background-color: var(--tf-master-accent);
+    border-color: var(--tf-master-accent);
+}
+
+.master-shell .btn-primary {
+    --bs-btn-color: #020617;
+    --bs-btn-bg: #ff9900;
+    --bs-btn-border-color: #ff9900;
+    --bs-btn-hover-color: #020617;
+    --bs-btn-hover-bg: #ffad33;
+    --bs-btn-hover-border-color: #ffad33;
+    --bs-btn-active-color: #020617;
+    --bs-btn-active-bg: #e68a00;
+    --bs-btn-active-border-color: #e68a00;
+    --bs-btn-disabled-color: #020617;
+    --bs-btn-disabled-bg: #ff9900;
+    --bs-btn-disabled-border-color: #ff9900;
+    font-weight: 600;
+}
+
+.master-shell .btn-outline-primary {
+    --bs-btn-color: #ff9900;
+    --bs-btn-border-color: #ff9900;
+    --bs-btn-hover-color: #020617;
+    --bs-btn-hover-bg: #ff9900;
+    --bs-btn-hover-border-color: #ff9900;
+    --bs-btn-active-color: #020617;
+    --bs-btn-active-bg: #e68a00;
+    --bs-btn-active-border-color: #e68a00;
+    --bs-btn-disabled-color: #ff9900;
+    --bs-btn-disabled-border-color: #ff9900;
+}
+
+.master-main .text-bg-primary {
+    color: #020617 !important;
+    background-color: #ff9900 !important;
+}
+
+.master-main .text-bg-light {
+    color: var(--tf-master-text) !important;
+    background-color: #334155 !important;
+}
+
+.master-main .bg-primary {
+    background-color: #ff9900 !important;
+}
+
+.master-main .dashboard-page .dashboard-stat-card {
+    background: var(--tf-master-surface);
 }
 
 @media (min-width: 992px) {

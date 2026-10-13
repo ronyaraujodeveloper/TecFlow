@@ -90,3 +90,4 @@
 [2026-10-12 20:05:11]feat(lojas): OAuth do Mercado Livre em Minhas Lojas para busca MLB
 [2026-10-12 21:50:10]feat(master): backoffice SaaS fases 35-41
 [2026-10-12 22:39:17]feat(master): rotas master, contas de desenvolvedor e menu por plano (fases 42-44)
+[2026-10-12 23:31:38]feat(ui): reset de scroll, sidebar hierarquica, paletas master/cliente e vault segregado (fase 45)

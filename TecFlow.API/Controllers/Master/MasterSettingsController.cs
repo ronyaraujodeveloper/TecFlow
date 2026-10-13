@@ -14,17 +14,20 @@ public sealed class MasterSettingsController : MasterControllerBase
     private readonly ISaasPlanService _plans;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly IMasterAuditService _audit;
+    private readonly IGlobalCredentialHealthService _credentialHealth;
 
     public MasterSettingsController(
         ISystemSettingsService settings,
         ISaasPlanService plans,
         IHostApplicationLifetime lifetime,
-        IMasterAuditService audit)
+        IMasterAuditService audit,
+        IGlobalCredentialHealthService credentialHealth)
     {
         _settings = settings;
         _plans = plans;
         _lifetime = lifetime;
         _audit = audit;
+        _credentialHealth = credentialHealth;
     }
 
     [HttpGet("configuracoes")]
@@ -38,6 +41,11 @@ public sealed class MasterSettingsController : MasterControllerBase
         [FromBody] SystemSettingSaveDto request,
         CancellationToken cancellationToken) =>
         Result(await _settings.SaveAsync(Actor, request ?? new SystemSettingSaveDto(), cancellationToken));
+
+    [HttpPost("configuracoes/saude-chaves")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public async Task<ActionResult<IReadOnlyList<DeveloperAccountCheckDto>>> CheckGlobalKeysAsync(CancellationToken cancellationToken) =>
+        Ok(await _credentialHealth.CheckAsync(cancellationToken));
 
     /// <summary>Encerra o processo da API; o IIS recicla e recarrega todas as integrações com as novas chaves.</summary>
     [HttpPost("configuracoes/reiniciar-api")]

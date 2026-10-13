@@ -1432,17 +1432,43 @@ flowchart LR
   GUARD -- sim --> ML[MasterMainLayout]
   ML --> DEV[/master/marketplace-accounts/]
   ML --> MENU[/master/menu-permissions/]
+  ML --> VLT[/master/vault/]
   DEV --> MDA[MasterDeveloperAccountsController]
   MDA --> DAS[DeveloperAccountService]
   DAS --> HC[DeveloperAccountHealthChecker]
   HC --> EXT[(ML oauth/token · Shopee GraphQL · Amazon PA-API SigV4)]
-  DAS -->|publicar| SSS[SystemSettingsService] --> VAULT[(SystemSettings ENC)]
-  DAS --> SDA[(SystemDeveloperAccounts ENC)]
+  DAS --> SDA[(SystemDeveloperAccounts ENC<br/>somente contas teste/dev)]
+  VLT --> MSC[MasterSettingsController]
+  MSC --> SSS[SystemSettingsService] --> VAULT[(SystemSettings ENC)]
+  MSC -->|saude-chaves| GCH[GlobalCredentialHealthService] --> HC
   MENU --> MMP[MasterMenuPermissionsController] --> MPS[MenuPermissionService]
   MPS --> MI[(MenuItems)]
   MPS --> PMP[(PlanMenuPermissions)]
   NAV[NavMenu cliente] -->|GET api/sistema/menu| SCC[SystemCommunicationController] --> MPS
   MPS -->|plano do tenant| PLANS[(SaasPlans / Tenants)]
+```
+
+---
+
+## Navegação, hierarquia da sidebar e paletas Master × Cliente (Fase 45)
+
+```mermaid
+flowchart TB
+  subgraph Layouts["Layouts estáticos (SSR)"]
+    CL[MainLayout<br/>.portal-shell · paleta clara]
+    MML[MasterMainLayout<br/>data-bs-theme=dark · slate + #FF9900]
+  end
+  CL --> NSR[NavigationScrollReset<br/>ilha interativa]
+  MML --> NSR
+  NSR -->|LocationChanged| JS[tecFlowAppInterop.resetScroll<br/>window + .main-content]
+  BW[blazor.web.js enhancedload] --> JS
+  CL --> NAV[NavMenu]
+  NAV -->|GET api/sistema/menu| MPS[MenuPermissionService]
+  MPS -->|EnsureCatalogAsync sincroniza pai/ordem/título| MI[(MenuItems)]
+  CAT[DefaultMenuCatalog] --> MPS
+  NAV --> R1[Categoria · cabeçalho caixa alta]
+  R1 --> R2[Menu pai · ícone destacado + negrito]
+  R2 --> R3[Submenu · recuo 1.5rem + linha guia]
 ```
 
 ---

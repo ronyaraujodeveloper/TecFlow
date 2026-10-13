@@ -5,47 +5,23 @@
 @inherits MasterPageBase
 @inject IMasterApiService Api
 
-<PageTitle>Contas de desenvolvedor — Painel Master</PageTitle>
+<PageTitle>Contas de teste / dev — Painel Master</PageTitle>
 
 <div class="dashboard-page">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold mb-1">Contas de desenvolvedor e testes</h1>
+            <h1 class="h3 fw-bold mb-1">Contas corporativas de teste e desenvolvimento</h1>
             <p class="text-muted small mb-0">
-                App Credentials (Mercado Livre, Shopee, Amazon) e contas de homologação da TecFlow. Ficam em escopo de sistema,
-                separadas das lojas dos clientes em <code>/marketplace-accounts</code>.
+                Apps de desenvolvimento/sandbox e logins de teste da empresa TecFlow (Mercado Livre, Shopee, Amazon), em escopo de sistema.
+                As chaves globais de produção ficam no <a href="@MasterRoutes.Vault">Cofre (Vault)</a>; as lojas dos afiliados ficam em <code>/marketplace-accounts</code>.
             </p>
         </div>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary btn-touch" disabled="@(!_canManage)" @onclick="CheckGlobalAsync">
-                <i class="bi bi-activity" aria-hidden="true"></i> Testar credenciais globais
-            </button>
             <button type="button" class="btn btn-primary btn-touch" disabled="@(!_canManage)" @onclick="NewAccount">+ Nova conta</button>
         </div>
     </div>
 
     <MasterAlerts Error="@Error" Info="@Info" />
-
-    @if (_globalChecks.Count > 0)
-    {
-        <div class="row g-3 mb-4">
-            @foreach (var check in _globalChecks)
-            {
-                <div class="col-12 col-md-4">
-                    <div class="card shadow-sm h-100 border-@(check.Success ? "success" : "danger")">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong>@DeveloperPlatforms.Label(check.Platform)</strong>
-                                <span class="badge @(check.Success ? "text-bg-success" : "text-bg-danger")">@(check.Success ? "Online" : "Falha")</span>
-                            </div>
-                            <div class="small text-muted mb-1">@check.Source · @check.LatencyMs ms</div>
-                            <div class="small">@check.Message</div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    }
 
     @if (_form is not null)
     {
@@ -64,20 +40,20 @@
                 <div class="col-6 col-md-3">
                     <label class="form-label small mb-1">Tipo</label>
                     <select class="form-select form-select-sm" @bind="_form.Kind">
-                        <option value="@DeveloperAccountKinds.App">Credenciais de app</option>
-                        <option value="@DeveloperAccountKinds.Test">Conta de teste</option>
+                        <option value="@DeveloperAccountKinds.Test">Conta de teste (login)</option>
+                        <option value="@DeveloperAccountKinds.App">App de desenvolvimento</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label small mb-1">Ambiente</label>
                     <select class="form-select form-select-sm" @bind="_form.Environment">
-                        <option value="@DeveloperEnvironments.Production">Produção</option>
                         <option value="@DeveloperEnvironments.Sandbox">Sandbox</option>
+                        <option value="@DeveloperEnvironments.Production">Produção</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label small mb-1">Nome</label>
-                    <input class="form-control form-control-sm" placeholder="ex.: App oficial TecFlow" @bind="_form.Label" />
+                    <input class="form-control form-control-sm" placeholder="ex.: Comprador QA Shopee" @bind="_form.Label" />
                 </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label small mb-1">@ClientIdLabel</label>
@@ -144,13 +120,7 @@
                 {
                     <tr class="@(account.IsActive ? string.Empty : "text-muted")">
                         <td>
-                            <div class="fw-semibold">
-                                @account.Label
-                                @if (account.IsGlobalDefault)
-                                {
-                                    <span class="badge text-bg-primary ms-1">Global</span>
-                                }
-                            </div>
+                            <div class="fw-semibold">@account.Label</div>
                             <div class="text-muted">
                                 @DeveloperPlatforms.Label(account.Platform) · @(account.Kind == DeveloperAccountKinds.App ? "App" : "Teste") ·
                                 @(account.Environment == DeveloperEnvironments.Sandbox ? "Sandbox" : "Produção")
@@ -185,9 +155,6 @@
                                     <button type="button" class="btn btn-sm btn-outline-success" title="Testar conexão" @onclick="() => CheckAsync(account)">
                                         <i class="bi bi-activity" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@(!account.IsActive)" title="Usar como credencial global da API" @onclick="() => PublishAsync(account)">
-                                        <i class="bi bi-cloud-upload" aria-hidden="true"></i>
-                                    </button>
                                 }
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => Edit(account)">Editar</button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(account)">Excluir</button>
@@ -202,7 +169,6 @@
 
 @code {
     private List<DeveloperAccountDto> _accounts = [];
-    private List<DeveloperAccountCheckDto> _globalChecks = [];
     private DeveloperAccountDto? _form;
     private bool _canManage;
 
@@ -246,8 +212,8 @@
     private void NewAccount() => _form = new DeveloperAccountDto
     {
         Platform = DeveloperPlatforms.MercadoLivre,
-        Kind = DeveloperAccountKinds.App,
-        Environment = DeveloperEnvironments.Production,
+        Kind = DeveloperAccountKinds.Test,
+        Environment = DeveloperEnvironments.Sandbox,
         IsActive = true
     };
 
@@ -291,14 +257,6 @@
         }
     }
 
-    private async Task PublishAsync(DeveloperAccountDto account)
-    {
-        if (AcceptOperation(await Api.PublishDeveloperAccountAsync(account.Id)))
-        {
-            await ReloadKeepingMessageAsync(Info);
-        }
-    }
-
     private async Task CheckAsync(DeveloperAccountDto account)
     {
         var result = await Api.CheckDeveloperAccountAsync(account.Id);
@@ -310,16 +268,6 @@
             await LoadAsync();
             Info = message;
             Error = error;
-        }
-    }
-
-    private async Task CheckGlobalAsync()
-    {
-        var result = await Api.CheckGlobalCredentialsAsync();
-        if (Accept(result))
-        {
-            _globalChecks = result.Data ?? [];
-            Error = null;
         }
     }
 

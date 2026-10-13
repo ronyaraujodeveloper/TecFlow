@@ -372,6 +372,21 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Toggles/Checkboxes dinâmicos para você marcar ou desmarcar visualmente quais itens do menu cada plano enxergará na plataforma.
 - [x] **44.3. Renderização Dinâmica da Sidebar do Cliente (`DynamicNavMenu`):**
   - Refatoração do `NavMenu.razor` para carregar a estrutura de navegação diretamente da tabela de permissões com base no plano ativo do tenant logado, omitindo automaticamente rotas não contratadas ou indisponíveis.
+
+---
+
+### 🎨 Fase 45: Navegação, Usabilidade e Paleta de Cores (Master × Cliente)
+
+- [x] **45.1. Reset automático de scroll na navegação Blazor:**
+  - Componente `NavigationScrollReset` (ouvinte de `NavigationManager.LocationChanged` + JSInterop `tecFlowAppInterop.resetScroll`) nos layouts `MainLayout` e `MasterMainLayout`, retornando ao topo da janela e do container `.main-content` a cada troca de rota (âncoras `#` preservadas).
+- [x] **45.2. Hierarquia visual da Sidebar do cliente:**
+  - Categorias (MENSAGERIA & BOTS, CANAIS, INTEGRAÇÕES) como cabeçalhos em caixa alta e cinza suave; Menus Pai com ícone destacado e texto em negrito; Submenus com recuo de `1.5rem`, linha guia e ícone menor.
+  - "Minhas Lojas / Integrações" (`/marketplace-accounts`) como menu pai fixo da categoria Integrações, sempre visível conforme a matriz de permissão por plano.
+- [x] **45.3. Harmonização de paletas:**
+  - Master: fundo slate escuro (`#0F172A` / `#1E293B`) com detalhes laranja `#FF9900` e branco em header, sidebar, cards, tabelas, formulários e botões.
+  - Cliente: paleta clara e neutra, foco em legibilidade e bordas suaves.
+- [x] **45.4. Segregação Vault × Contas de teste:**
+  - `/master/vault` isolado para as chaves globais (AppId/SecretKey, Evolution, Telegram, OpenAI, ASAAS) com diagnóstico das chaves em uso; `/master/marketplace-accounts` exclusivo para contas corporativas de teste/dev (sem publicação no cofre); `/marketplace-accounts` preservado para o afiliado cliente.
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

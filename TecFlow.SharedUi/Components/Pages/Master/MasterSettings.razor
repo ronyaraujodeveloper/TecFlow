@@ -1,27 +1,54 @@
-﻿@page "/master/configuracoes"
+﻿@page "/master/vault"
+@page "/master/configuracoes"
 @attribute [Authorize(Roles = MasterRoles.AnyMaster)]
 @layout TecFlow.SharedUi.Components.Layout.MasterMainLayout
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inherits MasterPageBase
 @inject IMasterApiService Api
 
-<PageTitle>Chaves globais — Painel Master</PageTitle>
+<PageTitle>Cofre de chaves (Vault) — Painel Master</PageTitle>
 
 <div class="dashboard-page">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold mb-1">Configurações globais e cofre de chaves</h1>
+            <h1 class="h3 fw-bold mb-1">Cofre de chaves globais (Vault)</h1>
             <p class="text-muted small mb-0">
-                Valores criptografados no banco (AES). Segredos aparecem mascarados; deixe o campo como está para manter o valor atual ou apague-o para remover.
+                Chaves da plataforma usadas por todos os clientes: AppId/SecretKey dos marketplaces, Evolution API, Telegram, OpenAI e ASAAS.
+                Valores criptografados no banco (AES); segredos aparecem mascarados — deixe o campo como está para manter o valor atual ou apague-o para remover.
+                Contas corporativas de teste/dev ficam em <a href="@MasterRoutes.DeveloperAccounts">Contas de teste / dev</a>.
             </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="CheckKeysAsync">
+                <i class="bi bi-activity" aria-hidden="true"></i> Testar chaves em uso
+            </button>
             <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="SaveAsync">Salvar</button>
             <button type="button" class="btn btn-outline-warning btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="RestartAsync">Aplicar e reiniciar API</button>
         </div>
     </div>
 
     <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_checks.Count > 0)
+    {
+        <div class="row g-3 mb-4">
+            @foreach (var check in _checks)
+            {
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 border-@(check.Success ? "success" : "danger")">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>@DeveloperPlatforms.Label(check.Platform)</strong>
+                                <span class="badge @(check.Success ? "text-bg-success" : "text-bg-danger")">@(check.Success ? "Online" : "Falha")</span>
+                            </div>
+                            <div class="small text-muted mb-1">@check.Source · @check.LatencyMs ms</div>
+                            <div class="small">@check.Message</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     @foreach (var group in _items.GroupBy(item => item.Category))
     {
@@ -60,6 +87,7 @@
 
 @code {
     private List<SystemSettingItemDto> _items = [];
+    private List<DeveloperAccountCheckDto> _checks = [];
     private Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string?> _original = new(StringComparer.OrdinalIgnoreCase);
 
@@ -98,5 +126,15 @@
     private async Task RestartAsync()
     {
         AcceptOperation(await Api.RestartApiAsync());
+    }
+
+    private async Task CheckKeysAsync()
+    {
+        var result = await Api.CheckGlobalKeysAsync();
+        if (Accept(result))
+        {
+            _checks = result.Data ?? [];
+            Error = null;
+        }
     }
 }

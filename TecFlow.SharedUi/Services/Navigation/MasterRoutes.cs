@@ -12,7 +12,10 @@ public static class MasterRoutes
     public const string Tenants = "/master/tenants";
     public const string Plans = "/master/planos";
     public const string MenuPermissions = "/master/menu-permissions";
-    public const string Settings = "/master/configuracoes";
+    /// <summary>Cofre isolado das chaves globais da plataforma (AppId/SecretKey, Evolution, Telegram, OpenAI, ASAAS).</summary>
+    public const string Vault = "/master/vault";
+    public const string LegacySettings = "/master/configuracoes";
+    /// <summary>Somente contas corporativas de teste/dev da TecFlow; lojas dos afiliados ficam em /marketplace-accounts.</summary>
     public const string DeveloperAccounts = "/master/marketplace-accounts";
     public const string Operators = "/master/operadores";
     public const string Users = "/master/usuarios";
@@ -28,8 +31,8 @@ public static class MasterRoutes
         new(Tenants, "Inquilinos (Tenants)", "bi-buildings", MasterPermissions.ViewTenants),
         new(Plans, "Planos & assinaturas", "bi-credit-card", MasterPermissions.ManagePlans),
         new(MenuPermissions, "Menus por plano", "bi-diagram-3", MasterPermissions.ManagePlans),
-        new(Settings, "Chaves globais (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys),
-        new(DeveloperAccounts, "Contas de desenvolvedor", "bi-key", MasterPermissions.ManageGlobalKeys),
+        new(Vault, "Cofre de chaves (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys),
+        new(DeveloperAccounts, "Contas de teste / dev", "bi-person-badge", MasterPermissions.ManageGlobalKeys),
         new(Operators, "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators),
         new(Audit, "Trilha de auditoria", "bi-journal-lock", MasterPermissions.ViewAudit),
         new(Communication, "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication)

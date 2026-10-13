@@ -2197,9 +2197,6 @@ namespace TecFlow.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsGlobalDefault")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)

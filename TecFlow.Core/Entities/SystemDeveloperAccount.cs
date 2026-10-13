@@ -1,8 +1,8 @@
 ﻿namespace TecFlow.Core.Entities;
 
 /// <summary>
-/// Conta de desenvolvedor (App Credentials) ou conta de teste interna da TecFlow.
-/// Escopo de sistema: não pertence a inquilino e não se mistura com MarketplaceAccounts.
+/// Conta corporativa de teste/dev da TecFlow (credenciais de app de desenvolvimento ou login de teste).
+/// Escopo de sistema: não pertence a inquilino, não se mistura com MarketplaceAccounts e não alimenta o cofre global.
 /// </summary>
 public class SystemDeveloperAccount : BaseEntity
 {
@@ -31,8 +31,6 @@ public class SystemDeveloperAccount : BaseEntity
     public DateTime? SecretExpiresAt { get; set; }
 
     public bool IsActive { get; set; } = true;
-
-    public bool IsGlobalDefault { get; set; }
 
     public DateTime? LastCheckAt { get; set; }
 

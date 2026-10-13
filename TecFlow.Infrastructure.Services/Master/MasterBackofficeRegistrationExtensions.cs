@@ -27,6 +27,7 @@ public static class MasterBackofficeRegistrationExtensions
         });
         services.AddScoped<IMenuPermissionService, MenuPermissionService>();
         services.AddScoped<IDeveloperAccountService, DeveloperAccountService>();
+        services.AddScoped<IGlobalCredentialHealthService, GlobalCredentialHealthService>();
         services.AddHttpClient<IDeveloperAccountHealthChecker, DeveloperAccountHealthChecker>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(15);

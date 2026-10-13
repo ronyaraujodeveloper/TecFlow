@@ -6,7 +6,7 @@ using TecFlow.Business.Service.Master;
 
 namespace TecFlow.API.Controllers.Master;
 
-/// <summary>Contas de desenvolvedor / App Credentials e contas de teste internas (escopo de sistema).</summary>
+/// <summary>Contas corporativas de teste/dev da TecFlow (escopo de sistema; chaves globais ficam no Vault).</summary>
 [Route("api/master/marketplace-accounts")]
 [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
 public sealed class MasterDeveloperAccountsController : MasterControllerBase
@@ -33,15 +33,7 @@ public sealed class MasterDeveloperAccountsController : MasterControllerBase
     public async Task<ActionResult<MasterOperationResultDto>> DeleteAsync(int id, CancellationToken cancellationToken) =>
         Result(await _accounts.DeleteAsync(Actor, id, cancellationToken));
 
-    [HttpPost("{id:int}/publicar")]
-    public async Task<ActionResult<MasterOperationResultDto>> PublishAsync(int id, CancellationToken cancellationToken) =>
-        Result(await _accounts.PublishAsGlobalAsync(Actor, id, cancellationToken));
-
     [HttpPost("{id:int}/testar")]
     public async Task<ActionResult<DeveloperAccountCheckDto>> CheckAsync(int id, CancellationToken cancellationToken) =>
         Ok(await _accounts.CheckAsync(id, cancellationToken));
-
-    [HttpPost("saude-global")]
-    public async Task<ActionResult<IReadOnlyList<DeveloperAccountCheckDto>>> CheckGlobalAsync(CancellationToken cancellationToken) =>
-        Ok(await _accounts.CheckGlobalCredentialsAsync(cancellationToken));
 }

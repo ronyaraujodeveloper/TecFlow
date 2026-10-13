@@ -151,41 +151,77 @@ public sealed class MenuPermissionService : IMenuPermissionService
         return tree;
     }
 
-    /// <summary>Insere em MenuItems os itens do catálogo padrão que ainda não existem (idempotente).</summary>
+    /// <summary>
+    /// Sincroniza MenuItems com o catálogo padrão (idempotente): insere itens novos e alinha título, rota, ícone,
+    /// ordem e pai dos existentes. Visibilidade por plano e IsActive continuam sob controle do Master.
+    /// </summary>
     public async Task EnsureCatalogAsync(CancellationToken cancellationToken = default)
     {
         var existing = await _context.MenuItems.ToListAsync(cancellationToken);
         var byKey = existing.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
-        var missing = DefaultMenuCatalog.All.Where(definition => !byKey.ContainsKey(definition.Key)).ToList();
-        if (missing.Count == 0)
+        List<SaasPlan>? plans = null;
+        var changed = false;
+
+        foreach (var definition in DefaultMenuCatalog.All)
         {
-            return;
+            var parent = definition.ParentKey is not null && byKey.TryGetValue(definition.ParentKey, out var found) ? found : null;
+            if (!byKey.TryGetValue(definition.Key, out var item))
+            {
+                item = new MenuItem
+                {
+                    Key = definition.Key,
+                    Title = definition.Title,
+                    Route = definition.Route,
+                    Icon = definition.Icon,
+                    Order = definition.Order,
+                    Parent = parent
+                };
+                _context.MenuItems.Add(item);
+                byKey[item.Key] = item;
+                changed = true;
+
+                plans ??= await _context.SaasPlans.ToListAsync(cancellationToken);
+                foreach (var plan in plans.Where(plan => definition.HiddenForPlans?.Contains(plan.Code, StringComparer.OrdinalIgnoreCase) == true))
+                {
+                    _context.PlanMenuPermissions.Add(new PlanMenuPermission { Plan = plan, MenuItem = item, IsVisible = false });
+                }
+
+                continue;
+            }
+
+            var sameParent = parent is null ? item.ParentId is null : parent.Id != 0 && item.ParentId == parent.Id;
+            if (sameParent
+                && item.Title == definition.Title
+                && item.Route == definition.Route
+                && item.Icon == definition.Icon
+                && item.Order == definition.Order)
+            {
+                continue;
+            }
+
+            item.Title = definition.Title;
+            item.Route = definition.Route;
+            item.Icon = definition.Icon;
+            item.Order = definition.Order;
+            item.Parent = parent;
+            if (parent is null)
+            {
+                item.ParentId = null;
+            }
+
+            item.Touch();
+            changed = true;
         }
 
-        var plans = await _context.SaasPlans.ToListAsync(cancellationToken);
-        foreach (var definition in missing)
+        if (!changed)
         {
-            var item = new MenuItem
-            {
-                Key = definition.Key,
-                Title = definition.Title,
-                Route = definition.Route,
-                Icon = definition.Icon,
-                Order = definition.Order,
-                Parent = definition.ParentKey is not null && byKey.TryGetValue(definition.ParentKey, out var parent) ? parent : null
-            };
-            _context.MenuItems.Add(item);
-            byKey[item.Key] = item;
-
-            foreach (var plan in plans.Where(plan => definition.HiddenForPlans?.Contains(plan.Code, StringComparer.OrdinalIgnoreCase) == true))
-            {
-                _context.PlanMenuPermissions.Add(new PlanMenuPermission { Plan = plan, MenuItem = item, IsVisible = false });
-            }
+            return;
         }
 
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
+            Interlocked.Increment(ref _cacheVersion);
         }
         catch (DbUpdateException)
         {

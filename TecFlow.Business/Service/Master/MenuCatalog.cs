@@ -11,11 +11,15 @@ public sealed record MenuItemDefinition(
     int Order,
     IReadOnlyList<string>? HiddenForPlans = null);
 
-/// <summary>Árvore padrão da sidebar do cliente. Novos itens daqui são inseridos em MenuItems automaticamente.</summary>
+/// <summary>
+/// Árvore padrão da sidebar do cliente: Categoria (raiz sem rota) → Menu pai (link ou grupo) → Submenu.
+/// O catálogo é a fonte da estrutura; MenuItems é sincronizado a partir dele automaticamente.
+/// </summary>
 public static class DefaultMenuCatalog
 {
     public const string RadarOffers = "integracoes.radar";
     public const string RadarProfile = "integracoes.radar-perfil";
+    public const string MarketplaceAccounts = "integracoes.lojas";
 
     private static readonly IReadOnlyList<string> RadarPlans = [SaasPlanCodes.Starter];
 
@@ -28,27 +32,30 @@ public static class DefaultMenuCatalog
         new("mensageria.agendador", "Agendador de Grupos", "/integracoes/agendador", "bi-calendar-week", "mensageria", 20),
         new("mensageria.bot", "Bot de Conversão", "/integracoes/bot-conversor", "bi-robot", "mensageria", 30),
 
-        new("whatsapp", "WhatsApp", null, "bi-whatsapp", null, 30),
+        new("canais", "Canais", null, "bi-broadcast-pin", null, 30),
+        new("whatsapp", "WhatsApp", null, "bi-whatsapp", "canais", 10),
         new("whatsapp.agendador", "Agendador WhatsApp", "/integracoes/whatsapp/agendador", "bi-send", "whatsapp", 10),
         new("whatsapp.monitorados", "Grupos monitorados", "/integracoes/whatsapp/grupos/monitorados", "bi-eye", "whatsapp", 20),
-
-        new("telegram", "Telegram", null, "bi-telegram", null, 40),
+        new("telegram", "Telegram", null, "bi-telegram", "canais", 20),
         new("telegram.agendador", "Agendador Telegram", "/integracoes/telegram/agendador", "bi-send", "telegram", 10),
         new("telegram.monitorados", "Grupos monitorados", "/integracoes/telegram/grupos/monitorados", "bi-eye", "telegram", 20),
 
         new("integracoes", "Integrações", null, "bi-plug", null, 50),
-        new("integracoes.lojas", "Minhas Lojas / Integrações", "/marketplace-accounts", "bi-shop", "integracoes", 10),
-        new("integracoes.gerador", "Gerador de Links", "/gerador-links", "bi-link-45deg", "integracoes", 20),
-        new("integracoes.busca", "Buscar Ofertas", "/busca", "bi-search", "integracoes", 30),
-        new(RadarOffers, "Radar de Ofertas", "/radar-ofertas", "bi-broadcast", "integracoes", 40, RadarPlans),
-        new(RadarProfile, "Perfil de mineração", "/radar/perfil", "bi-sliders", "integracoes", 50, RadarPlans),
-        new("integracoes.saude-ofertas", "Saúde de ofertas", "/saude/ofertas", "bi-heart-pulse", "integracoes", 60),
-        new("integracoes.lucro-grupo", "Lucro por grupo", "/atribuicao/grupos", "bi-pie-chart", "integracoes", 70),
-        new("integracoes.evergreen", "Biblioteca Evergreen", "/biblioteca-evergreen", "bi-recycle", "integracoes", 80),
-        new("integracoes.estudio", "Estúdio de mídia", "/estudio-midia", "bi-image", "integracoes", 90),
-        new("integracoes.saude-agendamentos", "Saúde de agendamentos", "/saude/agendamentos", "bi-shield-check", "integracoes", 100),
-        new("integracoes.achadinhos", "Achadinhos VIP", "/achadinhos", "bi-stars", "integracoes", 110),
-        new("integracoes.paginas", "Minhas Páginas Públicas", "/minhas-paginas-publicas", "bi-globe2", "integracoes", 120),
+        new(MarketplaceAccounts, "Minhas Lojas / Integrações", "/marketplace-accounts", "bi-shop", "integracoes", 10),
+        new("integracoes.links", "Links & Ofertas", null, "bi-link-45deg", "integracoes", 20),
+        new("integracoes.gerador", "Gerador de Links", "/gerador-links", "bi-link-45deg", "integracoes.links", 10),
+        new("integracoes.busca", "Buscar Ofertas", "/busca", "bi-search", "integracoes.links", 20),
+        new(RadarOffers, "Radar de Ofertas", "/radar-ofertas", "bi-broadcast", "integracoes.links", 30, RadarPlans),
+        new(RadarProfile, "Perfil de mineração", "/radar/perfil", "bi-sliders", "integracoes.links", 40, RadarPlans),
+        new("integracoes.conteudo", "Conteúdo & Vitrines", null, "bi-collection", "integracoes", 30),
+        new("integracoes.evergreen", "Biblioteca Evergreen", "/biblioteca-evergreen", "bi-recycle", "integracoes.conteudo", 10),
+        new("integracoes.estudio", "Estúdio de mídia", "/estudio-midia", "bi-image", "integracoes.conteudo", 20),
+        new("integracoes.achadinhos", "Achadinhos VIP", "/achadinhos", "bi-stars", "integracoes.conteudo", 30),
+        new("integracoes.paginas", "Minhas Páginas Públicas", "/minhas-paginas-publicas", "bi-globe2", "integracoes.conteudo", 40),
+        new("integracoes.resultados", "Saúde & Resultados", null, "bi-activity", "integracoes", 40),
+        new("integracoes.saude-ofertas", "Saúde de ofertas", "/saude/ofertas", "bi-heart-pulse", "integracoes.resultados", 10),
+        new("integracoes.saude-agendamentos", "Saúde de agendamentos", "/saude/agendamentos", "bi-shield-check", "integracoes.resultados", 20),
+        new("integracoes.lucro-grupo", "Lucro por grupo", "/atribuicao/grupos", "bi-pie-chart", "integracoes.resultados", 30),
 
         new("novidades", "Novidades", "/novidades", "bi-megaphone", null, 60),
         new("conta", "Minha conta / Segurança", "/minha-conta", "bi-shield-lock", null, 70)

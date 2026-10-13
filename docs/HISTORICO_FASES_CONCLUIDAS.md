@@ -875,3 +875,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Fase 42 — Rotas e layout master:** convenção `/master/*` (`MasterRoutes`; `/master/usuarios`, `/master/planos`, `/master/marketplace-accounts`), `MasterMainLayout` com identidade executiva própria, guard `UseMasterRouteGuard` que redireciona não-masters para `/` e accordion "Próximos Desenvolvimentos" oculto na visão cliente.
 - [x] **Fase 43 — Contas de desenvolvedor:** `/master/marketplace-accounts` com App Credentials (ML AppId/Secret, Shopee AppKey/Secret, Amazon PA-API) e contas de teste internas em `SystemDeveloperAccounts` (segredos criptografados), teste de conectividade real por plataforma, status de validade do segredo e publicação como credencial global no cofre.
 - [x] **Fase 44 — Menu por plano:** tabelas `MenuItems` / `PlanMenuPermissions`, matriz `/master/menu-permissions` (planos × itens, ativo/inativo) e `NavMenu` dinâmico via `GET api/sistema/menu` conforme o plano do tenant (Radar oculto no Starter por padrão).
+
+## 🎨 Navegação, Usabilidade e Paletas (Fase 45)
+
+- [x] **Fase 45 — UX Master × Cliente:** reset de scroll ao trocar de rota (`NavigationScrollReset` + `tecFlowAppInterop.resetScroll`), sidebar do cliente em três níveis (Categoria → Menu pai → Submenu, com "Minhas Lojas / Integrações" fixo em Integrações), console Master em slate escuro com laranja `#FF9900`, paleta clara do cliente e segregação `/master/vault` (chaves globais + diagnóstico) × `/master/marketplace-accounts` (somente contas corporativas de teste/dev).

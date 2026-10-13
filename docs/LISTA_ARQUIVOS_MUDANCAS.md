@@ -1247,6 +1247,31 @@ API / Orquestrador / Worker / WebUi
 **Testes**
 - [x] **Unit/Master/MasterPhase42To44RulesTests.cs** / **MasterPhase42To44ServicesTests.cs** — rotas, catálogo, visibilidade, matriz, contas de desenvolvedor e diagnóstico HTTP.
 
+### Fase 45 — Navegação, hierarquia da sidebar, paletas e segregação do Vault
+
+**SharedUi / WebUi**
+- [x] **Components/Layout/NavigationScrollReset.razor** — ilha interativa que escuta `LocationChanged` e chama `tecFlowAppInterop.resetScroll`.
+- [x] **wwwroot/app-interop.js** — `resetScroll` (janela + `.main-content`) e fallback no evento `enhancedload`.
+- [x] **Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** — `.main-content`, `NavigationScrollReset`; Master com `data-bs-theme="dark"`.
+- [x] **Components/Layout/NavMenu.razor** — renderização Categoria → Menu pai → Submenu.
+- [x] **wwwroot/app.css** — paleta clara do cliente, hierarquia da sidebar e identidade slate/laranja do Master.
+- [x] **Services/Navigation/MasterRoutes.cs** — `Vault` (`/master/vault`), `LegacySettings`, rótulos do console.
+- [x] **Pages/Master/MasterSettings.razor** — `/master/vault` (+ alias `/master/configuracoes`) com "Testar chaves em uso".
+- [x] **Pages/Master/MasterDeveloperAccounts.razor** — somente contas corporativas de teste/dev (sem publicar no cofre).
+- [x] **Services/Master/MasterApiService.cs** — `CheckGlobalKeysAsync`; removido `PublishDeveloperAccountAsync`.
+
+**Business / Infrastructure / API / Data**
+- [x] **Service/Master/MenuCatalog.cs** — categoria "Canais" e menus pai de Integrações (Links & Ofertas, Conteúdo & Vitrines, Saúde & Resultados).
+- [x] **Master/MenuPermissionService.cs** — `EnsureCatalogAsync` sincroniza pai/ordem/título/ícone/rota dos itens existentes.
+- [x] **Master/GlobalCredentialHealthService.cs** (novo) + **IMasterServices.cs** (`IGlobalCredentialHealthService`) — diagnóstico das chaves do cofre.
+- [x] **Master/DeveloperAccountService.cs** / **DeveloperAccountRules.cs** / **MasterAuditActions.cs** — removida a publicação no cofre global.
+- [x] **Controllers/Master/MasterSettingsController.cs** — `POST api/master/configuracoes/saude-chaves`; **MasterDeveloperAccountsController.cs** sem `/publicar` e `/saude-global`.
+- [x] **SystemDeveloperAccount.cs** / **MasterDtos.cs** — removido `IsGlobalDefault`.
+- [x] **Migrations/20261013022329_SegregateVaultFromDeveloperAccountsPhase45.cs** — drop da coluna `IsGlobalDefault`.
+
+**Testes**
+- [x] **MasterPhase42To44RulesTests.cs** / **MasterPhase42To44ServicesTests.cs** — hierarquia do catálogo, migração de itens legados, contas de teste e `GlobalCredentialHealthService`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

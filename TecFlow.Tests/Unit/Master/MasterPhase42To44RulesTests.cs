@@ -97,8 +97,23 @@ public class MenuCatalogTests
 
         Assert.Equal("painel", tree[0].Key);
         var integracoes = tree.Single(node => node.Key == "integracoes");
-        Assert.Equal("integracoes.lojas", integracoes.Children[0].Key);
-        Assert.Equal(12, integracoes.Children.Count);
+        Assert.Equal(DefaultMenuCatalog.MarketplaceAccounts, integracoes.Children[0].Key);
+        Assert.Equal("/marketplace-accounts", integracoes.Children[0].Route);
+        Assert.Equal(4, integracoes.Children.Count);
+        var links = integracoes.Children.Single(node => node.Key == "integracoes.links");
+        Assert.Equal(["/gerador-links", "/busca", "/radar-ofertas", "/radar/perfil"], links.Children.Select(node => node.Route));
+    }
+
+    [Fact]
+    public void Catalog_ShouldGroupChannelsAndKeepCategoriesWithoutRoute()
+    {
+        var tree = DefaultMenuCatalog.BuildDefaultTree();
+
+        var categories = tree.Where(node => node.Route is null).Select(node => node.Key).ToList();
+        Assert.Equal(["mensageria", "canais", "integracoes"], categories);
+        var canais = tree.Single(node => node.Key == "canais");
+        Assert.Equal(["whatsapp", "telegram"], canais.Children.Select(node => node.Key));
+        Assert.All(canais.Children, parent => Assert.Equal(2, parent.Children.Count));
     }
 }
 
@@ -162,20 +177,6 @@ public class DeveloperAccountRulesTests
         Assert.Equal(SecretExpirationStatus.Expired, DeveloperAccountRules.ExpirationStatus(Now.AddMinutes(-1), Now));
         Assert.Equal(SecretExpirationStatus.Expiring, DeveloperAccountRules.ExpirationStatus(Now.AddDays(10), Now));
         Assert.Equal(SecretExpirationStatus.Valid, DeveloperAccountRules.ExpirationStatus(Now.AddDays(60), Now));
-    }
-
-    [Fact]
-    public void GlobalSettingValues_ShouldMapEachPlatformToVaultKeys()
-    {
-        var ml = DeveloperAccountRules.GlobalSettingValues(DeveloperPlatforms.MercadoLivre, "123", "sec", "https://x/cb");
-        var shopee = DeveloperAccountRules.GlobalSettingValues("shopee", "app", "sec", "ignorado");
-        var amazon = DeveloperAccountRules.GlobalSettingValues(DeveloperPlatforms.Amazon, "AK", "SK", null);
-
-        Assert.Equal("123", ml["Integrations:MercadoLivre:AppId"]);
-        Assert.Equal("https://x/cb", ml["Integrations:MercadoLivre:RedirectUri"]);
-        Assert.Equal(["Integrations:Shopee:AppKey", "Integrations:Shopee:AppSecret"], shopee.Keys.OrderBy(key => key));
-        Assert.False(amazon.ContainsKey("Integrations:AmazonPaApi:PartnerTag"));
-        Assert.All(ml.Keys.Concat(shopee.Keys).Concat(amazon.Keys), key => Assert.NotNull(SystemSettingCatalog.Find(key)));
     }
 
     [Theory]

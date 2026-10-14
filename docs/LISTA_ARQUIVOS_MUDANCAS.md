@@ -1300,6 +1300,13 @@ API / Orquestrador / Worker / WebUi
 **Testes**
 - [x] **MasterPhase42To44RulesTests.cs** (`MenuTreeEditRulesTests`, roadmap no catálogo) / **MasterPhase42To44ServicesTests.cs** (matriz com roadmap, visão cliente, mover, agrupar, excluir pasta).
 
+### Fase 47 - Cofre de chaves: alterações em segredos mascarados
+
+- [x] **TecFlow.Business/Service/Master/SystemSettingCatalog.cs** - `IsUnchangedMask` (comparação exata com a máscara atual) e `ContainsMaskCharacter`.
+- [x] **TecFlow.Infrastructure.Services/Master/SystemSettingsService.cs** - ignora só a máscara idêntica, rejeita máscara editada sem gravar nada e salva o restante com AES + recarga da configuração.
+- [x] **TecFlow.SharedUi/Components/Pages/Master/MasterSettings.razor** (`/master/vault`) - `@bind-value:event="oninput"`, `_hasChanges`, selo "Alterações não salvas", destaque do campo alterado, seleção da máscara ao focar e ícone de olho (`_showSecretMap` / `ToggleVisibility` / `IsSecretVisible`) para mostrar/ocultar segredos.
+- [x] **TecFlow.Tests/Unit/Master/MasterRulesTests.cs** / **MasterServicesTests.cs** - regras da máscara e gravação/rejeição de segredos.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

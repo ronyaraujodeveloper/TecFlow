@@ -290,6 +290,25 @@ public class SystemSettingCatalogTests
         Assert.Equal(expected, SystemSettingCatalog.Mask(value));
     }
 
+    [Theory]
+    [InlineData("••••7890", "sk-1234567890", true)]
+    [InlineData("••••1111", "sk-1234567890", false)]
+    [InlineData("nova-chave", "sk-1234567890", false)]
+    [InlineData("", "sk-1234567890", false)]
+    public void IsUnchangedMask_ShouldMatchOnlyTheExactDisplayedMask(string incoming, string current, bool expected)
+    {
+        Assert.Equal(expected, SystemSettingCatalog.IsUnchangedMask(incoming, current));
+    }
+
+    [Theory]
+    [InlineData("••••7890abc", true)]
+    [InlineData("sk-nova", false)]
+    [InlineData(null, false)]
+    public void ContainsMaskCharacter_ShouldDetectEditedMasks(string? value, bool expected)
+    {
+        Assert.Equal(expected, SystemSettingCatalog.ContainsMaskCharacter(value));
+    }
+
     [Fact]
     public void Find_ShouldBeCaseInsensitive()
     {

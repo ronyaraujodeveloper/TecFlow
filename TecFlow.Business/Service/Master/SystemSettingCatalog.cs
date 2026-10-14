@@ -64,4 +64,15 @@ public static class SystemSettingCatalog
 
         return value.Length <= 4 ? "••••" : $"••••{value[^4..]}";
     }
+
+    /// <summary>Valor recebido é exatamente a máscara exibida do segredo atual (campo não alterado).</summary>
+    public static bool IsUnchangedMask(string? incoming, string? current) =>
+        !string.IsNullOrEmpty(incoming)
+        && string.Equals(incoming, Mask(current), StringComparison.Ordinal);
+
+    /// <summary>Valor editado que ainda carrega o caractere da máscara (ex.: digitado após "••••1234").</summary>
+    public static bool ContainsMaskCharacter(string? value) =>
+        !string.IsNullOrEmpty(value) && value.Contains(MaskCharacter);
+
+    public const char MaskCharacter = '•';
 }

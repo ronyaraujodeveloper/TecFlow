@@ -85,6 +85,40 @@ public class MasterServicesTests
     }
 
     [Fact]
+    public async Task SystemSettings_NewSecretDifferentFromMask_ShouldReplaceStoredValue()
+    {
+        await using var context = CreateContext();
+        var service = new SystemSettingsService(context, new ConfigurationBuilder().Build(), new Mock<IMasterAuditService>().Object);
+        await service.SaveAsync(Actor, new SystemSettingSaveDto { Values = new() { ["Integrations:MercadoLivre:SecretKey"] = "old-secret-1111" } });
+
+        var result = await service.SaveAsync(Actor, new SystemSettingSaveDto { Values = new() { ["Integrations:MercadoLivre:SecretKey"] = "new-secret-2222" } });
+
+        Assert.True(result.Success);
+        Assert.Equal("new-secret-2222", await service.GetValueAsync("Integrations:MercadoLivre:SecretKey"));
+    }
+
+    [Fact]
+    public async Task SystemSettings_SecretTypedAfterMask_ShouldBeRejectedAndKeepStoredValue()
+    {
+        await using var context = CreateContext();
+        var service = new SystemSettingsService(context, new ConfigurationBuilder().Build(), new Mock<IMasterAuditService>().Object);
+        await service.SaveAsync(Actor, new SystemSettingSaveDto { Values = new() { ["Integrations:MercadoLivre:SecretKey"] = "old-secret-1111" } });
+
+        var result = await service.SaveAsync(Actor, new SystemSettingSaveDto
+        {
+            Values = new()
+            {
+                ["Integrations:MercadoLivre:SecretKey"] = "••••1111abc",
+                ["Integrations:MercadoLivre:AppId"] = "123"
+            }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("old-secret-1111", await service.GetValueAsync("Integrations:MercadoLivre:SecretKey"));
+        Assert.Null(await context.SystemSettings.SingleOrDefaultAsync(item => item.Key == "Integrations:MercadoLivre:AppId"));
+    }
+
+    [Fact]
     public async Task SystemSettings_EmptyValue_ShouldRemoveRow()
     {
         await using var context = CreateContext();

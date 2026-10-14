@@ -1505,6 +1505,31 @@ sequenceDiagram
 
 ---
 
+## Cofre de chaves: detecção de alteração em segredos mascarados (Fase 47)
+
+```mermaid
+sequenceDiagram
+  participant U as Master (MasterSettings.razor /master/vault)
+  participant API as MasterSettingsController
+  participant S as SystemSettingsService
+  participant DB as SystemSettings (AES via EF)
+  participant CFG as DatabaseSettingsConfigurationProvider
+  U->>U: @bind-value:event="oninput" → _hasChanges = true
+  U->>U: ícone de olho → ToggleVisibility (password ↔ text, somente no navegador)
+  U->>API: PUT valores alterados (somente diferentes do original)
+  API->>S: SaveAsync
+  alt valor == máscara atual (••••1234)
+    S->>S: ignora (mantém segredo do banco)
+  else contém "•" mas difere da máscara
+    S-->>U: erro, nada salvo
+  else valor novo
+    S->>DB: SaveChanges (criptografia AES)
+    S->>CFG: ReloadTecFlowDatabaseSettings (limpa cache da API)
+  end
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  

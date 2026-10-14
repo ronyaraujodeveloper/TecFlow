@@ -883,3 +883,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ## 🧲 Menu Dinâmico com Drag & Drop (Fase 46)
 
 - [x] **Fase 46 — Árvore de menus editável:** pasta "Próximos Desenvolvimentos" e seus 6 subitens semeados em `MenuItems` (ocultos por padrão em todos os planos, selo "EM BREVE" na fila de engajamento), drag & drop na matriz `/master/menu-permissions` (reordenar via `OrderIndex`, mover para pasta via `ParentId`, item sobre item cria pasta com modal) e `NavMenu` lendo apenas o banco, com pastas aninhadas e recarga a cada navegação.
+
+## 🔐 Cofre de Chaves: Alterações em Segredos Mascarados (Fase 47)
+
+- [x] **Fase 47 - Detecção de alterações no Vault:** inputs de `/master/vault` com `@bind-value:event="oninput"` e flag `_hasChanges` imediata (selo "Alterações não salvas", campo alterado destacado, máscara selecionada ao focar, ícone de olho para mostrar/ocultar segredos); `SystemSettingsService` ignora apenas o valor idêntico à máscara atual, rejeita valores que ainda contêm "•" e grava os demais com AES, recarregando a configuração da API.

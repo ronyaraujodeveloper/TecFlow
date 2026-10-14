@@ -412,4 +412,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 ---
 
+### 🔐 Fase 47: Cofre de Chaves — Alterações em Segredos Mascarados (`VaultDirtyTracking`)
+
+- [x] **47.1. Binding instantâneo em `/master/vault`:**
+  - Inputs de AppId/SecretKey com `@bind-value:event="oninput"`; flag `_hasChanges` ligada na digitação (selo "Alterações não salvas", botão Salvar habilitado e campo alterado destacado); a máscara é selecionada ao focar para ser substituída.
+- [x] **47.2. Tratamento da máscara no salvamento:**
+  - Valor idêntico à máscara (`••••1234`) é ignorado e o segredo do banco é mantido; valor diferente é gravado com AES e a configuração da API é recarregada; máscara editada (contém "•") é rejeitada sem gravar nada.
+- [x] **47.3. Ícone de olho nos segredos do Vault:**
+  - Botão `bi-eye` / `bi-eye-slash` por campo secreto (`_showSecretMap`, `ToggleVisibility`, `IsSecretVisible`) alterna `password` ↔ `text`; o servidor continua enviando apenas a máscara, então só a chave recém-digitada fica legível; tudo volta a ficar oculto após salvar/recarregar.
+
+---
+
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

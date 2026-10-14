@@ -14,7 +14,7 @@
             <h1 class="h3 fw-bold mb-1">Cofre de chaves globais (Vault)</h1>
             <p class="text-muted small mb-0">
                 Chaves da plataforma usadas por todos os clientes: AppId/SecretKey dos marketplaces, Evolution API, Telegram, OpenAI e ASAAS.
-                Valores criptografados no banco (AES); segredos aparecem mascarados — deixe o campo como está para manter o valor atual ou apague-o para remover.
+                Valores criptografados no banco (AES); segredos aparecem mascarados — deixe o campo como está para manter o valor atual, clique nele e digite a nova chave para substituí-la (a máscara é selecionada ao focar) ou apague-o para remover.
                 Contas corporativas de teste/dev ficam em <a href="@MasterRoutes.DeveloperAccounts">Contas de teste / dev</a>.
             </p>
         </div>
@@ -22,7 +22,11 @@
             <button type="button" class="btn btn-outline-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="CheckKeysAsync">
                 <i class="bi bi-activity" aria-hidden="true"></i> Testar chaves em uso
             </button>
-            <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="SaveAsync">Salvar</button>
+            @if (_hasChanges)
+            {
+                <span class="badge text-bg-warning align-self-center">Alterações não salvas</span>
+            }
+            <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || !_hasChanges)" @onclick="SaveAsync">Salvar</button>
             <button type="button" class="btn btn-outline-warning btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="RestartAsync">Aplicar e reiniciar API</button>
         </div>
     </div>
@@ -65,12 +69,29 @@
                                 <i class="bi bi-lock-fill text-muted ms-1" title="Segredo criptografado" aria-hidden="true"></i>
                             }
                         </label>
-                        <input type="@(item.IsSecret ? "password" : "text")"
-                               class="form-control"
-                               autocomplete="off"
-                               placeholder="@item.Placeholder"
-                               value="@_values[item.Key]"
-                               @onchange="args => _values[item.Key] = args.Value?.ToString()" />
+                        <div class="input-group">
+                            <input type="@(item.IsSecret && !IsSecretVisible(item.Key) ? "password" : "text")"
+                                   class="form-control @(IsChanged(item.Key) ? "border-warning" : null)"
+                                   autocomplete="@(item.IsSecret ? "new-password" : "off")"
+                                   spellcheck="false"
+                                   placeholder="@item.Placeholder"
+                                   onfocus="this.select()"
+                                   @bind-value="_values[item.Key]"
+                                   @bind-value:event="oninput"
+                                   @bind-value:after="UpdateDirty" />
+                            @if (item.IsSecret)
+                            {
+                                var visible = IsSecretVisible(item.Key);
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        title="@(visible ? "Ocultar chave" : "Mostrar chave")"
+                                        aria-label="@(visible ? "Ocultar chave" : "Mostrar chave")"
+                                        aria-pressed="@(visible ? "true" : "false")"
+                                        @onclick="() => ToggleVisibility(item.Key)">
+                                    <i class="bi @(visible ? "bi-eye-slash" : "bi-eye")" aria-hidden="true"></i>
+                                </button>
+                            }
+                        </div>
                         <div class="form-text">
                             <code>@item.Key</code>
                             @if (item.UpdatedAt is not null)
@@ -90,6 +111,19 @@
     private List<DeveloperAccountCheckDto> _checks = [];
     private Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string?> _original = new(StringComparer.OrdinalIgnoreCase);
+    private bool _hasChanges;
+    private Dictionary<string, bool> _showSecretMap = new(StringComparer.OrdinalIgnoreCase);
+
+    private void ToggleVisibility(string keyName)
+    {
+        if (_showSecretMap.ContainsKey(keyName))
+            _showSecretMap[keyName] = !_showSecretMap[keyName];
+        else
+            _showSecretMap[keyName] = true;
+    }
+
+    private bool IsSecretVisible(string keyName) =>
+        _showSecretMap.TryGetValue(keyName, out var visible) && visible;
 
     protected override async Task LoadAsync()
     {
@@ -102,12 +136,19 @@
         _items = result.Data ?? [];
         _values = _items.ToDictionary(item => item.Key, item => (string?)item.DisplayValue, StringComparer.OrdinalIgnoreCase);
         _original = new Dictionary<string, string?>(_values, StringComparer.OrdinalIgnoreCase);
+        _hasChanges = false;
+        _showSecretMap.Clear();
     }
+
+    private bool IsChanged(string key) =>
+        !string.Equals(_values.GetValueOrDefault(key) ?? string.Empty, _original.GetValueOrDefault(key) ?? string.Empty, StringComparison.Ordinal);
+
+    private void UpdateDirty() => _hasChanges = _values.Keys.Any(IsChanged);
 
     private async Task SaveAsync()
     {
         var changed = _values
-            .Where(pair => !string.Equals(pair.Value ?? string.Empty, _original.GetValueOrDefault(pair.Key) ?? string.Empty, StringComparison.Ordinal))
+            .Where(pair => IsChanged(pair.Key))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         if (changed.Count == 0)
         {

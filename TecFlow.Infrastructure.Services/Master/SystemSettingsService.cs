@@ -11,8 +11,6 @@ namespace TecFlow.Infrastructure.Services.Master;
 /// <summary>Cofre de chaves globais: valores criptografados no banco e recarregados na configuração da API.</summary>
 public sealed class SystemSettingsService : ISystemSettingsService
 {
-    private const string MaskPrefix = "••••";
-
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly IMasterAuditService _audit;
@@ -60,6 +58,8 @@ public sealed class SystemSettingsService : ISystemSettingsService
     {
         var changed = new List<string>();
         var rows = await _context.SystemSettings.ToListAsync(cancellationToken);
+        var pending = new List<(SystemSettingDefinition Definition, string Value, SystemSetting? Row)>();
+        var invalid = new List<string>();
         foreach (var (rawKey, rawValue) in request.Values)
         {
             var definition = SystemSettingCatalog.Find(rawKey);
@@ -69,12 +69,36 @@ public sealed class SystemSettingsService : ISystemSettingsService
             }
 
             var value = rawValue?.Trim() ?? string.Empty;
-            if (value.StartsWith(MaskPrefix, StringComparison.Ordinal))
+            var row = rows.FirstOrDefault(item => string.Equals(item.Key, definition.Key, StringComparison.OrdinalIgnoreCase));
+            if (definition.IsSecret)
             {
-                continue;
+                var current = string.IsNullOrEmpty(row?.Value) ? _configuration[definition.Key] : row.Value;
+                if (SystemSettingCatalog.IsUnchangedMask(value, current))
+                {
+                    continue;
+                }
+
+                if (SystemSettingCatalog.ContainsMaskCharacter(value))
+                {
+                    invalid.Add(definition.Label);
+                    continue;
+                }
             }
 
-            var row = rows.FirstOrDefault(item => string.Equals(item.Key, definition.Key, StringComparison.OrdinalIgnoreCase));
+            pending.Add((definition, value, row));
+        }
+
+        if (invalid.Count > 0)
+        {
+            return new MasterOperationResultDto
+            {
+                Success = false,
+                Message = "Apague a máscara (••••) e digite a chave completa em: " + string.Join(", ", invalid) + ". Nada foi salvo."
+            };
+        }
+
+        foreach (var (definition, value, row) in pending)
+        {
             if (row is null)
             {
                 if (value.Length == 0)

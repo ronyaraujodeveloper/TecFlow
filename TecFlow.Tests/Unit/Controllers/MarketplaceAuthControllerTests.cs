@@ -17,7 +17,7 @@ namespace TecFlow.Tests.Unit.Controllers;
 public class MarketplaceAuthControllerTests
 {
     [Fact]
-    public void GetAuthorizationUrl_ShouldReturnOkWithUrl_WhenServiceGeneratesLink()
+    public async Task GetAuthorizationUrl_ShouldReturnOkWithUrl_WhenServiceGeneratesLink()
     {
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(s => s.GenerateAuthorizationUrl(
@@ -27,7 +27,7 @@ public class MarketplaceAuthControllerTests
             .Returns("https://auth.tiktok.test/authorize?app_key=1");
 
         var controller = CreateController(auth: auth.Object);
-        var result = controller.GetAuthorizationUrl(
+        var result = await controller.GetAuthorizationUrl(
             MarketplaceType.TikTokShop,
             "https://callback",
             "state-1");
@@ -39,7 +39,7 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
-    public void GetPlatformAuthorizationUrl_ShouldReturnAuthorizeUrl_ForShopeeSlug()
+    public async Task GetPlatformAuthorizationUrl_ShouldReturnAuthorizeUrl_ForShopeeSlug()
     {
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(s => s.GenerateAuthorizationUrl(
@@ -49,7 +49,7 @@ public class MarketplaceAuthControllerTests
             .Returns("https://partner.shopee.test/auth?partner_id=1");
 
         var controller = CreateController(auth: auth.Object);
-        var result = controller.GetPlatformAuthorizationUrl(
+        var result = await controller.GetPlatformAuthorizationUrl(
             "shopee",
             "https://callback",
             "ticket-1",
@@ -63,10 +63,10 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
-    public void GetPlatformAuthorizationUrl_ShouldReturnBadRequest_WhenPlatformIsUnknown()
+    public async Task GetPlatformAuthorizationUrl_ShouldReturnBadRequest_WhenPlatformIsUnknown()
     {
         var controller = CreateController();
-        var result = controller.GetPlatformAuthorizationUrl("aliexpress", "https://callback");
+        var result = await controller.GetPlatformAuthorizationUrl("aliexpress", "https://callback");
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }
@@ -100,7 +100,7 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
-    public void GetPlatformAuthorizationUrl_ShouldReturnOkSandboxUrl_WhenShopeeServiceThrows()
+    public async Task GetPlatformAuthorizationUrl_ShouldReturnOkSandboxUrl_WhenShopeeServiceThrows()
     {
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(s => s.GenerateAuthorizationUrl(
@@ -110,7 +110,7 @@ public class MarketplaceAuthControllerTests
             .Throws(new InvalidOperationException("Configure Integrations:Shopee:PartnerId e PartnerKey."));
 
         var controller = CreateController(auth: auth.Object);
-        var result = controller.GetPlatformAuthorizationUrl(
+        var result = await controller.GetPlatformAuthorizationUrl(
             "shopee",
             "https://localhost:7002/integracoes/oauth/callback",
             "ticket-1",

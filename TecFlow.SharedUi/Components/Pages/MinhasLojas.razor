@@ -141,9 +141,14 @@
             }
         }
 
-        if (query.TryGetValue("link", out var linkResult))
+        if (query.TryGetValue("link", out var linkResult) || query.TryGetValue("status", out linkResult))
         {
             var link = linkResult.ToString();
+            if (string.Equals(link, "error", StringComparison.OrdinalIgnoreCase))
+            {
+                link = "failed";
+            }
+
             if (string.Equals(link, "success", StringComparison.OrdinalIgnoreCase))
             {
                 _pageMessage = "Loja vinculada com sucesso.";
@@ -162,7 +167,7 @@
 
         if (stripQuery)
         {
-            Navigation.NavigateTo("/minhas-lojas", replace: true);
+            Navigation.NavigateTo(uri.AbsolutePath, replace: true);
         }
     }
 

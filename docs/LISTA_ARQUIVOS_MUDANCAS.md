@@ -1318,6 +1318,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.WebUi/Extensions/IntegracoesEndpointExtensions.cs** / **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - callback pendente gravado já normalizado (retorno à origem sem porta).
 - [x] **TecFlow.Tests/Unit/Integrations/OAuthRedirectUriNormalizerTests.cs** (novo) / **MarketplaceAuthServiceTests.cs** - Ngrok com `:7002`/`:5000`, origem sem caminho e hosts locais preservados.
 
+### Callback do Mercado Livre sem sessão (state selado)
+
+- [x] **TecFlow.Business/Integrations/Auth/MarketplaceOAuthState.cs** (novo) - `MarketplaceOAuthState`, `IOAuthStateProtector` e `MarketplaceOAuthStateRules` (prefixo `tfs1.`, validade, URL de retorno `/marketplace-accounts?status=`).
+- [x] **TecFlow.Business/Dto/MarketplaceOAuthCallbackDtos.cs** (novo) - request (`Code`, `State`, `Error`) e resultado (`Success`, `Message`, `ReturnUrl`).
+- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/OAuthStateProtector.cs** (novo) - AES-256-GCM com chave derivada por HKDF de `Encryption:Key`; registrado em `MarketplaceAuthRegistrationExtensions`.
+- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** - `authorize-url` sela o state do ML para o usuário do JWT; `POST mercadolivre/callback` anônimo com nonce de uso único (`IMemoryCache`) e identidade do state para os filtros de tenant.
+- [x] **TecFlow.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - callback `.AllowAnonymous()`, repasse do state selado à API e redirecionamento ao `ReturnUrl`; `/oauth/start` envia JWT e apelido.
+- [x] **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - feedback de `?status=success|error` em `/marketplace-accounts`.
+- [x] **TecFlow.Tests/Unit/Integrations/MarketplaceOAuthStateTests.cs** (novo) / **Controllers/MarketplaceAuthControllerTests.cs** - selagem, adulteração/expiração, retorno à origem, callback anônimo, replay e state forjado.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

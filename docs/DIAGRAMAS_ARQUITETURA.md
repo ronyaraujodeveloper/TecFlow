@@ -1537,6 +1537,30 @@ flowchart LR
   N2 -->|authorization_code| TOKEN[api.mercadolibre.com/oauth/token]
 ```
 
+### Callback do Mercado Livre sem sessão (state selado)
+
+```mermaid
+sequenceDiagram
+  participant U as Usuário (/marketplace-accounts)
+  participant W as WebUi /integracoes/oauth/callback (AllowAnonymous)
+  participant A as API MarketplaceAuthController
+  participant P as OAuthStateProtector (AES-GCM)
+  participant ML as Mercado Livre
+  participant DB as MarketplaceAccounts
+  U->>A: GET mercadolivre/authorize-url (JWT)
+  A->>P: Protect(UserId, TenantId, apelido, origem, nonce, 15 min)
+  A-->>U: auth.mercadolivre.com.br/authorization?state=tfs1.…
+  U->>ML: autoriza
+  ML->>W: GET callback?code=…&state=tfs1.… (sem cookie)
+  W->>A: POST mercadolivre/callback {code, state}
+  A->>P: TryUnprotect + nonce de uso único
+  A->>A: HttpContext.User = UserId + TenantId do state
+  A->>ML: oauth/token (authorization_code)
+  A->>DB: AccessToken / RefreshToken (IntegracaoLojaService.LinkAsync)
+  A-->>W: ReturnUrl = origem/marketplace-accounts?status=success
+  W-->>U: 302 https://localhost:7002/marketplace-accounts?status=success
+```
+
 ---
 
 ## Cofre de chaves: detecção de alteração em segredos mascarados (Fase 47)

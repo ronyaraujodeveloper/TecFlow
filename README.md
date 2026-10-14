@@ -272,6 +272,10 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `OfficialCatalogSearchRules.CountVisibleOffers` conta apenas as ofertas exibidas (filtros + URLs únicas); a `/busca` limpa o alerta de erro assim que há produtos.
 - [x] **RedirectUri limpa em túneis Ngrok:**
   - `OAuthRedirectUriNormalizer` (Business) aplicado em `MarketplaceAuthService` (authorize + troca do code), `IntegracoesEndpointExtensions` e `MinhasLojas.razor`: hosts `ngrok-free.dev` / `ngrok-free.app` / `ngrok.io` / `ngrok.app` saem sempre como `https://{host}/integracoes/oauth/callback`, sem porta local (`:7002` / `:5000`), query ou fragmento.
+- [x] **Callback do Mercado Livre sem sessão no navegador:**
+  - `/integracoes/oauth/callback` com `.AllowAnonymous()`: não redireciona mais para `?login=required` quando o `state` é selado.
+  - `authorize-url` (usuário autenticado) sela `UserId` + `TenantId` + apelido + origem no `state` (`OAuthStateProtector`, AES-256-GCM com chave HKDF de `Encryption:Key`, validade de 15 min, uso único).
+  - `POST api/marketplace-auth/mercadolivre/callback` (anônimo) abre o `state`, troca o code e grava `AccessToken` / `RefreshToken` em `MarketplaceAccounts` no tenant do usuário; retorno para `{origem}/marketplace-accounts?status=success` (ex.: `https://localhost:7002/marketplace-accounts?status=success`).
 
 ---
 

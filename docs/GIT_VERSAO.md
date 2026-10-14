@@ -95,3 +95,4 @@
 [2026-10-13 21:32:08]feat(vault): deteccao de alteracoes em segredos mascarados e icone de olho (fase 47)
 [2026-10-13 21:57:57]fix(busca): token de aplicacao do Vault e fallback de vitrine na busca do Mercado Livre
 [2026-10-13 22:24:34]fix(oauth): redirect_uri do Mercado Livre sem porta local em tuneis Ngrok
+[2026-10-13 22:54:42]feat(oauth): callback do Mercado Livre sem sessao com state selado (AES-GCM) e retorno a /marketplace-accounts

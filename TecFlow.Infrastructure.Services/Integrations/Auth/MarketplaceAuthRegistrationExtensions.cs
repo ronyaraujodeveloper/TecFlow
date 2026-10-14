@@ -15,6 +15,7 @@ public static class MarketplaceAuthRegistrationExtensions
 
         services.AddScoped<IMarketplaceSignatureService, MarketplaceSignatureService>();
         services.AddScoped<IMarketplaceAuthService, MarketplaceAuthService>();
+        services.AddSingleton<IOAuthStateProtector, OAuthStateProtector>();
 
         return services;
     }

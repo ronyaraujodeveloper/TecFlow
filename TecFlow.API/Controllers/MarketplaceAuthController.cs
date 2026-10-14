@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -12,6 +14,7 @@ using TecFlow.Business.Integrations.Auth;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Core.Enums;
+using TecFlow.Core.Security;
 using TecFlow.Database.Filter;
 using TecFlow.Infrastructure.Services.Integrations.Auth;
 
@@ -25,6 +28,8 @@ public class MarketplaceAuthController : ControllerBase
     private readonly IIntegracaoLojaService _integracaoLojaService;
     private readonly ILogger<MarketplaceAuthController> _logger;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly IOAuthStateProtector? _stateProtector;
+    private readonly IMemoryCache? _memoryCache;
 
     /// <summary>
     /// Não injeta AppDbContext/TecFlowDbContext: o EF fica no serviço (DI scoped).
@@ -34,8 +39,12 @@ public class MarketplaceAuthController : ControllerBase
         IMarketplaceAuthService marketplaceAuthService,
         IIntegracaoLojaService integracaoLojaService,
         ILogger<MarketplaceAuthController> logger,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        IOAuthStateProtector? stateProtector = null,
+        IMemoryCache? memoryCache = null)
     {
+        _stateProtector = stateProtector;
+        _memoryCache = memoryCache;
         ArgumentNullException.ThrowIfNull(marketplaceAuthService);
         ArgumentNullException.ThrowIfNull(integracaoLojaService);
         ArgumentNullException.ThrowIfNull(logger);
@@ -50,23 +59,25 @@ public class MarketplaceAuthController : ControllerBase
     /// <summary>Gera URL oficial de autorização OAuth para TikTok Shop ou Shopee.</summary>
     [HttpGet("authorize-url")]
     [AllowAnonymous]
-    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetAuthorizationUrl(
+    public async Task<ActionResult<MarketplaceAuthorizeUrlResponseDto>> GetAuthorizationUrl(
         [FromQuery] MarketplaceType type,
         [FromQuery] string redirectUri,
-        [FromQuery] string? state = null)
+        [FromQuery] string? state = null,
+        [FromQuery] string? friendlyName = null)
     {
         if (string.IsNullOrWhiteSpace(redirectUri))
         {
             return BadRequest(new { error = "redirectUri é obrigatório." });
         }
 
-        return GenerateAuthorizeResult(type, redirectUri, state);
+        var stateValue = await SealMercadoLivreStateAsync(type, state, friendlyName, redirectUri);
+        return GenerateAuthorizeResult(type, redirectUri, stateValue);
     }
 
     /// <summary>Gera URL OAuth por slug da plataforma (shopee / tiktok / mercadolivre).</summary>
     [HttpGet("{plataforma}/authorize-url")]
     [AllowAnonymous]
-    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetPlatformAuthorizationUrl(
+    public async Task<ActionResult<MarketplaceAuthorizeUrlResponseDto>> GetPlatformAuthorizationUrl(
         string plataforma,
         [FromQuery] string? redirectUri,
         [FromQuery] string? state = null,
@@ -84,7 +95,162 @@ public class MarketplaceAuthController : ControllerBase
         }
 
         var stateValue = string.IsNullOrWhiteSpace(state) ? friendlyName ?? lojaId : state;
+        stateValue = await SealMercadoLivreStateAsync(type, stateValue, friendlyName, redirectUri);
         return GenerateAuthorizeResult(type, redirectUri, stateValue);
+    }
+
+    /// <summary>
+    /// Callback do Mercado Livre sem sessão no navegador: o <c>state</c> selado (AES-GCM) identifica
+    /// usuário/tenant, os tokens são gravados em MarketplaceAccounts e a resposta traz a URL de retorno.
+    /// </summary>
+    [HttpPost("mercadolivre/callback")]
+    [AllowAnonymous]
+    public async Task<ActionResult<MarketplaceOAuthCallbackResultDto>> CompleteMercadoLivreCallbackAsync(
+        [FromBody] MarketplaceOAuthCallbackRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        if (_stateProtector is null
+            || !_stateProtector.TryUnprotect(request?.State, out var state)
+            || state is null
+            || state.Platform != MarketplaceType.MercadoLivre)
+        {
+            _logger.LogWarning("Callback ML com state inválido, adulterado ou expirado.");
+            return BadRequest(CallbackFail(null, MarketplaceOAuthStateRules.InvalidStateMessage));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request!.Error))
+        {
+            return BadRequest(CallbackFail(state.CallbackUri, $"Autorização recusada: {request.Error.Trim()}"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(CallbackFail(state.CallbackUri, "Callback OAuth incompleto (code)."));
+        }
+
+        if (!TryConsumeStateNonce(state))
+        {
+            return BadRequest(CallbackFail(state.CallbackUri, MarketplaceOAuthStateRules.ReplayedStateMessage));
+        }
+
+        HttpContext.User = BuildStatePrincipal(state);
+        try
+        {
+            var result = await _integracaoLojaService.LinkAsync(
+                state.UserId,
+                new IntegracaoLojaDto
+                {
+                    PlatformType = MarketplaceType.MercadoLivre,
+                    AuthorizationCode = request.Code.Trim(),
+                    FriendlyName = state.FriendlyName,
+                    RedirectUri = state.CallbackUri
+                },
+                cancellationToken);
+            if (!result.Status)
+            {
+                return BadRequest(CallbackFail(state.CallbackUri, result.Descricao));
+            }
+
+            _logger.LogInformation(
+                "Tokens ML gravados via callback anônimo. UserId={UserId} TenantId={TenantId}",
+                state.UserId,
+                state.TenantId);
+            return Ok(new MarketplaceOAuthCallbackResultDto
+            {
+                Success = true,
+                Message = result.Descricao,
+                ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(state.CallbackUri, success: true)
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao salvar tokens do Mercado Livre no SQL Server");
+            _logger.LogError(ex, "Erro ao salvar tokens do Mercado Livre no SQL Server");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                CallbackFail(state.CallbackUri, MarketplaceAuthService.FormatSqlError(ex)));
+        }
+    }
+
+    private async Task<string?> SealMercadoLivreStateAsync(
+        MarketplaceType type,
+        string? state,
+        string? friendlyName,
+        string redirectUri)
+    {
+        if (type != MarketplaceType.MercadoLivre || _stateProtector is null)
+        {
+            return state;
+        }
+
+        var principal = User;
+        if (GetCurrentUserId() is null)
+        {
+            var jwt = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+            if (jwt.Succeeded && jwt.Principal is not null)
+            {
+                principal = jwt.Principal;
+            }
+        }
+
+        var userClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (!int.TryParse(userClaim, out var userId))
+        {
+            return state;
+        }
+
+        Guid? tenantId = Guid.TryParse(principal.FindFirst(TecFlowClaimTypes.TenantId)?.Value, out var tenant)
+            ? tenant
+            : null;
+        return _stateProtector.Protect(MarketplaceOAuthStateRules.Create(
+            userId,
+            tenantId,
+            type,
+            friendlyName,
+            redirectUri));
+    }
+
+    private bool TryConsumeStateNonce(MarketplaceOAuthState state)
+    {
+        if (_memoryCache is null)
+        {
+            return true;
+        }
+
+        var key = "oauth-state-nonce:" + state.Nonce;
+        if (_memoryCache.TryGetValue(key, out _))
+        {
+            return false;
+        }
+
+        _memoryCache.Set(key, true, state.ExpiresAt);
+        return true;
+    }
+
+    private static ClaimsPrincipal BuildStatePrincipal(MarketplaceOAuthState state)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, state.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture))
+        };
+        if (state.TenantId is { } tenantId)
+        {
+            claims.Add(new Claim(TecFlowClaimTypes.TenantId, tenantId.ToString()));
+        }
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, "OAuthState"));
+    }
+
+    private static MarketplaceOAuthCallbackResultDto CallbackFail(string? callbackUri, string? message)
+    {
+        var text = string.IsNullOrWhiteSpace(message) ? "Não foi possível vincular a loja." : message.Trim();
+        return new MarketplaceOAuthCallbackResultDto
+        {
+            Success = false,
+            Message = text,
+            ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(callbackUri, success: false, text)
+        };
     }
 
     private ActionResult<MarketplaceAuthorizeUrlResponseDto> GenerateAuthorizeResult(

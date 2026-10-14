@@ -16,7 +16,7 @@ public static class IntegracoesEndpointExtensions
         var group = endpoints.MapGroup("/integracoes");
 
         group.MapGet("/oauth/start", StartMarketplaceOAuthAsync);
-        group.MapGet("/oauth/callback", FinishMarketplaceOAuthAsync);
+        group.MapGet("/oauth/callback", FinishMarketplaceOAuthAsync).AllowAnonymous();
 
         return endpoints;
     }
@@ -49,9 +49,18 @@ public static class IntegracoesEndpointExtensions
         {
             var client = httpClientFactory.CreateClient("Orquestrador");
             var url =
-                $"api/marketplace-auth/authorize-url?type={(int)platform}&redirectUri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(ticket)}";
+                $"api/marketplace-auth/authorize-url?type={(int)platform}&redirectUri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(ticket)}"
+                + $"&friendlyName={Uri.EscapeDataString(friendlyName.Trim())}";
 
-            using var response = await client.GetAsync(url, httpContext.RequestAborted);
+            using var authorizeRequest = new HttpRequestMessage(HttpMethod.Get, url);
+            var startJwt = httpContext.User.FindFirstValue(TecFlowClaimTypes.AccessToken);
+            if (!string.IsNullOrWhiteSpace(startJwt))
+            {
+                authorizeRequest.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", startJwt);
+            }
+
+            using var response = await client.SendAsync(authorizeRequest, httpContext.RequestAborted);
             var content = await response.Content.ReadAsStringAsync(httpContext.RequestAborted);
 
             if (!response.IsSuccessStatusCode)
@@ -94,6 +103,11 @@ public static class IntegracoesEndpointExtensions
         if (string.IsNullOrWhiteSpace(shopId))
         {
             shopId = query["shopId"].ToString();
+        }
+
+        if (MarketplaceOAuthStateRules.IsProtected(state))
+        {
+            return await CompleteSealedMercadoLivreCallbackAsync(httpContext, httpClientFactory, logger, code, state);
         }
 
         if (httpContext.User.Identity?.IsAuthenticated != true)
@@ -163,6 +177,77 @@ public static class IntegracoesEndpointExtensions
         {
             logger.LogError(ex, "Erro ao concluir vinculação OAuth de marketplace.");
             return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Erro inesperado ao vincular loja."));
+        }
+    }
+
+    /// <summary>
+    /// Mercado Livre com state selado: não exige cookie de sessão. A API abre o state, grava os tokens
+    /// e devolve a origem onde o OAuth começou (ex.: https://localhost:7002/marketplace-accounts?status=success).
+    /// </summary>
+    private static async Task<IResult> CompleteSealedMercadoLivreCallbackAsync(
+        HttpContext httpContext,
+        IHttpClientFactory httpClientFactory,
+        ILogger logger,
+        string code,
+        string state)
+    {
+        var query = httpContext.Request.Query;
+        var error = FirstNonEmpty(query["error_description"].ToString(), query["error"].ToString());
+        try
+        {
+            var client = httpClientFactory.CreateClient("Orquestrador");
+            using var response = await client.PostAsJsonAsync(
+                "api/marketplace-auth/mercadolivre/callback",
+                new MarketplaceOAuthCallbackRequestDto
+                {
+                    Code = string.IsNullOrWhiteSpace(code) ? null : code,
+                    State = state,
+                    Error = string.IsNullOrWhiteSpace(error) ? null : error
+                },
+                httpContext.RequestAborted);
+            var content = await response.Content.ReadAsStringAsync(httpContext.RequestAborted);
+            var result = TryDeserialize<MarketplaceOAuthCallbackResultDto>(content);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning(
+                    "Callback ML sem sessão recusado pela API. Status={StatusCode} Message={Message}",
+                    (int)response.StatusCode,
+                    result?.Message);
+            }
+
+            return Results.Redirect(SafeReturnUrl(result?.ReturnUrl, response.IsSuccessStatusCode, result?.Message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erro ao concluir callback OAuth do Mercado Livre sem sessão.");
+            return Results.Redirect(MarketplaceOAuthStateRules.BuildReturnUrl(null, success: false, "Erro inesperado ao vincular loja."));
+        }
+    }
+
+    private static string SafeReturnUrl(string? returnUrl, bool success, string? message)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl)
+            && (returnUrl.StartsWith(MarketplaceOAuthStateRules.AccountsPath, StringComparison.Ordinal)
+                || (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absolute)
+                    && (absolute.Scheme == Uri.UriSchemeHttps || absolute.Scheme == Uri.UriSchemeHttp)
+                    && absolute.AbsolutePath.Equals(MarketplaceOAuthStateRules.AccountsPath, StringComparison.OrdinalIgnoreCase))))
+        {
+            return returnUrl;
+        }
+
+        return MarketplaceOAuthStateRules.BuildReturnUrl(null, success, message);
+    }
+
+    private static T? TryDeserialize<T>(string content)
+        where T : class
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 

@@ -302,10 +302,12 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **API oficial desligada até a homologação do app:**
   - `Integrations:MercadoLivre:UseOfficialSearchApi` (padrão `false`): `SearchProductsAsync` não chama `/sites/MLB/search`; com `true` volta o fluxo OAuth + refresh.
 - [x] **Scraper `lista.mercadolivre.com.br/{query}`:**
-  - Headers de Chrome 130 (`Sec-Ch-Ua`, `Sec-Fetch-*`, `Upgrade-Insecure-Requests`) e descompressão automática; `MercadoLivreHtmlParser` lê título, preço atual (com centavos), preço original (`andes-money-amount--previous`), imagem (`data-src` em lazy-load) e link de `.ui-search-layout__item` / `.poly-card`.
+  - Headers de Chrome 129 (`User-Agent`, `Accept`, `Accept-Language`, `sec-ch-ua` `"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"`, `sec-ch-ua-mobile`, `sec-ch-ua-platform`, `Sec-Fetch-*`) e `HttpClientHandler` com `AutomaticDecompression = GZip | Deflate | Brotli`; `MercadoLivreHtmlParser` lê título, preço atual (com centavos), preço original (`andes-money-amount--previous`), imagem (`data-src` em lazy-load) e link de `.ui-search-layout__item` / `.poly-card`.
   - `matt_tool` do tenant (ex.: `14343296`) injetado em cada oferta.
 - [x] **Sem banner de 403 na `/busca`:**
   - Com ofertas, nenhum alerta; sem ofertas por desafio anti-robô (`bot_challenge` / `account-verification`), o badge mostra "vitrine pediu verificação anti-robô" em vez do erro HTTP 403 da API.
+- [ ] **Fallback pelo autocomplete do ML (não implementado):**
+  - `http2.mlstatic.com/resources/sites/MLB/suggest?q=` responde 404 e `.../autosuggest?q=` responde 403 a chamadas do servidor; além disso só devolve termos de busca (sem preço, imagem ou link), então não gera ofertas. O desafio anti-robô da vitrine não é contornado por código: a saída é a homologação do app (`UseOfficialSearchApi = true`) ou a busca executada no navegador do usuário.
   
 ---
 

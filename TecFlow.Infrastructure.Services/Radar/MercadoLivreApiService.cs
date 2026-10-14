@@ -23,7 +23,7 @@ namespace TecFlow.Infrastructure.Services.Radar;
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
     public const string PublicUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
 
     private static readonly JsonSerializerOptions SearchJsonOptions = new()
     {
@@ -353,7 +353,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
         ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
         ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
-        ApplyHeader(request.Headers, "Sec-Ch-Ua", "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"");
+        ApplyHeader(request.Headers, "Sec-Ch-Ua", "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"");
         ApplyHeader(request.Headers, "Sec-Ch-Ua-Mobile", "?0");
         ApplyHeader(request.Headers, "Sec-Ch-Ua-Platform", "\"Windows\"");
         ApplyHeader(request.Headers, "Sec-Fetch-Dest", "document");

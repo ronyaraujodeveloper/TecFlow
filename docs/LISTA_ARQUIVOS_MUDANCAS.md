@@ -1336,7 +1336,8 @@ API / Orquestrador / Worker / WebUi
 ### MLBScraperPrimary - Vitrine pública como motor primário da busca ML
 
 - [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `UseOfficialSearchApi` (padrão `false`).
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 130 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 129 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
+- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - cliente do ML com `HttpClientHandler` (`GZip | Deflate | Brotli`).
 - [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs** - preço atual com centavos, preço original (`--previous` / `<s>`), link `poly-component__title` e imagem `data-src` em lazy-load.
 - [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - detecção do `bot_challenge` (`_bmstate`, `micro-landing-container`) e `MercadoLivreScraperBlockedMessage`.
 - [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.

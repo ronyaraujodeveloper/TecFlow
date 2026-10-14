@@ -70,6 +70,9 @@ public static class WhatsAppEvolutionRegistrationExtensions
             client.BaseAddress = new Uri("https://api.mercadolibre.com/");
             client.Timeout = TimeSpan.FromSeconds(12);
             TecFlow.Infrastructure.Services.Radar.MercadoLivreApiService.EnsurePublicUserAgent(client);
+        }).ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All
         });
         services.AddHttpClient<IShopeeAffiliateOfferService, TecFlow.Infrastructure.Services.Radar.ShopeeAffiliateOfferService>((sp, client) =>
         {

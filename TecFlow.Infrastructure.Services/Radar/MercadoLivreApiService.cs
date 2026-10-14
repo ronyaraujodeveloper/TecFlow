@@ -23,7 +23,7 @@ namespace TecFlow.Infrastructure.Services.Radar;
 public sealed class MercadoLivreApiService : IMercadoLivreApiService
 {
     public const string PublicUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
     private static readonly JsonSerializerOptions SearchJsonOptions = new()
     {
@@ -99,6 +99,22 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
+        if (!_options.CurrentValue.UseOfficialSearchApi)
+        {
+            _logger.LogInformation(
+                "[ML Busca] API oficial desativada (UseOfficialSearchApi=false); buscando '{Query}' na vitrine lista.mercadolivre.com.br.",
+                query);
+            var primary = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
+            if (primary.Items.Count > 0)
+            {
+                return OfficialCatalogChannelResult.From(primary.Items);
+            }
+
+            return primary.Blocked
+                ? OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreScraperBlockedMessage)
+                : OfficialCatalogChannelResult.Empty;
+        }
+
         var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
         var accessToken = accountToken
             ?? ResolveStaticAccessToken()
@@ -106,8 +122,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         if (string.IsNullOrWhiteSpace(accessToken))
         {
             var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-            return scraped.Count > 0
-                ? OfficialCatalogChannelResult.From(scraped)
+            return scraped.Items.Count > 0
+                ? OfficialCatalogChannelResult.From(scraped.Items)
                 : OfficialCatalogChannelResult.Unconfigured();
         }
 
@@ -188,8 +204,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         CancellationToken cancellationToken)
     {
         var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-        return scraped.Count > 0
-            ? OfficialCatalogChannelResult.From(scraped)
+        return scraped.Items.Count > 0
+            ? OfficialCatalogChannelResult.From(scraped.Items)
             : OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
     }
 
@@ -285,7 +301,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         return (response.StatusCode, body);
     }
 
-    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaListaAsync(
+    private async Task<(IReadOnlyList<OfficialCatalogProductDto> Items, bool Blocked)> SearchViaListaAsync(
         string query,
         string? affiliateId,
         int maxItems,
@@ -295,9 +311,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, listaUrl);
-            ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
-            ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+            ApplyDocumentHeaders(request);
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             var html = await response.Content.ReadAsStringAsync(cancellationToken);
             var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri;
@@ -308,10 +322,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                     query,
                     response.StatusCode,
                     finalUrl ?? listaUrl);
-                return [];
+                return ([], true);
             }
 
-            return MercadoLivreHtmlParser.ParseSearchResults(html)
+            var items = MercadoLivreHtmlParser.ParseSearchResults(html)
                 .Take(maxItems)
                 .Select(item =>
                 {
@@ -320,12 +334,33 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 })
                 .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
                 .ToList();
+            _logger.LogInformation(
+                "[ML Busca] Vitrine lista.mercadolivre.com.br devolveu {Count} ofertas para '{Query}' (matt_tool={AffiliateId}).",
+                items.Count,
+                query,
+                affiliateId ?? "-");
+            return (items, false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Falha ao raspar a vitrine do Mercado Livre para '{Query}'.", query);
-            return [];
+            return ([], true);
         }
+    }
+
+    private static void ApplyDocumentHeaders(HttpRequestMessage request)
+    {
+        ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
+        ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
+        ApplyHeader(request.Headers, "Sec-Ch-Ua", "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"");
+        ApplyHeader(request.Headers, "Sec-Ch-Ua-Mobile", "?0");
+        ApplyHeader(request.Headers, "Sec-Ch-Ua-Platform", "\"Windows\"");
+        ApplyHeader(request.Headers, "Sec-Fetch-Dest", "document");
+        ApplyHeader(request.Headers, "Sec-Fetch-Mode", "navigate");
+        ApplyHeader(request.Headers, "Sec-Fetch-Site", "none");
+        ApplyHeader(request.Headers, "Sec-Fetch-User", "?1");
+        ApplyHeader(request.Headers, "Upgrade-Insecure-Requests", "1");
     }
 
     private async Task<string?> GetAppAccessTokenAsync(CancellationToken cancellationToken)

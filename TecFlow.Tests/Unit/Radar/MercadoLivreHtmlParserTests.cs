@@ -78,6 +78,47 @@ public class MercadoLivreHtmlParserTests
     }
 
     [Fact]
+    public void ParseSearchResults_ShouldReadPolyCardPricesAndLazyImage()
+    {
+        const string html = """
+            <li class="ui-search-layout__item">
+              <div class="poly-card poly-card--list">
+                <img src="data:image/gif;base64,R0lGOD" data-src="https://http2.mlstatic.com/D_NQ_NP_dell.webp" />
+                <h3 class="poly-component__title-wrapper">
+                  <a class="poly-component__title" href="https://www.mercadolivre.com.br/notebook-dell-i7/p/MLB555">Notebook Dell i7</a>
+                </h3>
+                <div class="poly-component__price">
+                  <s class="andes-money-amount andes-money-amount--previous">
+                    <span class="andes-money-amount__fraction">5.499</span>
+                  </s>
+                  <div class="poly-price__current">
+                    <span class="andes-money-amount">
+                      <span class="andes-money-amount__fraction">4.299</span><span class="andes-money-amount__cents">90</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </li>
+            """;
+
+        var item = Assert.Single(MercadoLivreHtmlParser.ParseSearchResults(html));
+
+        Assert.Equal("Notebook Dell i7", item.ProductName);
+        Assert.Equal(4299.90m, item.Price);
+        Assert.Equal(5499m, item.OriginalPrice);
+        Assert.Equal("https://http2.mlstatic.com/D_NQ_NP_dell.webp", item.ImageUrl);
+        Assert.Equal("MLB555", item.ProductId);
+    }
+
+    [Fact]
+    public void IsMercadoLivreVerificationPage_ShouldDetectBotChallenge()
+    {
+        Assert.True(OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(
+            "https://lista.mercadolivre.com.br/dell-i7",
+            """<div class="micro-landing-container"></div><script>"/security/bot_challenge"</script>"""));
+    }
+
+    [Fact]
     public void InjectMattTool_ShouldAppendTrackingId()
     {
         var url = MercadoLivreCommissionUrlBuilder.InjectMattTool(

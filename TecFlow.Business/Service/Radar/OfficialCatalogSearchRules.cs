@@ -48,6 +48,9 @@ public static class OfficialCatalogSearchRules
     public const string MercadoLivreSearchForbiddenMessage =
         "API MLB recusou a busca (HTTP 403) e a vitrine pública do Mercado Livre não retornou ofertas. Conecte a loja via OAuth ou tente novamente em instantes.";
 
+    public const string MercadoLivreScraperBlockedMessage =
+        "A vitrine pública do Mercado Livre pediu verificação anti-robô e não retornou ofertas. Tente novamente em instantes.";
+
     /// <summary>401/403 ou erro de escopo de usuário: a busca deve cair na vitrine HTML.</summary>
     public static bool IsMercadoLivreSearchRefused(HttpStatusCode statusCode, string? body)
     {
@@ -75,10 +78,13 @@ public static class OfficialCatalogSearchRules
         }
 
         return !string.IsNullOrWhiteSpace(html)
-            && html.Contains("account-verification", StringComparison.OrdinalIgnoreCase)
+            && VerificationMarkers.Any(marker => html.Contains(marker, StringComparison.OrdinalIgnoreCase))
             && !html.Contains("ui-search-layout", StringComparison.OrdinalIgnoreCase)
             && !html.Contains("poly-card", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static readonly string[] VerificationMarkers =
+        ["account-verification", "bot_challenge", "_bmstate", "micro-landing-container"];
 
     public static bool MatchesMercadoLivreAccount(
         MarketplaceType marketplaceType,

@@ -20,6 +20,12 @@ public sealed class MercadoLivreIntegrationOptions
     /// </summary>
     public string RedirectUri { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Desligado enquanto o app aguarda homologação no portal do ML (a API devolve 403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES):
+    /// a busca usa a vitrine pública lista.mercadolivre.com.br como motor primário.
+    /// </summary>
+    public bool UseOfficialSearchApi { get; set; }
+
     public bool HasAppCredentials =>
         !string.IsNullOrWhiteSpace(AppId) && !string.IsNullOrWhiteSpace(SecretKey);
 

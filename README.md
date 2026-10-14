@@ -288,6 +288,25 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Caso o token esteja expirado ou receba HTTP 401/403, executar o fluxo automático de renovação (`refresh_token`) usando as credenciais do Vault Master antes de registrar falha de busca.
   - Em 401/403: `POST oauth/token` (`grant_type=refresh_token`, `AppId`/`SecretKey` do Vault), grava o novo `AccessToken`/`RefreshToken` em `MarketplaceAccounts` e repete a busca uma vez; só então cai na vitrine `lista.mercadolivre.com.br`.
 
+## 🔑 Injeção Transparente do Token OAuth na API de Busca (`MLBOAuthSearchBinding`)
+
+- [x] **Vinculação Obrigatória do Access Token por Tenant:**
+  - Todo consumo do endpoint de busca do Mercado Livre (`/sites/MLB/search`) deve obrigatoriamente resgatar o `AccessToken` ativo da conta vinculada ao tenant atual e adicioná-lo ao cabeçalho HTTP `Authorization: Bearer {AccessToken}`.
+  - Entregue em `MLBOAuthSearchTokenFix` (conta do tenant + Bearer por requisição); vale quando `UseOfficialSearchApi = true`.
+- [x] **Auto-Refresh de Token em Chamadas de Busca:**
+  - Ao receber status HTTP 401 ou HTTP 403 da API oficial, o serviço de busca deve acionar o fluxo de renovação via `refresh_token` utilizando as credenciais do Vault Master antes de registrar falha.
+  - Entregue em `MLBOAuthSearchTokenFix`; em produção o ML respondeu `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` também ao token renovado (app aguardando homologação no portal).
+
+## 🕸️ Vitrine Pública como Motor Primário da Busca ML (`MLBScraperPrimary`)
+
+- [x] **API oficial desligada até a homologação do app:**
+  - `Integrations:MercadoLivre:UseOfficialSearchApi` (padrão `false`): `SearchProductsAsync` não chama `/sites/MLB/search`; com `true` volta o fluxo OAuth + refresh.
+- [x] **Scraper `lista.mercadolivre.com.br/{query}`:**
+  - Headers de Chrome 130 (`Sec-Ch-Ua`, `Sec-Fetch-*`, `Upgrade-Insecure-Requests`) e descompressão automática; `MercadoLivreHtmlParser` lê título, preço atual (com centavos), preço original (`andes-money-amount--previous`), imagem (`data-src` em lazy-load) e link de `.ui-search-layout__item` / `.poly-card`.
+  - `matt_tool` do tenant (ex.: `14343296`) injetado em cada oferta.
+- [x] **Sem banner de 403 na `/busca`:**
+  - Com ofertas, nenhum alerta; sem ofertas por desafio anti-robô (`bot_challenge` / `account-verification`), o badge mostra "vitrine pediu verificação anti-robô" em vez do erro HTTP 403 da API.
+  
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

@@ -1333,6 +1333,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - conta ML ativa filtrada pelo `TenantId` do usuário; `Bearer` da conta por requisição; HTTP 401/403 → `RefreshAccountTokenAsync` (`refresh_token` com `AppId`/`SecretKey` do Vault), persistência e nova tentativa antes da vitrine; log `[ML Busca]` com o nome da conta.
 - [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - 403 com token vigente → refresh → retry com o novo Bearer e banco atualizado; falha no refresh → vitrine; isolamento por tenant.
 
+### MLBScraperPrimary - Vitrine pública como motor primário da busca ML
+
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `UseOfficialSearchApi` (padrão `false`).
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 130 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs** - preço atual com centavos, preço original (`--previous` / `<s>`), link `poly-component__title` e imagem `data-src` em lazy-load.
+- [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - detecção do `bot_challenge` (`_bmstate`, `micro-landing-container`) e `MercadoLivreScraperBlockedMessage`.
+- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.
+- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **MercadoLivreHtmlParserTests.cs** - vitrine primária com `matt_tool`, desafio anti-robô, preços/imagem do poly-card.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

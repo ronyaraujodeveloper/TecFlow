@@ -1547,6 +1547,21 @@ sequenceDiagram
   end
 ```
 
+### Vitrine pública como motor primário (`MLBScraperPrimary`)
+
+```mermaid
+flowchart TB
+  BG[BuscaGlobal.razor /busca] --> OCS[OfficialCatalogSearchService]
+  OCS --> MLS[MercadoLivreApiService.SearchProductsAsync]
+  MLS --> FLAG{UseOfficialSearchApi?}
+  FLAG -->|true| OAUTH[Fluxo OAuth + refresh<br/>sites/MLB/search]
+  FLAG -->|false padrão| LISTA[GET lista.mercadolivre.com.br/query<br/>headers Chrome 130]
+  LISTA -->|cards .ui-search-layout__item / .poly-card| PARSER[MercadoLivreHtmlParser<br/>título, preço, preço original, imagem, link]
+  PARSER --> MATT[InjectMattTool matt_tool do tenant]
+  MATT --> OK[Badge 🟢 N produtos, sem alerta]
+  LISTA -->|bot_challenge / account-verification| BLOCK[Badge ❌ vitrine pediu verificação anti-robô]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

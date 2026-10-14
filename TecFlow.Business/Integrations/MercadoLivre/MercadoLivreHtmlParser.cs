@@ -174,9 +174,9 @@ public static class MercadoLivreHtmlParser
                 ?? node.SelectSingleNode(".//h3")
                 ?? node.SelectSingleNode(".//*[contains(@class, 'poly-component__title')]")
                 ?? node.SelectSingleNode(".//a[contains(@class, 'title')]");
-            var linkNode = node.SelectSingleNode(".//a[contains(@class, 'ui-search-link')]")
+            var linkNode = node.SelectSingleNode(".//a[contains(@class, 'poly-component__title')]")
+                ?? node.SelectSingleNode(".//a[contains(@class, 'ui-search-link')]")
                 ?? node.SelectSingleNode(".//a");
-            var priceNode = node.SelectSingleNode(".//span[contains(@class, 'andes-money-amount__fraction')]");
             var imgNode = node.SelectSingleNode(".//img");
             if (titleNode is null || linkNode is null)
             {
@@ -187,11 +187,62 @@ public static class MercadoLivreHtmlParser
                 StripTags(titleNode.InnerText),
                 titleNode.GetAttributeValue("title", null),
                 linkNode.GetAttributeValue("title", null));
-            var image = FirstNonEmpty(
-                imgNode?.GetAttributeValue("src", null),
-                imgNode?.GetAttributeValue("data-src", null));
-            TryAdd(items, seen, linkNode.GetAttributeValue("href", string.Empty), title, ParsePriceFraction(priceNode?.InnerText), image);
+            TryAdd(
+                items,
+                seen,
+                linkNode.GetAttributeValue("href", string.Empty),
+                title,
+                ReadCurrentPrice(node),
+                ReadNodeImage(imgNode),
+                ReadOriginalPrice(node));
         }
+    }
+
+    private static decimal? ReadCurrentPrice(HtmlNode card)
+    {
+        var fraction = card.SelectSingleNode(".//*[contains(@class, 'poly-price__current')]//span[contains(@class, 'andes-money-amount__fraction')]")
+            ?? card.SelectNodes(".//span[contains(@class, 'andes-money-amount__fraction')]")
+                ?.FirstOrDefault(item => !IsPreviousAmount(item));
+        return ReadAmount(fraction);
+    }
+
+    private static decimal? ReadOriginalPrice(HtmlNode card)
+    {
+        var fraction = card.SelectNodes(".//span[contains(@class, 'andes-money-amount__fraction')]")
+            ?.FirstOrDefault(IsPreviousAmount);
+        return ReadAmount(fraction);
+    }
+
+    private static bool IsPreviousAmount(HtmlNode fraction) =>
+        fraction.Ancestors().Any(ancestor =>
+            ancestor.Name.Equals("s", StringComparison.OrdinalIgnoreCase)
+            || ancestor.GetAttributeValue("class", string.Empty).Contains("andes-money-amount--previous", StringComparison.OrdinalIgnoreCase));
+
+    private static decimal? ReadAmount(HtmlNode? fraction)
+    {
+        var whole = ParsePriceFraction(fraction?.InnerText);
+        if (whole is null)
+        {
+            return null;
+        }
+
+        var cents = fraction!.ParentNode?.SelectSingleNode(".//span[contains(@class, 'andes-money-amount__cents')]")?.InnerText;
+        return int.TryParse(cents?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value is > 0 and < 100
+            ? whole + value / 100m
+            : whole;
+    }
+
+    private static string? ReadNodeImage(HtmlNode? img)
+    {
+        if (img is null)
+        {
+            return null;
+        }
+
+        var src = img.GetAttributeValue("src", null);
+        return string.IsNullOrWhiteSpace(src) || src.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+            ? FirstNonEmpty(img.GetAttributeValue("data-src", null), src)
+            : src;
     }
 
     private static List<HtmlNode> SelectVitrineNodes(HtmlDocument doc)
@@ -244,7 +295,8 @@ public static class MercadoLivreHtmlParser
         string rawUrl,
         string? title,
         decimal? price,
-        string? image)
+        string? image,
+        decimal? originalPrice = null)
     {
         var url = NormalizeProductUrl(rawUrl);
         if (string.IsNullOrWhiteSpace(url)
@@ -263,6 +315,7 @@ public static class MercadoLivreHtmlParser
             ProductId = string.IsNullOrWhiteSpace(itemId) ? null : itemId,
             ProductName = title.Trim(),
             Price = price,
+            OriginalPrice = originalPrice is not null && originalPrice > price ? originalPrice : null,
             ImageUrl = NormalizeImageUrl(image),
             SourceUrl = url,
             Source = "Web"

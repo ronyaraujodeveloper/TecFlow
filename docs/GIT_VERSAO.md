@@ -96,3 +96,4 @@
 [2026-10-13 21:57:57]fix(busca): token de aplicacao do Vault e fallback de vitrine na busca do Mercado Livre
 [2026-10-13 22:24:34]fix(oauth): redirect_uri do Mercado Livre sem porta local em tuneis Ngrok
 [2026-10-13 22:54:42]feat(oauth): callback do Mercado Livre sem sessao com state selado (AES-GCM) e retorno a /marketplace-accounts
+[2026-10-13 23:24:44] fix(busca): token OAuth da conta ML do tenant, refresh em 401/403 com retry e log da conta usada

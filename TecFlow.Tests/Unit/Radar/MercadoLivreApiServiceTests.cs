@@ -233,6 +233,103 @@ public class MercadoLivreApiServiceTests
         Assert.Equal(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage, result.ErrorMessage);
     }
 
+    [Fact]
+    public async Task SearchProductsAsync_OnForbiddenWithFreshAccountToken_ShouldRefreshPersistAndRetry()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var handler = new RoutingHandler { TokenBody = """{"access_token":"APP_USR-renewed","refresh_token":"TG-renewed","expires_in":21600}""" };
+        handler.RefusedBearers.Add("APP_USR-stale");
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "vault-app", SecretKey = "vault-secret" },
+            db =>
+            {
+                var account = MercadoLivreAccount(trackingId: "14343296");
+                account.FriendlyName = "@Achadinhos de Aaz";
+                account.AccessToken = "APP_USR-stale";
+                account.RefreshToken = "TG-stale";
+                account.AppKey = "account-app";
+                account.AppSecret = "account-secret";
+                account.ExpiresAt = DateTime.UtcNow.AddHours(4);
+                db.MarketplaceAccounts.Add(account);
+            },
+            dbName);
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        var searches = handler.Requests.Where(request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal)).ToList();
+        Assert.Equal(["Bearer APP_USR-stale", "Bearer APP_USR-renewed"], searches.Select(search => search.Authorization));
+        var tokenRequest = Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
+        Assert.Contains("grant_type=refresh_token", tokenRequest.Body, StringComparison.Ordinal);
+        Assert.Contains("refresh_token=TG-stale", tokenRequest.Body, StringComparison.Ordinal);
+        Assert.Contains("client_id=vault-app", tokenRequest.Body, StringComparison.Ordinal);
+        Assert.Equal("Api", Assert.Single(result.Items).Source);
+        Assert.DoesNotContain(handler.Requests, request => request.Host.StartsWith("lista.", StringComparison.OrdinalIgnoreCase));
+        await using var verify = CreateDbContext(dbName);
+        var stored = await verify.MarketplaceAccounts.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal("APP_USR-renewed", stored.AccessToken);
+        Assert.Equal("TG-renewed", stored.RefreshToken);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_OnForbiddenAndRefreshFailure_ShouldFallbackToLista()
+    {
+        var handler = new RoutingHandler();
+        handler.RefusedBearers.Add("APP_USR-stale");
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "vault-app", SecretKey = "vault-secret" },
+            db =>
+            {
+                var account = MercadoLivreAccount(trackingId: "14343296");
+                account.AccessToken = "APP_USR-stale";
+                account.RefreshToken = "TG-stale";
+                account.ExpiresAt = DateTime.UtcNow.AddHours(4);
+                db.MarketplaceAccounts.Add(account);
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Single(handler.Requests, request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal));
+        Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
+        Assert.Equal("Web", Assert.Single(result.Items).Source);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldUseAccountFromCurrentUserTenant()
+    {
+        var tenantId = Guid.NewGuid();
+        var handler = new RoutingHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db =>
+            {
+                db.UserAccounts.Add(new UserAccount
+                {
+                    Id = 1,
+                    TenantId = tenantId,
+                    Name = "Rony",
+                    Email = "rony@tecflow.dev",
+                    PasswordHash = "hash"
+                });
+                var foreign = MercadoLivreAccount(trackingId: null);
+                foreign.UserId = null;
+                foreign.AccessToken = "APP_USR-other-tenant";
+                foreign.ExpiresAt = DateTime.UtcNow.AddYears(1);
+                var own = MercadoLivreAccount(trackingId: null);
+                own.TenantId = tenantId;
+                own.AccessToken = "APP_USR-own";
+                own.ExpiresAt = DateTime.UtcNow.AddHours(4);
+                db.MarketplaceAccounts.AddRange(foreign, own);
+            });
+
+        await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        var search = Assert.Single(handler.Requests);
+        Assert.Equal("Bearer APP_USR-own", search.Authorization);
+    }
+
     private static MarketplaceAccount MercadoLivreAccount(string? trackingId) => new()
     {
         TenantId = Guid.NewGuid(),
@@ -295,6 +392,8 @@ public class MercadoLivreApiServiceTests
 
         public string ListaBody { get; set; } = ListaHtml;
 
+        public HashSet<string> RefusedBearers { get; } = new(StringComparer.Ordinal);
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -312,7 +411,9 @@ public class MercadoLivreApiServiceTests
                 ? (TokenBody.Contains("access_token", StringComparison.Ordinal) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, TokenBody)
                 : uri.Host.StartsWith("lista.", StringComparison.OrdinalIgnoreCase)
                     ? (HttpStatusCode.OK, ListaBody)
-                    : (SearchStatus, SearchBody);
+                    : RefusedBearers.Contains(request.Headers.Authorization?.Parameter ?? string.Empty)
+                        ? (HttpStatusCode.Forbidden, """{"message":"forbidden"}""")
+                        : (SearchStatus, SearchBody);
             return new HttpResponseMessage(status)
             {
                 RequestMessage = request,

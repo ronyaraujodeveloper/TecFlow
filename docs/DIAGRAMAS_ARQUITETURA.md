@@ -1525,6 +1525,28 @@ flowchart TB
   OCS -->|CountVisibleOffers| BADGE[Badge 🟢 N produtos]
 ```
 
+### Token OAuth da conta do tenant com renovação em 401/403 (`MLBOAuthSearchTokenFix`)
+
+```mermaid
+sequenceDiagram
+  participant S as MercadoLivreApiService
+  participant DB as Usuarios / MarketplaceAccounts
+  participant V as Vault (AppId/SecretKey)
+  participant ML as api.mercadolibre.com
+  S->>DB: TenantId do usuário → conta ML ativa do tenant
+  S->>S: log [ML Busca] conta '@Achadinhos de Aaz'
+  S->>ML: GET sites/MLB/search (Authorization: Bearer da conta)
+  alt 200
+    ML-->>S: ofertas + matt_tool
+  else 401/403
+    S->>V: AppId / SecretKey
+    S->>ML: POST oauth/token (grant_type=refresh_token)
+    S->>DB: grava AccessToken / RefreshToken / ExpiresAt
+    S->>ML: repete a busca com o novo Bearer
+    ML-->>S: ofertas (ou vitrine lista.mercadolivre.com.br se recusar de novo)
+  end
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

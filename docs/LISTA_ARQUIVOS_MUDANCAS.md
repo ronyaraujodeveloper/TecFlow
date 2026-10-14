@@ -1328,6 +1328,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - feedback de `?status=success|error` em `/marketplace-accounts`.
 - [x] **TecFlow.Tests/Unit/Integrations/MarketplaceOAuthStateTests.cs** (novo) / **Controllers/MarketplaceAuthControllerTests.cs** - selagem, adulteração/expiração, retorno à origem, callback anônimo, replay e state forjado.
 
+### MLBOAuthSearchTokenFix - Token OAuth da conta do tenant na busca MLB
+
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - conta ML ativa filtrada pelo `TenantId` do usuário; `Bearer` da conta por requisição; HTTP 401/403 → `RefreshAccountTokenAsync` (`refresh_token` com `AppId`/`SecretKey` do Vault), persistência e nova tentativa antes da vitrine; log `[ML Busca]` com o nome da conta.
+- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - 403 com token vigente → refresh → retry com o novo Bearer e banco atualizado; falha no refresh → vitrine; isolamento por tenant.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

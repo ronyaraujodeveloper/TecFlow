@@ -99,7 +99,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
-        var accessToken = await ResolveUserAccessTokenAsync(account, cancellationToken)
+        var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
+        var accessToken = accountToken
+            ?? ResolveStaticAccessToken()
             ?? await GetAppAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(accessToken))
         {
@@ -109,21 +111,31 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 : OfficialCatalogChannelResult.Unconfigured();
         }
 
+        if (accountToken is not null)
+        {
+            LogAccountTokenUsage(account!, query, renewed: false);
+        }
+
         try
         {
             var apiItems = await SearchViaApiAsync(query, accessToken.Trim(), affiliateId, maxItems, cancellationToken);
-            return apiItems.Count > 0
-                ? OfficialCatalogChannelResult.From(apiItems)
-                : OfficialCatalogChannelResult.Empty;
+            return ToChannelResult(apiItems);
+        }
+        catch (MercadoLivreSearchForbiddenException ex) when (accountToken is not null)
+        {
+            _logger.LogWarning(
+                "[ML Busca] API MLB recusou o token da conta '{AccountName}' (Id={AccountId}) para '{Query}' ({Reason}); renovando via refresh_token.",
+                DescribeAccount(account!),
+                account!.Id,
+                query,
+                ex.Message);
+            return await RetryWithRenewedAccountTokenAsync(account, query, affiliateId, maxItems, cancellationToken);
         }
         catch (MercadoLivreSearchForbiddenException ex)
         {
             _logger.LogWarning("API MLB recusou a busca de '{Query}' ({Reason}); usando a vitrine lista.mercadolivre.com.br.", query, ex.Message);
             EvictAppToken(accessToken);
-            var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-            return scraped.Count > 0
-                ? OfficialCatalogChannelResult.From(scraped)
-                : OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
+            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -134,6 +146,67 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             return OfficialCatalogChannelResult.Failed(tracedError);
         }
     }
+
+    private async Task<OfficialCatalogChannelResult> RetryWithRenewedAccountTokenAsync(
+        MarketplaceAccount account,
+        string query,
+        string? affiliateId,
+        int maxItems,
+        CancellationToken cancellationToken)
+    {
+        var renewedToken = await RefreshAccountTokenAsync(account, cancellationToken);
+        if (renewedToken is null)
+        {
+            _logger.LogWarning(
+                "[ML Busca] Não foi possível renovar o token da conta '{AccountName}' (Id={AccountId}); usando a vitrine lista.mercadolivre.com.br.",
+                DescribeAccount(account),
+                account.Id);
+            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
+        }
+
+        LogAccountTokenUsage(account, query, renewed: true);
+        try
+        {
+            var apiItems = await SearchViaApiAsync(query, renewedToken, affiliateId, maxItems, cancellationToken);
+            return ToChannelResult(apiItems);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "[ML Busca] API MLB recusou também o token renovado da conta '{AccountName}' (Id={AccountId}) ({Reason}); usando a vitrine lista.mercadolivre.com.br.",
+                DescribeAccount(account),
+                account.Id,
+                ex.Message);
+            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
+        }
+    }
+
+    private async Task<OfficialCatalogChannelResult> SearchListaFallbackAsync(
+        string query,
+        string? affiliateId,
+        int maxItems,
+        CancellationToken cancellationToken)
+    {
+        var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
+        return scraped.Count > 0
+            ? OfficialCatalogChannelResult.From(scraped)
+            : OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
+    }
+
+    private static OfficialCatalogChannelResult ToChannelResult(IReadOnlyList<OfficialCatalogProductDto> items) =>
+        items.Count > 0 ? OfficialCatalogChannelResult.From(items) : OfficialCatalogChannelResult.Empty;
+
+    private void LogAccountTokenUsage(MarketplaceAccount account, string query, bool renewed) =>
+        _logger.LogInformation(
+            "[ML Busca] Busca '{Query}' realizada com o token OAuth {TokenKind} da conta '{AccountName}' (Id={AccountId}, Tenant={TenantId}).",
+            query,
+            renewed ? "renovado" : "armazenado",
+            DescribeAccount(account),
+            account.Id,
+            account.TenantId);
+
+    private static string DescribeAccount(MarketplaceAccount account) =>
+        FirstNonEmpty(account.FriendlyName, account.ShopName) ?? $"#{account.Id}";
 
     internal static void EnsurePublicUserAgent(HttpClient httpClient)
     {
@@ -294,33 +367,57 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private static string BuildAppTokenCacheKey(string appId, string secret) =>
         appId + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
 
-    private async Task<string?> ResolveUserAccessTokenAsync(
+    private async Task<string?> ResolveAccountAccessTokenAsync(
         MarketplaceAccount? account,
         CancellationToken cancellationToken)
     {
-        if (account is not null && IsTokenFresh(account))
+        if (account is null)
+        {
+            return null;
+        }
+
+        if (IsTokenFresh(account))
         {
             return account.AccessToken!.Trim();
         }
 
-        if (account is not null
-            && !string.IsNullOrWhiteSpace(account.RefreshToken)
-            && !HomologMarketplaceAuth.IsStubToken(account.RefreshToken)
-            && TryResolveAppCredentials(account, out var refreshAppId, out var refreshSecret))
+        return await RefreshAccountTokenAsync(account, cancellationToken);
+    }
+
+    private async Task<string?> RefreshAccountTokenAsync(
+        MarketplaceAccount account,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(account.RefreshToken)
+            || HomologMarketplaceAuth.IsStubToken(account.RefreshToken)
+            || !TryResolveAppCredentials(account, out var appId, out var secret))
         {
-            var refreshed = await RequestOAuthTokenAsync(
-                "refresh_token",
-                refreshAppId,
-                refreshSecret,
-                account.RefreshToken,
-                cancellationToken);
-            if (!string.IsNullOrWhiteSpace(refreshed?.AccessToken))
-            {
-                await PersistRefreshedTokenAsync(account.Id, refreshed, cancellationToken);
-                return refreshed.AccessToken.Trim();
-            }
+            return null;
         }
 
+        var refreshed = await RequestOAuthTokenAsync(
+            "refresh_token",
+            appId,
+            secret,
+            account.RefreshToken,
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(refreshed?.AccessToken))
+        {
+            return null;
+        }
+
+        await PersistRefreshedTokenAsync(account.Id, refreshed, cancellationToken);
+        account.AccessToken = refreshed.AccessToken.Trim();
+        if (!string.IsNullOrWhiteSpace(refreshed.RefreshToken))
+        {
+            account.RefreshToken = refreshed.RefreshToken.Trim();
+        }
+
+        return account.AccessToken;
+    }
+
+    private string? ResolveStaticAccessToken()
+    {
         var options = _options.CurrentValue;
         return options.HasAccessToken ? options.AccessToken.Trim() : null;
     }
@@ -361,9 +458,17 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var userKey = userId.ToString(CultureInfo.InvariantCulture);
+        var tenantId = await dbContext.UserAccounts
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => (Guid?)user.TenantId)
+            .FirstOrDefaultAsync(cancellationToken);
         var accounts = await dbContext.MarketplaceAccounts
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(x => x.IsActive
+                && (tenantId == null || x.TenantId == tenantId)
                 && (x.MarketplaceType == MarketplaceType.MercadoLivre
                     || (x.FriendlyName != null && x.FriendlyName.Replace(" ", "") == "MercadoLivre")
                     || (x.ShopName != null && x.ShopName.Replace(" ", "") == "MercadoLivre")))
@@ -375,6 +480,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 item.FriendlyName,
                 item.ShopName))
             .OrderByDescending(item => OwnsAccount(item, userKey))
+            .ThenByDescending(HasOAuthToken)
             .ThenByDescending(item =>
                 !string.IsNullOrWhiteSpace(
                     OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
@@ -383,6 +489,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             .ThenByDescending(item => item.ExpiresAt)
             .FirstOrDefault();
     }
+
+    private static bool HasOAuthToken(MarketplaceAccount account) =>
+        !string.IsNullOrWhiteSpace(account.AccessToken) && !HomologMarketplaceAuth.IsStubToken(account.AccessToken);
 
     private static bool OwnsAccount(MarketplaceAccount account, string userKey) =>
         string.IsNullOrWhiteSpace(account.UserId)
@@ -434,8 +543,15 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private bool TryResolveAppCredentials(MarketplaceAccount account, out string appId, out string secret)
     {
         var options = _options.CurrentValue;
-        appId = FirstNonEmpty(account.AppKey, options.AppId) ?? string.Empty;
-        secret = FirstNonEmpty(account.AppSecret, options.SecretKey) ?? string.Empty;
+        if (options.HasAppCredentials)
+        {
+            appId = options.AppId.Trim();
+            secret = options.SecretKey.Trim();
+            return true;
+        }
+
+        appId = FirstNonEmpty(account.AppKey) ?? string.Empty;
+        secret = FirstNonEmpty(account.AppSecret) ?? string.Empty;
         return !string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(secret);
     }
 

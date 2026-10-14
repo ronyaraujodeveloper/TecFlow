@@ -277,6 +277,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `authorize-url` (usuário autenticado) sela `UserId` + `TenantId` + apelido + origem no `state` (`OAuthStateProtector`, AES-256-GCM com chave HKDF de `Encryption:Key`, validade de 15 min, uso único).
   - `POST api/marketplace-auth/mercadolivre/callback` (anônimo) abre o `state`, troca o code e grava `AccessToken` / `RefreshToken` em `MarketplaceAccounts` no tenant do usuário; retorno para `{origem}/marketplace-accounts?status=success` (ex.: `https://localhost:7002/marketplace-accounts?status=success`).
 
+
+  ## 🔑 Resolução da Injeção de Token OAuth na Busca (`MLBOAuthSearchTokenFix`)
+
+- [x] **Injeção Obrigatória do Access Token por Tenant:**
+  - Garantir que o `MercadoLivreApiService` recupere o `AccessToken` válido da tabela `MarketplaceAccounts` correspondente ao `TenantId` logado e inclua o cabeçalho `Authorization: Bearer {AccessToken}` em todas as chamadas para a API `/sites/MLB/search`.
+  - Conta ML ativa filtrada pelo `TenantId` do usuário (`Usuarios`), priorizando a do próprio usuário e com token OAuth real; Bearer aplicado por requisição (`HttpRequestMessage.Headers`), sem alterar `DefaultRequestHeaders` do `HttpClient` compartilhado entre tenants.
+  - Log no console (`[ML Busca] ... token OAuth armazenado|renovado da conta '@Achadinhos de Aaz' (Id, Tenant)`), sem expor o token.
+- [x] **Refresh Token Automático antes da Expiração:**
+  - Caso o token esteja expirado ou receba HTTP 401/403, executar o fluxo automático de renovação (`refresh_token`) usando as credenciais do Vault Master antes de registrar falha de busca.
+  - Em 401/403: `POST oauth/token` (`grant_type=refresh_token`, `AppId`/`SecretKey` do Vault), grava o novo `AccessToken`/`RefreshToken` em `MarketplaceAccounts` e repete a busca uma vez; só então cai na vitrine `lista.mercadolivre.com.br`.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

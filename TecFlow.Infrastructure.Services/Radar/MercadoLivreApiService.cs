@@ -1,6 +1,9 @@
-﻿using System.Globalization;
+﻿using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -27,19 +30,22 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         PropertyNameCaseInsensitive = true
     };
 
+    private static readonly ConcurrentDictionary<string, (string Token, DateTime ExpiresAt)> AppTokenCache =
+        new(StringComparer.Ordinal);
+
     private readonly HttpClient _httpClient;
-    private readonly MercadoLivreIntegrationOptions _options;
+    private readonly IOptionsMonitor<MercadoLivreIntegrationOptions> _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
-        IOptions<MercadoLivreIntegrationOptions> options,
+        IOptionsMonitor<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<MercadoLivreApiService> logger)
     {
         _httpClient = httpClient;
-        _options = options.Value;
+        _options = options;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
         EnsurePublicUserAgent(_httpClient);
@@ -88,23 +94,36 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
 
         query = query.Trim();
-        _ = limit;
+        var maxItems = OfficialCatalogSearchRules.ClampLimit(limit);
         var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
-        var accessToken = await ResolveAccessTokenAsync(account, cancellationToken);
+        var accessToken = await ResolveUserAccessTokenAsync(account, cancellationToken)
+            ?? await GetAppAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(accessToken))
         {
-            return OfficialCatalogChannelResult.Unconfigured();
+            var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
+            return scraped.Count > 0
+                ? OfficialCatalogChannelResult.From(scraped)
+                : OfficialCatalogChannelResult.Unconfigured();
         }
 
         try
         {
-            var apiItems = await SearchViaApiAsync(query, accessToken.Trim(), affiliateId, cancellationToken);
+            var apiItems = await SearchViaApiAsync(query, accessToken.Trim(), affiliateId, maxItems, cancellationToken);
             return apiItems.Count > 0
                 ? OfficialCatalogChannelResult.From(apiItems)
                 : OfficialCatalogChannelResult.Empty;
+        }
+        catch (MercadoLivreSearchForbiddenException ex)
+        {
+            _logger.LogWarning("API MLB recusou a busca de '{Query}' ({Reason}); usando a vitrine lista.mercadolivre.com.br.", query, ex.Message);
+            EvictAppToken(accessToken);
+            var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
+            return scraped.Count > 0
+                ? OfficialCatalogChannelResult.From(scraped)
+                : OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
         catch (Exception ex)
         {
@@ -131,16 +150,17 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         string query,
         string accessToken,
         string? affiliateId,
+        int maxItems,
         CancellationToken cancellationToken)
     {
         var searchUri =
-            $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit=20"
+            $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit={maxItems}"
             + $"&access_token={Uri.EscapeDataString(accessToken)}";
         var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
-        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
         {
             _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
-            throw new HttpRequestException(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
+            throw new MercadoLivreSearchForbiddenException($"HTTP {(int)statusCode}");
         }
 
         if (statusCode != HttpStatusCode.OK)
@@ -192,7 +212,89 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         return (response.StatusCode, body);
     }
 
-    private async Task<string?> ResolveAccessTokenAsync(
+    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaListaAsync(
+        string query,
+        string? affiliateId,
+        int maxItems,
+        CancellationToken cancellationToken)
+    {
+        var listaUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, listaUrl);
+            ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
+            ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8");
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri;
+            if (!response.IsSuccessStatusCode || OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(finalUrl, html))
+            {
+                _logger.LogWarning(
+                    "Vitrine ML indisponível para '{Query}' [{StatusCode}] {Url}",
+                    query,
+                    response.StatusCode,
+                    finalUrl ?? listaUrl);
+                return [];
+            }
+
+            return MercadoLivreHtmlParser.ParseSearchResults(html)
+                .Take(maxItems)
+                .Select(item =>
+                {
+                    item.SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.SourceUrl, affiliateId);
+                    return item;
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Falha ao raspar a vitrine do Mercado Livre para '{Query}'.", query);
+            return [];
+        }
+    }
+
+    private async Task<string?> GetAppAccessTokenAsync(CancellationToken cancellationToken)
+    {
+        var options = _options.CurrentValue;
+        if (!options.HasAppCredentials)
+        {
+            return null;
+        }
+
+        var appId = options.AppId.Trim();
+        var secret = options.SecretKey.Trim();
+        var cacheKey = BuildAppTokenCacheKey(appId, secret);
+        if (AppTokenCache.TryGetValue(cacheKey, out var cached) && cached.ExpiresAt > DateTime.UtcNow)
+        {
+            return cached.Token;
+        }
+
+        var appToken = await RequestOAuthTokenAsync("client_credentials", appId, secret, refreshToken: null, cancellationToken);
+        if (string.IsNullOrWhiteSpace(appToken?.AccessToken))
+        {
+            return null;
+        }
+
+        var lifetime = appToken.ExpiresIn is > 0 ? appToken.ExpiresIn.Value : 21600;
+        var token = appToken.AccessToken.Trim();
+        AppTokenCache[cacheKey] = (token, DateTime.UtcNow.AddSeconds(Math.Max(60, lifetime - 300)));
+        return token;
+    }
+
+    private static void EvictAppToken(string token)
+    {
+        foreach (var entry in AppTokenCache.Where(entry => string.Equals(entry.Value.Token, token.Trim(), StringComparison.Ordinal)))
+        {
+            AppTokenCache.TryRemove(entry.Key, out _);
+        }
+    }
+
+    private static string BuildAppTokenCacheKey(string appId, string secret) =>
+        appId + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
+
+    private async Task<string?> ResolveUserAccessTokenAsync(
         MarketplaceAccount? account,
         CancellationToken cancellationToken)
     {
@@ -219,23 +321,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             }
         }
 
-        if (_options.HasAccessToken)
-        {
-            return _options.AccessToken.Trim();
-        }
-
-        if (_options.HasAppCredentials)
-        {
-            var appToken = await RequestOAuthTokenAsync(
-                "client_credentials",
-                _options.AppId.Trim(),
-                _options.SecretKey.Trim(),
-                refreshToken: null,
-                cancellationToken);
-            return string.IsNullOrWhiteSpace(appToken?.AccessToken) ? null : appToken.AccessToken.Trim();
-        }
-
-        return null;
+        var options = _options.CurrentValue;
+        return options.HasAccessToken ? options.AccessToken.Trim() : null;
     }
 
     private async Task PersistRefreshedTokenAsync(
@@ -321,7 +408,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 fields["refresh_token"] = refreshToken;
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, _options.TokenUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _options.CurrentValue.TokenUrl)
             {
                 Content = new FormUrlEncodedContent(fields)
             };
@@ -346,8 +433,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private bool TryResolveAppCredentials(MarketplaceAccount account, out string appId, out string secret)
     {
-        appId = FirstNonEmpty(account.AppKey, _options.AppId) ?? string.Empty;
-        secret = FirstNonEmpty(account.AppSecret, _options.SecretKey) ?? string.Empty;
+        var options = _options.CurrentValue;
+        appId = FirstNonEmpty(account.AppKey, options.AppId) ?? string.Empty;
+        secret = FirstNonEmpty(account.AppSecret, options.SecretKey) ?? string.Empty;
         return !string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(secret);
     }
 
@@ -394,6 +482,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             headers.Add(name, value);
         }
     }
+
+    private sealed class MercadoLivreSearchForbiddenException(string reason) : Exception(reason);
 
     private sealed class MercadoLivreTokenResponse
     {

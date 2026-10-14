@@ -23,6 +23,32 @@ public class OfficialCatalogSearchRulesTests
     }
 
     [Fact]
+    public void CountVisibleOffers_ShouldApplyFiltersAndIgnoreDuplicateUrls()
+    {
+        OfficialCatalogProductDto Offer(string url, decimal price) => new() { SourceUrl = url, Price = price };
+        var items = new[]
+        {
+            Offer("https://produto.mercadolivre.com.br/MLB-1?matt_tool=14343296", 100),
+            Offer("https://produto.mercadolivre.com.br/MLB-1?matt_tool=14343296", 100),
+            Offer("https://produto.mercadolivre.com.br/MLB-2?matt_tool=14343296", 900)
+        };
+
+        Assert.Equal(2, OfficialCatalogSearchRules.CountVisibleOffers(items, new OfficialCatalogSearchFilter()));
+        Assert.Equal(1, OfficialCatalogSearchRules.CountVisibleOffers(items, new OfficialCatalogSearchFilter { MaxPrice = 500 }));
+    }
+
+    [Theory]
+    [InlineData(System.Net.HttpStatusCode.Forbidden, "", true)]
+    [InlineData(System.Net.HttpStatusCode.Unauthorized, "", true)]
+    [InlineData(System.Net.HttpStatusCode.BadRequest, "{\"error\":\"unauthorized_scopes\"}", true)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError, "{\"error\":\"internal\"}", false)]
+    [InlineData(System.Net.HttpStatusCode.OK, "{\"results\":[]}", false)]
+    public void IsMercadoLivreSearchRefused_ShouldDetectForbiddenAndScopeErrors(System.Net.HttpStatusCode status, string body, bool expected)
+    {
+        Assert.Equal(expected, OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(status, body));
+    }
+
+    [Fact]
     public void EscapeGraphQl_ShouldEscapeQuotes()
     {
         Assert.Equal("fone \\\"bt\\\"", OfficialCatalogSearchRules.EscapeGraphQl("fone \"bt\""));

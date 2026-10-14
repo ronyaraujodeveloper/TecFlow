@@ -257,169 +257,19 @@ As **Fases 1 a 32** (e entregas equivalentes já concluídas) foram movidas para
 
 O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
-  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)
+ 
 
-- [x] **OAuth obrigatório:** `sites/MLB/search` com `Bearer` + `access_token`; ID de afiliado não autentica a busca.
-- [x] **Sem scrap da vitrine:** `lista.mercadolivre.com.br` cai em `account-verification` no IIS e foi removido do fluxo.
-- [x] **Badge:** `⚠️ Requer OAuth...` sem token; `❌ API MLB recusou a busca (HTTP 403)...` com token recusado.
-- [x] **OAuth em Minhas Lojas:** botão **Autorizar Mercado Livre (OAuth)** no card e **Conectar via OAuth** na modal; `auth.mercadolivre.com.br/authorization` ➔ `/integracoes/oauth/callback` ➔ `authorization_code` grava `APP_USR-…` + refresh na loja ML existente (preserva o ID de afiliado).
-- [x] **Placeholder ignorado:** `homolog-test-access-token` do Universal Link não é enviado à API; refresh rotacionado é persistido na conta.
-- [ ] **Credenciais do app ML:** preencher `Integrations:MercadoLivre:AppId`/`SecretKey` e cadastrar a Redirect URI HTTPS (`…ngrok-free.dev/integracoes/oauth/callback`) em developers.mercadolivre.com.br.
+  ## 🔐 Resolução OAuth e Fallback na Busca do Mercado Livre (`MLBSearchOAuthFallback`)
 
-## 👑 Módulo Backoffice & Gestão Master SaaS (Fases 35 a 41)
-
----
-
-### 🛡️ Fase 35: Alternância Dinâmica de Perfil e Impersonation (`TenantImpersonationEngine`)
-
-- [x] **35.1. Mecanismo de Alternância Admin / Usuário Comum (`SwitchProfileService`):**
-  - Implementação do seletor global na barra superior para alternar instantaneamente da visão `SuperAdmin` para a visão `TenantUser` (Usuário Comum) sem perda de sessão.
-- [x] **35.2. Emulação de Contexto Real de Cliente (`ImpersonateTenantContext`):**
-  - Injeção temporária das Claims do tenant selecionado na memória do circuito Blazor (`ClaimsPrincipal`), permitindo testar a interface, limites de plano e buscas exatamente como o cliente enxerga.
-- [x] **35.3. Barra Indicativa de Modo Emulação (Feedback Visual Fixado):**
-  - Exibição de banner de alerta destacado no topo da tela: *"⚠️ Você está navegando como o tenant X. [Voltar ao Painel Master]"*.
-
----
-
-### 🔐 Fase 36: Controle de Permissões e Gestão de Operadores Master (`MasterAdminRBAC`)
-
-- [x] **36.1. Cadastro e Gestão de Operadores Internos (`MasterUsersManagement`):**
-  - Tela dedicada para criação, edição e inativação de contas administradoras do TecFlow com controle de credenciais via ASP.NET Core Identity.
-- [x] **36.2. Matriz de Permissões por Papel (`RBACMatrix`):**
-  - Atribuição granular de papéis (`SuperAdmin`, `SuporteTecnico`, `FinanceiroSaaS`), restringindo quem pode alterar chaves globais, alterar planos ou alternar para o modo de emulação.
-- [x] **36.3. Trilha de Auditoria do Master (`MasterAuditTrail`):**
-  - Registro imutável em banco de todas as ações administrativas sensíveis (troca de chaves de API, alteração manual de saldo de créditos ou acesso via impersonation).
-
----
-
-### ⚙️ Fase 37: Parametrização Global de APIs & Infraestrutura (`SystemSettingsEngine`)
-
-- [x] **37.1. Gestão Centralizada de App Keys de Marketplaces (`GlobalMarketplaceKeys`):**
-  - Painel para cadastro seguro do `AppId`/`ClientSecret` do Mercado Livre, `AppKey`/`AppSecret` da Shopee e `AccessKey`/`SecretKey`/`PartnerTag` da Amazon PA-API.
-- [x] **37.2. Configuração de Provedores de Mensageria e Conexões (`GlobalMessagingSettings`):**
-  - Gestão de endpoints da Evolution API (WhatsApp), tokens do Telegram e credenciais do MTProto UserBot.
-- [x] **37.3. Central de Chaves de IA, Encurtador e Secrets (`InfrastructureVault`):**
-  - Configuração de chaves globais da OpenAI e parametrização do domínio próprio do encurtador (`tflow.link`).
-  - Persistência das chaves criptografadas no banco/environment variables sem dependência de edições manuais em arquivos `appsettings.json`.
-
----
-
-### 💳 Fase 38: Gestão Financeira, Planos & Feature Toggles (`SubscriptionEngine`)
-
-- [x] **38.1. Cadastro e Configuração de Planos SaaS (`SaaSPlansManagement`):**
-  - Gestão dos planos de assinatura (*Starter, Pro, Agency, Enterprise*) definindo valores, ciclo de cobrança (mensal/anual) e limites de cada plano.
-- [x] **38.2. Matriz de Recursos e Limites por Plano (`FeatureTogglesMatrix`):**
-  - Trava de recursos por plano: quantidade de lojas conectadas, cotas diárias de "Achadinhos VIP", acesso ao radar de ofertas e limite de agendamentos diários.
-- [x] **38.3. Integração com Gateway de Pagamentos e Gestão de Cotas (`PaymentGatewaySync`):**
-  - Conexão com gateway de pagamento (ASAAS/Mercado Pago/Stripe) para gestão de cobranças recorrentes, faturamento automático por Pix/Boleto/Cartão e bloqueio automático de inadimplentes.
-  - Painel de ajuste manual de créditos extras de Achadinhos por tenant.
-
----
-
-### 👥 Fase 39: Gestão e Moderação de Inquilinos (`TenantManagement`)
-
-- [x] **39.1. Central 360° do Inquilino (`Tenant360View`):**
-  - Listagem completa dos clientes com filtros por status (*Ativo, Trial, Inadimplente, Suspenso, Cancelado*), plano contratado, consumo de disco e data de renovação.
-- [x] **39.2. Ações Moderativas e Controle de Ciclo de Vida (`TenantLifecycleControl`):**
-  - Botões de ação rápida para pausar, suspender, estender período de teste (trial) ou cancelar a conta de um tenant com motivo registrado.
-- [x] **39.3. Monitor de Consumo de Mídia e Armazenamento (`TenantStorageMonitor`):**
-  - Relatório detalhado da ocupação de disco por tenant (`wwwroot/uploads/products/{TenantId}`) com acionamento manual do expurgo de mídia para contas específicas.
-
----
-
-### 📊 Fase 40: Dashboard Executivo do SaaS (`SaaSExecutiveMetrics`)
-
-- [x] **40.1. Indicadores de Receita Recorrente (`MRRDashboard`):**
-  - Painel gerencial exibindo métricas do SaaS: **MRR** (Receita Mensal Recorrente), **ARR** (Receita Anual Projetada), **ARPU** (Receita Média por Usuário) e faturamento líquido do mês.
-- [x] **40.2. Análise de Saúde da Base (`ChurnAndRetentionMetrics`):**
-  - Gráficos de crescimento de novos assinantes, conversão de contas Trial para Pagantes e taxa de **Churn** (cancelamentos).
-- [x] **40.3. Métricas Globais de Operação e Disparos (`PlatformUsageMetrics`):**
-  - Volume consolidado de links convertidos, disparos de mensagens enviados via WhatsApp/Telegram e total de requisições às APIs nas últimas 24h.
-
----
-
-### 📢 Fase 41: Comunicação & Avisos em Massa (`GlobalBroadcastBanner Engine`)
-
-- [x] **41.1. Banners de Avisos Globais na Interface (`GlobalSystemBanners`):**
-  - Cadastro de avisos informativos, de manutenção ou comunicados importantes exibidos no topo do painel de todos os usuários (ex: *"A API da Shopee passará por manutenção hoje às 23h"*).
-- [x] **41.2. Disparo de Notificações Internas por Segmento (`TargetedNotifications`):**
-  - Envio de alertas direcionados dentro da plataforma para grupos específicos de tenants (ex.: apenas para inadimplentes ou apenas para assinantes do Plano Starter).
-- [x] **41.3. Central de Changelog e Novidades do Produto (`ProductChangelog`):**
-  - Módulo para publicação de atualizações do sistema (*What's New*), permitindo que os clientes leiam as melhorias recém-lançadas no TecFlow.
-
-## 👑 Módulo Backoffice Master: Isolamento de Rotas, Contas de Desenvolvedor e Menu por Plano (Fases 42 a 44)
-
----
-
-### 🌐 Fase 42: Segregação de Módulos e Rotas Master (`MasterRouteIsolation & Layout`)
-
-- [x] **42.1. Padrão de Roteamento `/master/*` (`MasterRouteConvention`):**
-  - Isolamento de todos os componentes e páginas de administração global sob o prefixo `/master/` (ex: `/master/marketplace-accounts`, `/master/planos`, `/master/usuarios`).
-- [x] **42.2. Layout e Guard de Segurança Master (`MasterLayout` & `MasterAuthorize`):**
-  - Criação do layout dedicado `MasterMainLayout.razor` com identidade visual executiva (distinta da visão do cliente).
-  - Interceptador/Guard de autorização que bloqueia o acesso a qualquer rota `/master/*` para usuários que não possuem o papel `SuperAdmin` (redirecionando para `/` em tentativas de acesso não autorizado).
-- [x] **42.3. Ocultação do Accordion "Próximos Desenvolvimentos" na Visão Cliente:**
-  - Remoção/bloqueio definitivo do menu de roadmaps e protótipos na visão do cliente comum, tornando a Sidebar do tenant 100% focada em recursos produtivos e liberados.
-
----
-
-### 🔑 Fase 43: Gerenciamento Master de Contas de Desenvolvedor e Testes (`MasterMarketplaceAccounts`)
-
-- [x] **43.1. Tela Específica de Infraestrutura `/master/marketplace-accounts`:**
-  - Desenvolvimento do painel Master para gerenciamento das **Contas de Desenvolvedor / App Credentials** (Mercado Livre AppId/SecretKey, Shopee AppKey/AppSecret, Amazon PA-API Keys) e contas de teste internas da empresa TecFlow.
-- [x] **43.2. Segregação Total de Escopo (`DeveloperAccountIsolation`):**
-  - Isolamento do serviço para garantir que as credenciais globais e contas de homologação cadastradas no `/master/marketplace-accounts` fiquem armazenadas em tabela/escopo de sistema (`SystemDeveloperAccounts`), sem interferir nas contas de afiliados do cliente (`/marketplace-accounts`).
-- [x] **43.3. Teste de Conectividade e Saúde das APIs Globais:**
-  - Painel com botões de diagnóstico direto na tela master para validar status de tokens de app, expiração de secrets e status das conexões com os servidores do Mercado Livre, Shopee e Amazon.
-
----
-
-### 📜 Fase 44: Matriz Dinâmica de Menus por Plano e Banco de Dados (`DynamicPlanMenuPermissions`)
-
-- [x] **44.1. Persistência de Menus no Banco de Dados (`MenuItems` & `PlanMenuPermissions`):**
-  - Criação das tabelas `MenuItems` (cadastrando toda a árvore de menus com `Id`, `Title`, `Route`, `Icon`, `ParentId`, `Order`) e `PlanMenuPermissions` (mapeando a relação entre `PlanId` e `MenuItemId` com `IsVisible`).
-- [x] **44.2. Interface Master de Controle de Árvore `/master/menu-permissions`:**
-  - Desenvolvimento da tela Master exibindo a árvore hierárquica completa do menu do TecFlow em formato de matriz/tabela com colunas para cada plano (*Starter, Pro, Agency, Enterprise*).
-  - Toggles/Checkboxes dinâmicos para você marcar ou desmarcar visualmente quais itens do menu cada plano enxergará na plataforma.
-- [x] **44.3. Renderização Dinâmica da Sidebar do Cliente (`DynamicNavMenu`):**
-  - Refatoração do `NavMenu.razor` para carregar a estrutura de navegação diretamente da tabela de permissões com base no plano ativo do tenant logado, omitindo automaticamente rotas não contratadas ou indisponíveis.
-
----
-
-### 🎨 Fase 45: Navegação, Usabilidade e Paleta de Cores (Master × Cliente)
-
-- [x] **45.1. Reset automático de scroll na navegação Blazor:**
-  - Componente `NavigationScrollReset` (ouvinte de `NavigationManager.LocationChanged` + JSInterop `tecFlowAppInterop.resetScroll`) nos layouts `MainLayout` e `MasterMainLayout`, retornando ao topo da janela e do container `.main-content` a cada troca de rota (âncoras `#` preservadas).
-- [x] **45.2. Hierarquia visual da Sidebar do cliente:**
-  - Categorias (MENSAGERIA & BOTS, CANAIS, INTEGRAÇÕES) como cabeçalhos em caixa alta e cinza suave; Menus Pai com ícone destacado e texto em negrito; Submenus com recuo de `1.5rem`, linha guia e ícone menor.
-  - "Minhas Lojas / Integrações" (`/marketplace-accounts`) como menu pai fixo da categoria Integrações, sempre visível conforme a matriz de permissão por plano.
-- [x] **45.3. Harmonização de paletas:**
-  - Master: fundo slate escuro (`#0F172A` / `#1E293B`) com detalhes laranja `#FF9900` e branco em header, sidebar, cards, tabelas, formulários e botões.
-  - Cliente: paleta clara e neutra, foco em legibilidade e bordas suaves.
-- [x] **45.4. Segregação Vault × Contas de teste:**
-  - `/master/vault` isolado para as chaves globais (AppId/SecretKey, Evolution, Telegram, OpenAI, ASAAS) com diagnóstico das chaves em uso; `/master/marketplace-accounts` exclusivo para contas corporativas de teste/dev (sem publicação no cofre); `/marketplace-accounts` preservado para o afiliado cliente.
-
----
-
-### 🧲 Fase 46: Menu Dinâmico com Drag & Drop e Roadmap no Banco (`MenuDragDrop`)
-
-- [x] **46.1. Seeding de "Próximos Desenvolvimentos" em `MenuItems`:**
-  - Pasta `Próximos Desenvolvimentos` (`IsFolder = true`, `Route = null`) com Campanhas (`/campanhas`), Métricas / Comissões (`/metricas`), Fila de engajamento (`/fila-engajamento`, selo "EM BREVE"), Conciliação financeira (`/conciliacao-financeira`), Produtos propaganda (`/produtos-propaganda`) e Saúde do sistema (`/saude-sistema`), oculta por padrão em todos os planos e listada na matriz `/master/menu-permissions`.
-- [x] **46.2. Drag & Drop na matriz `/master/menu-permissions`:**
-  - Arrasto entre linhas atualiza `OrderIndex`; arrasto para o centro de uma pasta atualiza `ParentId`; arrasto item sobre item abre modal para o título e cria uma nova pasta com os dois itens. Pastas criadas vazias podem ser excluídas.
-- [x] **46.3. Sidebar do cliente sincronizada com `MenuItems` + `PlanMenuPermissions`:**
-  - `NavMenu.razor` 100% dirigido pelo banco (sem accordion fixo), com pastas aninhadas, selos e recarga da árvore a cada navegação; master na visão cliente vê exatamente o que os clientes veem.
-
----
-
-### 🔐 Fase 47: Cofre de Chaves — Alterações em Segredos Mascarados (`VaultDirtyTracking`)
-
-- [x] **47.1. Binding instantâneo em `/master/vault`:**
-  - Inputs de AppId/SecretKey com `@bind-value:event="oninput"`; flag `_hasChanges` ligada na digitação (selo "Alterações não salvas", botão Salvar habilitado e campo alterado destacado); a máscara é selecionada ao focar para ser substituída.
-- [x] **47.2. Tratamento da máscara no salvamento:**
-  - Valor idêntico à máscara (`••••1234`) é ignorado e o segredo do banco é mantido; valor diferente é gravado com AES e a configuração da API é recarregada; máscara editada (contém "•") é rejeitada sem gravar nada.
-- [x] **47.3. Ícone de olho nos segredos do Vault:**
-  - Botão `bi-eye` / `bi-eye-slash` por campo secreto (`_showSecretMap`, `ToggleVisibility`, `IsSecretVisible`) alterna `password` ↔ `text`; o servidor continua enviando apenas a máscara, então só a chave recém-digitada fica legível; tudo volta a ficar oculto após salvar/recarregar.
+- [x] **Utilização do App Access Token / Client Credentials:**
+  - Em buscas globais do Mercado Livre sem token de usuário individual, o `MercadoLivreApiService` deve utilizar o token de aplicação obtido via `grant_type=client_credentials` com o `AppId` e `SecretKey` do Vault Master.
+  - Credenciais lidas via `IOptionsMonitor` (refletem o Vault sem reiniciar a API); token de aplicação em cache até 5 min antes de expirar e descartado se a API o recusar.
+- [x] **Fallback de vitrine em HTTP 401/403 ou erro de escopo:**
+  - Raspagem automática de `https://lista.mercadolivre.com.br/{query}` (`MercadoLivreHtmlParser`); página de verificação anti-bot é detectada e vira erro amigável no badge.
+- [x] **Injeção Transparente do Affiliate ID (`matt_tool`):**
+  - Garantia de que todos os produtos retornados na busca incorporem o `matt_tool` (`14343296`) do tenant nas URLs finais.
+- [x] **Badge do Mercado Livre com contagem real:**
+  - `OfficialCatalogSearchRules.CountVisibleOffers` conta apenas as ofertas exibidas (filtros + URLs únicas); a `/busca` limpa o alerta de erro assim que há produtos.
 
 ---
 

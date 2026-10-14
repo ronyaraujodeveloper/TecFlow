@@ -106,7 +106,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     "MercadoLivre",
                     "Mercado Livre",
                     includeMl,
-                    mlItems.Count,
+                    OfficialCatalogSearchRules.CountVisibleOffers(mlItems, filter),
                     mlTask.Result.MissingCredentials,
                     OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage,
                     mlTask.Result.MissingCredentials ? null : mlTask.Result.ErrorMessage),

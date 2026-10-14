@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Dto;
+﻿using System.Net;
+using TecFlow.Business.Dto;
 using TecFlow.Core.Enums;
 using TecFlow.Database.Filter;
 
@@ -45,7 +46,39 @@ public static class OfficialCatalogSearchRules
         "Requer OAuth do Mercado Livre para buscar ofertas";
 
     public const string MercadoLivreSearchForbiddenMessage =
-        "API MLB recusou a busca (HTTP 403). O token OAuth da loja é obrigatório; o ID de afiliado não libera a API.";
+        "API MLB recusou a busca (HTTP 403) e a vitrine pública do Mercado Livre não retornou ofertas. Conecte a loja via OAuth ou tente novamente em instantes.";
+
+    /// <summary>401/403 ou erro de escopo de usuário: a busca deve cair na vitrine HTML.</summary>
+    public static bool IsMercadoLivreSearchRefused(HttpStatusCode statusCode, string? body)
+    {
+        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return true;
+        }
+
+        return statusCode != HttpStatusCode.OK
+            && !string.IsNullOrWhiteSpace(body)
+            && (body.Contains("scope", StringComparison.OrdinalIgnoreCase)
+                || body.Contains("forbidden", StringComparison.OrdinalIgnoreCase)
+                || body.Contains("invalid_token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Desafio anti-bot da vitrine (account-verification / login) em vez da lista de produtos.</summary>
+    public static bool IsMercadoLivreVerificationPage(string? finalUrl, string? html)
+    {
+        if (!string.IsNullOrWhiteSpace(finalUrl)
+            && (finalUrl.Contains("account-verification", StringComparison.OrdinalIgnoreCase)
+                || finalUrl.Contains("/gz/", StringComparison.OrdinalIgnoreCase)
+                || finalUrl.Contains("/jms/", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(html)
+            && html.Contains("account-verification", StringComparison.OrdinalIgnoreCase)
+            && !html.Contains("ui-search-layout", StringComparison.OrdinalIgnoreCase)
+            && !html.Contains("poly-card", StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool MatchesMercadoLivreAccount(
         MarketplaceType marketplaceType,
@@ -102,6 +135,16 @@ public static class OfficialCatalogSearchRules
 
         return filter.HasCoupon != true || !string.IsNullOrWhiteSpace(item.CouponCode);
     }
+
+    /// <summary>Ofertas do canal que realmente chegam à tela (filtros opcionais + URLs únicas).</summary>
+    public static int CountVisibleOffers(
+        IEnumerable<OfficialCatalogProductDto> items,
+        OfficialCatalogSearchFilter filter) =>
+        items
+            .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl) && PassesOptionalFilters(item, filter))
+            .Select(item => item.SourceUrl.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
 
     public static bool HasConnectedMercadoLivreStore(
         MarketplaceType marketplaceType,

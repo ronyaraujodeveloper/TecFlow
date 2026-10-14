@@ -18,7 +18,7 @@ TecFlow.Business/Integrations/
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
 
-**Minhas Lojas / Busca:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. No Mercado Livre o campo aceita link de afiliado ou só o número; `ConnectStoreManualLinkForm` / `MarketplaceAccountService` extraem `matt_tool` (ou expandem `meli.la`/`/sec/` com `UrlUnshortenerService`) e gravam o ID numérico em `TrackingId`. A `/busca` localiza a loja ativa por `MarketplaceType.MercadoLivre` ou nome compacto (`Mercado Livre` → `MercadoLivre`). A pesquisa MLB exige token OAuth (`Bearer` + `access_token` em `sites/MLB/search`); o ID de afiliado só injeta `matt_tool` nos permalinks. Sem OAuth o badge fica `⚠️ Requer OAuth...`. HTTP 403 autenticado vira `Failed` com mensagem de API CloudFront — a vitrine `lista.mercadolivre.com.br` não é mais usada (challenge `account-verification`). O token vem do OAuth em Minhas Lojas: `MinhasLojas` ➔ `MarketplaceOAuthConnectService` ➔ `GET api/marketplace-auth/mercadolivre/authorize-url` (`MarketplaceAuthService`) ➔ `auth.mercadolivre.com.br/authorization` ➔ `WebUi /integracoes/oauth/callback` (reenvia do túnel HTTPS para a origem com cookie) ➔ `POST api/integracoes/vincular` ➔ `IntegracaoLojaService` ➔ `ExchangeMercadoLivreCodeAsync` (`oauth/token`, `authorization_code`) ➔ `MarketplaceAccounts.AccessToken/RefreshToken` da loja ML existente. O placeholder `homolog-test-access-token` do Universal Link é tratado como ausência de OAuth. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
+**Minhas Lojas / Busca:** `POST /api/marketplace-auth/vincular-manual` persiste `MarketplaceAccounts` com `UserId` existente em `Usuarios` e `TenantId` de um registro real em `Tenants` (`Tenant Principal` se a tabela estiver vazia), evitando `FK_MarketplaceAccounts_Tenants_TenantId`. No Mercado Livre o campo aceita link de afiliado ou só o número; `ConnectStoreManualLinkForm` / `MarketplaceAccountService` extraem `matt_tool` (ou expandem `meli.la`/`/sec/` com `UrlUnshortenerService`) e gravam o ID numérico em `TrackingId`. A `/busca` localiza a loja ativa por `MarketplaceType.MercadoLivre` ou nome compacto (`Mercado Livre` → `MercadoLivre`). A pesquisa MLB usa `Bearer` + `access_token` em `sites/MLB/search` com o token OAuth da loja; sem ele, `MercadoLivreApiService` pede um token de aplicação (`grant_type=client_credentials`) com `AppId`/`SecretKey` do Vault Master (`IOptionsMonitor`, cache até 5 min antes de expirar). HTTP 401/403 ou erro de escopo cai automaticamente na vitrine `lista.mercadolivre.com.br/{query}` (`MercadoLivreHtmlParser`), sempre com `matt_tool` injetado; se a vitrine responder o challenge `account-verification`, o badge mostra o erro de 403. Sem credenciais e com a vitrine bloqueada o badge fica `⚠️ Requer OAuth...`. O ID de afiliado só injeta `matt_tool` nos permalinks. O token vem do OAuth em Minhas Lojas: `MinhasLojas` ➔ `MarketplaceOAuthConnectService` ➔ `GET api/marketplace-auth/mercadolivre/authorize-url` (`MarketplaceAuthService`) ➔ `auth.mercadolivre.com.br/authorization` ➔ `WebUi /integracoes/oauth/callback` (reenvia do túnel HTTPS para a origem com cookie) ➔ `POST api/integracoes/vincular` ➔ `IntegracaoLojaService` ➔ `ExchangeMercadoLivreCodeAsync` (`oauth/token`, `authorization_code`) ➔ `MarketplaceAccounts.AccessToken/RefreshToken` da loja ML existente. O placeholder `homolog-test-access-token` do Universal Link é tratado como ausência de OAuth. `FriendlyName` e `TrackingId` seguem no corpo JSON; após sucesso a modal fecha e `MinhasLojas` recarrega a lista.
 
 ```mermaid
 flowchart LR
@@ -1501,6 +1501,28 @@ sequenceDiagram
   C->>API: GET api/sistema/menu[?visao=cliente] (a cada navegação)
   API->>S: GetClientMenuAsync(plano)
   S->>DB: árvore + ocultos do plano
+```
+
+---
+
+## Busca do Mercado Livre: token de aplicação e fallback de vitrine (`MLBSearchOAuthFallback`)
+
+```mermaid
+flowchart TB
+  BG[BuscaGlobal.razor /busca] --> OCS[OfficialCatalogSearchService]
+  OCS --> MLS[MercadoLivreApiService]
+  MLS --> UT{Token OAuth da loja?}
+  UT -->|sim / refresh_token| API[api.mercadolibre.com/sites/MLB/search<br/>Authorization: Bearer]
+  UT -->|não| VAULT[(Vault: Integrations:MercadoLivre:AppId/SecretKey<br/>IOptionsMonitor)]
+  VAULT --> TOK[POST oauth/token<br/>grant_type=client_credentials<br/>cache do app token]
+  TOK --> API
+  API -->|200| ITEMS[Ofertas + matt_tool]
+  API -->|401/403/escopo| LISTA[lista.mercadolivre.com.br/query<br/>MercadoLivreHtmlParser]
+  TOK -->|sem credenciais| LISTA
+  LISTA -->|cards| ITEMS
+  LISTA -->|account-verification| ERR[Badge ❌ / ⚠️]
+  ITEMS --> OCS
+  OCS -->|CountVisibleOffers| BADGE[Badge 🟢 N produtos]
 ```
 
 ---

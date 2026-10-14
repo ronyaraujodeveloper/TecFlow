@@ -1307,6 +1307,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Pages/Master/MasterSettings.razor** (`/master/vault`) - `@bind-value:event="oninput"`, `_hasChanges`, selo "Alterações não salvas", destaque do campo alterado, seleção da máscara ao focar e ícone de olho (`_showSecretMap` / `ToggleVisibility` / `IsSecretVisible`) para mostrar/ocultar segredos.
 - [x] **TecFlow.Tests/Unit/Master/MasterRulesTests.cs** / **MasterServicesTests.cs** - regras da máscara e gravação/rejeição de segredos.
 
+### MLBSearchOAuthFallback - Token de aplicação e vitrine na busca do Mercado Livre
+
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `IOptionsMonitor` (Vault ao vivo), token de usuário → token de aplicação `client_credentials` em cache → `Authorization: Bearer`; 401/403/escopo cai em `SearchViaListaAsync` (`lista.mercadolivre.com.br`) com `matt_tool`.
+- [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `IsMercadoLivreSearchRefused`, `IsMercadoLivreVerificationPage`, `CountVisibleOffers` e nova mensagem de 403.
+- [x] **TecFlow.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - badge do Mercado Livre com a contagem de ofertas visíveis.
+- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchRulesTests.cs** - token de aplicação (e cache), fallback em 403/escopo, vitrine bloqueada e contagem do badge.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

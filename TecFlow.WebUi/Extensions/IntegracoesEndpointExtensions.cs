@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Auth;
 using TecFlow.Core.Enums;
 using TecFlow.Core.Security;
 using TecFlow.SharedUi.Services.Integrations;
@@ -40,7 +41,8 @@ public static class IntegracoesEndpointExtensions
             return Results.Redirect("/minhas-lojas?link=failed&message=" + Uri.EscapeDataString("Informe um apelido para a loja."));
         }
 
-        var redirectUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}/integracoes/oauth/callback";
+        var redirectUri = OAuthRedirectUriNormalizer.Normalize(
+            $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{OAuthRedirectUriNormalizer.CallbackPath}");
         var ticket = pendingLinkStore.Create(platform, friendlyName, redirectUri);
 
         try

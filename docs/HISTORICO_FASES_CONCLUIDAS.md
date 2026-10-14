@@ -893,6 +893,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **App Access Token:** sem OAuth individual da loja, `MercadoLivreApiService` obtém token `client_credentials` com `AppId`/`SecretKey` do Vault Master (lidos ao vivo via `IOptionsMonitor`, token em cache) e envia `Authorization: Bearer` na busca `sites/MLB/search`.
 - [x] **Fallback de vitrine:** HTTP 401/403 ou erro de escopo aciona a raspagem de `lista.mercadolivre.com.br/{query}` (reativada; a página `account-verification` é detectada e exibida como erro), com `matt_tool` (`14343296`) injetado em cada oferta.
 - [x] **Badge real na `/busca`:** contagem do Mercado Livre baseada nas ofertas efetivamente exibidas (`CountVisibleOffers`); alerta de erro limpo quando há produtos.
+- [x] **RedirectUri limpa no Ngrok:** `OAuthRedirectUriNormalizer` remove a porta local (`:7002` / `:5000`), força https e descarta query/fragmento para hosts Ngrok, no authorize, na troca do code e no callback pendente da WebUi (ex.: `https://camcorder-bonding-sloppily.ngrok-free.dev/integracoes/oauth/callback`).
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

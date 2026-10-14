@@ -270,6 +270,8 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Garantia de que todos os produtos retornados na busca incorporem o `matt_tool` (`14343296`) do tenant nas URLs finais.
 - [x] **Badge do Mercado Livre com contagem real:**
   - `OfficialCatalogSearchRules.CountVisibleOffers` conta apenas as ofertas exibidas (filtros + URLs únicas); a `/busca` limpa o alerta de erro assim que há produtos.
+- [x] **RedirectUri limpa em túneis Ngrok:**
+  - `OAuthRedirectUriNormalizer` (Business) aplicado em `MarketplaceAuthService` (authorize + troca do code), `IntegracoesEndpointExtensions` e `MinhasLojas.razor`: hosts `ngrok-free.dev` / `ngrok-free.app` / `ngrok.io` / `ngrok.app` saem sempre como `https://{host}/integracoes/oauth/callback`, sem porta local (`:7002` / `:5000`), query ou fragmento.
 
 ---
 

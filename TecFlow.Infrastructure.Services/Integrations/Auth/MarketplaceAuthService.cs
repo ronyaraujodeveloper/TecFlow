@@ -177,9 +177,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     }
 
     private string ResolveMercadoLivreRedirectUri(string? redirectUri) =>
-        string.IsNullOrWhiteSpace(_mercadoLivreOptions.RedirectUri)
-            ? redirectUri?.Trim() ?? string.Empty
-            : _mercadoLivreOptions.RedirectUri.Trim();
+        OAuthRedirectUriNormalizer.Normalize(
+            string.IsNullOrWhiteSpace(_mercadoLivreOptions.RedirectUri)
+                ? redirectUri
+                : _mercadoLivreOptions.RedirectUri);
 
     public async Task<MarketplaceTokenResult> CallbackAndGenerateTokensAsync(
         MarketplaceType type,

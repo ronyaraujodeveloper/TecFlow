@@ -94,3 +94,4 @@
 [2026-10-13 20:11:38]feat(master): drag & drop da arvore de menus e roadmap no banco (fase 46)
 [2026-10-13 21:32:08]feat(vault): deteccao de alteracoes em segredos mascarados e icone de olho (fase 47)
 [2026-10-13 21:57:57]fix(busca): token de aplicacao do Vault e fallback de vitrine na busca do Mercado Livre
+[2026-10-13 22:24:34]fix(oauth): redirect_uri do Mercado Livre sem porta local em tuneis Ngrok

@@ -242,7 +242,8 @@
 
         try
         {
-            var callbackUri = Navigation.ToAbsoluteUri("integracoes/oauth/callback").ToString();
+            var callbackUri = TecFlow.Business.Integrations.Auth.OAuthRedirectUriNormalizer.Normalize(
+                Navigation.ToAbsoluteUri("integracoes/oauth/callback").ToString());
             var result = await OAuthConnect.StartAsync(payload.Platform, payload.FriendlyName, callbackUri);
 
             if (!result.Success || string.IsNullOrWhiteSpace(result.AuthorizeUrl))

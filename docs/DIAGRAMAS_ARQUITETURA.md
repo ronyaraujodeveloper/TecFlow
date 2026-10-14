@@ -1525,6 +1525,18 @@ flowchart TB
   OCS -->|CountVisibleOffers| BADGE[Badge 🟢 N produtos]
 ```
 
+### RedirectUri do OAuth Mercado Livre em túneis Ngrok
+
+```mermaid
+flowchart LR
+  ML[MinhasLojas.razor / IntegracoesEndpointExtensions] -->|callback da origem| N1[OAuthRedirectUriNormalizer]
+  VAULT[(Vault: Integrations:MercadoLivre:RedirectUri)] --> MAS[MarketplaceAuthService.ResolveMercadoLivreRedirectUri]
+  N1 --> MAS
+  MAS --> N2[OAuthRedirectUriNormalizer<br/>*.ngrok-free.dev / *.ngrok.io → https, sem :7002/:5000]
+  N2 -->|authorize| AUTH[auth.mercadolivre.com.br/authorization]
+  N2 -->|authorization_code| TOKEN[api.mercadolibre.com/oauth/token]
+```
+
 ---
 
 ## Cofre de chaves: detecção de alteração em segredos mascarados (Fase 47)

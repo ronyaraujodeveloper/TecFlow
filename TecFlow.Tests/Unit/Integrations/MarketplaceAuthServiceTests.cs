@@ -336,6 +336,50 @@ public class MarketplaceAuthServiceTests
         Assert.Contains("state=ticket-ml", url);
     }
 
+    [Theory]
+    [InlineData("https://camcorder-bonding-sloppily.ngrok-free.dev:7002/integracoes/oauth/callback")]
+    [InlineData("http://camcorder-bonding-sloppily.ngrok-free.dev:5000/integracoes/oauth/callback")]
+    [InlineData("https://camcorder-bonding-sloppily.ngrok-free.dev:7002")]
+    public void GenerateAuthorizationUrl_ShouldStripLocalPort_WhenRedirectIsNgrok(string configured)
+    {
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions
+        {
+            AppId = "123456",
+            SecretKey = "secret",
+            RedirectUri = configured
+        });
+
+        var url = service.GenerateAuthorizationUrl(MarketplaceType.MercadoLivre, "https://localhost:7002/integracoes/oauth/callback", "s");
+
+        Assert.Contains(
+            "redirect_uri=" + Uri.EscapeDataString("https://camcorder-bonding-sloppily.ngrok-free.dev/integracoes/oauth/callback") + "&",
+            url);
+    }
+
+    [Fact]
+    public async Task ExchangeMercadoLivreCodeAsync_ShouldSendSameCleanNgrokRedirect()
+    {
+        string? body = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"access_token":"APP_USR-1","expires_in":21600,"refresh_token":"TG-r"}""")
+            };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("TecFlow.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions { AppId = "123456", SecretKey = "secret" });
+
+        await service.ExchangeMercadoLivreCodeAsync("TG-code", "https://camcorder-bonding-sloppily.ngrok-free.dev:7002/integracoes/oauth/callback");
+
+        Assert.Contains(
+            "redirect_uri=https%3A%2F%2Fcamcorder-bonding-sloppily.ngrok-free.dev%2Fintegracoes%2Foauth%2Fcallback",
+            body);
+    }
+
     [Fact]
     public void GenerateAuthorizationUrl_ShouldExplainMissingAppId_WhenMercadoLivreIsNotConfigured()
     {

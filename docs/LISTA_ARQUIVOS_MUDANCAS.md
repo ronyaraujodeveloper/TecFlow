@@ -1313,6 +1313,10 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `IsMercadoLivreSearchRefused`, `IsMercadoLivreVerificationPage`, `CountVisibleOffers` e nova mensagem de 403.
 - [x] **TecFlow.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - badge do Mercado Livre com a contagem de ofertas visíveis.
 - [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchRulesTests.cs** - token de aplicação (e cache), fallback em 403/escopo, vitrine bloqueada e contagem do badge.
+- [x] **TecFlow.Business/Integrations/Auth/OAuthRedirectUriNormalizer.cs** (novo) - `redirect_uri` limpa para túneis Ngrok (https, sem porta local, sem query/fragmento, caminho `/integracoes/oauth/callback`).
+- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - `ResolveMercadoLivreRedirectUri` normaliza a URI no authorize e na troca do code.
+- [x] **TecFlow.WebUi/Extensions/IntegracoesEndpointExtensions.cs** / **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - callback pendente gravado já normalizado (retorno à origem sem porta).
+- [x] **TecFlow.Tests/Unit/Integrations/OAuthRedirectUriNormalizerTests.cs** (novo) / **MarketplaceAuthServiceTests.cs** - Ngrok com `:7002`/`:5000`, origem sem caminho e hosts locais preservados.
 
 ---
 

@@ -1555,7 +1555,9 @@ flowchart TB
   OCS --> MLS[MercadoLivreApiService.SearchProductsAsync]
   MLS --> FLAG{UseOfficialSearchApi?}
   FLAG -->|true| OAUTH[Fluxo OAuth + refresh<br/>sites/MLB/search]
-  FLAG -->|false padrão| LISTA[GET lista.mercadolivre.com.br/query<br/>headers Chrome 129 + GZip/Deflate/Brotli]
+  FLAG -->|false padrão| PUB[GET api.mercadolibre.com/sites/MLB/search<br/>anônimo, sem token]
+  PUB -->|200| MATT
+  PUB -->|403 / falha| LISTA[GET lista.mercadolivre.com.br/query<br/>headers Chrome 129 + GZip/Deflate/Brotli]
   LISTA -->|cards .ui-search-layout__item / .poly-card| PARSER[MercadoLivreHtmlParser<br/>título, preço, preço original, imagem, link]
   PARSER --> MATT[InjectMattTool matt_tool do tenant]
   MATT --> OK[Badge 🟢 N produtos, sem alerta]

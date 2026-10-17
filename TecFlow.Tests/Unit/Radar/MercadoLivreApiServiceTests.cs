@@ -331,7 +331,7 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
-    public async Task SearchProductsAsync_WithOfficialApiDisabled_ShouldUseListaAsPrimaryEngine()
+    public async Task SearchProductsAsync_WithOfficialApiDisabled_ShouldUseAnonymousPublicSearchFirst()
     {
         var handler = new RoutingHandler();
         var sut = CreateSut(
@@ -339,7 +339,7 @@ public class MercadoLivreApiServiceTests
             new MercadoLivreIntegrationOptions { AppId = "vault-app", SecretKey = "vault-secret" },
             db =>
             {
-                var account = MercadoLivreAccount(trackingId: "14343296");
+                var account = MercadoLivreAccount(trackingId: "97303724");
                 account.AccessToken = "APP_USR-valid";
                 account.ExpiresAt = DateTime.UtcNow.AddHours(4);
                 db.MarketplaceAccounts.Add(account);
@@ -349,18 +349,42 @@ public class MercadoLivreApiServiceTests
 
         Assert.Null(result.ErrorMessage);
         var item = Assert.Single(result.Items);
-        Assert.Equal("Web", item.Source);
-        Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
-        var lista = Assert.Single(handler.Requests);
-        Assert.Equal("https://lista.mercadolivre.com.br/dell-i7", lista.Url);
-        Assert.Null(lista.Authorization);
+        Assert.Equal("Api", item.Source);
+        Assert.Equal("Dell i7", item.ProductName);
+        Assert.Equal(10m, item.Price);
+        Assert.Equal("https://http2.mlstatic.com/t.jpg", item.ImageUrl);
+        Assert.Contains("matt_tool=97303724", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
+        var search = Assert.Single(handler.Requests);
+        Assert.Equal("https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20", search.Url);
+        Assert.Null(search.Authorization);
     }
 
     [Fact]
-    public async Task SearchProductsAsync_WithOfficialApiDisabledAndBotChallenge_ShouldExposeScraperBlockedMessage()
+    public async Task SearchProductsAsync_WithOfficialApiDisabledAndPublicSearchForbidden_ShouldFallbackToLista()
+    {
+        var handler = new RoutingHandler { SearchStatus = HttpStatusCode.Forbidden, SearchBody = """{"message":"forbidden"}""" };
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db => db.MarketplaceAccounts.Add(MercadoLivreAccount(trackingId: "97303724")));
+
+        var result = await sut.SearchProductsAsync(1, "dell i7");
+
+        Assert.Null(result.ErrorMessage);
+        var item = Assert.Single(result.Items);
+        Assert.Equal("Web", item.Source);
+        Assert.Contains("matt_tool=97303724", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(handler.Requests, request => request.Url == "https://lista.mercadolivre.com.br/dell-i7");
+        Assert.All(handler.Requests, request => Assert.Null(request.Authorization));
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WithOfficialApiDisabledAndEverythingBlocked_ShouldExposeScraperBlockedMessage()
     {
         var handler = new RoutingHandler
         {
+            SearchStatus = HttpStatusCode.Forbidden,
+            SearchBody = """{"message":"forbidden"}""",
             ListaBody = """<html><div class="micro-landing-container"></div><script>"/security/bot_challenge";_bmstate</script></html>"""
         };
         var sut = CreateSut(handler, new MercadoLivreIntegrationOptions());
@@ -369,7 +393,7 @@ public class MercadoLivreApiServiceTests
 
         Assert.Empty(result.Items);
         Assert.Equal(OfficialCatalogSearchRules.MercadoLivreScraperBlockedMessage, result.ErrorMessage);
-        Assert.DoesNotContain(handler.Requests, request => request.Host == "api.mercadolibre.com");
+        Assert.DoesNotContain(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
     }
 
     private static MarketplaceAccount MercadoLivreAccount(string? trackingId) => new()

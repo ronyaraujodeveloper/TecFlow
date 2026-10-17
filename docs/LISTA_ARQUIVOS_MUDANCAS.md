@@ -1338,6 +1338,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `UseOfficialSearchApi` (padrão `false`).
 - [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 129 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
 - [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - cliente do ML com `HttpClientHandler` (`GZip | Deflate | Brotli`).
+
+### MLBPublicSearch - Busca pública leve do Mercado Livre
+
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `TrySearchPublicApiAsync` (`sites/MLB/search` anônimo, sem `access_token`) antes da vitrine; `SearchViaApiAsync` aceita token nulo.
+- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - API pública com sucesso (`matt_tool=97303724`, sem Authorization), 403 → vitrine, tudo bloqueado → mensagem amigável.
 - [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs** - preço atual com centavos, preço original (`--previous` / `<s>`), link `poly-component__title` e imagem `data-src` em lazy-load.
 - [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - detecção do `bot_challenge` (`_bmstate`, `micro-landing-container`) e `MercadoLivreScraperBlockedMessage`.
 - [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.

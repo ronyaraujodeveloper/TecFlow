@@ -101,8 +101,14 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             null);
         if (!_options.CurrentValue.UseOfficialSearchApi)
         {
+            var publicItems = await TrySearchPublicApiAsync(query, affiliateId, maxItems, cancellationToken);
+            if (publicItems is not null)
+            {
+                return ToChannelResult(publicItems);
+            }
+
             _logger.LogInformation(
-                "[ML Busca] API oficial desativada (UseOfficialSearchApi=false); buscando '{Query}' na vitrine lista.mercadolivre.com.br.",
+                "[ML Busca] API pública recusou '{Query}'; buscando na vitrine lista.mercadolivre.com.br.",
                 query);
             var primary = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
             if (primary.Items.Count > 0)
@@ -160,6 +166,29 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 : ex.Message;
             _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
             return OfficialCatalogChannelResult.Failed(tracedError);
+        }
+    }
+
+    private async Task<IReadOnlyList<OfficialCatalogProductDto>?> TrySearchPublicApiAsync(
+        string query,
+        string? affiliateId,
+        int maxItems,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var items = await SearchViaApiAsync(query, accessToken: null, affiliateId, maxItems, cancellationToken);
+            _logger.LogInformation(
+                "[ML Busca] API pública sites/MLB/search devolveu {Count} ofertas para '{Query}' (matt_tool={AffiliateId}).",
+                items.Count,
+                query,
+                affiliateId ?? "-");
+            return items;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("[ML Busca] API pública sites/MLB/search indisponível para '{Query}' ({Reason}).", query, ex.Message);
+            return null;
         }
     }
 
@@ -237,14 +266,17 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaApiAsync(
         string query,
-        string accessToken,
+        string? accessToken,
         string? affiliateId,
         int maxItems,
         CancellationToken cancellationToken)
     {
-        var searchUri =
-            $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit={maxItems}"
-            + $"&access_token={Uri.EscapeDataString(accessToken)}";
+        var searchUri = $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit={maxItems}";
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            searchUri += $"&access_token={Uri.EscapeDataString(accessToken)}";
+        }
+
         var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
         if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
         {

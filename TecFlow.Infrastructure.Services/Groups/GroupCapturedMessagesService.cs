@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Entities;
@@ -14,17 +16,20 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
     private readonly IStructuredOfferParserService _parser;
     private readonly IOfferProductMediaStore _mediaStore;
     private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<GroupCapturedMessagesService> _logger;
 
     public GroupCapturedMessagesService(
         AppDbContext context,
         IStructuredOfferParserService parser,
         IOfferProductMediaStore mediaStore,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        ILogger<GroupCapturedMessagesService> logger)
     {
         _context = context;
         _parser = parser;
         _mediaStore = mediaStore;
         _environment = environment;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<MarketplaceType>> ListActivePlatformsAsync(
@@ -135,7 +140,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        return await UpdateImageUrlAsync(messageId, relativePath, userId, cancellationToken);
+        return await UpdateImageUrlAsync(messageId, relativePath, userId, cancellationToken: cancellationToken);
     }
 
     public async Task<int> SetProductImageUrlAsync(
@@ -151,13 +156,14 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        return await UpdateImageUrlAsync(messageId, webRelativeUrl, userId, cancellationToken);
+        return await UpdateImageUrlAsync(messageId, webRelativeUrl, userId, cancellationToken: cancellationToken);
     }
 
     public async Task<int> UpdateImageUrlAsync(
         long messageId,
         string imageWebPath,
         int? userId = null,
+        string? groupKey = null,
         CancellationToken cancellationToken = default)
     {
         var cleanPath = ProductImageStorageRules.EnsureLeadingSlash(
@@ -169,12 +175,91 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        var externalId = messageId.ToString();
-        var updatedAt = DateTime.UtcNow;
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
+        if (!ProductImageStorageRules.FileExistsOnDisk(webRoot, cleanPath))
+        {
+            _logger.LogWarning(
+                "ProductImageUrl não gravado: arquivo ausente no disco. MessageId={MessageId} UserId={UserId} Url={Url}",
+                messageId,
+                userId,
+                cleanPath);
+            return 0;
+        }
+
+        var (filter, parameters) = BuildMessageFilter(messageId, userId, groupKey, cleanPath, cleanPath, DateTime.UtcNow);
         return await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
-            new object[] { cleanPath, cleanPath, updatedAt, externalId },
+            "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE " + filter,
+            parameters,
             cancellationToken);
+    }
+
+    public async Task<int> ClearMissingImageUrlAsync(
+        long messageId,
+        int userId,
+        string? groupKey = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (messageId <= 0 || userId <= 0)
+        {
+            return 0;
+        }
+
+        var externalId = messageId.ToString(CultureInfo.InvariantCulture);
+        var query = _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId && item.ExternalMessageId == externalId && item.ProductImageUrl != null);
+        if (!string.IsNullOrWhiteSpace(groupKey))
+        {
+            query = query.Where(item => item.GroupKey == groupKey);
+        }
+
+        var rows = await query
+            .Select(item => new { item.Id, item.ProductImageUrl })
+            .ToListAsync(cancellationToken);
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
+        var cleared = 0;
+        foreach (var row in rows.Where(row => ProductImageStorageRules.IsLocalProductImage(row.ProductImageUrl)
+                     && !ProductImageStorageRules.FileExistsOnDisk(webRoot, row.ProductImageUrl)))
+        {
+            cleared += await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE GroupCapturedMessages SET ProductImageUrl = NULL, MediaUrl = CASE WHEN MediaUrl = ProductImageUrl THEN NULL ELSE MediaUrl END, UpdatedAt = {0} WHERE Id = {1}",
+                new object[] { DateTime.UtcNow, row.Id },
+                cancellationToken);
+            _logger.LogWarning(
+                "ProductImageUrl revertido para nulo (arquivo ausente e novo download falhou). Id={Id} MessageId={MessageId} UserId={UserId} Url={Url}",
+                row.Id,
+                messageId,
+                userId,
+                row.ProductImageUrl);
+        }
+
+        return cleared;
+    }
+
+    /// <summary>
+    /// <c>ExternalMessageId</c> sozinho não identifica a mensagem: o id do Telegram se repete entre grupos e tenants.
+    /// </summary>
+    private static (string Filter, object[] Parameters) BuildMessageFilter(
+        long messageId,
+        int? userId,
+        string? groupKey,
+        params object[] leadingParameters)
+    {
+        var parameters = new List<object>(leadingParameters) { messageId.ToString(CultureInfo.InvariantCulture) };
+        var filter = $"ExternalMessageId = {{{parameters.Count - 1}}}";
+        if (userId is > 0)
+        {
+            parameters.Add(userId.Value);
+            filter += $" AND UserId = {{{parameters.Count - 1}}}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(groupKey))
+        {
+            parameters.Add(groupKey);
+            filter += $" AND GroupKey = {{{parameters.Count - 1}}}";
+        }
+
+        return (filter, parameters.ToArray());
     }
 
     public async Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default)

@@ -249,6 +249,28 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
      - `ShortenedShopeeUrl` / `ShortenedPlatformUrl`: Link reduzido oficial da plataforma.
      - `TecFlowTrackingUrl`: Link interno de telemetria `/{storeSlug}/{code}`.
 
+## 🔒 Segurança de Dados, Criptografia e Conformidade (LGPD)
+
+Para manter a conformidade com a **Lei Geral de Proteção de Dados (LGPD)** e garantir a integridade das integrações, este projeto utiliza **Criptografia em Repouso (At-Rest Encryption)** para todas as credenciais sensíveis gravadas na base de dados.
+
+### ⚠️ Regras Obrigatórias de Desenvolvimento e Deploy
+
+1. **Proteção de Tokens e Segredos (`DataProtection`):**
+   - Todos os dados sensíveis (`AccessToken`, `RefreshToken`, `ClientSecret` e Chaves de API) **devem obrigatoriamente** passar pelo `ISecurityEncryptionService` / `ValueConverters` do Entity Framework Core.
+   - **Nunca** grave tokens ou segredos em texto puro (*Plain Text*) na base de dados.
+
+2. **Gestão do Diretório de Chaves de Criptografia:**
+   - As chaves de proteção do `DataProtection` devem residir **fora do diretório de publicação da aplicação** (exemplo: `C:\ProgramData\TecFlow\DataProtectionKeys`).
+   - **Atenção no Deploy/Publish:** Nunca limpe ou elimine o diretório de chaves durante uma atualização de código. A eliminação das chaves tornará impossível a descriptografia dos tokens salvos no SQLite, exigindo que todos os utilizadores reautorizem as suas contas de marketplace.
+
+3. **Cadeia de Fallback Mantida (`Unprotect`):**
+   - O serviço de segurança deve manter a cadeia de compatibilidade retroativa:
+     $$\text{DataProtection} \longrightarrow \text{AES (Legado ENC1:)} \longrightarrow \text{Texto Puro}$$
+   - Ao alterar qualquer entidade que contenha segredos, verifique se a conversão transparente no `OnModelCreating` do `ApplicationDbContext` permanece ativa.
+
+4. **Credenciais e Variáveis de Ambiente:**
+   - Ficheiros de configuração locais contendo segredos (ex: `appsettings.json`, `.env`) e a pasta de chaves do `DataProtection` estão incluídos no `.gitignore` e **nunca devem ser commitados no repositório**.
+   
 ---
 
 ## 🚀 Fases do Desenvolvimento (Checklist ativo)
@@ -332,6 +354,19 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **`ValueConverter<string, string>` no `AppDbContext`:**
   - `EncryptedStringConverter.CreateProtected` aplicado a `MarketplaceAccount.AccessToken`, `RefreshToken` e `AppSecret` (o "ClientSecret" da entidade); contextos sem o serviço (design-time, testes) seguem no AES.
   - Sem migration: o tipo da coluna não muda; os tokens `ENC1:` existentes são lidos normalmente e regravados como `DP1:` na próxima atualização (ex.: refresh do token).
+
+## 🖼️ Gravação Confiável das Fotos do Telegram (`TelegramMediaPersistenceFix`)
+
+- [x] **Banco só depois do arquivo físico:**
+  - `ImageOptimizationService` codifica o WebP em `.tmp`, faz `Flush(flushToDisk: true)` e só então move para o nome final; `OfferProductMediaStore` devolve a URL apenas com `File.Exists` verdadeiro, e `UpdateImageUrlAsync` / `OfferPipelineProcessor` recusam caminhos sem arquivo no disco.
+  - O `UPDATE` cru por `ExternalMessageId` saiu de `TelegramUserMonitorHost.PersistTelegramPhotoAsync` (rodava antes de a mensagem existir); o reprocessamento grava filtrando `UserId` + `GroupKey`, porque o id da mensagem do Telegram se repete entre grupos.
+  - Sem fire-and-forget: `OnUpdates`, captura histórica e fila de fotos aguardam cada download.
+- [x] **Caminho físico via `IWebHostEnvironment.WebRootPath`:**
+  - `wwwroot/uploads/products/{tenantId}/{yyyy}/{MM}/{arquivo}` com ano e mês em segmentos invariantes (`BuildRelativeDirectory`) e `Directory.CreateDirectory` automático com log.
+- [x] **Falhas com log e URL nula:**
+  - Download e conversão WebP em `try/catch` separados com `LogWarning` (tenant, chat, mensagem, bytes, caminho); sem arquivo confirmado a mensagem fica com `ProductImageUrl` nulo (placeholder "Processando mídia..." na tela) e `ClearMissingImageUrlAsync` limpa URLs que apontam para arquivos inexistentes quando o novo download falha.
+- [x] **Causa raiz no deploy:**
+  - A limpeza `Remove-Item C:\inetpub\tecflow\api\*` apagava `wwwroot\uploads` a cada publicação (198 de 300 mensagens recentes apontavam para arquivos removidos); a homologação passou a preservar `wwwroot\uploads`.
   
 ---
 

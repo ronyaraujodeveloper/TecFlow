@@ -34,10 +34,19 @@ public interface IGroupCapturedMessagesService
         string webRelativeUrl,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Grava o caminho somente se o arquivo existir no disco, restrito ao tenant e ao grupo quando informados.</summary>
     Task<int> UpdateImageUrlAsync(
         long messageId,
         string imageWebPath,
         int? userId = null,
+        string? groupKey = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Volta <c>ProductImageUrl</c> para nulo quando aponta para um arquivo local que não existe mais.</summary>
+    Task<int> ClearMissingImageUrlAsync(
+        long messageId,
+        int userId,
+        string? groupKey = null,
         CancellationToken cancellationToken = default);
 
     Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default);

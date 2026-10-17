@@ -160,9 +160,11 @@ flowchart LR
   GMUI -->|GET /uploads PhysicalFileProvider api/wwwroot/uploads| MEDIA
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
-  USERBOT -->|DownloadMediaAsync + IOfferProductMediaStore| OPT[ImageOptimizationService]
-  OPT -->|1080px WebP EXIF strip canvas neutro| MEDIA[wwwroot/uploads/products/tenant/yyyy/MM]
-  USERBOT -->|UpdateImageUrlAsync ExecuteSql ProductImageUrl ExternalMessageId| SQL
+  USERBOT -->|await DownloadMediaAsync + IOfferProductMediaStore| OPT[ImageOptimizationService]
+  OPT -->|1080px WebP EXIF strip canvas neutro .tmp + Flush + Move| MEDIA[WebRootPath/uploads/products/tenant/yyyy/MM]
+  OPT -->|File.Exists confirmado| STORE[OfferProductMediaStore URL ou null + LogWarning]
+  USERBOT -->|UpdateImageUrlAsync UserId GroupKey ExternalMessageId so com arquivo| SQL
+  USERBOT -->|download falhou ClearMissingImageUrlAsync ProductImageUrl null| SQL
   USERBOT -->|BackfillMediaPaths {ExternalMessageId}.webp| SQL
   GMUI -->|GET ListAsync DeduplicateOffers Id msg URL| SQL
   APIIIS[TecFlowApiPool Integrated Security] -->|login Windows AutomacaoSociais| SQL

@@ -55,8 +55,17 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         }
 
         string? localPhotoUrl = ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl)
-            ? ProductImageStorageRules.ToWebRelativePath(request.ProductImageUrl)
-            : null;
+            && _mediaStore.ExistsOnDisk(request.ProductImageUrl)
+                ? ProductImageStorageRules.ToWebRelativePath(request.ProductImageUrl)
+                : null;
+        if (localPhotoUrl is null && ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl))
+        {
+            _logger.LogWarning(
+                "Foto local da oferta ausente no disco; URL ignorada. UserId={UserId} MessageId={MessageId} Url={Url}",
+                request.UserId,
+                request.ExternalMessageId,
+                request.ProductImageUrl);
+        }
         if (request.PhotoBytes is { Length: > 0 })
         {
             localPhotoUrl = await _mediaStore.SaveProductPhotoAsync(
@@ -68,7 +77,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
 
         if (requireLocalPhoto && !ProductImageStorageRules.IsLocalProductImage(localPhotoUrl))
         {
-            _logger.LogDebug(
+            _logger.LogWarning(
                 "Pacote atômico descartado: foto essencial ausente. UserId={UserId} MessageId={MessageId}",
                 request.UserId,
                 request.ExternalMessageId);

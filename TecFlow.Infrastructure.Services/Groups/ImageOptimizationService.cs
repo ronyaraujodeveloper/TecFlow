@@ -84,8 +84,16 @@ public sealed class ImageOptimizationService : IImageOptimizationService
         string webRelative,
         CancellationToken cancellationToken)
     {
+        var tempPath = $"{absolutePath}.{Guid.NewGuid():N}.tmp";
         try
         {
+            var directory = Path.GetDirectoryName(absolutePath);
+            if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+                _logger.LogInformation("Diretório de mídia criado: {Directory}", directory);
+            }
+
             rawStream.Position = 0;
             using var image = await Image.LoadAsync<Rgba32>(rawStream, cancellationToken);
             image.Mutate(ctx => ctx.Resize(new ResizeOptions
@@ -111,62 +119,96 @@ public sealed class ImageOptimizationService : IImageOptimizationService
             image.Metadata.XmpProfile = null;
             image.Metadata.IptcProfile = null;
 
-            var directory = Path.GetDirectoryName(absolutePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
             var quality = ImageOptimizationRules.MaxQuality;
-            await EncodeAsync(image, absolutePath, quality, cancellationToken);
-            var length = new FileInfo(absolutePath).Length;
-            var next = ImageOptimizationRules.ChooseQuality(length, quality);
+            var savedPath = await EncodeAsync(image, absolutePath, tempPath, quality, cancellationToken);
+            var next = ImageOptimizationRules.ChooseQuality(new FileInfo(savedPath).Length, quality);
             if (next != quality)
             {
-                await EncodeAsync(image, absolutePath, next, cancellationToken);
+                savedPath = await EncodeAsync(image, absolutePath, tempPath, next, cancellationToken);
             }
 
-            var saved = new FileInfo(absolutePath);
-            if (!saved.Exists || saved.Length <= 0)
+            var saved = new FileInfo(savedPath);
+            if (!File.Exists(savedPath) || saved.Length <= 0)
             {
+                _logger.LogWarning(
+                    "Imagem não confirmada no disco após a conversão; descartada. Path={Path} Bytes={Bytes}",
+                    savedPath,
+                    saved.Exists ? saved.Length : 0);
+                TryDelete(savedPath);
                 return null;
             }
 
-            _logger.LogInformation("Imagem otimizada salva no caminho: {path}", absolutePath);
-            return ProductImageStorageRules.EnsureLeadingSlash(webRelative);
+            var relative = string.Equals(savedPath, absolutePath, StringComparison.OrdinalIgnoreCase)
+                ? webRelative
+                : Path.ChangeExtension(webRelative, Path.GetExtension(savedPath));
+            _logger.LogInformation(
+                "Imagem otimizada salva no caminho: {path} ({Bytes} bytes, qualidade {Quality})",
+                savedPath,
+                saved.Length,
+                next);
+            return ProductImageStorageRules.EnsureLeadingSlash(relative);
         }
         catch (UnknownImageFormatException ex)
         {
-            _logger.LogWarning(ex, "Formato de imagem rejeitado pela regra estrita de ingestão.");
+            _logger.LogWarning(ex, "Formato de imagem rejeitado pela regra estrita de ingestão. Path={Path}", absolutePath);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha ao otimizar imagem. Path={Path}", absolutePath);
+            _logger.LogWarning(ex, "Falha ao converter/gravar imagem em WebP. Path={Path}", absolutePath);
             return null;
+        }
+        finally
+        {
+            TryDelete(tempPath);
         }
     }
 
-    private static async Task EncodeAsync(
+    /// <summary>Codifica em arquivo temporário e só publica o nome final depois do flush físico, para nunca expor arquivo parcial.</summary>
+    private static async Task<string> EncodeAsync(
         Image<Rgba32> image,
         string absolutePath,
+        string tempPath,
         int quality,
         CancellationToken cancellationToken)
     {
-        await using var output = File.Create(absolutePath);
+        var targetPath = absolutePath;
+        await using (var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            try
+            {
+                await image.SaveAsWebpAsync(
+                    output,
+                    new WebpEncoder { Quality = quality, FileFormat = WebpFileFormatType.Lossy },
+                    cancellationToken);
+            }
+            catch (NotSupportedException)
+            {
+                output.SetLength(0);
+                output.Position = 0;
+                await image.SaveAsJpegAsync(output, new JpegEncoder { Quality = quality }, cancellationToken);
+                targetPath = Path.ChangeExtension(absolutePath, ".jpg");
+            }
+
+            output.Flush(flushToDisk: true);
+        }
+
+        File.Move(tempPath, targetPath, overwrite: true);
+        return targetPath;
+    }
+
+    private void TryDelete(string path)
+    {
         try
         {
-            await image.SaveAsWebpAsync(
-                output,
-                new WebpEncoder { Quality = quality, FileFormat = WebpFileFormatType.Lossy },
-                cancellationToken);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
-        catch (NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            output.SetLength(0);
-            var jpegPath = Path.ChangeExtension(absolutePath, ".jpg");
-            await using var jpeg = File.Create(jpegPath);
-            await image.SaveAsJpegAsync(jpeg, new JpegEncoder { Quality = quality }, cancellationToken);
+            _logger.LogWarning(ex, "Não foi possível remover arquivo de mídia incompleto. Path={Path}", path);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Service.Groups;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 using TecFlow.Infrastructure.Services.Groups;
@@ -10,7 +11,7 @@ public class GroupCapturedMessagesServiceTests
     [Fact]
     public void ApplyRelevanceFilter_ShouldKeepConnectedStoreAndHideIgnored()
     {
-        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!);
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);
         var items = new List<GroupCapturedMessage>
         {
             new() { Id = 1, HasDirectProductUrl = true, IsIgnored = false, IsAvailable = true, PlatformType = MarketplaceType.Shopee },
@@ -30,7 +31,7 @@ public class GroupCapturedMessagesServiceTests
     [Fact]
     public void ApplyStructuredParse_ShouldFillCouponAndSanitizeImagePath()
     {
-        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!);
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);
         var entity = new GroupCapturedMessage
         {
             RawText = "🔥 Fone X\nCUPOM: SURPRESAMELIMAIS\nhttps://shopee.com.br/produto-i.1.2",

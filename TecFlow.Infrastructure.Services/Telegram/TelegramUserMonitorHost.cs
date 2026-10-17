@@ -1189,7 +1189,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogDebug(
+                        _logger.LogWarning(
                             ex,
                             "Download priorizado de foto falhou. UserId={UserId} Chat={ChatId} MessageId={MessageId}",
                             job.UserId,
@@ -1249,20 +1249,35 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             cancellationToken,
             addOffset: -1);
         var messages = history.Messages?.OfType<Message>().Where(item => item.id == job.MessageId).ToArray() ?? [];
-        if (messages.Length == 0 || messages[0].media is not MessageMediaPhoto { photo: Photo })
+        using var scope = _scopeFactory.CreateScope();
+        var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
+        var groupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.TelegramChannel, job.ChatId);
+        if (messages.Length == 0 || !IsDownloadableOfferMedia(messages[0].media))
         {
+            _logger.LogWarning(
+                "Mensagem do Telegram sem foto disponível para novo download. UserId={UserId} Chat={ChatId} MessageId={MessageId}",
+                job.UserId,
+                job.ChatId,
+                job.MessageId);
+            await captured.ClearMissingImageUrlAsync(job.MessageId, job.UserId, groupKey, cancellationToken);
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var captured = scope.ServiceProvider.GetRequiredService<IGroupCapturedMessagesService>();
         var relative = await PersistTelegramPhotoAsync(slot.Client, job.UserId, messages[0], cancellationToken);
         if (string.IsNullOrWhiteSpace(relative))
         {
+            await captured.ClearMissingImageUrlAsync(job.MessageId, job.UserId, groupKey, cancellationToken);
             return;
         }
 
-        await captured.UpdateImageUrlAsync(job.MessageId, relative, job.UserId, cancellationToken);
+        var updated = await captured.UpdateImageUrlAsync(job.MessageId, relative, job.UserId, groupKey, cancellationToken);
+        _logger.LogInformation(
+            "Foto do Telegram vinculada após confirmação no disco. UserId={UserId} Chat={ChatId} MessageId={MessageId} Url={Url} Linhas={Rows}",
+            job.UserId,
+            job.ChatId,
+            job.MessageId,
+            relative,
+            updated);
     }
 
     private async Task LinkPendingDiskPhotosAsync(CancellationToken cancellationToken)
@@ -1342,36 +1357,37 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
         {
             using var scope = _scopeFactory.CreateScope();
             var store = scope.ServiceProvider.GetRequiredService<IOfferProductMediaStore>();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await using var raw = new MemoryStream();
-            await DownloadMediaAsync(client, message.media, raw);
-            raw.Position = 0;
+            var media = message.media!;
             var relativePath = await store.SaveFromStreamAsync(
                 tenantId,
                 message.id.ToString(),
-                async (destination, token) =>
-                {
-                    raw.Position = 0;
-                    await raw.CopyToAsync(destination, token);
-                },
+                (destination, _) => DownloadMediaAsync(client, media, destination),
                 cancellationToken);
-            if (string.IsNullOrWhiteSpace(relativePath))
+            relativePath = ProductImageStorageRules.EnsureLeadingSlash(relativePath);
+            if (string.IsNullOrWhiteSpace(relativePath) || !store.ExistsOnDisk(relativePath))
             {
+                _logger.LogWarning(
+                    "Foto do Telegram não confirmada no disco; ProductImageUrl permanece nulo. Tenant={TenantId} Chat={ChatId} MessageId={MessageId}",
+                    tenantId,
+                    message.peer_id?.ID,
+                    message.id);
                 return null;
             }
 
-            relativePath = ProductImageStorageRules.EnsureLeadingSlash(relativePath) ?? relativePath;
-            var externalId = message.id.ToString();
-            await dbContext.Database.ExecuteSqlRawAsync(
-                "UPDATE GroupCapturedMessages SET ProductImageUrl = {0}, MediaUrl = {1}, UpdatedAt = {2} WHERE ExternalMessageId = {3}",
-                new object[] { relativePath, relativePath, DateTime.UtcNow, externalId },
-                cancellationToken);
-            _logger.LogInformation("Imagem otimizada salva no caminho: {path}", relativePath);
             return relativePath;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Download imediato de foto falhou. Tenant={TenantId} MessageId={MessageId}", tenantId, message.id);
+            _logger.LogWarning(
+                ex,
+                "Download/gravação da foto do Telegram falhou; ProductImageUrl permanece nulo. Tenant={TenantId} Chat={ChatId} MessageId={MessageId}",
+                tenantId,
+                message.peer_id?.ID,
+                message.id);
             return null;
         }
     }

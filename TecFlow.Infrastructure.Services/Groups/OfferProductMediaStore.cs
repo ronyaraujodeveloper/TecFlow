@@ -52,31 +52,79 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
             return null;
         }
 
+        await using var raw = new MemoryStream();
         try
         {
-            await using var raw = new MemoryStream();
             await writeAsync(raw, cancellationToken);
-            if (raw.Length <= 0)
-            {
-                return null;
-            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                ex,
+                "Download da foto da oferta falhou; a mensagem fica sem imagem. Tenant={TenantId} MessageId={MessageId}",
+                tenantId,
+                messageId);
+            return null;
+        }
 
+        if (raw.Length <= 0)
+        {
+            _logger.LogWarning(
+                "Download da foto da oferta retornou 0 bytes; a mensagem fica sem imagem. Tenant={TenantId} MessageId={MessageId}",
+                tenantId,
+                messageId);
+            return null;
+        }
+
+        string? relativePath;
+        try
+        {
             raw.Position = 0;
             var digits = string.IsNullOrWhiteSpace(messageId)
                 ? string.Empty
                 : new string(messageId.Where(char.IsDigit).ToArray());
             _ = long.TryParse(digits, out var telegramId);
-            return await _optimizer.ProcessAndSaveImageAsync(
+            relativePath = await _optimizer.ProcessAndSaveImageAsync(
                 raw,
                 tenantId.ToString(),
                 telegramId,
                 cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Falha ao gravar foto da oferta. UserId={UserId}", tenantId);
+            _logger.LogWarning(
+                ex,
+                "Conversão WebP da foto da oferta falhou; a mensagem fica sem imagem. Tenant={TenantId} MessageId={MessageId} Bytes={Bytes}",
+                tenantId,
+                messageId,
+                raw.Length);
             return null;
         }
+
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            _logger.LogWarning(
+                "Conversão WebP da foto da oferta não gerou arquivo; a mensagem fica sem imagem. Tenant={TenantId} MessageId={MessageId} Bytes={Bytes}",
+                tenantId,
+                messageId,
+                raw.Length);
+            return null;
+        }
+
+        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
+        var physicalPath = ProductImageStorageRules.TryResolvePhysicalPath(webRoot, relativePath);
+        if (physicalPath is null || !File.Exists(physicalPath))
+        {
+            _logger.LogWarning(
+                "Foto da oferta não encontrada no disco após a gravação; URL descartada. Tenant={TenantId} MessageId={MessageId} Url={Url} Path={Path}",
+                tenantId,
+                messageId,
+                relativePath,
+                physicalPath);
+            return null;
+        }
+
+        return relativePath;
     }
 
     public bool ExistsOnDisk(string? webRelativeUrl)

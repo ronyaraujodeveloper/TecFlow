@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Service.Radar;
+﻿using System.Globalization;
+using TecFlow.Business.Service.Radar;
 
 namespace TecFlow.Business.Service.Groups;
 
@@ -113,15 +114,21 @@ public static class ProductImageStorageRules
         return deleted;
     }
 
-    public static string BuildPhysicalDirectory(string webRootPath, int tenantId, DateTime utcNow)
+    public static string BuildPhysicalDirectory(string webRootPath, int tenantId, DateTime utcNow) =>
+        Path.Combine(webRootPath, BuildRelativeDirectory(tenantId, utcNow));
+
+    /// <summary>
+    /// <c>uploads/products/{tenantId}/{yyyy}/{MM}</c>; ano e mês em segmentos separados porque "/" num formato de data vira o separador da cultura.
+    /// </summary>
+    public static string BuildRelativeDirectory(int tenantId, DateTime utcNow)
     {
         var stamp = utcNow.ToUniversalTime();
         return Path.Combine(
-            webRootPath,
             "uploads",
             "products",
-            tenantId.ToString(),
-            stamp.ToString("yyyy/MM"));
+            tenantId.ToString(CultureInfo.InvariantCulture),
+            stamp.ToString("yyyy", CultureInfo.InvariantCulture),
+            stamp.ToString("MM", CultureInfo.InvariantCulture));
     }
 
     public static string BuildFileName(string? messageId)
@@ -161,8 +168,7 @@ public static class ProductImageStorageRules
         string fileName,
         DateTime utcNow)
     {
-        var stamp = utcNow.ToUniversalTime();
-        var relativeDir = Path.Combine("uploads", "products", tenantId.ToString(), stamp.ToString("yyyy/MM"));
+        var relativeDir = BuildRelativeDirectory(tenantId, utcNow);
         var absoluteDir = Path.Combine(webRootPath, relativeDir);
         var absoluteFilePath = Path.Combine(absoluteDir, fileName);
         var webRelativeUrl = $"/{relativeDir}/{fileName}".Replace('\\', '/');

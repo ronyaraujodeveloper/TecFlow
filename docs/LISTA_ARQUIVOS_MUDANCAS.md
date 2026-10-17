@@ -1359,6 +1359,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.API/Program.cs** - `AddTecFlowDataProtection(builder.Configuration)`.
 - [x] **TecFlow.Tests/Unit/Security/SecurityEncryptionServiceTests.cs** (novo) - round trip `DP1:`, idempotência, AES legado, texto puro, anel de chaves diferente e conversor EF.
 
+### TelegramMediaPersistenceFix - Gravação confiável das fotos do Telegram
+
+- [x] **TecFlow.Business/Service/Groups/ProductImageStorageRules.cs** - `BuildRelativeDirectory` (`uploads/products/{tenant}/{yyyy}/{MM}` invariante), usado por `BuildSaveTarget` / `BuildPhysicalDirectory`.
+- [x] **TecFlow.Infrastructure.Services/Groups/ImageOptimizationService.cs** - `CreateDirectory` com log, WebP em `.tmp` + `Flush(true)` + `File.Move`, confirmação `File.Exists`, fallback JPEG sem arquivo órfão e logs de falha com caminho.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferProductMediaStore.cs** - `try/catch` separados para download e conversão, `LogWarning` detalhado e URL só com arquivo físico confirmado.
+- [x] **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - `PersistTelegramPhotoAsync` sem `UPDATE` cru e com log em Warning; reprocessamento grava por `UserId` + `GroupKey` e reverte para nulo quando o download falha.
+- [x] **TecFlow.Business/Interfaces/Services/IGroupCapturedMessagesService.cs** / **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `UpdateImageUrlAsync` filtra `UserId`/`GroupKey` e exige arquivo no disco; novo `ClearMissingImageUrlAsync`; `ILogger` injetado.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ignora `ProductImageUrl` local sem arquivo no disco (Warning).
+- [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - pasta criada e arquivo confirmado, falha de download, falha de conversão sem arquivo e caminho com cultura `de-DE`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -377,6 +377,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - API: `app.UseStaticFiles` com `PhysicalFileProvider(C:\inetpub\tecflow\uploads)` e `RequestPath = "/uploads"` (antes do `wwwroot`); WebUi: `UseTecFlowProductUploads` usa a mesma pasta configurada.
 - [x] **Deploy sem perda de mídia:**
   - As 581 fotos existentes foram copiadas de `api\wwwroot\uploads` para `C:\inetpub\tecflow\uploads`; a limpeza literal `Remove-Item C:\inetpub\tecflow\api\*` voltou a ser segura.
+
+## 🧹 Filtros de Integridade e Revalidação de Ofertas (`OfferIntegrityFilters`)
+
+- [x] **Validação prévia na entrada (Telegram/WhatsApp → `OfferPipelineProcessor`):**
+  - `OfferIntegrityRules.IsGenericStorefrontUrl` rejeita links cujo caminho contém `/social/`, `/lists/`, `/perfil/` ou `/perfil-vendedor/`, antes da validação HTTP e de novo depois de resolver a URL final (`OfferValidationService`), com o status `VitrineGenerica` e log `Ingestão rejeitada`.
+- [x] **Trava de sanidade de preço:**
+  - Preço abaixo de R$ 5,00 em produto de alto valor (TV, notebook, smartphone, monitor, console, geladeira etc., ignorando acessórios como capa, película ou cabo) grava `PrecoSuspeito` em vez de `Ativo`; a clonagem fica bloqueada com aviso.
+- [x] **"Verificar anúncio" em tempo real:**
+  - `LiveCheckSearchService.CheckUrlAsync` faz primeiro o GET da página (seguindo redirecionamentos); vitrine genérica ou marcas de anúncio encerrado/pausado (`Publicação finalizada`, `Anúncio pausado`...) gravam na hora `VitrineGenerica` / `Inativo` com `IsAvailable = false`, e a oferta sai do feed.
+- [x] **Revalidação periódica (`OfferRevalidationWorker`):**
+  - A cada `OfferRevalidation:IntervalHours` (padrão 2h, `appsettings.json` da API) revalida em lote (`BatchSize`, pausa `DelayBetweenChecksMs`) as ofertas `Ativo` / `PrecoAlterado` / `Verificando` dos últimos 7 dias ainda não verificadas no intervalo; encerradas, pausadas ou redirecionadas para vitrine viram inativas no banco, com resumo no log.
   
 ---
 

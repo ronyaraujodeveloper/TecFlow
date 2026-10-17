@@ -46,7 +46,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         entity.OfferStatus = snapshot.Status;
         entity.IsAvailable = snapshot.IsAvailable;
         entity.LastValidatedAt = DateTime.UtcNow;
-        if (snapshot.Price is > 0)
+        if (snapshot.IsAvailable && snapshot.Price is > 0)
         {
             if (LiveSearchRules.IsCheaper(entity.ExtractedPrice, snapshot.Price)
                 || snapshot.Status == GroupOfferStatuses.PrecoAlterado)
@@ -83,6 +83,14 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             entity.PlatformType = platform;
         }
 
+        if (entity.IsAvailable)
+        {
+            entity.OfferStatus = OfferIntegrityRules.ApplyPriceSanity(
+                entity.OfferStatus,
+                entity.ProductName,
+                entity.ValidatedPrice ?? entity.ExtractedPrice);
+        }
+
         entity.Touch();
         await _context.SaveChangesAsync(cancellationToken);
         return snapshot;
@@ -95,6 +103,19 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         decimal? capturedPrice,
         CancellationToken cancellationToken = default)
     {
+        var page = await _htmlValidation.ValidateProductPageStatusAsync(url ?? string.Empty, cancellationToken);
+        if (!page.IsAvailable)
+        {
+            return new OfficialOfferSnapshotDto
+            {
+                IsAvailable = false,
+                Status = page.Status,
+                Price = capturedPrice,
+                Source = "Html",
+                Platform = GroupOfferCaptureRules.DetectPlatform(page.FinalUrl ?? url) ?? platform
+            };
+        }
+
         OfficialOfferSnapshotDto? api = null;
         if (ProductSkuRules.TryExtract(url, platform, out var platformKey, out var sku))
         {
@@ -126,7 +147,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             return api;
         }
 
-        var html = await _htmlValidation.ValidateAsync(url ?? string.Empty, capturedPrice, cancellationToken);
+        var html = await _htmlValidation.ValidateFromPageAsync(page, url ?? string.Empty, capturedPrice, cancellationToken);
         return new OfficialOfferSnapshotDto
         {
             IsAvailable = html.IsAvailable,

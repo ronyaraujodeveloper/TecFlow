@@ -25,6 +25,51 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ShouldRejectGenericStorefront_WhenResolvedUrlIsSocialProfile()
+    {
+        var handler = new StubHandler { Html = "<html>Produto</html>" };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://www.mercadolivre.com.br/social/loja-vendedor?matt_tool=1"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var result = await service.ValidateAsync("https://meli.la/abc123", 99m);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.VitrineGenerica, result.Status);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldRejectGenericStorefront_WhenRedirectEndsInStorefront()
+    {
+        var service = CreateService(
+            "<html>Loja</html>",
+            HttpStatusCode.OK,
+            "https://www.mercadolivre.com.br/perfil-vendedor/LOJA123");
+
+        var page = await service.ValidateProductPageStatusAsync("https://produto.mercadolivre.com.br/MLB-1-x-_JM");
+
+        Assert.False(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.VitrineGenerica, page.Status);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ShouldMarkInactive_WhenListingIsClosed()
+    {
+        var service = CreateService(
+            "<html><body><h2>Publicação finalizada</h2></body></html>",
+            HttpStatusCode.OK,
+            "https://produto.mercadolivre.com.br/MLB-1-x-_JM");
+
+        var result = await service.ValidateAsync("https://produto.mercadolivre.com.br/MLB-1-x-_JM", 50m);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Inativo, result.Status);
+    }
+
+    [Fact]
     public async Task ValidateAsync_ShouldFallbackToOpenGraphTitleAndPrice()
     {
         const string html = """
@@ -89,8 +134,11 @@ public class OfferValidationServiceTests
 
         public string? FinalUrl { get; set; }
 
+        public int Calls { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            Calls++;
             var response = new HttpResponseMessage(Status)
             {
                 Content = new StringContent(Html),

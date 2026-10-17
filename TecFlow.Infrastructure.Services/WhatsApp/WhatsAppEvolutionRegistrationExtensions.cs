@@ -43,6 +43,10 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IProductImageUrlLinkBackfillService, TecFlow.Infrastructure.Services.Groups.BackfillMediaPathsService>();
         services.AddScoped<IProductImageCleanupService, TecFlow.Infrastructure.Services.Groups.ProductImageCleanupService>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Groups.ProductImageCleanupHost>();
+        services.Configure<TecFlow.Business.Service.Groups.OfferRevalidationOptions>(
+            configuration.GetSection(TecFlow.Business.Service.Groups.OfferRevalidationOptions.SectionName));
+        services.AddScoped<IOfferRevalidationService, TecFlow.Infrastructure.Services.Groups.OfferRevalidationService>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Groups.OfferRevalidationHost>();
         services.AddScoped<IGroupCapturedMessagesService, TecFlow.Infrastructure.Services.Groups.GroupCapturedMessagesService>();
         services.AddScoped<IMonitoredGroupService, TecFlow.Infrastructure.Services.Groups.MonitoredGroupService>();
         services.AddScoped<IAffiliateMiningProfileService, TecFlow.Infrastructure.Services.Radar.AffiliateMiningProfileService>();

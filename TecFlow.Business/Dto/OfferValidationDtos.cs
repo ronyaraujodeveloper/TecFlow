@@ -27,4 +27,17 @@ public sealed class OfferValidationResultDto
     public string? ProductName { get; init; }
 
     public MarketplaceType? Platform { get; init; }
+
+    public string? FinalUrl { get; init; }
+}
+
+public sealed class OfferRevalidationSummaryDto
+{
+    public int Checked { get; set; }
+
+    public int Deactivated { get; set; }
+
+    public int Suspicious { get; set; }
+
+    public int Failed { get; set; }
 }

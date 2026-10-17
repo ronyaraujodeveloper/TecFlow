@@ -34,15 +34,25 @@ public sealed class OfferValidationService : IOfferValidationService
         CancellationToken cancellationToken = default)
     {
         var page = await ValidateProductPageStatusAsync(originalUrl, cancellationToken);
+        return await ValidateFromPageAsync(page, originalUrl, capturedPrice, cancellationToken);
+    }
+
+    public async Task<OfferValidationResultDto> ValidateFromPageAsync(
+        OfferPageStatusDto page,
+        string originalUrl,
+        decimal? capturedPrice,
+        CancellationToken cancellationToken = default)
+    {
         var platform = GroupOfferCaptureRules.DetectPlatform(page.FinalUrl ?? originalUrl);
         if (!page.IsAvailable)
         {
             return new OfferValidationResultDto
             {
-                Status = GroupOfferStatuses.Esgotado,
+                Status = page.Status,
                 IsAvailable = false,
                 Price = capturedPrice,
-                Platform = platform
+                Platform = platform,
+                FinalUrl = page.FinalUrl
             };
         }
 
@@ -78,7 +88,8 @@ public sealed class OfferValidationService : IOfferValidationService
                 Price = price,
                 ImageUrl = metadata.ProductImageUrl,
                 ProductName = metadata.ProductName,
-                Platform = platform ?? GroupOfferCaptureRules.DetectPlatform(originalUrl)
+                Platform = platform ?? GroupOfferCaptureRules.DetectPlatform(originalUrl),
+                FinalUrl = page.FinalUrl
             };
         }
         catch (Exception ex)
@@ -89,7 +100,8 @@ public sealed class OfferValidationService : IOfferValidationService
                 Status = GroupOfferStatuses.Verificando,
                 IsAvailable = true,
                 Price = capturedPrice,
-                Platform = platform
+                Platform = platform,
+                FinalUrl = page.FinalUrl
             };
         }
     }
@@ -109,6 +121,11 @@ public sealed class OfferValidationService : IOfferValidationService
         }
 
         var workingUrl = originalUrl.Trim();
+        if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+        {
+            return GenericStorefront(originalUrl, workingUrl);
+        }
+
         try
         {
             var resolved = await _urlResolver.ResolveCanonicalAsync(workingUrl, cancellationToken);
@@ -122,6 +139,11 @@ public sealed class OfferValidationService : IOfferValidationService
             _logger.LogDebug(ex, "Follow redirects falhou na integridade da oferta. Url={Url}", originalUrl);
         }
 
+        if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+        {
+            return GenericStorefront(originalUrl, workingUrl);
+        }
+
         try
         {
             using var response = await _httpClient.GetAsync(workingUrl, cancellationToken);
@@ -129,6 +151,11 @@ public sealed class OfferValidationService : IOfferValidationService
             if (!string.IsNullOrWhiteSpace(finalUrl))
             {
                 workingUrl = finalUrl;
+            }
+
+            if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+            {
+                return GenericStorefront(originalUrl, workingUrl);
             }
 
             if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone or HttpStatusCode.UnavailableForLegalReasons)
@@ -143,6 +170,21 @@ public sealed class OfferValidationService : IOfferValidationService
             }
 
             var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (OfferIntegrityRules.ContainsClosedListingPhrase(html))
+            {
+                _logger.LogInformation(
+                    "Anúncio encerrado ou pausado detectado. Url={Url} FinalUrl={FinalUrl}",
+                    originalUrl,
+                    workingUrl);
+                return new OfferPageStatusDto
+                {
+                    IsAvailable = false,
+                    Status = GroupOfferStatuses.Inativo,
+                    Html = html,
+                    FinalUrl = workingUrl
+                };
+            }
+
             if (GroupOfferCaptureRules.ContainsUnavailableProductPhrase(html))
             {
                 return Unavailable(workingUrl, html);
@@ -166,6 +208,20 @@ public sealed class OfferValidationService : IOfferValidationService
                 FinalUrl = workingUrl
             };
         }
+    }
+
+    private OfferPageStatusDto GenericStorefront(string originalUrl, string finalUrl)
+    {
+        _logger.LogInformation(
+            "Link de vitrine genérica rejeitado. Url={Url} FinalUrl={FinalUrl}",
+            originalUrl,
+            finalUrl);
+        return new OfferPageStatusDto
+        {
+            IsAvailable = false,
+            Status = GroupOfferStatuses.VitrineGenerica,
+            FinalUrl = finalUrl
+        };
     }
 
     private static OfferPageStatusDto Unavailable(string? finalUrl, string? html = null) =>

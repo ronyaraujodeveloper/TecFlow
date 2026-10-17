@@ -215,9 +215,9 @@
                                 <span class="marketplace-platform-badge @PlatformBadgeHelper.GetPlatformBadgeClass(item.PlatformName)">
                                     @PlatformBadgeHelper.GetPlatformLabel(item.PlatformName, item.PlatformType)
                                 </span>
-                                @if (!item.IsAvailable || item.OfferStatus == GroupOfferStatuses.Esgotado)
+                                @if (!item.IsAvailable || GroupOfferStatuses.IsInactive(item.OfferStatus))
                                 {
-                                    <span class="badge text-bg-secondary border border-danger">Esgotado</span>
+                                    <span class="badge text-bg-secondary border border-danger">@(GroupOfferStatuses.IsInactive(item.OfferStatus) ? item.OfferStatusLabel : "Esgotado")</span>
                                 }
                                 else
                                 {
@@ -357,6 +357,8 @@
         GroupOfferStatuses.Ativo => "text-bg-success",
         GroupOfferStatuses.Esgotado => "text-bg-danger",
         GroupOfferStatuses.PrecoAlterado => "text-bg-warning",
+        GroupOfferStatuses.PrecoSuspeito => "text-bg-warning border border-danger",
+        GroupOfferStatuses.Inativo or GroupOfferStatuses.VitrineGenerica => "text-bg-danger",
         _ => "text-bg-secondary"
     };
 

@@ -99,6 +99,16 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     continue;
                 }
 
+                if (OfferIntegrityRules.IsGenericStorefrontUrl(url))
+                {
+                    _logger.LogInformation(
+                        "Ingestão rejeitada: VitrineGenerica. UserId={UserId} MessageId={MessageId} Url={Url}",
+                        request.UserId,
+                        request.ExternalMessageId,
+                        url);
+                    continue;
+                }
+
                 var name = FirstNonEmpty(extracted.ProductTitle, GroupOfferCaptureRules.ExtractName(request.RawText, url));
                 var price = extracted.Price ?? GroupOfferCaptureRules.ExtractPrice(request.RawText, url);
                 OfferValidationResultDto? validation = null;
@@ -114,6 +124,17 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
 
                 if (validation is null || !validation.IsAvailable)
                 {
+                    if (validation is not null)
+                    {
+                        _logger.LogInformation(
+                            "Ingestão rejeitada: {Status}. UserId={UserId} MessageId={MessageId} Url={Url} FinalUrl={FinalUrl}",
+                            validation.Status,
+                            request.UserId,
+                            request.ExternalMessageId,
+                            url,
+                            validation.FinalUrl);
+                    }
+
                     continue;
                 }
 
@@ -156,6 +177,17 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     continue;
                 }
 
+                var status = OfferIntegrityRules.ApplyPriceSanity(validation.Status, name, validation.Price ?? price);
+                if (status == GroupOfferStatuses.PrecoSuspeito)
+                {
+                    _logger.LogWarning(
+                        "Oferta sinalizada como PrecoSuspeito. UserId={UserId} MessageId={MessageId} Produto={Product} Preco={Price}",
+                        request.UserId,
+                        request.ExternalMessageId,
+                        name,
+                        validation.Price ?? price);
+                }
+
                 var entity = new GroupCapturedMessage
                 {
                     UserId = request.UserId,
@@ -174,7 +206,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     ValidatedPrice = validation.Price,
                     PlatformType = platform,
                     PlatformName = FirstNonEmpty(extracted.Platform, platform?.GetDisplayName()),
-                    OfferStatus = validation.Status,
+                    OfferStatus = status,
                     ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
                     LastValidatedAt = DateTime.UtcNow,
                     HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),

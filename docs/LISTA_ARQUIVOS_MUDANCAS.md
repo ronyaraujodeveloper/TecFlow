@@ -1382,6 +1382,24 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.API/appsettings.json** / **TecFlow.WebUi/appsettings.json** - `UploadStorage:RootPath = C:\inetpub\tecflow\uploads`.
 - [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** / **ImageOptimizationServiceTests.cs** - gravação na pasta externa, raiz configurada, fallback para `WebRootPath` e rejeição de pasta fora do padrão.
 
+### OfferIntegrityFilters - Vitrine genérica, preço suspeito e revalidação periódica
+
+- [x] **TecFlow.Core/Entities/GroupOfferStatuses.cs** - novos status `Inativo`, `VitrineGenerica`, `PrecoSuspeito`, rótulos e helpers `IsInactive` / `IsRevalidatable`.
+- [x] **TecFlow.Business/Service/Groups/OfferIntegrityRules.cs** (novo) - `IsGenericStorefrontUrl`, `ContainsClosedListingPhrase`, `IsHighValueProduct`, `IsSuspiciousPrice` (< R$ 5,00) e `ApplyPriceSanity`.
+- [x] **TecFlow.Business/Service/Groups/OfferRevalidationOptions.cs** (novo) - seção `OfferRevalidation` (`Enabled`, `IntervalHours`, `InitialDelayMinutes`, `BatchSize`, `DelayBetweenChecksMs`) com limites.
+- [x] **TecFlow.Business/Dto/OfferValidationDtos.cs** - `FinalUrl` no resultado e `OfferRevalidationSummaryDto`.
+- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `IOfferValidationService.ValidateFromPageAsync` e `IOfferRevalidationService`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine antes/depois de resolver e após o GET (`VitrineGenerica`), anúncio encerrado/pausado (`Inativo`), status da página repassado ao resultado.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - rejeição de vitrine na entrada com log e `PrecoSuspeito` no lugar de `Ativo`.
+- [x] **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - checagem da página antes das APIs oficiais, inativação imediata e trava de preço ao gravar.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - clonagem bloqueada para status inativos e `PrecoSuspeito`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** (novo) - `OfferRevalidationService` (lote de ofertas ativas vencidas) + `OfferRevalidationHost` (laço com intervalo configurável).
+- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro das opções, do serviço (Scoped) e do host (Singleton).
+- [x] **TecFlow.API/Workers/OfferRevalidationWorker.cs** (novo) - `BackgroundService` registrado em `Program.cs`.
+- [x] **TecFlow.API/appsettings.json** - seção `OfferRevalidation` (2h, lote 200).
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - selos de `Inativo`, `Vitrine Genérica` e `Preço Suspeito`.
+- [x] **TecFlow.Tests/Unit/Groups/OfferIntegrityRulesTests.cs** (novo) / **OfferRevalidationServiceTests.cs** (novo) / **OfferValidationServiceTests.cs** - detecção de vitrine, preço suspeito, anúncio encerrado e seleção do lote de revalidação.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -176,6 +176,11 @@ flowchart LR
   DATAPURGE -->|ColdStorageArchiver SKU preco cupom| HIST[(ProductPriceHistory)]
   DATAPURGE -->|DELETE TOP 5000 14d + REORGANIZE| SQL
   GCAP -->|ValidateProductPageStatusAsync + og:title/og:image| VAL
+  PIPE -->|OfferIntegrityRules vitrine /social/ /lists/ /perfil/ rejeita + PrecoSuspeito| INTEG[OfferIntegrityRules]
+  VAL -->|URL final vitrine VitrineGenerica / anuncio encerrado Inativo| INTEG
+  GMUI -->|Verificar anuncio LiveCheck GET pagina antes das APIs| VAL
+  REVAL[OfferRevalidationWorker a cada IntervalHours] -->|OfferRevalidationHost scope| REVSVC[OfferRevalidationService lote Ativo vencidas]
+  REVSVC -->|CheckAndPersistAsync Inativo / VitrineGenerica / PrecoSuspeito| SQL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
   GMUI -->|POST midia/priorizar IDs visiveis| USERBOT

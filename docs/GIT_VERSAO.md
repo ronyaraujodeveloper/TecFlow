@@ -103,3 +103,4 @@
 [2026-10-17 19:19:04] feat(security): tokens de marketplace com Data Protection em repouso (DP1, fallback ENC1/texto puro)
 [2026-10-17 19:54:43] fix(telegram): fotos gravadas no banco só após confirmação em disco, UPDATE por UserId/GroupKey e uploads preservados no deploy
 [2026-10-17 20:17:49] feat(uploads): mídias gravadas e servidas a partir de C:\inetpub\tecflow\uploads (UploadStorage:RootPath)
+[2026-10-17 20:43:18] feat(offers): filtros de vitrine genérica, preço suspeito, verificação em tempo real e revalidação periódica de ofertas

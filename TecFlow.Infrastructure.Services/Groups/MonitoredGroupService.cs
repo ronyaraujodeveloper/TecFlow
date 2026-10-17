@@ -255,12 +255,23 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
         await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
 
-        if (entity.OfferStatus == GroupOfferStatuses.Esgotado)
+        if (!entity.IsAvailable || GroupOfferStatuses.IsInactive(entity.OfferStatus))
         {
             return new MonitoredGroupsResponseDto
             {
                 Status = false,
-                Descricao = "O anúncio parece esgotado ou indisponível. Confira o link original antes de clonar."
+                Descricao = entity.OfferStatus == GroupOfferStatuses.VitrineGenerica
+                    ? "O link aponta para uma vitrine genérica (perfil, loja ou lista), não para um produto. Clonagem bloqueada."
+                    : "O anúncio parece esgotado ou indisponível. Confira o link original antes de clonar."
+            };
+        }
+
+        if (entity.OfferStatus == GroupOfferStatuses.PrecoSuspeito)
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = "Preço suspeito para este tipo de produto (possível isca ou erro de captura). Confira o link original antes de clonar."
             };
         }
 

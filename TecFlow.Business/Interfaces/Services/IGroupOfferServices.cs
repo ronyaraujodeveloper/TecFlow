@@ -49,6 +49,21 @@ public interface IOfferValidationService
     Task<OfferPageStatusDto> ValidateProductPageStatusAsync(
         string originalUrl,
         CancellationToken cancellationToken = default);
+
+    Task<OfferValidationResultDto> ValidateFromPageAsync(
+        OfferPageStatusDto page,
+        string originalUrl,
+        decimal? capturedPrice,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IOfferRevalidationService
+{
+    Task<OfferRevalidationSummaryDto> RevalidateActiveOffersAsync(
+        int batchSize,
+        TimeSpan minimumAge,
+        TimeSpan delayBetweenChecks,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IMonitoredGroupService

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Infrastructure.Services.Groups;
 
 namespace TecFlow.Infrastructure.Services.Master;
 
@@ -16,6 +17,7 @@ public static class MasterBackofficeRegistrationExtensions
         services.AddScoped<SaasPlanService>();
         services.AddScoped<ISaasPlanService>(sp => sp.GetRequiredService<SaasPlanService>());
         services.AddScoped<IPlanLimitsService>(sp => sp.GetRequiredService<SaasPlanService>());
+        services.AddTecFlowUploadStorage();
         services.AddScoped<ITenantAdminService, TenantAdminService>();
         services.AddScoped<IImpersonationService, ImpersonationService>();
         services.AddScoped<IMasterMetricsService, MasterMetricsService>();

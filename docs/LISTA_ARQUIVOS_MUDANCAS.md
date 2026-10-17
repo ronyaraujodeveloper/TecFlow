@@ -1369,6 +1369,19 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ignora `ProductImageUrl` local sem arquivo no disco (Warning).
 - [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - pasta criada e arquivo confirmado, falha de download, falha de conversão sem arquivo e caminho com cultura `de-DE`.
 
+### ExternalUploadsFolder - Uploads em C:\inetpub\tecflow\uploads
+
+- [x] **TecFlow.Business/Service/Groups/UploadStorageRules.cs** (novo) - `UploadStorage:RootPath`, `/uploads`, `ResolveUploadsRoot` (configurado ou `{WebRootPath}/uploads`, exige pasta `uploads`) e `ResolveMediaRoot`.
+- [x] **TecFlow.Business/Interfaces/Services/IUploadStorage.cs** (novo) - `UploadsRoot` / `MediaRoot`.
+- [x] **TecFlow.Infrastructure.Services/Groups/UploadStorage.cs** (novo) - implementação + `AddTecFlowUploadStorage` (Singleton), registrada em `WhatsAppEvolutionRegistrationExtensions` e `MasterBackofficeRegistrationExtensions`.
+- [x] **TecFlow.Infrastructure.Services/Groups/ImageOptimizationService.cs** / **OfferProductMediaStore.cs** / **GroupCapturedMessagesService.cs** / **ProductImageCleanupService.cs** - `IUploadStorage` no lugar de `IWebHostEnvironment`.
+- [x] **TecFlow.Infrastructure.Services/Master/TenantAdminService.cs** / **Radar/OfferMediaStudio.cs** - disco por tenant e vídeos na pasta externa.
+- [x] **TecFlow.API/Workers/TelegramUserMonitorWorker.cs** - cria `uploads/products` na pasta externa.
+- [x] **TecFlow.API/Program.cs** - `UseStaticFiles` com `PhysicalFileProvider(UploadsRoot)` em `/uploads`.
+- [x] **TecFlow.WebUi/Extensions/ProductUploadsStaticFilesExtensions.cs** - pasta configurada como primeira opção de `/uploads`.
+- [x] **TecFlow.API/appsettings.json** / **TecFlow.WebUi/appsettings.json** - `UploadStorage:RootPath = C:\inetpub\tecflow\uploads`.
+- [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** / **ImageOptimizationServiceTests.cs** - gravação na pasta externa, raiz configurada, fallback para `WebRootPath` e rejeição de pasta fora do padrão.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -4,14 +4,18 @@ namespace TecFlow.WebUi.Extensions;
 
 public static class ProductUploadsStaticFilesExtensions
 {
+    public const string RootPathSetting = "UploadStorage:RootPath";
+
     public static WebApplication UseTecFlowProductUploads(this WebApplication app)
     {
+        var configured = app.Configuration[RootPathSetting];
         var candidates = new[]
-        {
-            Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "api", "wwwroot", "uploads")),
-            Path.GetFullPath(@"C:\inetpub\tecflow\api\wwwroot\uploads"),
-            Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "TecFlow.API", "wwwroot", "uploads"))
-        };
+            {
+                string.IsNullOrWhiteSpace(configured) ? null : Path.GetFullPath(configured.Trim()),
+                Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "api", "wwwroot", "uploads")),
+                Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "TecFlow.API", "wwwroot", "uploads"))
+            }
+            .OfType<string>();
 
         foreach (var root in candidates)
         {
@@ -38,6 +42,7 @@ public static class ProductUploadsStaticFilesExtensions
                 FileProvider = new PhysicalFileProvider(root),
                 RequestPath = "/uploads"
             });
+            app.Logger.LogInformation("Uploads servidos em /uploads a partir de {UploadsRoot}", root);
             break;
         }
 

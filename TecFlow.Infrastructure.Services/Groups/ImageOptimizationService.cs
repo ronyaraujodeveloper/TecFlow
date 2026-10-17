@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Webp;
@@ -12,14 +11,14 @@ namespace TecFlow.Infrastructure.Services.Groups;
 
 public sealed class ImageOptimizationService : IImageOptimizationService
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly ILogger<ImageOptimizationService> _logger;
 
     public ImageOptimizationService(
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         ILogger<ImageOptimizationService> logger)
     {
-        _environment = environment;
+        _uploads = uploads;
         _logger = logger;
     }
 
@@ -34,12 +33,9 @@ public sealed class ImageOptimizationService : IImageOptimizationService
             return Task.FromResult<string?>(null);
         }
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath);
         var fileName = ImageOptimizationRules.BuildOutputFileName(messageId);
         var (_, absolutePath, webRelative) = ProductImageStorageRules.BuildSaveTarget(
-            webRoot,
+            _uploads.MediaRoot,
             tenant,
             fileName,
             DateTime.UtcNow);
@@ -63,14 +59,10 @@ public sealed class ImageOptimizationService : IImageOptimizationService
             return Task.FromResult<string?>(null);
         }
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath);
         var combined = Path.GetFullPath(Path.Combine(
-            webRoot,
+            _uploads.MediaRoot,
             relative.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)));
-        var uploadsRoot = Path.GetFullPath(Path.Combine(webRoot, "uploads"));
-        if (!combined.StartsWith(uploadsRoot, StringComparison.OrdinalIgnoreCase))
+        if (!combined.StartsWith(_uploads.UploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult<string?>(null);
         }

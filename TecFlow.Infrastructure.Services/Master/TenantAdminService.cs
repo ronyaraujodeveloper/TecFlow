@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
@@ -18,7 +17,7 @@ public sealed class TenantAdminService : ITenantAdminService
     public static readonly MasterActor SystemActor = new(0, "sistema@tecflow", "Sistema", null);
 
     private readonly AppDbContext _context;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly IMasterAuditService _audit;
     private readonly ITenantAccessReader _accessReader;
     private readonly ISaasPaymentGateway _gateway;
@@ -26,7 +25,7 @@ public sealed class TenantAdminService : ITenantAdminService
 
     public TenantAdminService(
         AppDbContext context,
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         IMasterAuditService audit,
         ITenantAccessReader accessReader,
         ISaasPaymentGateway gateway,
@@ -34,7 +33,7 @@ public sealed class TenantAdminService : ITenantAdminService
     {
         _context = context;
         _currentTenant = currentTenant;
-        _environment = environment;
+        _uploads = uploads;
         _audit = audit;
         _accessReader = accessReader;
         _gateway = gateway;
@@ -251,7 +250,7 @@ public sealed class TenantAdminService : ITenantAdminService
             dto.Folders.Add(new TenantStorageFolderDto
             {
                 UserId = userId,
-                Path = $"wwwroot/uploads/products/{userId}",
+                Path = Path.Combine(_uploads.UploadsRoot, "products", userId.ToString()),
                 Bytes = bytes,
                 Files = files
             });
@@ -405,11 +404,7 @@ public sealed class TenantAdminService : ITenantAdminService
             .Select(item => item.Id)
             .ToListAsync(cancellationToken);
 
-    private string ResolveWebRoot() =>
-        ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath,
-            AppDomain.CurrentDomain.BaseDirectory);
+    private string ResolveWebRoot() => _uploads.MediaRoot;
 
     private static (long Bytes, int Files) MeasureUsers(string webRoot, IEnumerable<int> userIds)
     {

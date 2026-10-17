@@ -102,3 +102,4 @@
 [2026-10-17 18:51:18] feat(busca): API publica anonima sites/MLB/search antes da vitrine do ML, matt_tool 97303724 da conta ativa e verificacao da reautorizacao OAuth
 [2026-10-17 19:19:04] feat(security): tokens de marketplace com Data Protection em repouso (DP1, fallback ENC1/texto puro)
 [2026-10-17 19:54:43] fix(telegram): fotos gravadas no banco só após confirmação em disco, UPDATE por UserId/GroupKey e uploads preservados no deploy
+[2026-10-17 20:17:49] feat(uploads): mídias gravadas e servidas a partir de C:\inetpub\tecflow\uploads (UploadStorage:RootPath)

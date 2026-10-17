@@ -1,6 +1,4 @@
 ﻿using System.Globalization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -81,13 +79,55 @@ public class OfferProductMediaStoreTests
         }
     }
 
-    private static (OfferProductMediaStore Store, string WebRoot) CreateStore()
+    [Fact]
+    public async Task SaveFromStreamAsync_ShouldWriteIntoExternalUploadsFolder()
     {
-        var root = Path.Combine(Path.GetTempPath(), "tecflow-media-" + Guid.NewGuid().ToString("N"));
-        var environment = new FakeEnv(root);
-        Directory.CreateDirectory(environment.WebRootPath);
-        var optimizer = new ImageOptimizationService(environment, NullLogger<ImageOptimizationService>.Instance);
-        return (new OfferProductMediaStore(environment, optimizer, NullLogger<OfferProductMediaStore>.Instance), environment.WebRootPath);
+        var (store, mediaRoot) = CreateStore();
+
+        var relative = await store.SaveFromStreamAsync(
+            1,
+            "77",
+            async (stream, token) => await stream.WriteAsync(await CreatePngAsync(), token));
+
+        var utc = DateTime.UtcNow;
+        var expected = Path.Combine(mediaRoot, "uploads", "products", "1", utc.ToString("yyyy"), utc.ToString("MM"), "77.webp");
+        Assert.Equal($"/uploads/products/1/{utc:yyyy}/{utc:MM}/77.webp", relative);
+        Assert.True(File.Exists(expected));
+        Assert.EndsWith(Path.Combine("tecflow", "uploads", "products", "1", utc.ToString("yyyy"), utc.ToString("MM"), "77.webp"), expected);
+    }
+
+    [Fact]
+    public void ResolveUploadsRoot_ShouldPreferConfiguredExternalFolder()
+    {
+        var uploads = UploadStorageRules.ResolveUploadsRoot(@"C:\inetpub\tecflow\uploads\", @"C:\inetpub\tecflow\api\wwwroot");
+
+        Assert.Equal(@"C:\inetpub\tecflow\uploads", uploads);
+        Assert.Equal(@"C:\inetpub\tecflow", UploadStorageRules.ResolveMediaRoot(uploads));
+        Assert.Equal(
+            @"C:\inetpub\tecflow\uploads\products\7\2026\10\9.webp",
+            ProductImageStorageRules.TryResolvePhysicalPath(UploadStorageRules.ResolveMediaRoot(uploads), "/uploads/products/7/2026/10/9.webp"));
+    }
+
+    [Fact]
+    public void ResolveUploadsRoot_ShouldFallBackToWebRoot_WhenNotConfigured()
+    {
+        Assert.Equal(
+            @"C:\site\wwwroot\uploads",
+            UploadStorageRules.ResolveUploadsRoot(null, @"C:\site\wwwroot"));
+    }
+
+    [Fact]
+    public void ResolveUploadsRoot_ShouldRejectFolderNotNamedUploads()
+    {
+        Assert.Throws<InvalidOperationException>(() => UploadStorageRules.ResolveUploadsRoot(@"D:\media", null));
+    }
+
+    private static (OfferProductMediaStore Store, string MediaRoot) CreateStore()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tecflow-media-" + Guid.NewGuid().ToString("N"), "tecflow");
+        var uploads = new UploadStorage(Path.Combine(root, "uploads"));
+        var optimizer = new ImageOptimizationService(uploads, NullLogger<ImageOptimizationService>.Instance);
+        return (new OfferProductMediaStore(uploads, optimizer, NullLogger<OfferProductMediaStore>.Instance), uploads.MediaRoot);
     }
 
     private static async Task<byte[]> CreatePngAsync()
@@ -96,21 +136,5 @@ public class OfferProductMediaStoreTests
         await using var buffer = new MemoryStream();
         await image.SaveAsPngAsync(buffer);
         return buffer.ToArray();
-    }
-
-    private sealed class FakeEnv : IWebHostEnvironment
-    {
-        public FakeEnv(string contentRoot)
-        {
-            ContentRootPath = contentRoot;
-            WebRootPath = Path.Combine(contentRoot, "wwwroot");
-        }
-
-        public string ApplicationName { get; set; } = "tests";
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-        public string WebRootPath { get; set; }
-        public string EnvironmentName { get; set; } = "Tests";
-        public string ContentRootPath { get; set; }
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

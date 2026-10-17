@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 
@@ -9,16 +8,16 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
 {
     public const string RelativeUploadsFolder = "uploads/products";
 
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly IImageOptimizationService _optimizer;
     private readonly ILogger<OfferProductMediaStore> _logger;
 
     public OfferProductMediaStore(
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         IImageOptimizationService optimizer,
         ILogger<OfferProductMediaStore> logger)
     {
-        _environment = environment;
+        _uploads = uploads;
         _optimizer = optimizer;
         _logger = logger;
     }
@@ -111,8 +110,7 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
             return null;
         }
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
-        var physicalPath = ProductImageStorageRules.TryResolvePhysicalPath(webRoot, relativePath);
+        var physicalPath = ProductImageStorageRules.TryResolvePhysicalPath(_uploads.MediaRoot, relativePath);
         if (physicalPath is null || !File.Exists(physicalPath))
         {
             _logger.LogWarning(
@@ -127,11 +125,6 @@ public sealed class OfferProductMediaStore : IOfferProductMediaStore
         return relativePath;
     }
 
-    public bool ExistsOnDisk(string? webRelativeUrl)
-    {
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath);
-        return ProductImageStorageRules.FileExistsOnDisk(webRoot, webRelativeUrl);
-    }
+    public bool ExistsOnDisk(string? webRelativeUrl) =>
+        ProductImageStorageRules.FileExistsOnDisk(_uploads.MediaRoot, webRelativeUrl);
 }

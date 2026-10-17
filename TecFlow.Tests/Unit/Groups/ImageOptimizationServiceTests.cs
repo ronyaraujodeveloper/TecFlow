@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using TecFlow.Infrastructure.Services.Groups;
@@ -14,7 +12,7 @@ public class ImageOptimizationServiceTests
     {
         var root = Path.Combine(Path.GetTempPath(), "tecflow-opt-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "wwwroot"));
-        var service = new ImageOptimizationService(new FakeEnv(root), NullLogger<ImageOptimizationService>.Instance);
+        var service = CreateService(root);
         await using var raw = new MemoryStream();
         using (var source = new Image<Rgba32>(2000, 1200, Color.ParseHex("112233")))
         {
@@ -41,7 +39,7 @@ public class ImageOptimizationServiceTests
     {
         var root = Path.Combine(Path.GetTempPath(), "tecflow-pad-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "wwwroot"));
-        var service = new ImageOptimizationService(new FakeEnv(root), NullLogger<ImageOptimizationService>.Instance);
+        var service = CreateService(root);
         await using var raw = new MemoryStream();
         using (var source = new Image<Rgba32>(1600, 200, Color.ParseHex("AABBCC")))
         {
@@ -56,19 +54,6 @@ public class ImageOptimizationServiceTests
         Assert.Equal(saved.Width, saved.Height);
     }
 
-    private sealed class FakeEnv : IWebHostEnvironment
-    {
-        public FakeEnv(string contentRoot)
-        {
-            ContentRootPath = contentRoot;
-            WebRootPath = Path.Combine(contentRoot, "wwwroot");
-        }
-
-        public string ApplicationName { get; set; } = "tests";
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-        public string WebRootPath { get; set; }
-        public string EnvironmentName { get; set; } = "Tests";
-        public string ContentRootPath { get; set; }
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-    }
+    private static ImageOptimizationService CreateService(string root) =>
+        new(new UploadStorage(Path.Combine(root, "wwwroot", "uploads")), NullLogger<ImageOptimizationService>.Instance);
 }

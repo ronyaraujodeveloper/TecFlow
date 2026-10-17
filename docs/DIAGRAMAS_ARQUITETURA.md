@@ -157,11 +157,13 @@ flowchart LR
   USERBOT -->|try-catch LogError| ST[IUserBotSyncStatusService]
   GMUI[GruposMonitorados] -->|HandleResetAllAsync POST resetar só limpa SQL e disco| GCAPSVC
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
-  GMUI -->|GET /uploads PhysicalFileProvider api/wwwroot/uploads| MEDIA
+  GMUI -->|GET /uploads PhysicalFileProvider UploadStorage:RootPath| MEDIA
+  APIUP[API Program.cs UseStaticFiles /uploads] -->|PhysicalFileProvider| MEDIA
+  UPS[IUploadStorage UploadsRoot MediaRoot] -->|C:\inetpub\tecflow\uploads| MEDIA
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|await DownloadMediaAsync + IOfferProductMediaStore| OPT[ImageOptimizationService]
-  OPT -->|1080px WebP EXIF strip canvas neutro .tmp + Flush + Move| MEDIA[WebRootPath/uploads/products/tenant/yyyy/MM]
+  OPT -->|1080px WebP EXIF strip canvas neutro .tmp + Flush + Move| MEDIA[C:\inetpub\tecflow\uploads\products\tenant\yyyy\MM]
   OPT -->|File.Exists confirmado| STORE[OfferProductMediaStore URL ou null + LogWarning]
   USERBOT -->|UpdateImageUrlAsync UserId GroupKey ExternalMessageId so com arquivo| SQL
   USERBOT -->|download falhou ClearMissingImageUrlAsync ProductImageUrl null| SQL

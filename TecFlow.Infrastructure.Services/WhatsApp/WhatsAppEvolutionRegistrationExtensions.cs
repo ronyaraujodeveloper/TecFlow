@@ -7,6 +7,7 @@ using TecFlow.Business.Integrations.WhatsApp;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Infrastructure.Services;
+using TecFlow.Infrastructure.Services.Groups;
 
 namespace TecFlow.Infrastructure.Services.WhatsApp;
 
@@ -36,6 +37,7 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IOfferPipelineProcessor, TecFlow.Infrastructure.Services.Groups.OfferPipelineProcessor>();
         services.AddScoped<IGroupOfferCaptureService, TecFlow.Infrastructure.Services.Groups.GroupOfferCaptureService>();
         services.AddSingleton<IStructuredOfferParserService, TecFlow.Business.Service.Groups.StructuredOfferParserService>();
+        services.AddTecFlowUploadStorage();
         services.AddScoped<IImageOptimizationService, TecFlow.Infrastructure.Services.Groups.ImageOptimizationService>();
         services.AddScoped<IOfferProductMediaStore, TecFlow.Infrastructure.Services.Groups.OfferProductMediaStore>();
         services.AddScoped<IProductImageUrlLinkBackfillService, TecFlow.Infrastructure.Services.Groups.BackfillMediaPathsService>();

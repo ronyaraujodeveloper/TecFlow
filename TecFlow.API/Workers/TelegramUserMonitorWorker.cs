@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using TecFlow.Business.Interfaces.Services;
+﻿using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Infrastructure.Services.Telegram;
 
@@ -11,7 +10,7 @@ public sealed class TelegramUserMonitorWorker : BackgroundService
     private readonly TelegramUserBotSessionStore _sessions;
     private readonly IUserBotSyncStatusService _syncStatus;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly ILogger<TelegramUserMonitorWorker> _logger;
 
     public TelegramUserMonitorWorker(
@@ -19,14 +18,14 @@ public sealed class TelegramUserMonitorWorker : BackgroundService
         TelegramUserBotSessionStore sessions,
         IUserBotSyncStatusService syncStatus,
         IServiceScopeFactory scopeFactory,
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         ILogger<TelegramUserMonitorWorker> logger)
     {
         _host = host;
         _sessions = sessions;
         _syncStatus = syncStatus;
         _scopeFactory = scopeFactory;
-        _environment = environment;
+        _uploads = uploads;
         _logger = logger;
     }
 
@@ -34,15 +33,13 @@ public sealed class TelegramUserMonitorWorker : BackgroundService
     {
         try
         {
-            var folders = UserBotRuntimeRules.EnsureLocalFolders(_environment.WebRootPath);
+            var folders = UserBotRuntimeRules.EnsureLocalFolders(_uploads.MediaRoot);
             _ = _sessions.GetSessionDirectory();
-            var baseWebRoot = _environment.WebRootPath
-                ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
             _logger.LogInformation(
-                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions} WebRoot={WebRoot}",
+                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions} UploadsRoot={UploadsRoot}",
                 folders.UploadsPath,
                 folders.SessionsPath,
-                baseWebRoot);
+                _uploads.UploadsRoot);
 
             try
             {

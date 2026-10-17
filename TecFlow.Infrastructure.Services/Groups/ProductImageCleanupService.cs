@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
@@ -11,16 +10,16 @@ namespace TecFlow.Infrastructure.Services.Groups;
 public sealed class ProductImageCleanupService : IProductImageCleanupService
 {
     private readonly AppDbContext _context;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly ILogger<ProductImageCleanupService> _logger;
 
     public ProductImageCleanupService(
         AppDbContext context,
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         ILogger<ProductImageCleanupService> logger)
     {
         _context = context;
-        _environment = environment;
+        _uploads = uploads;
         _logger = logger;
     }
 
@@ -35,9 +34,7 @@ public sealed class ProductImageCleanupService : IProductImageCleanupService
             .Take(500)
             .ToListAsync(cancellationToken);
 
-        var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
-            ? Path.Combine(_environment.ContentRootPath, "wwwroot")
-            : _environment.WebRootPath;
+        var webRoot = _uploads.MediaRoot;
         var purged = 0;
         foreach (var item in items)
         {

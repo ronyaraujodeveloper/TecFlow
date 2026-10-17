@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.IdentityModel.Tokens;
@@ -13,6 +14,8 @@ using TecFlow.API.Extensions;
 using TecFlow.API.Security;
 using TecFlow.Infrastructure.Services.Master;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Infrastructure.Services.LinkStrategies;
@@ -172,14 +175,21 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-var productUploads = Path.Combine(
-    app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
-    "uploads",
-    "products");
-Directory.CreateDirectory(productUploads);
+var uploadStorage = app.Services.GetRequiredService<IUploadStorage>();
+Directory.CreateDirectory(Path.Combine(uploadStorage.UploadsRoot, "products"));
 var staticTypes = new FileExtensionContentTypeProvider();
 staticTypes.Mappings[".webp"] = "image/webp";
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadStorage.UploadsRoot),
+    RequestPath = UploadStorageRules.RequestPath,
+    ContentTypeProvider = staticTypes
+});
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticTypes });
+app.Logger.LogInformation(
+    "Uploads servidos em {RequestPath} a partir de {UploadsRoot}",
+    UploadStorageRules.RequestPath,
+    uploadStorage.UploadsRoot);
 app.UseRouting();
 app.UseCors("AllowAll");
 app.UseMiddleware<ApiRequestCounterMiddleware>();

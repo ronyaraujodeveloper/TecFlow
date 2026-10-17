@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,20 +13,20 @@ namespace TecFlow.Infrastructure.Services.Radar;
 
 public sealed class OfferMediaStudio : IOfferMediaStudio
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly IHttpClientFactory _httpFactory;
     private readonly IImageOptimizationService _optimizer;
     private readonly ShortLinkOptions _shortLinks;
     private readonly ILogger<OfferMediaStudio> _logger;
 
     public OfferMediaStudio(
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         IHttpClientFactory httpFactory,
         IImageOptimizationService optimizer,
         IOptions<ShortLinkOptions> shortLinks,
         ILogger<OfferMediaStudio> logger)
     {
-        _environment = environment;
+        _uploads = uploads;
         _httpFactory = httpFactory;
         _optimizer = optimizer;
         _shortLinks = shortLinks.Value;
@@ -109,10 +108,7 @@ public sealed class OfferMediaStudio : IOfferMediaStudio
             }
 
             var bytes = await DownloadBytesAsync(video, cancellationToken);
-            var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
-                ? Path.Combine(_environment.ContentRootPath, "wwwroot")
-                : _environment.WebRootPath;
-            var folder = Path.Combine(webRoot, "uploads", "videos");
+            var folder = Path.Combine(_uploads.UploadsRoot, "videos");
             Directory.CreateDirectory(folder);
             var fileName = $"{Guid.NewGuid():N}.mp4";
             await File.WriteAllBytesAsync(Path.Combine(folder, fileName), bytes, cancellationToken);

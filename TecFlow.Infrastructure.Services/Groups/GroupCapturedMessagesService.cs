@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
@@ -15,20 +14,20 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
     private readonly AppDbContext _context;
     private readonly IStructuredOfferParserService _parser;
     private readonly IOfferProductMediaStore _mediaStore;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IUploadStorage _uploads;
     private readonly ILogger<GroupCapturedMessagesService> _logger;
 
     public GroupCapturedMessagesService(
         AppDbContext context,
         IStructuredOfferParserService parser,
         IOfferProductMediaStore mediaStore,
-        IWebHostEnvironment environment,
+        IUploadStorage uploads,
         ILogger<GroupCapturedMessagesService> logger)
     {
         _context = context;
         _parser = parser;
         _mediaStore = mediaStore;
-        _environment = environment;
+        _uploads = uploads;
         _logger = logger;
     }
 
@@ -175,7 +174,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
+        var webRoot = _uploads.MediaRoot;
         if (!ProductImageStorageRules.FileExistsOnDisk(webRoot, cleanPath))
         {
             _logger.LogWarning(
@@ -216,7 +215,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         var rows = await query
             .Select(item => new { item.Id, item.ProductImageUrl })
             .ToListAsync(cancellationToken);
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(_environment.WebRootPath, _environment.ContentRootPath);
+        var webRoot = _uploads.MediaRoot;
         var cleared = 0;
         foreach (var row in rows.Where(row => ProductImageStorageRules.IsLocalProductImage(row.ProductImageUrl)
                      && !ProductImageStorageRules.FileExistsOnDisk(webRoot, row.ProductImageUrl)))
@@ -264,10 +263,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 
     public async Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default)
     {
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath,
-            AppDomain.CurrentDomain.BaseDirectory);
+        var webRoot = _uploads.MediaRoot;
         var uploadsFolder = Path.Combine(webRoot, "uploads", "products");
         if (!Directory.Exists(uploadsFolder))
         {
@@ -315,10 +311,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath,
-            AppDomain.CurrentDomain.BaseDirectory);
+        var webRoot = _uploads.MediaRoot;
         var uploadsFolder = Path.Combine(webRoot, "uploads", "products");
         if (!Directory.Exists(uploadsFolder))
         {
@@ -444,10 +437,7 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             new object[] { userId },
             cancellationToken);
 
-        var webRoot = ProductImageStorageRules.ResolveWebRoot(
-            _environment.WebRootPath,
-            _environment.ContentRootPath,
-            AppDomain.CurrentDomain.BaseDirectory);
+        var webRoot = _uploads.MediaRoot;
         var tenantUploadPath = ProductImageStorageRules.TryResolveTenantProductsFolder(webRoot, userId);
         ProductImageStorageRules.TryDeleteTenantProductFiles(tenantUploadPath);
 

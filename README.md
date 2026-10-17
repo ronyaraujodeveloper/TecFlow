@@ -270,7 +270,7 @@ Para manter a conformidade com a **Lei Geral de Proteção de Dados (LGPD)** e g
 
 4. **Credenciais e Variáveis de Ambiente:**
    - Ficheiros de configuração locais contendo segredos (ex: `appsettings.json`, `.env`) e a pasta de chaves do `DataProtection` estão incluídos no `.gitignore` e **nunca devem ser commitados no repositório**.
-   
+
 ---
 
 ## 🚀 Fases do Desenvolvimento (Checklist ativo)
@@ -367,6 +367,16 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Download e conversão WebP em `try/catch` separados com `LogWarning` (tenant, chat, mensagem, bytes, caminho); sem arquivo confirmado a mensagem fica com `ProductImageUrl` nulo (placeholder "Processando mídia..." na tela) e `ClearMissingImageUrlAsync` limpa URLs que apontam para arquivos inexistentes quando o novo download falha.
 - [x] **Causa raiz no deploy:**
   - A limpeza `Remove-Item C:\inetpub\tecflow\api\*` apagava `wwwroot\uploads` a cada publicação (198 de 300 mensagens recentes apontavam para arquivos removidos); a homologação passou a preservar `wwwroot\uploads`.
+
+## 📁 Uploads em Pasta Externa ao Deploy (`ExternalUploadsFolder`)
+
+- [x] **Gravação em `C:\inetpub\tecflow\uploads\products\{tenantId}\{year}\{month}`:**
+  - `UploadStorage:RootPath` (`appsettings.json` da API e da WebUi) define a pasta servida em `/uploads`; `IUploadStorage` (Singleton) expõe `UploadsRoot` e `MediaRoot` para `ImageOptimizationService`, `OfferProductMediaStore`, `GroupCapturedMessagesService`, `ProductImageCleanupService`, `TenantAdminService`, `OfferMediaStudio` (vídeos/molduras) e `TelegramUserMonitorWorker`.
+  - Sem configuração (testes, outra máquina) volta para `{WebRootPath}/uploads`; a pasta precisa se chamar `uploads`, porque as URLs no banco começam com `/uploads/`.
+- [x] **Servimento estático:**
+  - API: `app.UseStaticFiles` com `PhysicalFileProvider(C:\inetpub\tecflow\uploads)` e `RequestPath = "/uploads"` (antes do `wwwroot`); WebUi: `UseTecFlowProductUploads` usa a mesma pasta configurada.
+- [x] **Deploy sem perda de mídia:**
+  - As 581 fotos existentes foram copiadas de `api\wwwroot\uploads` para `C:\inetpub\tecflow\uploads`; a limpeza literal `Remove-Item C:\inetpub\tecflow\api\*` voltou a ser segura.
   
 ---
 

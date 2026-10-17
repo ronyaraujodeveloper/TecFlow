@@ -320,6 +320,18 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Com ofertas retornadas, o alerta de erro é limpo (comportamento de `BuscaGlobal.razor` mantido).
 - [x] **Reautorização OAuth verificada:**
   - `14/10/2026 20:53:11`: `oauth/token` 200 e "Tokens ML gravados via callback anônimo" (UserId 1, tenant `a1000000-…`); conta 13 com `AccessToken`/`RefreshToken` criptografados no banco.
+
+## 🔒 Criptografia em Repouso dos Tokens de Marketplace (`MarketplaceTokensDataProtection`)
+
+- [x] **ASP.NET Core Data Protection:**
+  - `AddTecFlowDataProtection` com `SetApplicationName("TecFlow")`, chaves persistidas fora da pasta publicada (`C:\ProgramData\TecFlow\DataProtectionKeys`, configurável em `DataProtection:KeysPath`) e protegidas por DPAPI da máquina; a pasta fica restrita a SYSTEM, Administradores, `IIS APPPOOL\TecFlowApiPool` e ao usuário de desenvolvimento.
+  - Registrado no `Program.cs` da API e em `AddTecFlowInfrastructureData` (API, Worker e Orquestrador compartilham o mesmo anel de chaves).
+- [x] **`ISecurityEncryptionService` / `SecurityEncryptionService` (Singleton):**
+  - `Protect` grava `DP1:` + payload do `IDataProtector` (purpose `TecFlow.MarketplaceTokens.v1`), sem cifrar duas vezes.
+  - `Unprotect` lê `DP1:`, depois o AES legado `ENC1:` e, por fim, devolve o texto puro; falha criptográfica é registrada sem o valor e retorna a string armazenada.
+- [x] **`ValueConverter<string, string>` no `AppDbContext`:**
+  - `EncryptedStringConverter.CreateProtected` aplicado a `MarketplaceAccount.AccessToken`, `RefreshToken` e `AppSecret` (o "ClientSecret" da entidade); contextos sem o serviço (design-time, testes) seguem no AES.
+  - Sem migration: o tipo da coluna não muda; os tokens `ENC1:` existentes são lidos normalmente e regravados como `DP1:` na próxima atualização (ex.: refresh do token).
   
 ---
 

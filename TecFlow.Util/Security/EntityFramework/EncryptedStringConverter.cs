@@ -13,4 +13,9 @@ public static class EncryptedStringConverter
         new(
             value => value == null ? null : encryptionService.Encrypt(value),
             value => value == null ? null : encryptionService.Decrypt(value));
+
+    public static ValueConverter<string?, string?> CreateProtected(ISecurityEncryptionService securityEncryption) =>
+        new(
+            value => value == null ? null : securityEncryption.Protect(value),
+            value => value == null ? null : securityEncryption.Unprotect(value));
 }

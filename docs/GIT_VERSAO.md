@@ -100,3 +100,4 @@
 [2026-10-14 19:29:46] feat(busca): vitrine lista.mercadolivre.com.br como motor primario da busca ML (UseOfficialSearchApi=false) com preco original, imagem lazy e deteccao do desafio anti-robo
 [2026-10-14 19:47:10] chore(busca): headers Chrome 129 e HttpClientHandler GZip/Deflate/Brotli no scraper do ML; fallback suggest descartado (404/403, sem ofertas)
 [2026-10-17 18:51:18] feat(busca): API publica anonima sites/MLB/search antes da vitrine do ML, matt_tool 97303724 da conta ativa e verificacao da reautorizacao OAuth
+[2026-10-17 19:19:04] feat(security): tokens de marketplace com Data Protection em repouso (DP1, fallback ENC1/texto puro)

@@ -1627,6 +1627,30 @@ sequenceDiagram
 
 ---
 
+## Tokens de marketplace em repouso (`MarketplaceTokensDataProtection`)
+
+```mermaid
+flowchart LR
+  HOST[API / Worker / Orquestrador] -->|AddTecFlowDataProtection| DP[DataProtection app TecFlow]
+  DP -->|chaves DPAPI| KEYS[(C:\ProgramData\TecFlow\DataProtectionKeys)]
+  DP --> SEC[SecurityEncryptionService Singleton]
+  AES[DataEncryptionService ENC1] -->|leitura legada| SEC
+  SEC -->|CreateProtected ValueConverter| CTX[AppDbContext]
+  CTX -->|AccessToken / RefreshToken / AppSecret| DB[(MarketplaceAccounts)]
+```
+
+```mermaid
+flowchart TD
+  READ[Valor da coluna] --> P{Prefixo}
+  P -->|DP1:| UNP[IDataProtector.Unprotect]
+  P -->|ENC1:| DEC[AES legado Decrypt]
+  P -->|outro| RAW[Texto puro legado]
+  UNP -->|CryptographicException| RAW2[Valor armazenado + log sem segredo]
+  WRITE[SaveChanges] --> PROT[DP1: + IDataProtector.Protect]
+```
+
+---
+
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  

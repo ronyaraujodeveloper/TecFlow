@@ -1348,6 +1348,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.
 - [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **MercadoLivreHtmlParserTests.cs** - vitrine primária com `matt_tool`, desafio anti-robô, preços/imagem do poly-card.
 
+### MarketplaceTokensDataProtection - Criptografia em repouso dos tokens de marketplace
+
+- [x] **TecFlow.Util/Security/ISecurityEncryptionService.cs** (novo) - contrato `Protect` / `Unprotect`.
+- [x] **TecFlow.Util/Security/EntityFramework/EncryptedStringConverter.cs** - `CreateProtected(ISecurityEncryptionService)`.
+- [x] **TecFlow.Infrastructure/Security/SecurityEncryptionService.cs** (novo) - `IDataProtector` (prefixo `DP1:`, purpose `TecFlow.MarketplaceTokens.v1`), leitura do AES `ENC1:` e do texto puro legado.
+- [x] **TecFlow.Infrastructure/Security/DataProtectionRegistrationExtensions.cs** (novo) - `AddTecFlowDataProtection` (app `TecFlow`, chaves em `C:\ProgramData\TecFlow\DataProtectionKeys` / `DataProtection:KeysPath`, DPAPI, Singleton).
+- [x] **TecFlow.Database/AppDbContext.cs** - `ISecurityEncryptionService` opcional no construtor; conversor protegido em `MarketplaceAccount.AccessToken` / `RefreshToken` / `AppSecret`.
+- [x] **TecFlow.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs** - chama `AddTecFlowDataProtection` junto do `IEncryptionService`.
+- [x] **TecFlow.API/Program.cs** - `AddTecFlowDataProtection(builder.Configuration)`.
+- [x] **TecFlow.Tests/Unit/Security/SecurityEncryptionServiceTests.cs** (novo) - round trip `DP1:`, idempotência, AES legado, texto puro, anel de chaves diferente e conversor EF.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

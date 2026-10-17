@@ -17,6 +17,7 @@ using TecFlow.Business.Service.Application;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Infrastructure.Services.LinkStrategies;
 using TecFlow.Infrastructure;
+using TecFlow.Infrastructure.Security;
 using TecFlow.Infrastructure.Services;
 using TecFlow.Observability;
 
@@ -71,6 +72,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddTecFlowCoreServices();
+builder.Services.AddTecFlowDataProtection(builder.Configuration);
 builder.Services.AddTecFlowInfrastructureServices(builder.Configuration);
 // IDbContextFactory<AppDbContext> + AddDbContext (SQL Server / tenant scoped) — paralelo seguro no /busca.
 builder.Services.AddTecFlowInfrastructureData(builder.Configuration);

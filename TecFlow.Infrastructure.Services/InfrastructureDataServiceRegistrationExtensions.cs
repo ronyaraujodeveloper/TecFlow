@@ -68,6 +68,7 @@ namespace TecFlow.Infrastructure.Services
                     configuration[$"{EncryptionOptions.SectionName}:Key"] ?? string.Empty);
                 services.AddSingleton<IDataEncryptionService>(dataEncryption);
                 services.AddSingleton<IEncryptionService>(dataEncryption);
+                services.AddTecFlowDataProtection(configuration);
             }
 
             services.AddHttpContextAccessor();

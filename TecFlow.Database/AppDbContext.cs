@@ -13,15 +13,21 @@ public class AppDbContext : DbContext
 {
     private readonly IEncryptionService _encryptionService;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ISecurityEncryptionService? _securityEncryption;
 
+    /// <param name="securityEncryption">
+    /// Data Protection dos tokens de <see cref="MarketplaceAccount"/>; sem ele (design-time, testes) os campos seguem no AES legado.
+    /// </param>
     public AppDbContext(
         DbContextOptions<AppDbContext> options,
         IEncryptionService encryptionService,
-        ICurrentTenantService currentTenant)
+        ICurrentTenantService currentTenant,
+        ISecurityEncryptionService? securityEncryption = null)
         : base(options)
     {
         _encryptionService = encryptionService ?? throw new ArgumentNullException(nameof(encryptionService));
         _currentTenant = currentTenant ?? throw new ArgumentNullException(nameof(currentTenant));
+        _securityEncryption = securityEncryption;
     }
 
     public DbSet<Tenant> Tenants { get; set; } = null!;
@@ -852,15 +858,19 @@ public class AppDbContext : DbContext
             .HasConversion(encryptedNullableString);
 
         var marketplaceAccount = modelBuilder.Entity<MarketplaceAccount>();
-
-        marketplaceAccount.Property(a => a.AccessToken)
-            .HasConversion(encryptedNullableString);
-
-        marketplaceAccount.Property(a => a.AppSecret)
-            .HasConversion(encryptedNullableString);
-
-        marketplaceAccount.Property(a => a.RefreshToken)
-            .HasConversion(encryptedNullableString);
+        if (_securityEncryption is not null)
+        {
+            var protectedString = EncryptedStringConverter.CreateProtected(_securityEncryption);
+            marketplaceAccount.Property(a => a.AccessToken).HasConversion(protectedString);
+            marketplaceAccount.Property(a => a.AppSecret).HasConversion(protectedString);
+            marketplaceAccount.Property(a => a.RefreshToken).HasConversion(protectedString);
+        }
+        else
+        {
+            marketplaceAccount.Property(a => a.AccessToken).HasConversion(encryptedNullableString);
+            marketplaceAccount.Property(a => a.AppSecret).HasConversion(encryptedNullableString);
+            marketplaceAccount.Property(a => a.RefreshToken).HasConversion(encryptedNullableString);
+        }
 
         var integracaoLoja = modelBuilder.Entity<IntegracaoLoja>();
 

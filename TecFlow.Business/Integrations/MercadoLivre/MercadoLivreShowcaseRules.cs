@@ -179,7 +179,7 @@ public static class MercadoLivreShowcaseRules
         return false;
     }
 
-    private static bool TryGetMercadoLivreUri(string? url, out Uri uri)
+    internal static bool TryGetMercadoLivreUri(string? url, out Uri uri)
     {
         uri = null!;
         if (string.IsNullOrWhiteSpace(url)

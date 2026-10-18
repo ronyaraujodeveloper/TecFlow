@@ -196,6 +196,10 @@ flowchart LR
   MONSVC -->|OrderByCapturedAtDescending ReceivedAt desc + Id desc| TIMERULE[CapturedMessageTimeRules]
   PIPE -->|ReceivedAt UTC = horário de envio da mensagem| TIMERULE
   GMUI -->|card dd/MM/yyyy HH:mm horário de Brasília| TIMERULE
+  VAL -->|pausado ➔ Inativo; sem estoque / só Produtos relacionados / redirect lista ➔ Esgotado| MLAVAIL[MercadoLivreAvailabilityRules]
+  MONSVC -->|ApplyRelevanceFilter IsAvailable + FeedVisibleStatuses| FEEDVIS[OfferFeedVisibilityRules]
+  GMUI -->|Verificar ValidatedOffer / OfferRemoved ➔ remove card + toast Produto esgotado| FEEDVIS
+  REVALW[OfferRevalidationService Worker de lote] -->|CheckAndPersistAsync IsAvailable=false some do feed| FEEDVIS
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

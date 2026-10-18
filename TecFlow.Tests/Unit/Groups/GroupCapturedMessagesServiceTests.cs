@@ -48,6 +48,25 @@ public class GroupCapturedMessagesServiceTests
     }
 
     [Fact]
+    public void ApplyRelevanceFilter_ShouldHideProductsWithInactiveStatusEvenWhenStillFlaggedAvailable()
+    {
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);
+        var items = new List<GroupCapturedMessage>
+        {
+            new() { Id = 1, HasDirectProductUrl = true, IsAvailable = true, OfferStatus = GroupOfferStatuses.Ativo, PlatformType = MarketplaceType.MercadoLivre },
+            new() { Id = 2, HasDirectProductUrl = true, IsAvailable = true, OfferStatus = GroupOfferStatuses.PrecoAlterado, PlatformType = MarketplaceType.MercadoLivre },
+            new() { Id = 3, HasDirectProductUrl = true, IsAvailable = true, OfferStatus = GroupOfferStatuses.Esgotado, PlatformType = MarketplaceType.MercadoLivre },
+            new() { Id = 4, HasDirectProductUrl = true, IsAvailable = true, OfferStatus = GroupOfferStatuses.Inativo, PlatformType = MarketplaceType.MercadoLivre },
+            new() { Id = 5, HasDirectProductUrl = true, IsAvailable = false, OfferStatus = GroupOfferStatuses.Esgotado, PlatformType = MarketplaceType.MercadoLivre },
+            new() { Id = 6, Type = OfferType.Coupon, IsAvailable = true, OfferStatus = GroupOfferStatuses.Esgotado }
+        }.AsQueryable();
+
+        var feed = service.ApplyRelevanceFilter(items, [MarketplaceType.MercadoLivre], ignored: false).Select(item => item.Id).ToList();
+
+        Assert.Equal([1, 2, 6], feed);
+    }
+
+    [Fact]
     public void ApplyStructuredParse_ShouldFillCouponAndSanitizeImagePath()
     {
         var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);

@@ -21,8 +21,17 @@ public static class GroupOfferStatuses
         _ => "Verificando"
     };
 
+    /// <summary>
+    /// Lista branca da aba de Ofertas: qualquer status fora dela (inclusive desconhecido) some do feed.
+    /// Verificando entra porque significa "ainda não confirmado indisponível".
+    /// </summary>
+    public static readonly string[] FeedVisibleStatuses = [Ativo, PrecoAlterado, PrecoSuspeito, Verificando];
+
     public static bool IsInactive(string? status) =>
         status is Esgotado or Inativo or VitrineGenerica;
+
+    public static bool IsFeedVisible(bool isAvailable, string? status) =>
+        isAvailable && status is Ativo or PrecoAlterado or PrecoSuspeito or Verificando;
 
     public static bool IsRevalidatable(string? status) =>
         status is Ativo or PrecoAlterado or Verificando;

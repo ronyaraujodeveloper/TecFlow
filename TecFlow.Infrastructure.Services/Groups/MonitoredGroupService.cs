@@ -200,18 +200,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .DeduplicateOffers(offers.Select(MapOffer))
                 .Take(resolvedTake)
                 .ToList();
-            await _priceHistory.EnrichOffersAsync(uniqueOffers, cancellationToken);
-            var mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
-            foreach (var offer in uniqueOffers)
-            {
-                offer.AffiliateUrl = _affiliateUrls.BuildAffiliateUrl(
-                    offer.OriginalUrl,
-                    offer.PrimaryProductUrl,
-                    offer.Type == OfferType.Coupon
-                        ? GroupOfferCaptureRules.DetectPlatform(offer.OriginalUrl)
-                        : offer.PlatformType,
-                    mattTool);
-            }
+            await EnrichForFeedAsync(userId, uniqueOffers, cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {
@@ -252,19 +241,45 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
 
         await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
 
-        var list = await ListAsync(
-            userId,
-            24,
-            entity.GroupKey,
-            channel ?? entity.Channel,
-            skip: 0,
-            take: GroupOfferCaptureRules.OffersPageSize,
-            ignored: false,
-            search: null,
-            type: entity.Type,
-            cancellationToken: cancellationToken);
-        list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
-        return list;
+        var removed = !OfferFeedVisibilityRules.IsVisibleInFeed(entity.Type, entity.IsAvailable, entity.OfferStatus);
+        if (removed)
+        {
+            _logger.LogInformation(
+                "Oferta removida do feed após Verificar. OfferId={OfferId} Status={Status}",
+                entity.Id,
+                entity.OfferStatus);
+        }
+
+        var offer = MapOffer(entity);
+        await EnrichForFeedAsync(userId, [offer], cancellationToken);
+        return new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = removed
+                ? OfferFeedVisibilityRules.RemovedFromFeedToast
+                : $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.",
+            ValidatedOffer = offer,
+            OfferRemoved = removed
+        };
+    }
+
+    private async Task EnrichForFeedAsync(
+        int userId,
+        IList<GroupCapturedOfferDto> offers,
+        CancellationToken cancellationToken)
+    {
+        await _priceHistory.EnrichOffersAsync(offers, cancellationToken);
+        var mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
+        foreach (var offer in offers)
+        {
+            offer.AffiliateUrl = _affiliateUrls.BuildAffiliateUrl(
+                offer.OriginalUrl,
+                offer.PrimaryProductUrl,
+                offer.Type == OfferType.Coupon
+                    ? GroupOfferCaptureRules.DetectPlatform(offer.OriginalUrl)
+                    : offer.PlatformType,
+                mattTool);
+        }
     }
 
     public async Task<MonitoredGroupsResponseDto> CloneAsync(

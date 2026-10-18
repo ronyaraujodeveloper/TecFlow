@@ -54,7 +54,10 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             && (item.Type == OfferType.Coupon || item.HasDirectProductUrl));
         if (!ignored)
         {
-            query = query.Where(item => item.IsAvailable);
+            var feedStatuses = GroupOfferStatuses.FeedVisibleStatuses;
+            query = query.Where(item =>
+                item.IsAvailable
+                && (item.Type == OfferType.Coupon || feedStatuses.Contains(item.OfferStatus)));
         }
 
         if (activePlatforms.Count == 0)

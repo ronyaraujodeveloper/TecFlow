@@ -164,6 +164,7 @@ public sealed class OfferValidationService : IOfferValidationService
 
         try
         {
+            var requestedUrl = workingUrl;
             var (pageResponse, finalUrl) = await GetProductPageAsync(originalUrl, workingUrl, cancellationToken);
             using var response = pageResponse;
             if (!string.IsNullOrWhiteSpace(finalUrl))
@@ -198,6 +199,23 @@ public sealed class OfferValidationService : IOfferValidationService
                 {
                     IsAvailable = false,
                     Status = GroupOfferStatuses.Inativo,
+                    Html = html,
+                    FinalUrl = workingUrl
+                };
+            }
+
+            if (MercadoLivreAvailabilityRules.IsMercadoLivreUrl(workingUrl)
+                && MercadoLivreAvailabilityRules.DetectUnavailableStatus(html, requestedUrl, workingUrl) is { } mercadoLivreStatus)
+            {
+                _logger.LogInformation(
+                    "Anúncio Mercado Livre sem compra direta. Status={Status} Url={Url} FinalUrl={FinalUrl}",
+                    mercadoLivreStatus,
+                    originalUrl,
+                    workingUrl);
+                return new OfferPageStatusDto
+                {
+                    IsAvailable = false,
+                    Status = mercadoLivreStatus,
                     Html = html,
                     FinalUrl = workingUrl
                 };

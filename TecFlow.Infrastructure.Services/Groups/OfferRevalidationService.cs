@@ -57,11 +57,11 @@ public sealed class OfferRevalidationService : IOfferRevalidationService
             {
                 await _liveCheck.CheckAndPersistAsync(offer, offer.UserId, cancellationToken);
                 summary.Checked++;
-                if (!offer.IsAvailable || GroupOfferStatuses.IsInactive(offer.OfferStatus))
+                if (!OfferFeedVisibilityRules.IsVisibleInFeed(offer.Type, offer.IsAvailable, offer.OfferStatus))
                 {
                     summary.Deactivated++;
                     _logger.LogInformation(
-                        "Oferta desativada na revalidação. OfferId={OfferId} UserId={UserId} Status={Status}",
+                        "Oferta desativada na revalidação e removida do feed. OfferId={OfferId} UserId={UserId} Status={Status}",
                         offer.Id,
                         offer.UserId,
                         offer.OfferStatus);

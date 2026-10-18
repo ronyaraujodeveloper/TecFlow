@@ -1532,6 +1532,21 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** / **CouponCard.razor** - data/hora exibida no horário de Brasília (`dd/MM/yyyy HH:mm`).
 - [x] **TecFlow.Tests/Unit/Groups/CapturedMessageTimeRulesTests.cs** (novo) - ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23 com dados reais, desempate, UTC/Brasília e timestamps dos webhooks.
 
+### SoldOutFeedRemoval - Remoção imediata de produtos esgotados
+
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreAvailabilityRules.cs** (novo) - anúncio pausado/encerrado (`Inativo`), sem estoque / só "Produtos relacionados" sem caixa de compra / redirect para `lista.mercadolivre.com.br` (`Esgotado`) e status da API `/items` (`available_quantity = 0`).
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - `TryGetMercadoLivreUri` passou a `internal` para ser reaproveitado.
+- [x] **TecFlow.Business/Service/Groups/OfferFeedVisibilityRules.cs** (novo) - `IsVisibleInFeed`, `RemoveFromFeed`, `ReplaceInFeed` e o toast "Produto esgotado. Oferta removida do feed.".
+- [x] **TecFlow.Core/Entities/GroupOfferStatuses.cs** - `FeedVisibleStatuses` (lista branca do feed) e `IsFeedVisible`.
+- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `MonitoredGroupsResponseDto.ValidatedOffer` e `OfferRemoved`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - detecção do Mercado Livre na verificação HTTP (botão Verificar e Worker de lote).
+- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - item pausado/encerrado ou com estoque zero marcado indisponível.
+- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` exige status da lista branca para produtos.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` devolve a oferta revalidada e `OfferRemoved` sem recarregar o feed do grupo; `EnrichForFeedAsync` compartilhado com `ListAsync`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** - Worker de lote conta como desativada a oferta que sai do feed.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar remove o card esgotado da lista em memória, ajusta o total, chama `StateHasChanged()` e mostra o toast de aviso.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreAvailabilityRulesTests.cs** (novo) / **TecFlow.Tests/Unit/Groups/OfferFeedVisibilityRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** / **GroupCapturedMessagesServiceTests.cs** / **TecFlow.Tests/Unit/Radar/MercadoLivreItemParserTests.cs** - cobertura da detecção, do filtro estrito e da remoção em memória.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -585,11 +585,31 @@
         try
         {
             var result = await Api.ValidateAsync(offerId, Channel);
-            Apply(result.Data, result.ErrorMessage, append: false, silent: false);
-            if (result.Data is { Status: true })
+            if (result.Data is not { Status: true } data)
             {
-                ToastService.ShowSuccess(result.Data.Descricao);
+                ToastService.ShowError(result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível validar o anúncio.");
+                return;
             }
+
+            if (data.OfferRemoved)
+            {
+                if (OfferFeedVisibilityRules.RemoveFromFeed(_offers, offerId) && _totalOffers > 0)
+                {
+                    _totalOffers--;
+                }
+
+                StateHasChanged();
+                ToastService.ShowWarning(OfferFeedVisibilityRules.RemovedFromFeedToast);
+                return;
+            }
+
+            if (data.ValidatedOffer is not null)
+            {
+                OfferFeedVisibilityRules.ReplaceInFeed(_offers, data.ValidatedOffer);
+            }
+
+            StateHasChanged();
+            ToastService.ShowSuccess(data.Descricao);
         }
         catch (Exception ex)
         {

@@ -130,6 +130,12 @@ public class MonitoredGroupsResponseDto
     public CloneMonitoredOfferResultDto? Clone { get; set; }
 
     public bool Ignored { get; set; }
+
+    /// <summary>Oferta revalidada pelo botão Verificar, já com o status persistido.</summary>
+    public GroupCapturedOfferDto? ValidatedOffer { get; set; }
+
+    /// <summary>True quando a revalidação tirou a oferta do feed (esgotada, pausada ou vitrine genérica).</summary>
+    public bool OfferRemoved { get; set; }
 }
 
 public class PrioritizeMonitoredMediaRequest

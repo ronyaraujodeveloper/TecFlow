@@ -499,7 +499,18 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `ReceivedAt` é `datetime2` gravado sempre em UTC com o horário de envio da mensagem (UserBot `message.Date`, Bot API `message.date`, Evolution `messageTimestamp`); a interface converte para o horário de Brasília.
 - [x] **Verificação:**
   - Teste com as ofertas reais do banco garante a ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23.
-  
+
+## 🚫 Remoção Imediata de Produtos Esgotados (`SoldOutFeedRemoval`)
+
+- [x] **Detecção de anúncio encerrado no Mercado Livre (`MercadoLivreAvailabilityRules`):**
+  - "Anúncio pausado" / "Publicação finalizada" ➔ `Inativo`; "Sem estoque", `schema.org/OutOfStock`, página só com "Produtos relacionados" (sem "Comprar agora" / "Adicionar ao carrinho") ou produto redirecionado para `lista.mercadolivre.com.br` ➔ `Esgotado`; em ambos `IsAvailable = false`.
+  - API `/items/{id}`: `paused`/`closed` ➔ `Inativo` e `available_quantity = 0` ➔ `Esgotado`.
+  - Página de verificação anti-robô (`/gz/account-verification`) é inconclusiva e não derruba a oferta.
+- [x] **Atualização em tempo real no botão Verificar:**
+  - A API devolve a própria oferta revalidada (`ValidatedOffer` + `OfferRemoved`) em vez de recarregar o feed do grupo; o card esgotado sai da lista em memória, o contador é ajustado e aparece o toast "Produto esgotado. Oferta removida do feed.".
+- [x] **Filtro estrito no feed de Ofertas:**
+  - Produtos só aparecem com `IsAvailable` e status na lista branca `Ativo` / `PrecoAlterado` / `PrecoSuspeito` / `Verificando` (`GroupOfferStatuses.FeedVisibleStatuses`); cupons seguem filtrados só por `IsAvailable`. O Worker de lote (`OfferRevalidationService`) usa a mesma regra, então o que ele desativa some do feed na próxima carga.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

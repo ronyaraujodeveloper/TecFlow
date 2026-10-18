@@ -149,6 +149,68 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreEsgotado_WhenPageShowsOnlyRelatedProducts()
+    {
+        var service = CreateService(
+            "<html><body><h2>Produtos relacionados</h2><div class=\"carousel\">Fone A</div></body></html>",
+            HttpStatusCode.OK,
+            "https://www.mercadolivre.com.br/p/MLB19700000");
+
+        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/p/MLB19700000");
+
+        Assert.False(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Esgotado, page.Status);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreInativo_WhenListingIsPaused()
+    {
+        var service = CreateService(
+            "<html><body><p>Anúncio pausado</p><h2>Produtos relacionados</h2></body></html>",
+            HttpStatusCode.OK,
+            "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM");
+
+        var page = await service.ValidateProductPageStatusAsync("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM");
+
+        Assert.False(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Inativo, page.Status);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreEsgotado_WhenRedirectedToSearch()
+    {
+        var handler = new StubHandler
+        {
+            Html = "<html><body>Resultados</body></html>",
+            FinalUrlByRequest = _ => "https://lista.mercadolivre.com.br/fone-bluetooth"
+        };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
+
+        Assert.False(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Esgotado, page.Status);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldKeepMercadoLivreActive_WhenBuyBoxIsPresent()
+    {
+        var service = CreateService(
+            "<html><body><button>Comprar agora</button><span>Cor Azul: Sem estoque</span><h2>Produtos relacionados</h2></body></html>",
+            HttpStatusCode.OK,
+            "https://www.mercadolivre.com.br/p/MLB19700000");
+
+        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/p/MLB19700000");
+
+        Assert.True(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
+    }
+
+    [Fact]
     public async Task ValidateAsync_ShouldMarkShopeeSoldOutAsEsgotado()
     {
         var service = CreateService(

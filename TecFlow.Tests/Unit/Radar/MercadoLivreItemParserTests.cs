@@ -1,4 +1,5 @@
-﻿using TecFlow.Infrastructure.Services.Radar;
+﻿using TecFlow.Core.Entities;
+using TecFlow.Infrastructure.Services.Radar;
 
 namespace TecFlow.Tests.Unit.Radar;
 
@@ -17,5 +18,18 @@ public class MercadoLivreItemParserTests
         Assert.Equal("https://produto.mercadolivre.com.br/MLB-123", item.SourceUrl);
         Assert.Equal("https://http2.mlstatic.com/x.jpg", item.ImageUrl);
         Assert.Equal("Frete grátis", item.Shipping);
+    }
+
+    [Theory]
+    [InlineData("""{"id":"MLB1","status":"active","available_quantity":0,"price":10}""", false, GroupOfferStatuses.Esgotado)]
+    [InlineData("""{"id":"MLB1","status":"paused","available_quantity":4,"price":10}""", false, GroupOfferStatuses.Inativo)]
+    [InlineData("""{"id":"MLB1","status":"active","available_quantity":4,"price":10}""", true, GroupOfferStatuses.Ativo)]
+    public void Parse_ShouldMarkSoldOutAndPausedItemsUnavailable(string json, bool available, string status)
+    {
+        var item = MercadoLivreItemParser.Parse(json);
+
+        Assert.NotNull(item);
+        Assert.Equal(available, item.IsAvailable);
+        Assert.Equal(status, item.Status);
     }
 }

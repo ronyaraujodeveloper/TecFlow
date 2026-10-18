@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Enums;
 
@@ -22,8 +23,11 @@ public static class MercadoLivreItemParser
         }
 
         var status = root.TryGetProperty("status", out var statusEl) ? statusEl.GetString() : null;
-        var available = !string.Equals(status, "closed", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(status, "paused", StringComparison.OrdinalIgnoreCase);
+        var quantity = root.TryGetProperty("available_quantity", out var quantityEl) && quantityEl.TryGetInt32(out var parsedQuantity)
+            ? parsedQuantity
+            : (int?)null;
+        var unavailableStatus = MercadoLivreAvailabilityRules.FromApiItem(status, quantity);
+        var available = unavailableStatus is null;
         decimal? price = ReadDecimal(root, "price");
         decimal? original = ReadDecimal(root, "original_price");
         var free = root.TryGetProperty("shipping", out var shipping)
@@ -35,7 +39,7 @@ public static class MercadoLivreItemParser
         return new OfficialOfferSnapshotDto
         {
             IsAvailable = available,
-            Status = LiveSearchRules.MapListingStatus(status, available),
+            Status = unavailableStatus ?? LiveSearchRules.MapListingStatus(status, available),
             Price = price,
             OriginalPrice = original,
             ProductName = root.TryGetProperty("title", out var title) ? title.GetString() : null,

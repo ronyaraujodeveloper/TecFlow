@@ -222,6 +222,32 @@ window.tecFlowMenuDnd = (function () {
     };
 })();
 
+(function registerProfileMenuDismiss() {
+    const closeAll = function () {
+        document.querySelectorAll("details[data-profile-menu][open]").forEach(function (menu) {
+            menu.removeAttribute("open");
+        });
+    };
+
+    document.addEventListener("click", function (event) {
+        const menu = event.target.closest ? event.target.closest("details[data-profile-menu]") : null;
+        if (!menu) {
+            closeAll();
+            return;
+        }
+
+        if (event.target.closest("a")) {
+            menu.removeAttribute("open");
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeAll();
+        }
+    });
+})();
+
 (function registerEnhancedNavigationScrollReset() {
     let lastPath = window.location.pathname;
     const attach = function () {

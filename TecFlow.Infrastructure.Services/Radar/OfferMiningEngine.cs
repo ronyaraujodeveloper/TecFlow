@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 
 namespace TecFlow.Infrastructure.Services.Radar;
@@ -42,6 +43,7 @@ public sealed class OfferMiningEngine : IOfferMiningEngine
         var offers = await _context.GroupCapturedMessages
             .AsNoTracking()
             .Where(item => item.UserId == userId
+                && item.Type == OfferType.Product
                 && item.HasDirectProductUrl
                 && item.IsAvailable
                 && item.ReceivedAt >= since

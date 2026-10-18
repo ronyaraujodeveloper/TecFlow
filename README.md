@@ -438,6 +438,25 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - No `MainLayout` e no `MasterMainLayout`, fixo no canto superior direito (`top: 20px; right: 20px; z-index: 9999`), cores #198754 / #dc3545 / #ffc107 / #0d6efd, botão fechar "X", barra de progresso e fechamento automático. Usa `InteractiveServer` próprio porque o layout é SSR estático.
 - [x] **Grupos Monitorados migrado:**
   - O banner/toast local de status ("Status atualizado: Ativo.") e os alertas fixos de erro da página viraram `ToastService.ShowSuccess` / `ShowError` / `ShowInfo`; o `CouponCard` avisa a cópia do código pelo serviço global.
+
+## 🎟️ Cupons Fora do Feed de Produtos (`CouponFeedCleanup`)
+
+- [x] **Classificador mais rigoroso (`CouponMessageRules`):**
+  - Vira cupom: título de anúncio ("NOVO CUPOM ...", "NOVOS CUPONS ...", "CUPONS ...", "CUPOM SHOPEE/MERCADO LIVRE/AMAZON ...") ou mensagem com 2+ códigos; "Limite de R$ X" e "OFF em R$ X" deixam de contar como preço à vista.
+  - Produto com um único cupom ("R$ 391,42 no Pix — Use o cupom OFFHOJE") continua no feed; tokens dentro de URLs (ASIN da Amazon) e pedaços de palavras acentuadas ("RELÂMPAGO") não contam como código; "a partir de R$ X" volta a ser preço do produto.
+- [x] **Reclassificação do legado (`CouponReclassificationService` + `CouponReclassificationWorker`):**
+  - Roda uma vez a cada inicialização da API (15 s após subir), em lotes de 500, só sobre itens `Product` com sinal de cupom; itens sem link direto só viram cupom se forem anúncio de cupons. Medição no banco atual: ~607 de 9.634 itens migram para a aba Cupons.
+- [x] **Filtro explícito `Type == Product`:**
+  - Feed (já existia em `MonitoredGroupService.ListAsync`) e agora também mineração, arbitragem, tendências globais e busca local de catálogo.
+
+## 👤 Cabeçalho com Menu de Perfil (`UserProfileMenu`)
+
+- [x] **Elementos obsoletos removidos:**
+  - Dropdown "Todas as lojas" (`ActiveStoreScopeSelector`), botão azul "Painel" e badge "Sessão ativa (plataforma)" (`SessionStatusBadge`).
+- [x] **Menu de perfil:**
+  - Pílula com ícone + nome do usuário; dropdown com Minha Conta (`/minha-conta`), Super Admin (só master), Modo de Visão (Painel Master ⇄ Visão Cliente via `/master/visao/{modo}`) e Sair (`/auth/logout`). Usa `<details>` nativo porque o layout é SSR estático (sem bootstrap.js); fecha ao clicar fora ou com Esc.
+- [x] **Header compacto:**
+  - Topo alinhado à direita com `d-flex align-items-center gap-2`; o mesmo menu substitui o seletor de visão no Master Console.
   
 ---
 

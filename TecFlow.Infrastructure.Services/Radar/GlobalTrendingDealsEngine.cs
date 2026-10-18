@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Database.MultiTenancy;
 
@@ -49,7 +50,10 @@ public sealed class GlobalTrendingDealsEngine : IGlobalTrendingDealsEngine
         var since = now.AddHours(-48);
         var messages = await _context.GroupCapturedMessages
             .AsNoTracking()
-            .Where(item => item.ReceivedAt >= since && item.IsAvailable && !item.IsIgnored)
+            .Where(item => item.ReceivedAt >= since
+                && item.Type == OfferType.Product
+                && item.IsAvailable
+                && !item.IsIgnored)
             .Select(item => new
             {
                 item.OriginalUrl,

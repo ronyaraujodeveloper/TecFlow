@@ -35,6 +35,22 @@ public static class CouponMessageRules
         @"desconto\s+de\s+R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?",
         Options);
 
+    private static readonly Regex CouponLimitRegex = new(
+        @"limit(?:e|ad[oa])?\s+(?:de\s+|a\s+)?(?:at[eé]\s+)?R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?(?:\s*(?:OFF\b|de\s+desconto))?",
+        Options);
+
+    private static readonly Regex OffOverAmountRegex = new(
+        @"OFF\s+(?:em|nas?|nos?|para|a\s+partir\s+de)\s+(?:compras?\s+(?:de\s+|acima\s+de\s+)?)?R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?",
+        Options);
+
+    private static readonly Regex CouponMinimumStripRegex = new(
+        @"(?:acima\s+de|compras?\s+(?:acima\s+)?de|pedido\s+m[ií]nimo(?:\s+de)?|m[ií]nimo(?:\s+de)?)\s*R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?",
+        Options);
+
+    private static readonly Regex CouponHeadlineRegex = new(
+        @"^(?:novos?\s+cupo(?:m|ns)\b|cupons\b|cupo(?:m|ns)\s+(?:de\s+desconto\s+)?(?:(?:no|na|do|da)\s+)?(?:mercado\s*livre|meli|shopee|amazon|magalu|aliexpress|shein|kabum)\b)",
+        Options);
+
     private static readonly Regex FreeShippingRegex = new(
         @"frete\s+gr[aá]tis",
         Options);
@@ -55,8 +71,12 @@ public static class CouponMessageRules
         @"\b(?:cupom|c[oó]digo|code|coupon|voucher|use|usar|utilize|aplique)\b",
         Options);
 
+    private static readonly Regex UrlRegex = new(
+        @"(?:https?://|www\.)\S+",
+        Options);
+
     private static readonly Regex CodeTokenRegex = new(
-        @"[A-Za-z0-9][A-Za-z0-9_\-]{2,31}",
+        @"(?<![\p{L}\p{N}])[A-Za-z0-9][A-Za-z0-9_\-]{2,31}(?![\p{L}\p{N}])",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex RuleLineRegex = new(
@@ -83,7 +103,8 @@ public static class CouponMessageRules
 
     /// <summary>
     /// Mensagens de produto com cupom continuam <see cref="OfferType.Product"/>: só vira cupom quando
-    /// não há link de produto ou quando nenhum preço à vista sobra após remover os valores do próprio cupom.
+    /// não há link de produto, quando a mensagem é um anúncio de cupons (título "NOVO CUPOM ..." ou
+    /// dois ou mais códigos) ou quando nenhum preço à vista sobra após remover os valores do próprio cupom.
     /// </summary>
     public static OfferType Classify(string? text, bool hasDirectProductUrl)
     {
@@ -92,7 +113,7 @@ public static class CouponMessageRules
             return OfferType.Product;
         }
 
-        if (!hasDirectProductUrl)
+        if (!hasDirectProductUrl || IsCouponAnnouncement(text))
         {
             return OfferType.Coupon;
         }
@@ -103,21 +124,40 @@ public static class CouponMessageRules
             : OfferType.Coupon;
     }
 
-    public static string StripCouponAmounts(string text)
-    {
-        var result = AmountOffRegex.Replace(text, " ");
-        result = DiscountOfAmountRegex.Replace(result, " ");
-        result = MinimumPurchaseRegex.Replace(result, " ");
-        return result;
-    }
-
-    public static string? ExtractCouponCode(string? text)
+    public static bool IsCouponAnnouncement(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return null;
+            return false;
         }
 
+        var headline = ExtractHeadline(text);
+        return (headline is not null && CouponHeadlineRegex.IsMatch(headline))
+            || ExtractCouponCodes(text).Count >= 2;
+    }
+
+    public static string StripCouponAmounts(string text)
+    {
+        var result = OffOverAmountRegex.Replace(text, "OFF ");
+        result = CouponLimitRegex.Replace(result, " ");
+        result = AmountOffRegex.Replace(result, " ");
+        result = DiscountOfAmountRegex.Replace(result, " ");
+        result = CouponMinimumStripRegex.Replace(result, " ");
+        return result;
+    }
+
+    public static string? ExtractCouponCode(string? text) =>
+        ExtractCouponCodes(text).FirstOrDefault();
+
+    public static IReadOnlyList<string> ExtractCouponCodes(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        text = UrlRegex.Replace(text, " ");
+        var codes = new List<string>();
         foreach (Match anchor in CouponCodeAnchorRegex.Matches(text))
         {
             var start = anchor.Index + anchor.Length;
@@ -139,12 +179,18 @@ public static class CouponMessageRules
                 var candidate = token.Value.Trim('-', '_');
                 if (IsCodeCandidate(candidate))
                 {
-                    return candidate.ToUpperInvariant();
+                    var code = candidate.ToUpperInvariant();
+                    if (!codes.Contains(code))
+                    {
+                        codes.Add(code);
+                    }
+
+                    break;
                 }
             }
         }
 
-        return null;
+        return codes;
     }
 
     public static string? ExtractDiscount(string? text)

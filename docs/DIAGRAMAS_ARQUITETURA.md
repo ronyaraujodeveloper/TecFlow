@@ -197,6 +197,10 @@ flowchart LR
   GMUI -->|paginar scrollIntoViewById ofertas-container| APPJS[app-interop.js]
   GMUI -->|ToastService.ShowSuccess / ShowError / ShowInfo| TOAST[ToastService Scoped por circuito]
   TOAST -->|OnChange| TOASTUI[ToastContainer MainLayout InteractiveServer]
+  COUPWORKER[CouponReclassificationWorker startup] -->|lotes Product com sinal de cupom| COUPRECL[CouponReclassificationService]
+  COUPRECL -->|IsCouponAnnouncement / Classify| COUPRULE
+  COUPRECL -->|Type=Coupon| SQL
+  RADARENG[Mining / Arbitragem / Trending / Catálogo] -->|Type == Product| SQL
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
   GMUI -->|POST midia/priorizar IDs visiveis| USERBOT
@@ -1404,7 +1408,9 @@ flowchart LR
   subgraph WebUi
     NAV[NavMenu: Painel Master] --> PAGES[Pages/Master/*]
     LAYOUT[MainLayout] --> BANNER[ImpersonationBanner]
-    LAYOUT --> SWITCH[MasterProfileSwitcher]
+    LAYOUT --> SWITCH[UserProfileMenu: Minha Conta / Super Admin / Modo de Visão / Sair]
+    SWITCH -->|/master/visao/master ou cliente| EP
+    SWITCH -->|/auth/logout| COOKIE
     LAYOUT --> ANN[GlobalAnnouncements]
     EP[MasterEndpointExtensions /master/emular, /master/visao] --> COOKIE[AuthCookieService]
   end

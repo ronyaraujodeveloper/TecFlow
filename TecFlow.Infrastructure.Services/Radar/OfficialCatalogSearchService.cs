@@ -170,9 +170,9 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var rows = await dbContext.GroupCapturedMessages
             .AsNoTracking()
-            .Where(item =>
-                (item.ProductName != null && item.ProductName.Contains(keyword))
-                || item.OriginalUrl.Contains(keyword))
+            .Where(item => item.Type == OfferType.Product
+                && ((item.ProductName != null && item.ProductName.Contains(keyword))
+                    || item.OriginalUrl.Contains(keyword)))
             .OrderByDescending(item => item.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);

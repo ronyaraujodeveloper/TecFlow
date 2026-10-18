@@ -703,7 +703,7 @@ API / Orquestrador / Worker / WebUi
 ### Fase 19.24 — Resolução inteligente de loja no gerador
 
 - [x] **IntegracaoLojaScopeResolver.cs** — `MarketplaceAccounts` ativas por plataforma; fallback quando o seletor é Todas ou a loja ativa é de outro marketplace.
-- [x] **GeradorLinks.razor** / **ActiveStoreScopeSelector.razor** — opção Todas as lojas e CTA para conectar conta inexistente.
+- [x] **GeradorLinks.razor** — opção Todas as lojas e CTA para conectar conta inexistente (`ActiveStoreScopeSelector.razor` removido em `UserProfileMenu`).
 - [x] **IntegracaoLojaScopeResolverTests.cs**.
 
 ### Fase 19.25 — Nome e preço do produto (Shopee slug/OG)
@@ -1200,7 +1200,7 @@ API / Orquestrador / Worker / WebUi
 **SharedUi / WebUi**
 - [x] **Services/Auth/JwtPayloadReader.cs** / **MasterAccess.cs** — leitura de papel e emulação no cookie.
 - [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs**.
-- [x] **Components/Master/** — `MasterPageBase`, `MasterAlerts`, `MasterProfileSwitcher`, `ImpersonationBanner`, `GlobalAnnouncements`.
+- [x] **Components/Master/** — `MasterPageBase`, `MasterAlerts`, `ImpersonationBanner`, `GlobalAnnouncements` (`MasterProfileSwitcher` substituído por `Layout/UserProfileMenu` em `UserProfileMenu`).
 - [x] **Pages/Master/** — `MasterDashboard`, `MasterTenants`, `MasterOperators`, `MasterAudit`, `MasterSettings`, `MasterPlans`, `MasterCommunication`.
 - [x] **Pages/Novidades.razor** — changelog para clientes.
 - [x] **MainLayout.razor** / **NavMenu.razor** — banner de emulação, alternância de perfil, avisos e grupo "Painel Master".
@@ -1463,6 +1463,27 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - alertas fixos e toast local trocados por `IToastService`.
 - [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** - `OnCopied` removido; cópia do código notificada via `IToastService`.
 - [x] **TecFlow.Tests/Unit/SharedUi/ToastServiceTests.cs** (novo) - duração padrão, tipos, mensagens vazias, duplicatas, limite, dismiss e auto-dismiss.
+
+### CouponFeedCleanup - Cupons fora do feed de produtos
+
+- [x] **TecFlow.Business/Service/Groups/CouponMessageRules.cs** - `IsCouponAnnouncement` (título de anúncio ou 2+ códigos), `ExtractCouponCodes`, remoção de "Limite de R$" / "OFF em R$" no cálculo de preço, URLs e palavras acentuadas ignoradas na leitura de códigos.
+- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `ICouponReclassificationService`.
+- [x] **TecFlow.Infrastructure.Services/Groups/CouponReclassificationService.cs** (novo) - reclassificação em lotes dos itens `Product` legados + `CouponReclassificationHost` (execução única no startup).
+- [x] **TecFlow.API/Workers/CouponReclassificationWorker.cs** (novo) - `BackgroundService` que dispara a reclassificação.
+- [x] **TecFlow.API/Program.cs** / **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro do worker, host e serviço.
+- [x] **TecFlow.Infrastructure.Services/Radar/OfferMiningEngine.cs**, **ProductArbitrageService.cs**, **GlobalTrendingDealsEngine.cs**, **OfficialCatalogSearchService.cs** - filtro `Type == OfferType.Product`.
+- [x] **TecFlow.Tests/Unit/Groups/CouponMessageRulesTests.cs** / **CouponReclassificationServiceTests.cs** (novo) - anúncios reais de cupom, produtos com cupom único e idempotência da reclassificação.
+
+### UserProfileMenu - Cabeçalho limpo com menu de perfil
+
+- [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** (novo) - pílula com o nome do usuário e dropdown `<details>` (Minha Conta, Super Admin, Modo de Visão, Sair), funcional no layout SSR estático.
+- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** - removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; cabeçalho só com `UserProfileMenu`.
+- [x] **TecFlow.SharedUi/Components/Layout/MasterMainLayout.razor** - `MasterProfileSwitcher` + `SessionStatusBadge` trocados por `UserProfileMenu`.
+- [x] **TecFlow.SharedUi/Components/Master/MasterProfileSwitcher.razor** (removido) - virou "Super Admin" / "Modo de Visão" no menu de perfil.
+- [x] **TecFlow.SharedUi/Components/Shared/SessionStatusBadge.razor** (removido) - badge "Sessão ativa (plataforma)".
+- [x] **TecFlow.SharedUi/Components/Shared/ActiveStoreScopeSelector.razor** (removido) - dropdown "Todas as lojas"; as páginas seguem usando `IActiveStoreScopeService` com a loja salva no navegador.
+- [x] **TecFlow.SharedUi/wwwroot/app.css** - estilos `.active-store-scope*` trocados por `.tecflow-profile-*`.
+- [x] **TecFlow.SharedUi/wwwroot/app-interop.js** - fecha o menu de perfil ao clicar fora, em um item ou com Esc.
 
 ---
 

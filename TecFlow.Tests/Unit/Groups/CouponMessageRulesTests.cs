@@ -41,6 +41,34 @@ public class CouponMessageRulesTests
         Assert.Equal(OfferType.Product, CouponMessageRules.Classify(text, hasDirectProductUrl: true));
     }
 
+    [Theory]
+    [InlineData("🔥 NOVO CUPOM MERCADO LIVRE\n\n🎟 Cupom: CARE15 - 15% OFF em R$ 5, Limite de R$ 145 OFF\nhttps://meli.la/abc")]
+    [InlineData("🔥NOVOS CUPONS MERCADO LIVRE\n🛒 Em produtos selecionados\n10% OFF acima de R$ 149, Limite de R$ 200:\n✅ Cupom: OFFHOJE\nhttps://meli.la/abc")]
+    [InlineData("NOVO CUPOM SHOPEE!\nR$ 20 OFF\nhttps://shopee.com.br/produto-i.1.2")]
+    [InlineData("Mercado Livre\nCupom: PARAVC - 30% OFF\nCupom: MELIOFFHJ - 25% OFF\nhttps://meli.la/abc")]
+    public void Classify_ShouldReturnCoupon_WhenMessageAnnouncesCoupons(string text)
+    {
+        Assert.Equal(OfferType.Coupon, CouponMessageRules.Classify(text, hasDirectProductUrl: true));
+    }
+
+    [Theory]
+    [InlineData("💧 Purificador de Água Consul CPB34ASVNA\n\nPOR: R$ 391,42 no Pix\n\n🎟 Use o cupom: OFFHOJE\n\n🛒 Compre aqui:\nhttps://meli.la/1ByK7gG")]
+    [InlineData("CUPOM RELÂMPAGO ⚡\n\n👟 Tênis Fila Recovery Feminino\n🔗 https://meli.la/1ZxLXMC\n\n✅ R$ 260,90\n🎟 Use o CUPOM: SITE1610")]
+    [InlineData("🖥 Monitor Gamer Curvo AOC AGON G4Z 27\"\n\n💰 Valor: R$1.079,00 - 12x sem juros\nCupom: CUPOMPRIME10\n\n🔗 https://www.amazon.com.br/dp/B0FGDJQ68P?tag=geovani0d-20\n✅ Oferta verificada: conferimos manualmente o preço e cupom")]
+    [InlineData("🔨 Martelo Amaciador De Carne Aço Inox 22cm | Shopee:\n\n🛒 GARANTA JÁ:\n🔗 https://s.shopee.com.br/7Ae6Jz1CfD\n\n✅ a partir de R$ 36,50\n\n🎟 CUPONS e OFERTAS - 10.10:\n🔗 https://s.shopee.com.br/5pmo7sve98")]
+    public void Classify_ShouldKeepProduct_WhenProductOfferMentionsSingleCoupon(string text)
+    {
+        Assert.Equal(OfferType.Product, CouponMessageRules.Classify(text, hasDirectProductUrl: true));
+    }
+
+    [Fact]
+    public void ExtractCouponCodes_ShouldReturnDistinctCodesInOrder()
+    {
+        const string text = "Cupom: CARE15\nCupom: PARAVC\nUse o cupom CARE15";
+
+        Assert.Equal(["CARE15", "PARAVC"], CouponMessageRules.ExtractCouponCodes(text));
+    }
+
     [Fact]
     public void Classify_ShouldKeepProduct_WhenNoCouponSignal()
     {

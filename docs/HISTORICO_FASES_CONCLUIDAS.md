@@ -907,6 +907,8 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Aba de Cupons & Promoções (`CouponsTab`):** mensagens de cupom (`CUPOM`, `CÓDIGO`, `USAR CUPOM`, `R$ OFF`) sem preço à vista viram `OfferType.Coupon`, saem do Feed de Ofertas e aparecem na nova aba com pills Todos / Mercado Livre / Shopee / Amazon / Outros, em `CouponCard` com copiar código, desconto, validade, regras e "Ir para a loja" com link de afiliado.
 - [x] **Layout compacto de Grupos Monitorados (`CompactOffersUi`):** cabeçalho e controles `sm` sem texto explicativo, toast de status com auto-dismiss em 5s, só busca rápida + grupo na tela e o restante em "Filtros Avançados ⚙️" (sem "Só com cupom"), scroll suave até `#ofertas-container` ao paginar e `OfferCard` com ações 2x2 compactas e badges pill sutis.
 - [x] **Notificações Toast globais (`GlobalToasts`):** `IToastService`/`ToastService` (Success/Error/Warning/Info, ID único, 10s padrão) e `ToastContainer` fixo no canto superior direito do `MainLayout`; Grupos Monitorados e `CouponCard` passaram a usar o serviço no lugar dos alertas fixos e do toast local.
+- [x] **Cupons fora do feed de produtos (`CouponFeedCleanup`):** classificador reconhece anúncios de cupom (título "NOVO CUPOM..." ou 2+ códigos, "Limite de R$" não é preço), `CouponReclassificationWorker` migra o legado no startup (~607 itens) e os motores de radar filtram `Type == Product`.
+- [x] **Cabeçalho com menu de perfil (`UserProfileMenu`):** removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; pílula com o nome do usuário abre dropdown nativo (Minha Conta, Super Admin, Modo de Visão, Sair) no `MainLayout` e no `MasterMainLayout`.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

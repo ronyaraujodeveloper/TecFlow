@@ -66,6 +66,11 @@ public interface IOfferRevalidationService
         CancellationToken cancellationToken = default);
 }
 
+public interface ICouponReclassificationService
+{
+    Task<int> ReclassifyLegacyCouponsAsync(CancellationToken cancellationToken = default);
+}
+
 public interface IMonitoredGroupService
 {
     Task<MonitoredGroupsResponseDto> SyncAsync(

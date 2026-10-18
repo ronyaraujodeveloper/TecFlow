@@ -47,6 +47,8 @@ public static class WhatsAppEvolutionRegistrationExtensions
             configuration.GetSection(TecFlow.Business.Service.Groups.OfferRevalidationOptions.SectionName));
         services.AddScoped<IOfferRevalidationService, TecFlow.Infrastructure.Services.Groups.OfferRevalidationService>();
         services.AddSingleton<TecFlow.Infrastructure.Services.Groups.OfferRevalidationHost>();
+        services.AddScoped<ICouponReclassificationService, TecFlow.Infrastructure.Services.Groups.CouponReclassificationService>();
+        services.AddSingleton<TecFlow.Infrastructure.Services.Groups.CouponReclassificationHost>();
         services.AddScoped<IGroupCapturedMessagesService, TecFlow.Infrastructure.Services.Groups.GroupCapturedMessagesService>();
         services.AddScoped<IAffiliateUrlBuilderService, TecFlow.Infrastructure.Services.LinkStrategies.AffiliateUrlBuilderService>();
         services.AddScoped<IMonitoredGroupService, TecFlow.Infrastructure.Services.Groups.MonitoredGroupService>();

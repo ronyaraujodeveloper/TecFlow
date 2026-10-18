@@ -1627,82 +1627,69 @@ html, body {
     font-size: 0.72rem;
 }
 
-.active-store-scope {
+/* --- Menu de perfil do cabeçalho (UserProfileMenu) --- */
+
+.tecflow-profile-menu {
     position: relative;
 }
 
-.active-store-scope-toggle {
+.tecflow-profile-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    max-width: min(14rem, 42vw);
-    padding-inline: 0.65rem;
+    list-style: none;
+    user-select: none;
 }
 
-.active-store-scope-label,
-.active-store-scope-label-compact {
-    max-width: 8rem;
+.tecflow-profile-toggle::-webkit-details-marker,
+.tecflow-profile-toggle::marker {
+    display: none;
+    content: "";
+}
+
+.tecflow-profile-name {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 600;
-    font-size: 0.85rem;
 }
 
-.active-store-scope-badge {
-    flex-shrink: 0;
-    min-width: 2rem;
-    justify-content: center;
+.tecflow-profile-caret {
+    font-size: 0.7rem;
+    transition: transform 0.15s ease;
 }
 
-.active-store-scope-menu {
-    min-width: min(18rem, 92vw);
-    max-height: 16rem;
-    overflow-y: auto;
+.tecflow-profile-menu[open] .tecflow-profile-caret {
+    transform: rotate(180deg);
+}
+
+.tecflow-profile-menu:not([open]) .tecflow-profile-dropdown {
+    display: none;
+}
+
+.tecflow-profile-dropdown {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    left: auto;
+    min-width: 15rem;
+    max-width: min(20rem, calc(100vw - 1.5rem));
     z-index: 1080;
 }
 
-.active-store-scope-item {
+.tecflow-profile-dropdown .dropdown-item {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    white-space: normal;
+    font-size: 0.9rem;
 }
 
-.active-store-scope-item-name {
-    flex: 1 1 auto;
-    text-align: left;
-}
-
-.active-store-scope-item-check {
-    color: #198754;
-    font-weight: 700;
-}
-
-.active-store-scope-backdrop {
-    position: fixed;
-    inset: 0;
-    border: 0;
-    background: rgba(0, 0, 0, 0.25);
-    z-index: 1070;
-}
-
-.active-store-scope-empty {
-    min-width: var(--touch-target-min);
-    min-height: var(--touch-target-min);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding-inline: 0.65rem;
-}
-
-.active-store-scope-icon {
-    font-weight: 700;
-    line-height: 1;
-}
-
-@media (min-width: 576px) {
-    .active-store-scope-toggle {
-        max-width: 18rem;
-    }
+.tecflow-profile-hint {
+    flex-basis: 100%;
+    padding-left: 1.5rem;
+    font-size: 0.75rem;
 }
 
 /* --- Gerador de Links de Comissão (Fase 11.1) --- */

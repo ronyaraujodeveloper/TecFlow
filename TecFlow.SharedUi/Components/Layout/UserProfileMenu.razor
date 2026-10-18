@@ -1,0 +1,76 @@
+﻿@using System.Security.Claims
+@* <details> nativo: os layouts são SSR estático, sem circuito Blazor nem bootstrap.js para abrir dropdowns. *@
+<AuthorizeView>
+    <Authorized>
+        @{
+            var user = context.User;
+            var name = DisplayName(user);
+            var email = user.FindFirst(ClaimTypes.Email)?.Value;
+            var isAdmin = MasterAccess.IsMaster(user) && !MasterAccess.IsImpersonating(user);
+            var masterView = MasterAccess.IsMasterView(user);
+        }
+        <details class="tecflow-profile-menu" data-profile-menu>
+            <summary class="btn btn-sm btn-outline-secondary rounded-pill tecflow-profile-toggle" title="@name">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
+                <span class="tecflow-profile-name d-none d-sm-inline">@name</span>
+                <i class="bi bi-chevron-down tecflow-profile-caret" aria-hidden="true"></i>
+            </summary>
+            <div class="dropdown-menu dropdown-menu-end show tecflow-profile-dropdown" role="menu" aria-label="Menu do perfil">
+                <div class="dropdown-header">
+                    <div class="fw-semibold text-body text-truncate">@name</div>
+                    @if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        <div class="small text-truncate">@email</div>
+                    }
+                    @if (isAdmin)
+                    {
+                        <span class="badge text-bg-warning mt-1">@MasterRoles.Label(MasterAccess.Role(user))</span>
+                    }
+                </div>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="/minha-conta" role="menuitem">
+                    <i class="bi bi-gear" aria-hidden="true"></i> Minha Conta
+                </a>
+                @if (isAdmin)
+                {
+                    <a class="dropdown-item"
+                       href="@(masterView ? MasterRoutes.Dashboard : $"/master/visao/{MasterAccess.ViewMaster}")"
+                       data-enhance-nav="false"
+                       role="menuitem">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i> Super Admin
+                    </a>
+                    <a class="dropdown-item"
+                       href="/master/visao/@(masterView ? MasterAccess.ViewClient : MasterAccess.ViewMaster)"
+                       data-enhance-nav="false"
+                       role="menuitem">
+                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Modo de Visão
+                        <span class="d-block small text-muted tecflow-profile-hint">
+                            @(masterView ? "Painel Master → Visão Cliente" : "Visão Cliente → Painel Master")
+                        </span>
+                    </a>
+                }
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="/auth/logout" data-enhance-nav="false" role="menuitem">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
+                </a>
+            </div>
+        </details>
+    </Authorized>
+    <NotAuthorized>
+        <a href="/" class="btn btn-sm btn-primary rounded-pill">Entrar</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private static string DisplayName(ClaimsPrincipal user)
+    {
+        var name = user.FindFirst(ClaimTypes.Name)?.Value;
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return name.Trim();
+        }
+
+        var email = user.FindFirst(ClaimTypes.Email)?.Value;
+        return string.IsNullOrWhiteSpace(email) ? "Minha conta" : email.Trim();
+    }
+}

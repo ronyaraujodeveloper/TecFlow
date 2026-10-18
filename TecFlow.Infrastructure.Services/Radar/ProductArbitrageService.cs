@@ -53,6 +53,7 @@ public sealed class ProductArbitrageService : IProductArbitrageService
         var captured = await _context.GroupCapturedMessages
             .AsNoTracking()
             .Where(item => item.UserId == userId
+                && item.Type == OfferType.Product
                 && item.HasDirectProductUrl
                 && item.IsAvailable
                 && item.ReceivedAt >= since

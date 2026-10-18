@@ -18,7 +18,10 @@ public class MercadoLivreShowcaseRulesTests
     [Theory]
     [InlineData(
         "https://www.mercadolivre.com.br/social/achados?item_id=MLB4012345678&matt_tool=1",
-        "https://produto.mercadolivre.com.br/MLB-4012345678")]
+        "https://www.mercadolivre.com.br/p/MLB4012345678")]
+    [InlineData(
+        "https://www.mercadolivre.com.br/social/mastertechjr?matt_word=mastertechjr&matt_tool=88888888&item_id=MLB-4012345678&forceInApp=true",
+        "https://www.mercadolivre.com.br/p/MLB4012345678")]
     [InlineData(
         "https://www.mercadolivre.com.br/social/achados?product_id=MLB19700000",
         "https://www.mercadolivre.com.br/p/MLB19700000")]
@@ -30,7 +33,7 @@ public class MercadoLivreShowcaseRulesTests
         "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM")]
     [InlineData(
         "https://www.mercadolivre.com.br/social/achados#item_id=MLB-4012345678",
-        "https://produto.mercadolivre.com.br/MLB-4012345678")]
+        "https://www.mercadolivre.com.br/p/MLB4012345678")]
     public void TryExtractFocusedProductUrl_ShouldReturnDirectProductPage(string url, string expected)
     {
         Assert.True(MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(url, out var productUrl));
@@ -51,7 +54,7 @@ public class MercadoLivreShowcaseRulesTests
         "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM")]
     [InlineData(
         "https://www.mercadolivre.com.br/social/achados?item_id=MLB4012345678",
-        "https://produto.mercadolivre.com.br/MLB-4012345678")]
+        "https://www.mercadolivre.com.br/p/MLB4012345678")]
     public void TryResolveDirectProductUrl_ShouldReturnCleanProductPage(string url, string expected)
     {
         Assert.True(MercadoLivreShowcaseRules.TryResolveDirectProductUrl(url, out var productUrl));

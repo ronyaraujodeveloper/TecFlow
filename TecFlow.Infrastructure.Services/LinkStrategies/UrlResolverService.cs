@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Integrations.Common;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.LinkStrategies;
 
@@ -59,6 +60,15 @@ public sealed class UrlResolverService : IUrlResolverService
             {
                 _logger.LogDebug(ex, "Fallback de expansão após HEAD/GET. Url={Url}", working);
             }
+        }
+
+        if (MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(working, out var focusedProductUrl))
+        {
+            _logger.LogInformation(
+                "Vitrine Meli Social convertida no produto focado. Url={Url} Produto={ProductUrl}",
+                capturedUrl,
+                focusedProductUrl);
+            working = focusedProductUrl;
         }
 
         if (UrlUnshortenerService.IsSupportedMarketplaceUrl(working))

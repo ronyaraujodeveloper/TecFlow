@@ -9,7 +9,6 @@ namespace TecFlow.Business.Integrations.MercadoLivre;
 public static class MercadoLivreShowcaseRules
 {
     public const string CatalogProductBase = "https://www.mercadolivre.com.br/p/";
-    public const string ItemProductBase = "https://produto.mercadolivre.com.br/MLB-";
 
     public static readonly string[] ThirdPartyTrackingParameters =
     [
@@ -47,7 +46,10 @@ public static class MercadoLivreShowcaseRules
             || url!.Contains("affiliate-profile", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Página direta do produto focado numa vitrine de divulgador, sem query nem fragmento.</summary>
+    /// <summary>
+    /// Página direta do produto focado numa vitrine de divulgador, sem query nem fragmento: IDs vindos dos
+    /// parâmetros viram <c>https://www.mercadolivre.com.br/p/{ITEM_ID}</c>.
+    /// </summary>
     public static bool TryExtractFocusedProductUrl(string? url, out string productUrl)
     {
         productUrl = string.Empty;
@@ -72,7 +74,7 @@ public static class MercadoLivreShowcaseRules
 
         if (TryReadId(parameters, ItemIdKeys, out var itemDigits))
         {
-            productUrl = ItemProductBase + itemDigits;
+            productUrl = CatalogProductBase + "MLB" + itemDigits;
             return true;
         }
 

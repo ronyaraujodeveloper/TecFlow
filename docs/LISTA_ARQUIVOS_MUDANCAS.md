@@ -1511,6 +1511,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** - `selected` explícito na opção atual e fallback para o padrão (100) quando o valor não está na lista.
 - [x] **TecFlow.Tests/Unit/Groups/GroupOfferCaptureRulesTests.cs** - default 100 e fallback de `take` inválido.
 
+### MeliSocialCardReset - Vitrines /social/ resolvidas, card compacto e reset limpo
+
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - IDs extraídos dos parâmetros da vitrine (`item_id`, `product_id`, `wid`) viram `https://www.mercadolivre.com.br/p/{ITEM_ID}`.
+- [x] **TecFlow.Infrastructure.Services/LinkStrategies/UrlResolverService.cs** - após seguir os redirects, vitrine Meli Social com produto focado vira a página `/p/` antes da limpeza de rastreio (que descarta o fragmento).
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** / **OfferPipelineProcessor.cs** - links `/social/` do Mercado Livre não são mais rejeitados antes da resolução HTTP; viram `VitrineGenerica` só se a URL final continuar no perfil sem produto.
+- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** - data/hora da captura (`dd/MM/yyyy HH:mm`) em destaque no cabeçalho; botões "Abrir", "Verificar", "Clonar" e "Ocultar" com os ícones originais.
+- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.monitored-offer-captured` (pílula da data) e `.monitored-offer-actions` em uma linha com padding reduzido.
+- [x] **ResetarOfertasLegadas.ps1** (novo) - reset limpo de `GroupCapturedMessages` e `uploads\products` (todos ou `-UserId`), com `-WhatIf`, confirmação "RESETAR", `-PararIis` e `-IncluirHistoricoPrecos`.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/UrlResolverServiceTests.cs** / **MercadoLivreShowcaseRulesTests.cs** / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - formato `/p/{ITEM_ID}`, redirect social ➔ produto e rejeição só na URL final.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

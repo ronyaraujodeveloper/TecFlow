@@ -93,7 +93,8 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     continue;
                 }
 
-                if (OfferIntegrityRules.IsGenericStorefrontUrl(url))
+                if (OfferIntegrityRules.IsGenericStorefrontUrl(url)
+                    && !MercadoLivreShowcaseRules.IsAffiliateShowcaseUrl(url))
                 {
                     _logger.LogInformation(
                         "Ingestão rejeitada: VitrineGenerica. UserId={UserId} MessageId={MessageId} Url={Url}",

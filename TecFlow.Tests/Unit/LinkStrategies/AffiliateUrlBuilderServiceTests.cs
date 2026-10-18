@@ -72,7 +72,7 @@ public class AffiliateUrlBuilderServiceTests
             MarketplaceType.MercadoLivre,
             "97303724");
 
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678?matt_tool=97303724&matt_word=97303724", url);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678?matt_tool=97303724&matt_word=97303724", url);
     }
 
     [Fact]

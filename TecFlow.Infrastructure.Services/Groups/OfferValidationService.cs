@@ -138,7 +138,7 @@ public sealed class OfferValidationService : IOfferValidationService
         }
 
         var workingUrl = BypassAffiliateShowcase(originalUrl, originalUrl.Trim());
-        if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+        if (IsUnresolvableStorefront(workingUrl))
         {
             return GenericStorefront(originalUrl, workingUrl);
         }
@@ -157,7 +157,7 @@ public sealed class OfferValidationService : IOfferValidationService
         }
 
         workingUrl = BypassAffiliateShowcase(originalUrl, workingUrl);
-        if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+        if (IsUnresolvableStorefront(workingUrl))
         {
             return GenericStorefront(originalUrl, workingUrl);
         }
@@ -236,6 +236,14 @@ public sealed class OfferValidationService : IOfferValidationService
             };
         }
     }
+
+    /// <summary>
+    /// Vitrine genérica que não vale seguir: vitrines Meli Social ainda passam pelo GET com redirects,
+    /// que pode cair na página do produto; a rejeição delas acontece só na URL final.
+    /// </summary>
+    private static bool IsUnresolvableStorefront(string url) =>
+        OfferIntegrityRules.IsGenericStorefrontUrl(url)
+        && !MercadoLivreShowcaseRules.IsAffiliateShowcaseUrl(url);
 
     private string BypassAffiliateShowcase(string originalUrl, string url)
     {

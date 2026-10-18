@@ -5,6 +5,14 @@
 
 <article class="card border-0 shadow-sm h-100 monitored-offer-card">
     <div class="card-body p-3 d-flex flex-column gap-2">
+        <div class="d-flex align-items-center justify-content-between gap-2 monitored-offer-header">
+            <span class="monitored-offer-captured" title="Capturada em @CapturedAtLabel">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <time datetime="@CapturedAtLocal.ToString("yyyy-MM-ddTHH:mm")">@CapturedAtLabel</time>
+            </span>
+            <small class="text-muted text-truncate monitored-offer-meta" title="@Item.GroupName">@Item.GroupName</small>
+        </div>
+
         <div class="d-flex gap-2">
             <div class="product-image-preview-box product-image-preview-box--sm flex-shrink-0">
                 @if (!string.IsNullOrEmpty(Item.ImageUrl))
@@ -47,19 +55,16 @@
                 @PlatformBadgeHelper.GetPlatformLabel(Item.PlatformName, Item.PlatformType)
             </span>
             <span class="badge badge-sm rounded-pill @StatusBadgeClass">@StatusLabel</span>
-            <small class="text-muted text-truncate ms-auto monitored-offer-meta" title="@Item.GroupName">
-                @Item.GroupName · @Item.ReceivedAt.ToLocalTime().ToString("dd/MM HH:mm")
-            </small>
         </div>
 
         <div class="monitored-offer-actions mt-auto">
             <a class="btn btn-outline-secondary" href="@OpenUrl" target="_blank" rel="noopener noreferrer" title="Abrir Link Original">
                 <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
-                <span>Abrir Link Original</span>
+                <span>Abrir</span>
             </a>
             <button type="button" class="btn btn-outline-primary" disabled="@IsBusy" title="Verificar anúncio" @onclick="() => OnValidate.InvokeAsync(Item.Id)">
                 <i class="bi bi-shield-check" aria-hidden="true"></i>
-                <span>Verificar anúncio</span>
+                <span>Verificar</span>
             </button>
             @if (ShowIgnored)
             {
@@ -76,11 +81,11 @@
                         title="@(CanClone ? CloneTitle : "Clonagem indisponível para anúncio esgotado, inativo ou com preço suspeito")"
                         @onclick="() => OnClone.InvokeAsync(Item.Id)">
                     <i class="bi bi-copy" aria-hidden="true"></i>
-                    <span>Clonar Oferta</span>
+                    <span>Clonar</span>
                 </button>
-                <button type="button" class="btn btn-outline-danger" disabled="@IsBusy" title="Sem interesse" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
+                <button type="button" class="btn btn-outline-danger" disabled="@IsBusy" title="Ocultar (sem interesse)" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
                     <i class="bi bi-eye-slash" aria-hidden="true"></i>
-                    <span>Sem interesse</span>
+                    <span>Ocultar</span>
                 </button>
             }
         </div>
@@ -128,6 +133,10 @@
         !IsInactive && Item.OfferStatus != GroupOfferStatuses.PrecoSuspeito;
 
     private string CloneTitle => IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha";
+
+    private DateTime CapturedAtLocal => Item.ReceivedAt.ToLocalTime();
+
+    private string CapturedAtLabel => CapturedAtLocal.ToString("dd/MM/yyyy HH:mm");
 
     private string StatusLabel => IsInactive && !GroupOfferStatuses.IsInactive(Item.OfferStatus)
         ? "Esgotado"

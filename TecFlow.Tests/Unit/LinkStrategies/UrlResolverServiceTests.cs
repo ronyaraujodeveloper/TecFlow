@@ -34,6 +34,26 @@ public class UrlResolverServiceTests
         Assert.Contains("shopee.com.br", result.CanonicalUrl, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task ResolveCanonicalAsync_ShouldConvertMeliSocialRedirectIntoFocusedProduct()
+    {
+        var handler = new StubHttpMessageHandler(request => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                request.Method,
+                "https://www.mercadolivre.com.br/social/mastertechjr?matt_tool=88888888&matt_d2id=x#item_id=MLB4012345678")
+        });
+
+        var service = new UrlResolverService(
+            new NamedClientFactory(handler),
+            new StaticExpansion("https://meli.la/1aBcDeF"),
+            NullLogger<UrlResolverService>.Instance);
+
+        var result = await service.ResolveCanonicalAsync("https://meli.la/1aBcDeF");
+
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678", result.CanonicalUrl);
+    }
+
     private sealed class NamedClientFactory : IHttpClientFactory
     {
         private readonly HttpClient _client;

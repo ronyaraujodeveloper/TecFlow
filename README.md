@@ -477,6 +477,19 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - "Ofertas por página" abre com `100` selecionado; valor fora da lista volta para 100.
 - [x] **Consulta sem teto oculto:**
   - A pré-busca para deduplicação deixou de parar em 80 linhas (agora `take + 20`, até 200), então a página de 100 vem completa.
+
+## 🧭 Vitrines Meli Social, Card Compacto e Reset Limpo (`MeliSocialCardReset`)
+
+- [x] **Bypass obrigatório de `/social/` (ex.: Master Tech Jr):**
+  - Links do Telegram/WhatsApp com `mercadolivre.com.br/social/` seguem os redirects HTTP (`UrlResolverService` + GET da validação) até `/p/MLB...` ou `produto.mercadolivre.com.br`.
+  - Se a URL final continuar no perfil social, o ID dos parâmetros (`item_id`, `product_id`, `wid`, inclusive no fragmento) vira `https://www.mercadolivre.com.br/p/{ITEM_ID}?matt_tool=97303724`; sem ID, a oferta segue como `VitrineGenerica`.
+  - Qualquer `matt_tool` de terceiros é trocado pelo `97303724` (ou pelo TrackingId da conta ML do tenant).
+- [x] **Data e hora da captura no cabeçalho do card:**
+  - Pílula `🕒 18/10/2026 09:20` (`ReceivedAt` em horário local) no topo do `OfferCard`, com o nome do grupo ao lado.
+- [x] **Botões enxutos:**
+  - "Abrir", "Verificar", "Clonar" e "Ocultar" (ícones originais, rótulos completos no tooltip) em uma única linha com padding reduzido.
+- [x] **Reset limpo do ambiente (`ResetarOfertasLegadas.ps1`):**
+  - Zera `GroupCapturedMessages` e `uploads\products` (todos os usuários ou `-UserId`), preservando conexões, grupos e lojas; `-WhatIf` para simular, `-PararIis` para pausar os pools e `-IncluirHistoricoPrecos` para zerar `ProductPriceHistory`.
   
 ---
 

@@ -38,6 +38,44 @@ public class OfferValidationServiceTests
 
         Assert.False(result.IsAvailable);
         Assert.Equal(GroupOfferStatuses.VitrineGenerica, result.Status);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldFollowSocialRedirect_UntilProductPage()
+    {
+        var handler = new StubHandler
+        {
+            Html = "<html>Produto</html>",
+            FinalUrlByRequest = request => request.Contains("/social/", StringComparison.Ordinal)
+                ? "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM"
+                : request
+        };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://www.mercadolivre.com.br/social/mastertechjr?matt_tool=88888888"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/social/mastertechjr?matt_tool=88888888");
+
+        Assert.True(page.IsAvailable);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM", page.FinalUrl);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldStillRejectNonMercadoLivreStorefrontWithoutRequest()
+    {
+        var handler = new StubHandler { Html = "<html>Loja</html>" };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://www.mercadolivre.com.br/perfil/LOJA123"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/perfil/LOJA123");
+
+        Assert.Equal(GroupOfferStatuses.VitrineGenerica, page.Status);
         Assert.Equal(0, handler.Calls);
     }
 
@@ -55,8 +93,8 @@ public class OfferValidationServiceTests
 
         Assert.True(page.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", page.FinalUrl);
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", handler.LastRequestUri);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678", page.FinalUrl);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678", handler.LastRequestUri);
     }
 
     [Fact]

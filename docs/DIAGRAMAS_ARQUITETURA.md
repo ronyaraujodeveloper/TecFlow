@@ -190,6 +190,9 @@ flowchart LR
   GMUI -->|Verificar anuncio ResolvedProductUrl atualiza PrimaryProductUrl| SHOWCASE
   GMUI -->|Clonar Oferta ML usa a URL higienizada do AffiliateUrlBuilderService| AFFURL
   GMUI -->|take padrão OffersPageSize=100 pré-busca take+20 até 200| MONSVC
+  RESOLVSOC[UrlResolverService HEAD/GET redirects] -->|vitrine /social/ ➔ /p/ITEM_ID antes do StripForeignTracking| SHOWCASE
+  VAL -->|/social/ do ML segue o GET; VitrineGenerica só na URL final| RESOLVSOC
+  RESETPS[ResetarOfertasLegadas.ps1] -->|DELETE GroupCapturedMessages + uploads/products| SQL
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

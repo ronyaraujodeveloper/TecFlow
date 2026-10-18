@@ -1,5 +1,5 @@
 /*
-  TecFlow — seed PostgreSQL (Portal + Orquestrador)
+  Ofertio — seed PostgreSQL (Portal + Orquestrador)
   Login: demo@TecFlow.local / Test@123
 
   psql -U Us_Automacao -d automacaosociais -f scripts/seed-dashboard-demo.postgresql.sql

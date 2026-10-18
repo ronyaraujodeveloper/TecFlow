@@ -1,16 +1,16 @@
 @startuml
-title Arquitetura TecFlow
+title Arquitetura Ofertio
 
-package "TecFlow.Core" {
+package "Ofertio.Core" {
   interface IDataService
   class Produto
 }
 
-package "TecFlow.Data" {
+package "Ofertio.Data" {
   class AppDbContext
 }
 
-package "TecFlow.Core.Services" {
+package "Ofertio.Core.Services" {
   class DataService
 }
 

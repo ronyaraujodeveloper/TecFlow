@@ -1,16 +1,16 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Cria a pasta de stdout logs do TecFlow.WebUi no IIS e concede escrita ao pool.
+    Cria a pasta de stdout logs do Ofertio.WebUi no IIS e concede escrita ao pool.
 
 .DESCRIPTION
     Habilita captura imediata de falhas Blazor/server-side (ex.: login) via aspNetCore stdoutLogEnabled.
-    Execute como Administrador após publicar em C:\inetpub\tecflow\webui.
+    Execute como Administrador após publicar em C:\inetpub\ofertio\webui.
 #>
 [CmdletBinding()]
 param(
-    [string] $LogsPath = "C:\inetpub\tecflow\webui\logs",
-    [string] $AppPoolName = "TecFlowWebUiPool"
+    [string] $LogsPath = "C:\inetpub\ofertio\webui\logs",
+    [string] $AppPoolName = "OfertioWebUiPool"
 )
 
 $ErrorActionPreference = "Stop"

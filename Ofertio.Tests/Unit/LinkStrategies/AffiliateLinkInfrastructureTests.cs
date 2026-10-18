@@ -1,0 +1,258 @@
+﻿using System.Net;
+using Microsoft.Extensions.Hosting;
+using Moq;
+using Ofertio.Business.Dto;
+using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Application;
+using Ofertio.Business.Service.LinkStrategies;
+using Ofertio.Core.Enums;
+using Ofertio.Infrastructure.Services.LinkStrategies;
+using Ofertio.Tests.Helpers;
+
+namespace Ofertio.Tests.Unit.LinkStrategies;
+
+public class UrlExpansionServiceTests
+{
+    [Fact]
+    public async Task ExpandUrlAsync_ShouldFollowLocationHeaderUntilFinalUrl()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("s.shopee.com.br"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://shopee.com.br/produto-i.123.456") }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var factory = new StubHttpClientFactory(handler);
+        var service = new UrlExpansionService(factory, Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://s.shopee.com.br/abc");
+
+        Assert.Equal("https://shopee.com.br/produto-i.123.456", expanded);
+        Assert.NotEqual("true", expanded, StringComparer.OrdinalIgnoreCase);
+        Assert.False(bool.TryParse(expanded, out _));
+    }
+
+    [Fact]
+    public async Task ExpandUrlAsync_ShouldIgnoreBooleanLocationAndKeepHttpUrl()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("magazineluiza.onelink.me"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://www.magazinevoce.com.br/minhaloja/p/1") }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var factory = new StubHttpClientFactory(handler);
+        var service = new UrlExpansionService(factory, Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://magazineluiza.onelink.me/abc");
+
+        Assert.Equal("https://www.magazinevoce.com.br/minhaloja/p/1", expanded);
+        Assert.IsType<string>(expanded);
+        Assert.False(bool.TryParse(expanded, out _));
+    }
+
+    [Fact]
+    public async Task ExpandUrlAsync_ShouldUnwrapTikTokLoginRedirectUrl()
+    {
+        const string destination =
+            "https://shop.tiktok.com/view/product/1?unique_id=amz.indica";
+        var login = "https://www.tiktok.com/login?redirect_url=" + Uri.EscapeDataString(destination);
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("vt.tiktok.com"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri(login) }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var factory = new StubHttpClientFactory(handler);
+        var service = new UrlExpansionService(
+            factory,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://vt.tiktok.com/ZSabc/");
+
+        Assert.Contains("unique_id=amz.indica", expanded, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/login", expanded, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "amz.indica",
+            PlatformLinkResolver.ExtractAffiliateId(expanded, MarketplaceType.TikTokShop));
+    }
+}
+
+public class AffiliateLinkGenerationServiceTests
+{
+    [Fact]
+    public async Task GenerateAsync_ShouldReturnFriendlyFailure_WhenPlatformIsUnsupported()
+    {
+        var strategies = new IPlatformLinkStrategy[]
+        {
+            new ShopeeLinkStrategy(
+                new NoOpUrlExpansionService(),
+                new NoOpStoreResolver(),
+                new AffiliateLinkGenerationContext(),
+                Microsoft.Extensions.Options.Options.Create(new Ofertio.Business.Integrations.Shopee.ShopeeIntegrationOptions()),
+                CreateHostEnvironment(),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ShopeeLinkStrategy>.Instance)
+        };
+
+        var service = new AffiliateLinkGenerationService(
+            new PlatformLinkResolver(strategies, Microsoft.Extensions.Logging.Abstractions.NullLogger<PlatformLinkResolver>.Instance),
+            new NoOpUrlExpansionService(),
+            new NoOpStoreResolver(),
+            new NoOpShortLinkService(),
+            new NoOpLinkClickTelemetryService(),
+            new AffiliateLinkGenerationContext(),
+            new NoOpProductMetadataService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AffiliateLinkGenerationService>.Instance);
+
+        var result = await service.GenerateAsync(
+            new GerarLinkAfiliadoDto
+            {
+                OriginalUrl = "https://example.com/produto",
+                StoreId = IntegracaoLojaScopeHelper.EncodeStoreScope(1)
+            },
+            userId: 10);
+
+        Assert.False(result.Success);
+        Assert.Contains("Não reconhecemos este domínio", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IHostEnvironment CreateHostEnvironment()
+    {
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(item => item.EnvironmentName).Returns("Homologacao");
+        return environment.Object;
+    }
+
+    private sealed class NoOpProductMetadataService : IProductMetadataService
+    {
+        public Task<ProductMetadataDto> ExtractAsync(string productUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ProductMetadataHtmlParser.FromUrlFallback(productUrl));
+    }
+
+    private sealed class NoOpUrlExpansionService : IUrlExpansionService
+    {
+        public Task<string> ExpandUrlAsync(string shortenedUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult(shortenedUrl);
+    }
+
+    private sealed class NoOpStoreResolver : IIntegracaoLojaScopeResolver
+    {
+        public Task<Ofertio.Database.Entity.IntegracaoLoja> ResolveAsync(
+            Guid storeScopeId,
+            int userId,
+            MarketplaceType expectedPlatform,
+            CancellationToken cancellationToken = default) =>
+            throw new AffiliateLinkGenerationException("Loja mock indisponível.");
+    }
+
+    private sealed class NoOpShortLinkService : IShortLinkService
+    {
+        public Task<(string PublicShortUrl, Guid AffiliateLinkId)> CreateShortLinkAsync(
+            string destinationUrl,
+            string originalUrl,
+            MarketplaceType platformType,
+            int userId,
+            Guid tenantId,
+            int? integracaoLojaId,
+            string? customNickname,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(("http://localhost:5001/r/mock123", Guid.NewGuid()));
+
+        public Task<Guid> ResolveLinkGroupIdAsync(
+            int userId,
+            string originalUrl,
+            MarketplaceType platformType,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Guid.NewGuid());
+
+        public Task<ShortLinkCreateResult> EnsureForStoreAsync(
+            string destinationUrl,
+            string originalUrl,
+            MarketplaceType platformType,
+            int userId,
+            Guid tenantId,
+            int integracaoLojaId,
+            Guid linkGroupId,
+            string? customNickname,
+            CancellationToken cancellationToken = default,
+            ProductMetadataDto? productMetadata = null,
+            string? source = null,
+            string? sourceGroup = null) =>
+            Task.FromResult(new ShortLinkCreateResult
+            {
+                PublicShortUrl = "http://localhost:5001/r/mock123",
+                AffiliateLinkId = Guid.NewGuid(),
+                ShortCode = "mock123"
+            });
+
+        public Task DeactivateUnselectedAccountsAsync(
+            Guid linkGroupId,
+            IReadOnlyCollection<int> selectedIntegracaoLojaIds,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<bool> UpdateProductMetadataAsync(
+            Guid affiliateLinkId,
+            int userId,
+            string? productName,
+            decimal? productPrice,
+            CancellationToken cancellationToken = default,
+            string? productImageUrl = null,
+            bool updateImage = false) =>
+            Task.FromResult(false);
+    }
+
+    private sealed class NoOpLinkClickTelemetryService : ILinkClickTelemetryService
+    {
+        public Task RecordGenerationAsync(
+            Guid affiliateLinkId,
+            Guid tenantId,
+            string shopId,
+            string originalUrl,
+            string convertedUrl,
+            MarketplaceType platformType,
+            string? ipAddress,
+            string? userAgent,
+            string? referrerUrl,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public void EnqueueClickLog(
+            Guid affiliateLinkId,
+            string? ipAddress,
+            string? userAgent,
+            string? referrerUrl)
+        {
+        }
+    }
+}
+
+internal sealed class StubHttpClientFactory : IHttpClientFactory
+{
+    private readonly HttpMessageHandler _handler;
+
+    public StubHttpClientFactory(HttpMessageHandler handler) => _handler = handler;
+
+    public HttpClient CreateClient(string name) => new(_handler, disposeHandler: false);
+}

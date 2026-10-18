@@ -1,0 +1,258 @@
+﻿@page "/integracoes/telegram"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Security
+@using Ofertio.Business.Service.Telegram
+@using Ofertio.SharedUi.Services.Integrations
+@inject ITelegramIntegrationApiService TelegramApi
+
+<PageTitle>Telegram — Ofertio</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Telegram</h1>
+        <p class="text-muted small mb-0">
+            Informe o token do @("@BotFather") e o ChatId. O Ofertio valida o bot, registra o webhook e criptografa o token.
+        </p>
+        <a href="/integracoes/conexoes?tab=telegram" class="btn btn-outline-secondary btn-sm mt-2">Painel de conexões</a>
+        <a href="/integracoes/telegram/agendador" class="btn btn-outline-primary btn-sm mt-2">Agendador de grupos</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 small" role="alert">@_error</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_ok))
+    {
+        <div class="alert alert-success py-2 small" role="status">@_ok</div>
+    }
+
+    <section class="card border-0 shadow-sm mx-auto" style="max-width: 32rem;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <h2 class="h5 fw-bold mb-0">BotFather</h2>
+                <span class="badge @(_session?.IsConnected == true ? "text-bg-success" : "text-bg-secondary")">
+                    @(_session?.UiStatusLabel ?? TelegramBotRules.DisconnectedLabel)
+                </span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-token">BotToken</label>
+                <input id="tg-token"
+                       class="form-control"
+                       type="password"
+                       autocomplete="off"
+                       placeholder="@SecretMasking.MaskedValue"
+                       @bind="_tokenInput" />
+                <div class="form-text">Armazenado: @(_session?.TokenMasked ?? "—")</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-chat">ChatId</label>
+                <input id="tg-chat" class="form-control" placeholder="-100..." @bind="_chatId" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="tg-bot">Bot username</label>
+                <input id="tg-bot" class="form-control" placeholder="meu_bot" @bind="_botUsername" readonly="@(_session?.IsConnected == true)" />
+            </div>
+            <dl class="row small mb-3">
+                <dt class="col-4 text-muted">Token</dt>
+                <dd class="col-8 font-monospace mb-1">@(string.IsNullOrEmpty(_session?.TokenMasked) ? "—" : _session.TokenMasked)</dd>
+                <dt class="col-4 text-muted">SessionData</dt>
+                <dd class="col-8 font-monospace mb-0">@(string.IsNullOrEmpty(_session?.SessionDataMasked) ? "—" : _session.SessionDataMasked)</dd>
+            </dl>
+            <button type="button" class="btn btn-primary w-100 mb-3" disabled="@_isBusy" @onclick="ConnectAsync">
+                @(_isBusy ? "Validando..." : "Conectar Telegram")
+            </button>
+
+            <h3 class="h6 fw-semibold">UserBot (canais de terceiros)</h3>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-api-id">ApiId</label>
+                <input id="tg-api-id"
+                       class="form-control"
+                       type="text"
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       maxlength="12"
+                       autocomplete="off"
+                       placeholder="28471934"
+                       value="@_userBotApiId"
+                       @oninput="OnApiIdInput" />
+                <div class="form-text">@TelegramUserMonitorRules.InvalidApiIdMessage</div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-api-hash">ApiHash</label>
+                <input id="tg-api-hash" class="form-control" type="password" autocomplete="off" placeholder="@SecretMasking.MaskedValue" @bind="_userBotApiHash" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label small" for="tg-phone">Telefone da conta leitora</label>
+                <input id="tg-phone" class="form-control" inputmode="tel" maxlength="16" placeholder="+5511981656947" value="@_userBotPhone" @oninput="OnPhoneInput" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small" for="tg-code">Código de verificação</label>
+                <input id="tg-code" class="form-control" inputmode="numeric" maxlength="5" placeholder="12345" disabled="@(!_userBotCodeRequested)" value="@_userBotCode" @oninput="OnPinInput" />
+            </div>
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-outline-primary" disabled="@_isBusy" @onclick="RequestUserBotCodeAsync">
+                    Solicitar Código
+                </button>
+                <button type="button" class="btn btn-primary" disabled="@(!_userBotCodeRequested || _isBusy)" @onclick="ConfirmUserBotAsync">
+                    Confirmar e Autenticar
+                </button>
+            </div>
+            <div class="form-text">Status: @(_session?.UserBotStatusLabel ?? "Inativo")</div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private TelegramIntegrationDto? _session;
+    private string _tokenInput = string.Empty;
+    private string? _chatId;
+    private string? _botUsername;
+    private string? _userBotApiId;
+    private string? _userBotApiHash;
+    private string? _userBotPhone;
+    private string? _userBotCode;
+    private bool _userBotCodeRequested;
+    private string? _error;
+    private string? _ok;
+    private bool _isBusy;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var response = await TelegramApi.GetMineAsync();
+        _session = response.Data?.Data;
+        _chatId = _session?.ChatId;
+        _botUsername = _session?.BotUsername;
+        _userBotApiId = _session?.UserBotApiId?.ToString();
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(_session?.UserBotPhone);
+        _userBotCodeRequested = false;
+        _tokenInput = string.Empty;
+        if (!response.Success)
+        {
+            _error = response.Data?.Descricao ?? response.ErrorMessage;
+        }
+    }
+
+    private async Task ConnectAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.ConnectAsync(new SaveTelegramIntegrationDto
+            {
+                Token = string.IsNullOrWhiteSpace(_tokenInput) ? SecretMasking.MaskedValue : _tokenInput,
+                ChatId = _chatId,
+                BotUsername = _botUsername
+            });
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _session = response.Data?.Data;
+            _ok = response.Data?.Descricao ?? TelegramBotRules.ConnectedLabel;
+            _botUsername = _session?.BotUsername;
+            _tokenInput = string.Empty;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void OnApiIdInput(ChangeEventArgs args) =>
+        _userBotApiId = TelegramUserMonitorRules.SanitizeApiIdInput(args.Value?.ToString());
+
+    private void OnPhoneInput(ChangeEventArgs args) =>
+        _userBotPhone = TelegramUserMonitorRules.SanitizePhoneInput(args.Value?.ToString());
+
+    private void OnPinInput(ChangeEventArgs args) =>
+        _userBotCode = TelegramUserMonitorRules.SanitizePinInput(args.Value?.ToString());
+
+    private SaveTelegramIntegrationDto BuildUserBotRequest()
+    {
+        int? apiId = null;
+        if (int.TryParse(_userBotApiId, out var parsed) && parsed > 0)
+        {
+            apiId = parsed;
+        }
+
+        return new SaveTelegramIntegrationDto
+        {
+            ChatId = _chatId,
+            BotUsername = _botUsername,
+            UserBotApiId = apiId,
+            UserBotApiHash = string.IsNullOrWhiteSpace(_userBotApiHash) ? SecretMasking.MaskedValue : _userBotApiHash,
+            UserBotPhone = _userBotPhone,
+            UserBotVerificationCode = _userBotCode
+        };
+    }
+
+    private async Task RequestUserBotCodeAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        _userBotCodeRequested = false;
+        try
+        {
+            if (!TelegramUserMonitorRules.TryParseApiId(_userBotApiId, out _))
+            {
+                _error = TelegramUserMonitorRules.InvalidApiIdMessage;
+                return;
+            }
+
+            var response = await TelegramApi.RequestUserBotCodeAsync(BuildUserBotRequest());
+            var accepted = response.Success
+                && response.Data?.Status != false
+                && (response.StatusCode is null or 200);
+            if (!accepted)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _session = response.Data?.Data;
+            _userBotCodeRequested = _session?.HasUserBotSession != true;
+            _ok = TelegramUserMonitorRules.CodeSentMessage;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ConfirmUserBotAsync()
+    {
+        _error = null;
+        _ok = null;
+        _isBusy = true;
+        try
+        {
+            var response = await TelegramApi.ConfirmUserBotAsync(BuildUserBotRequest());
+            if (!response.Success)
+            {
+                _error = response.Data?.Descricao ?? response.ErrorMessage;
+                return;
+            }
+
+            _session = response.Data?.Data;
+            _ok = response.Data?.Descricao;
+            _userBotApiHash = string.Empty;
+            _userBotCode = string.Empty;
+            _userBotCodeRequested = false;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

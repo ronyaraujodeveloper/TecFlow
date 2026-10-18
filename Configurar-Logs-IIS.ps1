@@ -1,10 +1,10 @@
 ﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Cria pastas de log IIS e concede escrita para TecFlow.API e TecFlow.WebUi.
+    Cria pastas de log IIS e concede escrita para Ofertio.API e Ofertio.WebUi.
 
 .DESCRIPTION
-    Prepara C:\inetpub\tecflow\api\logs e C:\inetpub\tecflow\webui\logs para:
+    Prepara C:\inetpub\ofertio\api\logs e C:\inetpub\ofertio\webui\logs para:
     - stdout do ASP.NET Core Module (web.config: stdoutLogFile=".\logs\stdout")
     - arquivos Serilog (logs/app-*.txt) quando configurados no host .NET
 
@@ -12,19 +12,19 @@
 
 .EXAMPLE
     .\Configurar-Logs-IIS.ps1
-    .\Configurar-Logs-IIS.ps1 -ApiPublishPath "D:\sites\tecflow\api"
+    .\Configurar-Logs-IIS.ps1 -ApiPublishPath "D:\sites\ofertio\api"
 #>
 [CmdletBinding()]
 param(
-    [string] $ApiPublishPath = "C:\inetpub\tecflow\api",
-    [string] $WebUiPublishPath = "C:\inetpub\tecflow\webui",
-    [string] $ApiAppPoolName = "TecFlowApiPool",
-    [string] $WebUiAppPoolName = "TecFlowWebUiPool"
+    [string] $ApiPublishPath = "C:\inetpub\ofertio\api",
+    [string] $WebUiPublishPath = "C:\inetpub\ofertio\webui",
+    [string] $ApiAppPoolName = "OfertioApiPool",
+    [string] $WebUiAppPoolName = "OfertioWebUiPool"
 )
 
 $ErrorActionPreference = "Stop"
 
-function Set-TecFlowLogFolderPermissions {
+function Set-OfertioLogFolderPermissions {
     param(
         [Parameter(Mandatory = $true)]
         [string] $LogsPath,
@@ -68,11 +68,11 @@ function Set-TecFlowLogFolderPermissions {
     Set-Acl -Path $LogsPath -AclObject $acl
 }
 
-Write-Host "Configurando logs IIS TecFlow..." -ForegroundColor Cyan
+Write-Host "Configurando logs IIS Ofertio..." -ForegroundColor Cyan
 
 $sites = @(
-    @{ Label = "TecFlow.API"; PublishPath = $ApiPublishPath; AppPool = $ApiAppPoolName },
-    @{ Label = "TecFlow.WebUi"; PublishPath = $WebUiPublishPath; AppPool = $WebUiAppPoolName }
+    @{ Label = "Ofertio.API"; PublishPath = $ApiPublishPath; AppPool = $ApiAppPoolName },
+    @{ Label = "Ofertio.WebUi"; PublishPath = $WebUiPublishPath; AppPool = $WebUiAppPoolName }
 )
 
 foreach ($site in $sites) {
@@ -82,16 +82,16 @@ foreach ($site in $sites) {
 
     $logsPath = Join-Path $site.PublishPath "logs"
     Write-Host "`n[$($site.Label)] $logsPath" -ForegroundColor Yellow
-    Set-TecFlowLogFolderPermissions -LogsPath $logsPath -AppPoolNames @($site.AppPool)
+    Set-OfertioLogFolderPermissions -LogsPath $logsPath -AppPoolNames @($site.AppPool)
 
-    if ($site.Label -eq "TecFlow.API") {
+    if ($site.Label -eq "Ofertio.API") {
         $sessionsPath = Join-Path $site.PublishPath "App_Data\telegram-sessions"
         Write-Host "`n[$($site.Label)] $sessionsPath" -ForegroundColor Yellow
-        Set-TecFlowLogFolderPermissions -LogsPath $sessionsPath -AppPoolNames @($site.AppPool)
+        Set-OfertioLogFolderPermissions -LogsPath $sessionsPath -AppPoolNames @($site.AppPool)
 
-        $durableSessions = "C:\ProgramData\TecFlow\telegram-sessions"
+        $durableSessions = "C:\ProgramData\Ofertio\telegram-sessions"
         Write-Host "`n[$($site.Label)] $durableSessions" -ForegroundColor Yellow
-        Set-TecFlowLogFolderPermissions -LogsPath $durableSessions -AppPoolNames @($site.AppPool)
+        Set-OfertioLogFolderPermissions -LogsPath $durableSessions -AppPoolNames @($site.AppPool)
     }
 }
 

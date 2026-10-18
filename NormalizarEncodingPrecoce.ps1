@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Normaliza arquivos de texto da solution TecFlow para UTF-8 com BOM (Windows/IIS).
+    Normaliza arquivos de texto da solution Ofertio para UTF-8 com BOM (Windows/IIS).
 #>
 [CmdletBinding()]
 param(

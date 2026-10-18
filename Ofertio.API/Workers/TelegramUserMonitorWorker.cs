@@ -1,0 +1,84 @@
+﻿using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Telegram;
+using Ofertio.Infrastructure.Services.Telegram;
+
+namespace Ofertio.API.Workers;
+
+public sealed class TelegramUserMonitorWorker : BackgroundService
+{
+    private readonly TelegramUserMonitorHost _host;
+    private readonly TelegramUserBotSessionStore _sessions;
+    private readonly IUserBotSyncStatusService _syncStatus;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IUploadStorage _uploads;
+    private readonly ILogger<TelegramUserMonitorWorker> _logger;
+
+    public TelegramUserMonitorWorker(
+        TelegramUserMonitorHost host,
+        TelegramUserBotSessionStore sessions,
+        IUserBotSyncStatusService syncStatus,
+        IServiceScopeFactory scopeFactory,
+        IUploadStorage uploads,
+        ILogger<TelegramUserMonitorWorker> logger)
+    {
+        _host = host;
+        _sessions = sessions;
+        _syncStatus = syncStatus;
+        _scopeFactory = scopeFactory;
+        _uploads = uploads;
+        _logger = logger;
+    }
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var folders = UserBotRuntimeRules.EnsureLocalFolders(_uploads.MediaRoot);
+            _ = _sessions.GetSessionDirectory();
+            _logger.LogInformation(
+                "Pastas do UserBot prontas. Uploads={Uploads} AppDataSessions={Sessions} UploadsRoot={UploadsRoot}",
+                folders.UploadsPath,
+                folders.SessionsPath,
+                _uploads.UploadsRoot);
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var backfill = scope.ServiceProvider.GetRequiredService<IProductImageUrlLinkBackfillService>();
+                var linked = await backfill.LinkExistingFilesOnceAsync(cancellationToken);
+                if (linked > 0)
+                {
+                    _logger.LogInformation("ImageUrl vinculado a arquivos já existentes no disco. Count={Count}", linked);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Backfill único de ImageUrl a partir do disco falhou.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro crítico ao criar pastas do UserBot");
+            _syncStatus.MarkFailed(0, ex.Message);
+        }
+
+        await base.StartAsync(cancellationToken);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            _logger.LogInformation("Iniciando conexão com WTelegramClient...");
+            await _host.RunForeverAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro crítico na execução em segundo plano do UserBot");
+            _syncStatus.MarkFailed(0, ex.Message);
+        }
+    }
+}

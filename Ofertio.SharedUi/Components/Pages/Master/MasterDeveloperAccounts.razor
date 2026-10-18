@@ -1,0 +1,295 @@
+﻿@page "/master/marketplace-accounts"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Contas de teste / dev — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Contas corporativas de teste e desenvolvimento</h1>
+            <p class="text-muted small mb-0">
+                Apps de desenvolvimento/sandbox e logins de teste da empresa Ofertio (Mercado Livre, Shopee, Amazon), em escopo de sistema.
+                As chaves globais de produção ficam no <a href="@MasterRoutes.Vault">Cofre (Vault)</a>; as lojas dos afiliados ficam em <code>/marketplace-accounts</code>.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-touch" disabled="@(!_canManage)" @onclick="NewAccount">+ Nova conta</button>
+        </div>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_form is not null)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">@(_form.Id > 0 ? "Editar conta" : "Nova conta")</div>
+            <div class="card-body row g-2">
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Plataforma</label>
+                    <select class="form-select form-select-sm" @bind="_form.Platform">
+                        @foreach (var platform in DeveloperPlatforms.All)
+                        {
+                            <option value="@platform">@DeveloperPlatforms.Label(platform)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Tipo</label>
+                    <select class="form-select form-select-sm" @bind="_form.Kind">
+                        <option value="@DeveloperAccountKinds.Test">Conta de teste (login)</option>
+                        <option value="@DeveloperAccountKinds.App">App de desenvolvimento</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Ambiente</label>
+                    <select class="form-select form-select-sm" @bind="_form.Environment">
+                        <option value="@DeveloperEnvironments.Sandbox">Sandbox</option>
+                        <option value="@DeveloperEnvironments.Production">Produção</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Nome</label>
+                    <input class="form-control form-control-sm" placeholder="ex.: Comprador QA Shopee" @bind="_form.Label" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-1">@ClientIdLabel</label>
+                    <input class="form-control form-control-sm" autocomplete="off" @bind="_form.ClientId" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-1">@SecretLabel</label>
+                    <input type="password" class="form-control form-control-sm" autocomplete="new-password"
+                           placeholder="@(_form.HasSecret ? "Mantém o atual se ficar como está" : string.Empty)" @bind="_form.ClientSecret" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-1">@ExtraLabel</label>
+                    <input class="form-control form-control-sm" @bind="_form.Extra" disabled="@(_form.Platform == DeveloperPlatforms.Shopee)" />
+                </div>
+                @if (_form.Kind == DeveloperAccountKinds.Test)
+                {
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small mb-1">Usuário de teste</label>
+                        <input class="form-control form-control-sm" autocomplete="off" @bind="_form.TestUsername" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small mb-1">Senha de teste</label>
+                        <input type="password" class="form-control form-control-sm" autocomplete="new-password" @bind="_form.TestPassword" />
+                    </div>
+                }
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">Segredo vence em</label>
+                    <input type="date" class="form-control form-control-sm" @bind="_form.SecretExpiresAt" />
+                </div>
+                <div class="col-6 col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="dev-active" @bind="_form.IsActive" />
+                        <label class="form-check-label small" for="dev-active">Ativa</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <textarea class="form-control form-control-sm" rows="2" placeholder="Observações (escopos, dono da conta, link do painel do desenvolvedor...)" @bind="_form.Notes"></textarea>
+                </div>
+                <div class="col-12 d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _form = null">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="SaveAsync">Salvar</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="table-responsive card shadow-sm">
+        <table class="table align-middle mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Conta</th>
+                    <th>Credencial</th>
+                    <th>Validade do segredo</th>
+                    <th>Último diagnóstico</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_accounts.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma conta cadastrada.</td></tr>
+                }
+                @foreach (var account in _accounts)
+                {
+                    <tr class="@(account.IsActive ? string.Empty : "text-muted")">
+                        <td>
+                            <div class="fw-semibold">@account.Label</div>
+                            <div class="text-muted">
+                                @DeveloperPlatforms.Label(account.Platform) · @(account.Kind == DeveloperAccountKinds.App ? "App" : "Teste") ·
+                                @(account.Environment == DeveloperEnvironments.Sandbox ? "Sandbox" : "Produção")
+                                @(account.IsActive ? string.Empty : " · inativa")
+                            </div>
+                        </td>
+                        <td>
+                            <code>@(account.ClientId ?? "—")</code>
+                            <div class="text-muted">@(account.HasSecret ? account.ClientSecret : "sem segredo")</div>
+                        </td>
+                        <td>
+                            <span class="badge @ExpirationCss(account.ExpirationStatus)">@ExpirationLabel(account.ExpirationStatus)</span>
+                            <div class="text-muted">@Date(account.SecretExpiresAt)</div>
+                        </td>
+                        <td style="max-width: 320px;">
+                            @if (account.LastCheckAt is null)
+                            {
+                                <span class="text-muted">Nunca testada</span>
+                            }
+                            else
+                            {
+                                <span class="badge @(account.LastCheckOk == true ? "text-bg-success" : "text-bg-danger")">@(account.LastCheckOk == true ? "OK" : "Falha")</span>
+                                <span class="text-muted">@DateTimeText(account.LastCheckAt)</span>
+                                <div class="text-break">@account.LastCheckMessage</div>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            @if (_canManage)
+                            {
+                                @if (account.Kind == DeveloperAccountKinds.App)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-success" title="Testar conexão" @onclick="() => CheckAsync(account)">
+                                        <i class="bi bi-activity" aria-hidden="true"></i>
+                                    </button>
+                                }
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => Edit(account)">Editar</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(account)">Excluir</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<DeveloperAccountDto> _accounts = [];
+    private DeveloperAccountDto? _form;
+    private bool _canManage;
+
+    private string ClientIdLabel => _form?.Platform switch
+    {
+        DeveloperPlatforms.Shopee => "AppKey (Afiliados)",
+        DeveloperPlatforms.Amazon => "Access Key",
+        _ => "App ID (Client ID)"
+    };
+
+    private string SecretLabel => _form?.Platform switch
+    {
+        DeveloperPlatforms.Shopee => "AppSecret",
+        DeveloperPlatforms.Amazon => "Secret Key",
+        _ => "Client Secret"
+    };
+
+    private string ExtraLabel => _form?.Platform switch
+    {
+        DeveloperPlatforms.Amazon => "Partner Tag",
+        DeveloperPlatforms.Shopee => "—",
+        _ => "Redirect URI"
+    };
+
+    protected override async Task LoadAsync()
+    {
+        _canManage = Can(MasterPermissions.ManageGlobalKeys);
+        if (!_canManage)
+        {
+            Error = "Seu papel não permite gerenciar contas de desenvolvedor.";
+            return;
+        }
+
+        var result = await Api.DeveloperAccountsAsync();
+        if (Accept(result))
+        {
+            _accounts = result.Data ?? [];
+        }
+    }
+
+    private void NewAccount() => _form = new DeveloperAccountDto
+    {
+        Platform = DeveloperPlatforms.MercadoLivre,
+        Kind = DeveloperAccountKinds.Test,
+        Environment = DeveloperEnvironments.Sandbox,
+        IsActive = true
+    };
+
+    private void Edit(DeveloperAccountDto account) => _form = new DeveloperAccountDto
+    {
+        Id = account.Id,
+        Platform = account.Platform,
+        Kind = account.Kind,
+        Label = account.Label,
+        Environment = account.Environment,
+        ClientId = account.ClientId,
+        ClientSecret = account.ClientSecret,
+        HasSecret = account.HasSecret,
+        Extra = account.Extra,
+        TestUsername = account.TestUsername,
+        TestPassword = account.TestPassword,
+        Notes = account.Notes,
+        SecretExpiresAt = account.SecretExpiresAt,
+        IsActive = account.IsActive
+    };
+
+    private async Task SaveAsync()
+    {
+        if (_form is null)
+        {
+            return;
+        }
+
+        if (Accept(await Api.SaveDeveloperAccountAsync(_form)))
+        {
+            _form = null;
+            await ReloadKeepingMessageAsync("Conta salva com segredos criptografados.");
+        }
+    }
+
+    private async Task DeleteAsync(DeveloperAccountDto account)
+    {
+        if (AcceptOperation(await Api.DeleteDeveloperAccountAsync(account.Id)))
+        {
+            await ReloadKeepingMessageAsync(Info);
+        }
+    }
+
+    private async Task CheckAsync(DeveloperAccountDto account)
+    {
+        var result = await Api.CheckDeveloperAccountAsync(account.Id);
+        if (Accept(result) && result.Data is not null)
+        {
+            SetResult(result.Data.Success, $"{account.Label}: {result.Data.Message} ({result.Data.LatencyMs} ms)");
+            var message = Info;
+            var error = Error;
+            await LoadAsync();
+            Info = message;
+            Error = error;
+        }
+    }
+
+    private async Task ReloadKeepingMessageAsync(string? message)
+    {
+        await LoadAsync();
+        Info = message;
+    }
+
+    private static string ExpirationLabel(string status) => status switch
+    {
+        SecretExpirationStatus.Expired => "Vencido",
+        SecretExpirationStatus.Expiring => "Vence em breve",
+        SecretExpirationStatus.Valid => "Válido",
+        _ => "Sem validade"
+    };
+
+    private static string ExpirationCss(string status) => status switch
+    {
+        SecretExpirationStatus.Expired => "text-bg-danger",
+        SecretExpirationStatus.Expiring => "text-bg-warning",
+        SecretExpirationStatus.Valid => "text-bg-success",
+        _ => "text-bg-light"
+    };
+}

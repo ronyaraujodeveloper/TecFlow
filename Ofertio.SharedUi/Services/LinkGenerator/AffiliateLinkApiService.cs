@@ -1,0 +1,68 @@
+﻿using Ofertio.Business.Dto;
+using Ofertio.Database.Filter;
+using Ofertio.SharedUi.Models;
+using Ofertio.SharedUi.Services.Http;
+using Ofertio.SharedUi.Services.UI;
+
+namespace Ofertio.SharedUi.Services.LinkGenerator;
+
+public sealed class AffiliateLinkApiService : IAffiliateLinkApiService
+{
+    public const string GeneratePath = "api/links/convert";
+    public const string LegacyGeneratePath = "api/afiliados/links/gerar";
+    public const string HistoryPath = "api/afiliados/links/historico";
+
+    private readonly IHttpService _httpService;
+    private readonly ILoadingService _loadingService;
+
+    public AffiliateLinkApiService(IHttpService httpService, ILoadingService loadingService)
+    {
+        _httpService = httpService;
+        _loadingService = loadingService;
+    }
+
+    public Task<ApiResult<GerarLinkAfiliadoResponseDto>> GenerateAsync(
+        GerarLinkAfiliadoDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Gerando link de comissão...");
+        return _httpService.PostAsync<GerarLinkAfiliadoDto, GerarLinkAfiliadoResponseDto>(
+            GeneratePath,
+            request,
+            cancellationToken);
+    }
+
+    public async Task<AffiliateLinkHistoryResponseDto> ListHistoryAsync(
+        AffiliateLinkFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Carregando histórico de links...");
+        var result = await _httpService.GetAsync<AffiliateLinkHistoryResponseDto>(
+            HistoryPath,
+            filter,
+            cancellationToken);
+
+        if (result.Success && result.Data is not null)
+        {
+            return result.Data;
+        }
+
+        return new AffiliateLinkHistoryResponseDto
+        {
+            Status = false,
+            Descricao = result.ErrorMessage ?? "Não foi possível carregar o histórico de links."
+        };
+    }
+
+    public Task<ApiResult<UpdateAffiliateProductMetadataDto>> UpdateProductMetadataAsync(
+        Guid affiliateLinkId,
+        UpdateAffiliateProductMetadataDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Salvando nome do produto...");
+        return _httpService.PutAsync<UpdateAffiliateProductMetadataDto, UpdateAffiliateProductMetadataDto>(
+            $"api/afiliados/links/{affiliateLinkId}/metadata",
+            request,
+            cancellationToken);
+    }
+}

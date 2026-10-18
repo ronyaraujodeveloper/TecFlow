@@ -1,0 +1,18 @@
+﻿using Ofertio.Business.Dto;
+using Ofertio.Database.Filter;
+
+namespace Ofertio.Business.Interfaces.Services;
+
+public interface IIntegracaoLojaService
+{
+    Task<IntegracaoLojaResponseDto> ListByUserAsync(int userId, IntegracaoLojaFilter filter, CancellationToken cancellationToken = default);
+
+    Task<IntegracaoLojaResponseDto> LinkAsync(int userId, IntegracaoLojaDto dto, CancellationToken cancellationToken = default);
+
+    Task<IntegracaoLojaResponseDto> UnlinkAsync(int userId, int integrationId, CancellationToken cancellationToken = default);
+
+    Task<ExpandAffiliateUrlResponseDto> ExpandAffiliateUrlAsync(
+        string url,
+        string platform,
+        CancellationToken cancellationToken = default);
+}

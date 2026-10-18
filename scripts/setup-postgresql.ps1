@@ -1,14 +1,14 @@
-# Setup PostgreSQL local (Windows)
+﻿# Setup PostgreSQL local (Windows)
 # Requer: PostgreSQL instalado OU Docker Desktop
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 
-Write-Host "=== TecFlow PostgreSQL Setup ===" -ForegroundColor Cyan
+Write-Host "=== Ofertio PostgreSQL Setup ===" -ForegroundColor Cyan
 
 if (Get-Command docker -ErrorAction SilentlyContinue) {
     Write-Host "A iniciar PostgreSQL via Docker..." -ForegroundColor Yellow
-    docker compose -f "$Root\TecFlow.Orquestrador\docker-compose.yml" up postgres -d
+    docker compose -f "$Root\Ofertio.Orquestrador\docker-compose.yml" up postgres -d
     Start-Sleep -Seconds 8
 }
 elseif (Get-Command psql -ErrorAction SilentlyContinue) {
@@ -23,8 +23,8 @@ else {
 
 Write-Host "A aplicar migrations..." -ForegroundColor Yellow
 dotnet ef database update `
-    --project "$Root\TecFlow.Infrastructure\TecFlow.Infrastructure.csproj" `
-    --startup-project "$Root\TecFlow.Orquestrador\TecFlow.Orquestrador.csproj"
+    --project "$Root\Ofertio.Infrastructure\Ofertio.Infrastructure.csproj" `
+    --startup-project "$Root\Ofertio.Orquestrador\Ofertio.Orquestrador.csproj"
 
 if (Get-Command psql -ErrorAction SilentlyContinue) {
     Write-Host "A executar seed SQL..." -ForegroundColor Yellow

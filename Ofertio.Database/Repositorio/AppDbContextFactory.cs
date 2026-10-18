@@ -1,0 +1,67 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Ofertio.Database.Data;
+using Ofertio.Database.MultiTenancy;
+using Ofertio.Util.Security;
+
+namespace Ofertio.Database.Repositorio;
+
+/// <summary>
+/// Factory de design-time para migrations do EF Core (lê appsettings do projeto de inicialização).
+/// </summary>
+public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
+{
+    public AppDbContext CreateDbContext(string[] args)
+    {
+        var basePath = ResolveSettingsPath();
+
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(basePath)
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("DefaultConnection não configurada.");
+        var provider = configuration.GetValue<string>("Database:Provider") ?? "SqlServer";
+
+        var encryptionService = EncryptionServiceCollectionExtensions.CreateEncryptionService(configuration);
+
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseConfiguredProvider(connectionString, provider);
+
+        return new AppDbContext(optionsBuilder.Options, encryptionService, new NullCurrentTenantService());
+    }
+
+    private static string ResolveSettingsPath()
+    {
+        var current = Directory.GetCurrentDirectory();
+        if (File.Exists(Path.Combine(current, "appsettings.json")))
+        {
+            return current;
+        }
+
+        var candidates = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), "../Ofertio.API"),
+            Path.Combine(Directory.GetCurrentDirectory(), "../../Ofertio.API"),
+            Path.Combine(Directory.GetCurrentDirectory(), "../Ofertio.Orquestrador"),
+            Path.Combine(Directory.GetCurrentDirectory(), "../../Ofertio.Orquestrador"),
+        };
+
+        foreach (var path in candidates)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (File.Exists(Path.Combine(fullPath, "appsettings.json")))
+            {
+                return fullPath;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Não foi possível localizar appsettings.json do Orquestrador ou API.");
+    }
+}

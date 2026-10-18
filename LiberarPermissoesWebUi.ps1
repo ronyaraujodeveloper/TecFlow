@@ -1,4 +1,4 @@
-$path = "C:\inetpub\tecflow\webui"
+﻿$path = "C:\inetpub\ofertio\webui"
 if (Test-Path $path) {
     $acl = Get-Acl $path
 

@@ -1,0 +1,348 @@
+﻿@page "/master/tenants"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Inquilinos — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Central de inquilinos (Tenant 360°)</h1>
+        <p class="text-muted small mb-0">Filtre, modere o ciclo de vida, ajuste planos e créditos, monitore armazenamento e emule a visão do cliente.</p>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small mb-1">Buscar</label>
+                <input class="form-control" placeholder="Nome ou e-mail" @bind="_query.Search" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Status</label>
+                <select class="form-select" @bind="_query.Status">
+                    <option value="">Todos</option>
+                    @foreach (var status in TenantStatuses.All)
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Plano</label>
+                <select class="form-select" @bind="_query.Plan">
+                    <option value="">Todos</option>
+                    @foreach (var plan in SaasPlanCodes.All)
+                    {
+                        <option value="@plan">@plan</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Renova até</label>
+                <input type="date" class="form-control" @bind="_query.RenewalBefore" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Disco mínimo (MB)</label>
+                <input type="number" min="0" class="form-control" @bind="_minDiskMb" />
+            </div>
+            <div class="col-12 col-md-1 d-grid">
+                <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="LoadAsync">Filtrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive card shadow-sm mb-4">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Inquilino</th>
+                    <th>Status</th>
+                    <th>Plano</th>
+                    <th>Trial / Renovação</th>
+                    <th class="text-end">Disco</th>
+                    <th class="text-end">Créditos</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_tenants.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">@(Busy ? "Carregando..." : "Nenhum inquilino encontrado.")</td></tr>
+                }
+                @foreach (var tenant in _tenants)
+                {
+                    <tr class="@(_selected?.Id == tenant.Id ? "table-primary" : string.Empty)">
+                        <td>
+                            <div class="fw-semibold">@tenant.Name</div>
+                            <div class="text-muted">@(tenant.OwnerEmail ?? "—") · @tenant.UserCount usuário(s)</div>
+                        </td>
+                        <td>
+                            <span class="badge @StatusCss(tenant.Status)">@tenant.Status</span>
+                            @if (!string.IsNullOrWhiteSpace(tenant.StatusReason))
+                            {
+                                <div class="text-muted text-truncate" style="max-width: 220px;" title="@tenant.StatusReason">@tenant.StatusReason</div>
+                            }
+                        </td>
+                        <td>@tenant.PlanCode <span class="text-muted">(@tenant.BillingCycle)</span></td>
+                        <td>@Date(tenant.TrialEndsAt) / @Date(tenant.RenewalAt)</td>
+                        <td class="text-end">@Bytes(tenant.DiskBytes)</td>
+                        <td class="text-end">@tenant.CreditBalance</td>
+                        <td class="text-end text-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SelectAsync(tenant)">Gerenciar</button>
+                            @if (Can(MasterPermissions.Impersonate) && tenant.OwnerUserId is not null)
+                            {
+                                <a class="btn btn-sm btn-outline-warning" href="/master/emular/@tenant.Id" data-enhance-nav="false" title="Emular o painel do cliente">
+                                    <i class="bi bi-incognito" aria-hidden="true"></i> Emular
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (_selected is not null)
+    {
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>@_selected.Name</strong>
+                <button type="button" class="btn-close" aria-label="Fechar" @onclick="() => _selected = null"></button>
+            </div>
+            <div class="card-body row g-4">
+                @if (Can(MasterPermissions.ManageTenants))
+                {
+                    <div class="col-12 col-lg-6">
+                        <h2 class="h6 fw-semibold">Ciclo de vida</h2>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" @bind="_lifecycle.Action">
+                                    <option value="">Selecione a ação</option>
+                                    <option value="@TenantLifecycleActions.Pausar">Pausar</option>
+                                    <option value="@TenantLifecycleActions.Suspender">Suspender</option>
+                                    <option value="@TenantLifecycleActions.Reativar">Reativar</option>
+                                    <option value="@TenantLifecycleActions.EstenderTrial">Estender trial</option>
+                                    <option value="@TenantLifecycleActions.MarcarInadimplente">Marcar inadimplente</option>
+                                    <option value="@TenantLifecycleActions.Cancelar">Cancelar</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                @if (_lifecycle.Action == TenantLifecycleActions.EstenderTrial)
+                                {
+                                    <input type="number" min="1" max="90" class="form-control form-control-sm" placeholder="Dias" @bind="_lifecycle.TrialDays" />
+                                }
+                            </div>
+                            <div class="col-12">
+                                <textarea class="form-control form-control-sm" rows="2" placeholder="Motivo (obrigatório para pausar, suspender e cancelar)" @bind="_lifecycle.Reason"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-sm btn-danger" disabled="@string.IsNullOrEmpty(_lifecycle.Action)" @onclick="ApplyLifecycleAsync">Aplicar ação</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (Can(MasterPermissions.ManagePlans))
+                {
+                    <div class="col-12 col-lg-6">
+                        <h2 class="h6 fw-semibold">Plano e assinatura</h2>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" @bind="_plan.PlanCode">
+                                    @foreach (var plan in SaasPlanCodes.All)
+                                    {
+                                        <option value="@plan">@plan</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" @bind="_plan.BillingCycle">
+                                    <option value="@SaasMetricsRules.CycleMonthly">Mensal</option>
+                                    <option value="@SaasMetricsRules.CycleAnnual">Anual</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="ChangePlanAsync">Alterar plano</button>
+                                @if (Can(MasterPermissions.ManageBilling))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-success" @onclick="CreateSubscriptionAsync">
+                                        @(_selected.HasGatewaySubscription ? "Recriar assinatura ASAAS" : "Gerar assinatura ASAAS")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (Can(MasterPermissions.AdjustCredits))
+                {
+                    <div class="col-12 col-lg-6">
+                        <h2 class="h6 fw-semibold">Créditos de Achadinhos (saldo: @_selected.CreditBalance)</h2>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number" class="form-control form-control-sm" placeholder="+/- créditos" @bind="_credits.Amount" />
+                            </div>
+                            <div class="col-8">
+                                <input class="form-control form-control-sm" placeholder="Motivo (ex.: cortesia, compensação)" @bind="_credits.Reason" />
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-sm btn-outline-primary" disabled="@(_credits.Amount == 0)" @onclick="AdjustCreditsAsync">Lançar ajuste</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="col-12 col-lg-6">
+                    <h2 class="h6 fw-semibold">Armazenamento</h2>
+                    @if (_storage is null)
+                    {
+                        <p class="text-muted small mb-0">Carregando...</p>
+                    }
+                    else
+                    {
+                        <p class="small mb-2">@Bytes(_storage.TotalBytes) em @_storage.TotalFiles arquivo(s)</p>
+                        <ul class="small text-muted mb-2">
+                            @foreach (var folder in _storage.Folders)
+                            {
+                                <li>Usuário @folder.UserId: @Bytes(folder.Bytes) (@folder.Files arquivos)</li>
+                            }
+                        </ul>
+                        @if (Can(MasterPermissions.ManageTenants) && _storage.TotalFiles > 0)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="PurgeAsync">Purgar mídias</button>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "erro")]
+    public string? QueryError { get; set; }
+
+    private readonly TenantQueryDto _query = new();
+    private List<TenantSummaryDto> _tenants = [];
+    private TenantSummaryDto? _selected;
+    private TenantStorageDto? _storage;
+    private int _minDiskMb;
+    private bool _queryErrorShown;
+    private TenantLifecycleRequestDto _lifecycle = new();
+    private TenantPlanChangeDto _plan = new();
+    private TenantCreditAdjustDto _credits = new();
+
+    protected override async Task LoadAsync()
+    {
+        if (!_queryErrorShown && !string.IsNullOrWhiteSpace(QueryError))
+        {
+            Error = QueryError;
+            _queryErrorShown = true;
+        }
+
+        Busy = true;
+        _query.MinDiskBytes = _minDiskMb > 0 ? _minDiskMb * 1024L * 1024L : null;
+        var result = await Api.TenantsAsync(_query);
+        if (Accept(result))
+        {
+            _tenants = result.Data ?? [];
+            if (_selected is not null)
+            {
+                _selected = _tenants.FirstOrDefault(item => item.Id == _selected.Id);
+            }
+        }
+
+        Busy = false;
+    }
+
+    private async Task SelectAsync(TenantSummaryDto tenant)
+    {
+        _selected = tenant;
+        _storage = null;
+        _lifecycle = new TenantLifecycleRequestDto();
+        _plan = new TenantPlanChangeDto { PlanCode = tenant.PlanCode, BillingCycle = tenant.BillingCycle };
+        _credits = new TenantCreditAdjustDto();
+
+        var storage = await Api.TenantStorageAsync(tenant.Id);
+        if (Accept(storage))
+        {
+            _storage = storage.Data;
+        }
+    }
+
+    private async Task ApplyLifecycleAsync()
+    {
+        if (_selected is null)
+        {
+            return;
+        }
+
+        if (AcceptOperation(await Api.TenantLifecycleAsync(_selected.Id, _lifecycle)))
+        {
+            _lifecycle = new TenantLifecycleRequestDto();
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task ChangePlanAsync()
+    {
+        if (_selected is not null && AcceptOperation(await Api.TenantPlanAsync(_selected.Id, _plan)))
+        {
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task CreateSubscriptionAsync()
+    {
+        if (_selected is not null && AcceptOperation(await Api.TenantSubscriptionAsync(_selected.Id)))
+        {
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task AdjustCreditsAsync()
+    {
+        if (_selected is not null && AcceptOperation(await Api.TenantCreditsAsync(_selected.Id, _credits)))
+        {
+            _credits = new TenantCreditAdjustDto();
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task PurgeAsync()
+    {
+        if (_selected is null)
+        {
+            return;
+        }
+
+        if (AcceptOperation(await Api.TenantPurgeAsync(_selected.Id)))
+        {
+            var storage = await Api.TenantStorageAsync(_selected.Id);
+            _storage = storage.Data;
+            await ReloadKeepingMessageAsync();
+        }
+    }
+
+    private async Task ReloadKeepingMessageAsync()
+    {
+        var info = Info;
+        await LoadAsync();
+        Info ??= info;
+    }
+
+    private static string StatusCss(string status) => status switch
+    {
+        TenantStatuses.Ativo => "text-bg-success",
+        TenantStatuses.Trial => "text-bg-info",
+        TenantStatuses.Inadimplente => "text-bg-warning",
+        TenantStatuses.Pausado => "text-bg-secondary",
+        TenantStatuses.Suspenso => "text-bg-danger",
+        TenantStatuses.Cancelado => "text-bg-dark",
+        _ => "text-bg-light"
+    };
+}

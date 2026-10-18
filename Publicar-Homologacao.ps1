@@ -1,11 +1,11 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Publica TecFlow.API e/ou TecFlow.WebUi em homologação (IIS) sem erro de arquivo bloqueado.
+    Publica Ofertio.API e/ou Ofertio.WebUi em homologação (IIS) sem erro de arquivo bloqueado.
 
 .DESCRIPTION
     Para os app pools do IIS antes do dotnet publish e reinicia após a cópia.
-    Evita MSB3027/MSB3021 quando o Worker Process mantém as DLLs em C:\inetpub\tecflow\*.
+    Evita MSB3027/MSB3021 quando o Worker Process mantém as DLLs em C:\inetpub\ofertio\*.
 
 .PARAMETER Projeto
     Api, WebUi ou All (padrão).
@@ -19,19 +19,19 @@ param(
     [ValidateSet("Api", "WebUi", "All")]
     [string] $Projeto = "All",
 
-    [string[]] $AppPools = @("TecFlowApiPool", "TecFlowWebUiPool"),
+    [string[]] $AppPools = @("OfertioApiPool", "OfertioWebUiPool"),
 
     [string] $Configuration = "Homologacao",
 
-    [string] $ApiOutput = "C:\inetpub\tecflow\api",
-    [string] $WebUiOutput = "C:\inetpub\tecflow\webui"
+    [string] $ApiOutput = "C:\inetpub\ofertio\api",
+    [string] $WebUiOutput = "C:\inetpub\ofertio\webui"
 )
 
 $ErrorActionPreference = "Stop"
 
 $SolutionRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 
-function Stop-TecFlowAppPools {
+function Stop-OfertioAppPools {
     param([string[]] $Names)
     Import-Module WebAdministration -ErrorAction Stop
     foreach ($name in $Names) {
@@ -53,7 +53,7 @@ function Stop-TecFlowAppPools {
     }
 }
 
-function Start-TecFlowAppPools {
+function Start-OfertioAppPools {
     param([string[]] $Names)
     Import-Module WebAdministration -ErrorAction Stop
     foreach ($name in $Names) {
@@ -65,7 +65,7 @@ function Start-TecFlowAppPools {
     }
 }
 
-function Publish-TecFlowProject {
+function Publish-OfertioProject {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -85,47 +85,47 @@ function Publish-TecFlowProject {
 }
 
 $poolsToStop = switch ($Projeto) {
-    "Api"    { @("TecFlowApiPool") }
-    "WebUi"  { @("TecFlowWebUiPool") }
+    "Api"    { @("OfertioApiPool") }
+    "WebUi"  { @("OfertioWebUiPool") }
     default  { $AppPools }
 }
 
 $stopped = $false
 try {
-    Stop-TecFlowAppPools -Names $poolsToStop
+    Stop-OfertioAppPools -Names $poolsToStop
     $stopped = $true
 
     $root = (Resolve-Path $SolutionRoot).Path
 
-    Write-Host "Aplicando migrations SQL Server (Development / TecFlow.Data)..."
+    Write-Host "Aplicando migrations SQL Server (Development / Ofertio.Data)..."
     $env:ASPNETCORE_ENVIRONMENT = "Development"
     & dotnet ef database update `
-        --project (Join-Path $root "TecFlow.Data\TecFlow.Data.csproj") `
-        --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
+        --project (Join-Path $root "Ofertio.Data\Ofertio.Data.csproj") `
+        --startup-project (Join-Path $root "Ofertio.API\Ofertio.API.csproj") `
         --context AppDbContext
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet ef database update (SQL Server/Development) falhou (exit $LASTEXITCODE)."
     }
 
-    Write-Host "Aplicando migrations SQL Server (Homologacao IIS / AutomacaoSociais)..."
+    Write-Host "Aplicando migrations SQL Server (Homologacao IIS / Ofertio)..."
     $env:ASPNETCORE_ENVIRONMENT = "Homologacao"
     & dotnet ef database update `
-        --project (Join-Path $root "TecFlow.Data\TecFlow.Data.csproj") `
-        --startup-project (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
+        --project (Join-Path $root "Ofertio.Data\Ofertio.Data.csproj") `
+        --startup-project (Join-Path $root "Ofertio.API\Ofertio.API.csproj") `
         --context AppDbContext
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet ef database update (SQL Server/Homologacao) falhou (exit $LASTEXITCODE)."
     }
 
     if ($Projeto -in @("Api", "All")) {
-        Publish-TecFlowProject `
-            -ProjectPath (Join-Path $root "TecFlow.API\TecFlow.API.csproj") `
+        Publish-OfertioProject `
+            -ProjectPath (Join-Path $root "Ofertio.API\Ofertio.API.csproj") `
             -OutputPath $ApiOutput
     }
 
     if ($Projeto -in @("WebUi", "All")) {
-        Publish-TecFlowProject `
-            -ProjectPath (Join-Path $root "TecFlow.WebUi\TecFlow.WebUi.csproj") `
+        Publish-OfertioProject `
+            -ProjectPath (Join-Path $root "Ofertio.WebUi\Ofertio.WebUi.csproj") `
             -OutputPath $WebUiOutput
     }
 
@@ -133,6 +133,6 @@ try {
 }
 finally {
     if ($stopped) {
-        Start-TecFlowAppPools -Names $poolsToStop
+        Start-OfertioAppPools -Names $poolsToStop
     }
 }

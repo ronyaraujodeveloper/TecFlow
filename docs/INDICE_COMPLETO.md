@@ -1,4 +1,4 @@
-# 📑 ÍNDICE COMPLETO - EXPLORAÇÃO TecFlow
+# 📑 ÍNDICE COMPLETO - EXPLORAÇÃO Ofertio
 
 **Data:** 26 de Maio de 2026 · **Atualização de links:** 3 de junho de 2026  
 **Status:** ✅ Exploração Completa  
@@ -135,15 +135,15 @@
 
 **... aprender sobre um PROJETO ESPECÍFICO**
 → Abra [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) e procure por:
-- "TecFlow.Core" - Seção 🏗️ ESTRUTURA DE PROJETOS
-- "TecFlow.Application" - Seção 🏗️ ESTRUTURA DE PROJETOS
-- "TecFlow.Infrastructure" - Seção 🏗️ ESTRUTURA DE PROJETOS
+- "Ofertio.Core" - Seção 🏗️ ESTRUTURA DE PROJETOS
+- "Ofertio.Application" - Seção 🏗️ ESTRUTURA DE PROJETOS
+- "Ofertio.Infrastructure" - Seção 🏗️ ESTRUTURA DE PROJETOS
 - Etc.
 
 **... encontrar um ARQUIVO ESPECÍFICO**
 → Use: CTRL+F (Find) nos documentos, procure por:
 - Nome do arquivo (ex: "ServiceRegistrationExtensions.cs")
-- Nome do projeto (ex: "TecFlow.API")
+- Nome do projeto (ex: "Ofertio.API")
 - Tipo de problema (ex: "DUPLICATA")
 
 **... ver a LISTA DE MUDANÇAS**
@@ -202,12 +202,12 @@
 
 | Projeto | Documento | Seção |
 |---------|-----------|-------|
-| TecFlow.Core | ANALISE | 1️⃣ TecFlow.Core |
-| TecFlow.Application | ANALISE | 2️⃣ TecFlow.Application |
-| TecFlow.Infrastructure | ANALISE | 3️⃣ TecFlow.Infrastructure |
-| TecFlow.Infrastructure.Services | ANALISE | 4️⃣ TecFlow.Infrastructure.Services |
-| TecFlow.API | ANALISE | 5️⃣ TecFlow.API |
-| TecFlow.Orquestrador | ANALISE | 7️⃣ TecFlow.Orquestrador |
+| Ofertio.Core | ANALISE | 1️⃣ Ofertio.Core |
+| Ofertio.Application | ANALISE | 2️⃣ Ofertio.Application |
+| Ofertio.Infrastructure | ANALISE | 3️⃣ Ofertio.Infrastructure |
+| Ofertio.Infrastructure.Services | ANALISE | 4️⃣ Ofertio.Infrastructure.Services |
+| Ofertio.API | ANALISE | 5️⃣ Ofertio.API |
+| Ofertio.Orquestrador | ANALISE | 7️⃣ Ofertio.Orquestrador |
 
 ### Procurando por uma AÇÃO?
 
@@ -224,22 +224,22 @@
 ## 📌 REFERÊNCIAS RÁPIDAS
 
 ### Top 5 Arquivos a Consolidar
-1. `TecFlow.Infrastructure.Services/ServiceRegistrationExtensions.cs`
-2. `TecFlow.Infrastructure.Services/CoreServiceRegistrationExtensions.cs`
-3. `TecFlow.Infrastructure.Services/ExternalServiceRegistrationExtensions.cs`
-4. `TecFlow.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs`
+1. `Ofertio.Infrastructure.Services/ServiceRegistrationExtensions.cs`
+2. `Ofertio.Infrastructure.Services/CoreServiceRegistrationExtensions.cs`
+3. `Ofertio.Infrastructure.Services/ExternalServiceRegistrationExtensions.cs`
+4. `Ofertio.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs`
 
 ### Top 4 Interfaces a Mover
-1. `TecFlow.Infrastructure.Services/Interfaces/IShopeeApi.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/`
-2. `TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApi.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/`
-3. `TecFlow.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/`
-4. `TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApiService.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/`
+1. `Ofertio.Infrastructure.Services/Interfaces/IShopeeApi.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/`
+2. `Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApi.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/`
+3. `Ofertio.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/`
+4. `Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApiService.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/`
 
 ### Top 5 Arquivos a Editar
-1. `TecFlow.API/Program.cs` - Adicionar ApplicationServices
-2. `TecFlow.Orquestrador/Program.cs` - Executar Configurator
-3. `TecFlow.Orquestrador/Configurator.cs` - Usar extension methods
-4. `TecFlow.Application/Services/ApplicationServiceCollectionExtensions.cs` - Remover duplicatas
+1. `Ofertio.API/Program.cs` - Adicionar ApplicationServices
+2. `Ofertio.Orquestrador/Program.cs` - Executar Configurator
+3. `Ofertio.Orquestrador/Configurator.cs` - Usar extension methods
+4. `Ofertio.Application/Services/ApplicationServiceCollectionExtensions.cs` - Remover duplicatas
 5. 6+ serviços - Atualizar usings
 
 ---
@@ -251,7 +251,7 @@
 - [ ] Leu LISTA_ARQUIVOS_MUDANCAS.md
 - [ ] Visualizou DIAGRAMAS_ARQUITETURA.md
 - [ ] Fez backup de Git (`git commit -m "backup before refactoring"`)
-- [ ] Tem editor aberto em `Tecso.AutomacaoCusor` (raiz do `TecFlow.sln`)
+- [ ] Tem editor aberto em `Tecso.AutomacaoCusor` (raiz do `Ofertio.sln`)
 - [ ] Criou branch novo (`git checkout -b refactor/service-registration`)
 - [ ] Pronto para começar FASE 1
 
@@ -323,7 +323,7 @@
 ROOT: c:\Programacao\Tecso.AutomacaoCusor\
 │
 ├── README.md ............................... [Roadmap, regras, links para docs]
-├── TecFlow.sln ............................. [13 projetos TecFlow.*]
+├── Ofertio.sln ............................. [13 projetos Ofertio.*]
 ├── docs/
 │   ├── 📑 RESUMO_EXECUTIVO.md .............. [10 min - START HERE]
 │   ├── 📊 ANALISE_WORKSPACE_COMPLETA.md .... [60 min - DEEP DIVE]
@@ -332,10 +332,10 @@ ROOT: c:\Programacao\Tecso.AutomacaoCusor\
 │   ├── 📑 INDICE_COMPLETO.md ............... [este arquivo]
 │   └── ComandosGit.txt ..................... [comandos Git — sem tokens no arquivo]
 │
-├── TecFlow.Business/ ....................... [Dto, Interfaces, Service, Pipelines]
-├── TecFlow.Database/ ....................... [AppDbContext, Filter, Entity, Pagin]
-├── TecFlow.Core/ ........................... [Entities, Exceptions]
-├── TecFlow.API/ ............................ [host HTTP]
+├── Ofertio.Business/ ....................... [Dto, Interfaces, Service, Pipelines]
+├── Ofertio.Database/ ....................... [AppDbContext, Filter, Entity, Pagin]
+├── Ofertio.Core/ ........................... [Entities, Exceptions]
+├── Ofertio.API/ ............................ [host HTTP]
 └── [demais projetos: Orquestrador, Portal, Infrastructure, …]
 ```
 

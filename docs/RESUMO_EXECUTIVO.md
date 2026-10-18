@@ -1,4 +1,4 @@
-# ⚡ RESUMO EXECUTIVO - EXPLORAÇÃO TecFlow
+# ⚡ RESUMO EXECUTIVO - EXPLORAÇÃO Ofertio
 
 [« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md)
 
@@ -14,7 +14,7 @@
 ✅ **9 Projetos Principais** + 1 Util = 10 total  
 ✅ **~140-150 Arquivos** analisados  
 ✅ **Estrutura em Camadas** bem definida (Core → App → Infra → API)  
-✅ **21 Interfaces** em TecFlow.Core  
+✅ **21 Interfaces** em Ofertio.Core  
 ✅ **30+ Implementações** espalhadas  
 ✅ **4 Arquivos** de Service Registration desorganizados  
 ✅ **11 Application Services** não registrados  
@@ -26,8 +26,8 @@
 ### 🔴 #1: ORQUESTRADOR REPLICA TUDO MANUALMENTE
 **Impacto**: Altíssimo - Quebra garantida se API mudar
 ```
-TecFlow.API/Program.cs: Define todas as dependências
-TecFlow.Orquestrador/Configurator.cs: Replica TUDO manualmente (sem sincronizar)
+Ofertio.API/Program.cs: Define todas as dependências
+Ofertio.Orquestrador/Configurator.cs: Replica TUDO manualmente (sem sincronizar)
 ```
 
 ### 🔴 #2: 4 ARQUIVOS DE SERVICE REGISTRATION
@@ -43,16 +43,16 @@ InfrastructureDataServiceRegistrationExtensions.cs
 ### 🔴 #3: APPLICATION SERVICES NUNCA REGISTRADOS
 **Impacto**: Médio-Alto - 11 serviços criados mas não usados
 ```
-TecFlow.Application/Services/ApplicationServiceCollectionExtensions.cs
+Ofertio.Application/Services/ApplicationServiceCollectionExtensions.cs
 └─ NUNCA é chamada em lugar nenhum!
 ```
 
 ### 🟠 #4: INTERFACES EM LOCAÇÕES ERRADAS
 **Impacto**: Médio - Confusão arquitetural
 ```
-❌ IShopeeApi em TecFlow.Infrastructure.Services/Interfaces/ (deveria estar em Core)
-❌ ITikTokShopApi em TecFlow.Infrastructure.Services/Interfaces/ (deveria estar em Core)
-❌ ITikTokAdsApiService em TecFlow.Infrastructure.Services/Interfaces/ (deveria estar em Core)
+❌ IShopeeApi em Ofertio.Infrastructure.Services/Interfaces/ (deveria estar em Core)
+❌ ITikTokShopApi em Ofertio.Infrastructure.Services/Interfaces/ (deveria estar em Core)
+❌ ITikTokAdsApiService em Ofertio.Infrastructure.Services/Interfaces/ (deveria estar em Core)
 ```
 
 ### 🟠 #5: PROGRAM.CS DO ORQUESTRADOR VAZIO
@@ -149,7 +149,7 @@ Toda configuração em Configurator.cs (não é invocada)
 ### LONGO PRAZO (Próximas sprints)
 7. ✅ Refatorar `OrquestradorPrincipal` (separar Controller de Service)
 8. ✅ Expandir testes para cobertura de Application Services
-9. ✅ Considerar criar `TecFlow.Infrastructure.Security` propriamente
+9. ✅ Considerar criar `Ofertio.Infrastructure.Security` propriamente
 
 ---
 

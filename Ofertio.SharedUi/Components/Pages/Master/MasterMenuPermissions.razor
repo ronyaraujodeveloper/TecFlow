@@ -1,0 +1,334 @@
+﻿@page "/master/menu-permissions"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+@inject IJSRuntime Js
+
+<PageTitle>Menus por plano — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Matriz de menus por plano</h1>
+            <p class="text-muted small mb-0">
+                Marque o que cada plano enxerga na sidebar. Desmarcar uma pasta esconde todos os itens dela; desativar um item o remove para todos.
+            </p>
+        </div>
+        <button type="button" class="btn btn-primary btn-touch" disabled="@(!_canManage || PendingChanges == 0)" @onclick="SaveAsync">
+            Salvar @(PendingChanges > 0 ? $"({PendingChanges})" : string.Empty)
+        </button>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_canManage)
+    {
+        <div class="menu-dnd-help small mb-3">
+            <i class="bi bi-arrows-move" aria-hidden="true"></i>
+            Arraste pela alça <i class="bi bi-grip-vertical" aria-hidden="true"></i>:
+            solte na <strong>borda de cima/baixo</strong> de uma linha para reordenar,
+            no <strong>centro de uma pasta</strong> para movê-lo para dentro dela,
+            ou no <strong>centro de outro item</strong> para criar uma nova pasta com os dois.
+            A sidebar dos clientes reflete a mudança na próxima navegação.
+        </div>
+    }
+
+    @if (_matrix is not null)
+    {
+        <div class="table-responsive card shadow-sm">
+            <table class="table table-sm align-middle mb-0 small menu-matrix">
+                <thead class="table-light">
+                    <tr>
+                        <th class="menu-grip-col" aria-label="Arrastar"></th>
+                        <th>Item do menu</th>
+                        <th class="text-center">Ativo</th>
+                        @foreach (var plan in _matrix.Plans)
+                        {
+                            <th class="text-center">
+                                @plan.Name
+                                <div>
+                                    <button type="button" class="btn btn-link btn-sm p-0" disabled="@(!_canManage)" @onclick="() => SetColumn(plan.Id, true)">todos</button>
+                                    ·
+                                    <button type="button" class="btn btn-link btn-sm p-0" disabled="@(!_canManage)" @onclick="() => SetColumn(plan.Id, false)">nenhum</button>
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _matrix.Rows)
+                    {
+                        <tr data-menu-row="@row.MenuItemId"
+                            draggable="@(_canManage ? "true" : "false")"
+                            class="@(row.IsGroup ? "table-secondary fw-semibold" : string.Empty) @(row.IsActive ? string.Empty : "text-muted")"
+                            @ondragstart="() => _dragId = row.MenuItemId"
+                            @ondragend="() => _dragId = null"
+                            @ondrop="() => DropAsync(row)"
+                            @ondrop:preventDefault="true">
+                            <td class="menu-grip-col text-center">
+                                @if (_canManage)
+                                {
+                                    <i class="bi bi-grip-vertical menu-grip" title="Arrastar" aria-hidden="true"></i>
+                                }
+                            </td>
+                            <td style="padding-left: @(0.5 + row.Depth * 1.5)rem;">
+                                <i class="bi @(row.IsGroup ? (row.Icon ?? "bi-folder2") : row.Icon) me-1" aria-hidden="true"></i>@row.Title
+                                @if (row.IsGroup)
+                                {
+                                    <span class="badge text-bg-light ms-1">pasta</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(row.Badge))
+                                {
+                                    <span class="badge text-bg-primary ms-1">@row.Badge</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(row.Route))
+                                {
+                                    <span class="text-muted ms-1"><code>@row.Route</code></span>
+                                }
+                                @if (row.IsCustomFolder && _canManage && IsEmptyFolder(row))
+                                {
+                                    <button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2" title="Excluir pasta vazia" @onclick="() => DeleteFolderAsync(row)">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    </button>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input" checked="@row.IsActive" disabled="@(!_canManage)"
+                                       @onchange="args => ToggleActive(row, (bool)args.Value!)" />
+                            </td>
+                            @foreach (var plan in _matrix.Plans)
+                            {
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" checked="@IsVisible(row, plan.Id)" disabled="@(!_canManage || !row.IsActive)"
+                                           aria-label="@($"{row.Title} no plano {plan.Name}")"
+                                           @onchange="args => ToggleCell(row, plan.Id, (bool)args.Value!)" />
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (_folderDraft is not null)
+{
+    <div class="modal fade show d-block menu-folder-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="menu-folder-title-label">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="menu-folder-title-label">Nova pasta</h2>
+                    <button type="button" class="btn-close" aria-label="Cancelar" @onclick="CancelFolder"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        "<strong>@_folderTargetTitle</strong>" e "<strong>@_folderItemTitle</strong>" serão agrupados na nova pasta, na posição de "@_folderTargetTitle".
+                    </p>
+                    <label class="form-label small mb-1" for="menu-folder-title">Título da pasta</label>
+                    <input id="menu-folder-title" class="form-control" maxlength="@MenuTreeEditRules.FolderTitleMaxLength"
+                           placeholder="ex.: Ferramentas de venda" autocomplete="off"
+                           @ref="_folderInput" @bind="_folderDraft.Title" @bind:event="oninput" @onkeydown="FolderKeyDownAsync" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelFolder">Cancelar</button>
+                    <button type="button" class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(_folderDraft.Title)" @onclick="CreateFolderAsync">
+                        <i class="bi bi-folder-plus" aria-hidden="true"></i> Criar pasta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private MenuPermissionMatrixDto? _matrix;
+    private readonly Dictionary<(int PlanId, int ItemId), bool> _cells = [];
+    private readonly Dictionary<int, bool> _active = [];
+    private bool _canManage;
+    private int? _dragId;
+    private MenuFolderCreateDto? _folderDraft;
+    private string _folderItemTitle = string.Empty;
+    private string _folderTargetTitle = string.Empty;
+    private ElementReference _folderInput;
+    private bool _focusFolderInput;
+
+    private int PendingChanges => _cells.Count + _active.Count;
+
+    protected override async Task LoadAsync()
+    {
+        _canManage = Can(MasterPermissions.ManagePlans);
+        if (!_canManage)
+        {
+            Error = "Seu papel não permite alterar menus por plano.";
+            return;
+        }
+
+        var result = await Api.MenuPermissionsAsync();
+        if (Accept(result))
+        {
+            _matrix = result.Data;
+            _cells.Clear();
+            _active.Clear();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (_focusFolderInput && _folderDraft is not null)
+        {
+            _focusFolderInput = false;
+            await _folderInput.FocusAsync();
+        }
+    }
+
+    /// <summary>Recarrega a árvore após mover/criar pasta sem descartar marcações ainda não salvas.</summary>
+    private async Task RefreshStructureAsync(string? message)
+    {
+        var result = await Api.MenuPermissionsAsync();
+        if (!Accept(result) || result.Data is null)
+        {
+            return;
+        }
+
+        _matrix = result.Data;
+        foreach (var row in _matrix.Rows.Where(row => _active.ContainsKey(row.MenuItemId)))
+        {
+            row.IsActive = _active[row.MenuItemId];
+        }
+
+        Info = message;
+    }
+
+    private bool IsEmptyFolder(MenuPermissionRowDto folder) =>
+        _matrix?.Rows.All(row => row.ParentId != folder.MenuItemId) ?? false;
+
+    private async Task DropAsync(MenuPermissionRowDto target)
+    {
+        if (_dragId is not int itemId || itemId == target.MenuItemId || _matrix is null)
+        {
+            _dragId = null;
+            return;
+        }
+
+        _dragId = null;
+        var zone = await Js.InvokeAsync<string>("ofertioMenuDnd.zone");
+        if (zone == MenuDropPositions.Into && !target.IsGroup)
+        {
+            _folderDraft = new MenuFolderCreateDto { ItemId = itemId, TargetId = target.MenuItemId };
+            _folderItemTitle = _matrix.Rows.FirstOrDefault(row => row.MenuItemId == itemId)?.Title ?? string.Empty;
+            _folderTargetTitle = target.Title;
+            _focusFolderInput = true;
+            return;
+        }
+
+        var result = await Api.MoveMenuItemAsync(new MenuMoveDto { ItemId = itemId, TargetId = target.MenuItemId, Position = zone });
+        if (AcceptOperation(result))
+        {
+            await RefreshStructureAsync(Info);
+        }
+    }
+
+    private async Task CreateFolderAsync()
+    {
+        if (_folderDraft is null || string.IsNullOrWhiteSpace(_folderDraft.Title))
+        {
+            return;
+        }
+
+        var draft = _folderDraft;
+        if (AcceptOperation(await Api.CreateMenuFolderAsync(draft)))
+        {
+            _folderDraft = null;
+            await RefreshStructureAsync(Info);
+        }
+    }
+
+    private async Task FolderKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await CreateFolderAsync();
+        }
+        else if (args.Key == "Escape")
+        {
+            CancelFolder();
+        }
+    }
+
+    private void CancelFolder() => _folderDraft = null;
+
+    private async Task DeleteFolderAsync(MenuPermissionRowDto folder)
+    {
+        if (AcceptOperation(await Api.DeleteMenuFolderAsync(folder.MenuItemId)))
+        {
+            _cells.Keys.Where(key => key.ItemId == folder.MenuItemId).ToList().ForEach(key => _cells.Remove(key));
+            _active.Remove(folder.MenuItemId);
+            await RefreshStructureAsync(Info);
+        }
+    }
+
+    private bool IsVisible(MenuPermissionRowDto row, int planId) =>
+        _cells.TryGetValue((planId, row.MenuItemId), out var pending)
+            ? pending
+            : row.Visibility.GetValueOrDefault(planId, true);
+
+    private void ToggleCell(MenuPermissionRowDto row, int planId, bool visible)
+    {
+        if (row.Visibility.GetValueOrDefault(planId, true) == visible)
+        {
+            _cells.Remove((planId, row.MenuItemId));
+        }
+        else
+        {
+            _cells[(planId, row.MenuItemId)] = visible;
+        }
+    }
+
+    private void ToggleActive(MenuPermissionRowDto row, bool active)
+    {
+        if (!_active.Remove(row.MenuItemId))
+        {
+            _active[row.MenuItemId] = active;
+        }
+
+        row.IsActive = active;
+    }
+
+    private void SetColumn(int planId, bool visible)
+    {
+        if (_matrix is null)
+        {
+            return;
+        }
+
+        foreach (var row in _matrix.Rows)
+        {
+            ToggleCell(row, planId, visible);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        var request = new MenuPermissionSaveDto
+        {
+            Cells = _cells.Select(pair => new MenuPermissionCellDto
+            {
+                PlanId = pair.Key.PlanId,
+                MenuItemId = pair.Key.ItemId,
+                IsVisible = pair.Value
+            }).ToList(),
+            ActiveItems = new Dictionary<int, bool>(_active)
+        };
+
+        if (AcceptOperation(await Api.SaveMenuPermissionsAsync(request)))
+        {
+            var message = Info;
+            await LoadAsync();
+            Info = message;
+        }
+    }
+}

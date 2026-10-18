@@ -1,0 +1,49 @@
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
+using Ofertio.Core.Security;
+using Ofertio.SharedUi.Services.Auth;
+using Ofertio.SharedUi.Services.Http;
+using Ofertio.SharedUi.Services.State;
+
+namespace Ofertio.WebUi.Services.Http;
+
+public class WebAccessTokenProvider : IAccessTokenProvider
+{
+    private readonly ISessionStateService _sessionState;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
+    private readonly IAuthCookieService _authCookieService;
+
+    public WebAccessTokenProvider(
+        ISessionStateService sessionState,
+        IHttpContextAccessor httpContextAccessor,
+        AuthenticationStateProvider authenticationStateProvider,
+        IAuthCookieService authCookieService)
+    {
+        _sessionState = sessionState;
+        _httpContextAccessor = httpContextAccessor;
+        _authenticationStateProvider = authenticationStateProvider;
+        _authCookieService = authCookieService;
+    }
+
+    public string? GetAccessToken() =>
+        FirstNonEmpty(
+            _sessionState.AccessToken,
+            ReadAccessToken(_httpContextAccessor.HttpContext?.User));
+
+    public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
+    {
+        var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        _authCookieService.SyncSessionFromPrincipal(state.User);
+        return FirstNonEmpty(
+            ReadAccessToken(state.User),
+            _sessionState.AccessToken,
+            ReadAccessToken(_httpContextAccessor.HttpContext?.User));
+    }
+
+    private static string? ReadAccessToken(ClaimsPrincipal? user) =>
+        user?.FindFirst(OfertioClaimTypes.AccessToken)?.Value;
+
+    private static string? FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+}

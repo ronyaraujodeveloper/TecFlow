@@ -1,4 +1,4 @@
-$paths = @("C:\inetpub\tecflow\api", "C:\inetpub\tecflow\webui")
+﻿$paths = @("C:\inetpub\ofertio\api", "C:\inetpub\ofertio\webui")
 foreach ($path in $paths) {
     if (Test-Path $path) {
         $acl = Get-Acl $path

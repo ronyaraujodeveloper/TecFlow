@@ -1,10 +1,10 @@
 ﻿# 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
 
 **Última varredura:** 4 de junho de 2026 (Fase 7.1 — Multi-Tenant)  
-**Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *TecFlow*)  
-**Solution:** `TecFlow.sln` — 12 projetos `TecFlow.*` + `Tecso.LerArquivos` externo (Portal e Dashboard **removidos**)
+**Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *Ofertio*)  
+**Solution:** `Ofertio.sln` — 12 projetos `Ofertio.*` + `Tecso.LerArquivos` externo (Portal e Dashboard **removidos**)
 
-> **Nota de varredura:** Esta lista deve ser usada para eliminar **resíduos das pastas antigas** (*Tecso* / camadas pré-refatoração) que ainda geram conflitos de compilação — por exemplo, cópias de `ExceptionMiddleware` na API, interfaces fantasma em `Infrastructure.Services/Interfaces`, artefatos `bin/`/`obj/` versionados e namespaces legados (`TecFlow.API.Middlewares` em arquivos do Core). Priorize itens da seção **🚨 Conflitos** antes de novas features.
+> **Nota de varredura:** Esta lista deve ser usada para eliminar **resíduos das pastas antigas** (*Tecso* / camadas pré-refatoração) que ainda geram conflitos de compilação — por exemplo, cópias de `ExceptionMiddleware` na API, interfaces fantasma em `Infrastructure.Services/Interfaces`, artefatos `bin/`/`obj/` versionados e namespaces legados (`Ofertio.API.Middlewares` em arquivos do Core). Priorize itens da seção **🚨 Conflitos** antes de novas features.
 
 **Navegação:** [« Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md)
 
@@ -16,21 +16,21 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### Resolvido recentemente
 
-- [x] **ExceptionMiddleware.cs** — Havia cópia em `TecFlow.API/Middleware/` e implementação em `TecFlow.Core/Exceptions/`. **Ação concluída:** middleware legado removido do Core; `TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs` retorna `ProblemDetails` JSON.
+- [x] **ExceptionMiddleware.cs** — Havia cópia em `Ofertio.API/Middleware/` e implementação em `Ofertio.Core/Exceptions/`. **Ação concluída:** middleware legado removido do Core; `Ofertio.API/Middlewares/ExceptionHandlingMiddleware.cs` retorna `ProblemDetails` JSON.
 
 ### Interfaces duplicadas (compilam, mas confundem DI e manutenção)
 
-- [ ] **ITikTokShopApi.cs** — `TecFlow.Business/Interfaces/Services/` (canônico, em uso) e `TecFlow.Infrastructure.Services/Interfaces/` (cópia legada, **excluída do compile** no `.csproj`). (Ação: deletar o arquivo em `Infrastructure.Services/Interfaces` e remover `<Compile Remove>` do csproj).
+- [ ] **ITikTokShopApi.cs** — `Ofertio.Business/Interfaces/Services/` (canônico, em uso) e `Ofertio.Infrastructure.Services/Interfaces/` (cópia legada, **excluída do compile** no `.csproj`). (Ação: deletar o arquivo em `Infrastructure.Services/Interfaces` e remover `<Compile Remove>` do csproj).
 
-- [ ] **IShopeeApi.cs** — `TecFlow.Business/Interfaces/Services/` (canônico) e `TecFlow.Infrastructure.Services/Interfaces/` (legado, **Compile Remove**). (Ação: deletar cópia legada + limpar csproj).
+- [ ] **IShopeeApi.cs** — `Ofertio.Business/Interfaces/Services/` (canônico) e `Ofertio.Infrastructure.Services/Interfaces/` (legado, **Compile Remove**). (Ação: deletar cópia legada + limpar csproj).
 
-- [ ] **ITikTokAdsApiService.cs** — `TecFlow.Business/Interfaces/Services/` (canônico) e `TecFlow.Infrastructure.Services/Interfaces/` (namespace `TecFlow.Core.Interfaces.Services`, **Compile Remove**). (Ação: deletar cópia legada; manter interface só em Business até mover para Core se for o alvo arquitetural).
+- [ ] **ITikTokAdsApiService.cs** — `Ofertio.Business/Interfaces/Services/` (canônico) e `Ofertio.Infrastructure.Services/Interfaces/` (namespace `Ofertio.Core.Interfaces.Services`, **Compile Remove**). (Ação: deletar cópia legada; manter interface só em Business até mover para Core se for o alvo arquitetural).
 
-- [ ] **ValidationHelper.cs** — `TecFlow.Business/Service/ValidationHelper.cs` e `TecFlow.Util/Validation/ValidationHelper.cs`. (Ação: unificar em `TecFlow.Util`; Business referencia Util ou deleta a cópia local.)
+- [ ] **ValidationHelper.cs** — `Ofertio.Business/Service/ValidationHelper.cs` e `Ofertio.Util/Validation/ValidationHelper.cs`. (Ação: unificar em `Ofertio.Util`; Business referencia Util ou deleta a cópia local.)
 
 ### Mesmo nome de classe, hosts diferentes (não é CS0436, mas exige disciplina)
 
-- [ ] **CampaignsController.cs** — `TecFlow.API/Controllers/` e `TecFlow.Orquestrador/Controllers/`. (Ação: manter ambos se forem APIs distintas; documentar rotas; evitar lógica duplicada — extrair para `TecFlow.Business`).
+- [ ] **CampaignsController.cs** — `Ofertio.API/Controllers/` e `Ofertio.Orquestrador/Controllers/`. (Ação: manter ambos se forem APIs distintas; documentar rotas; evitar lógica duplicada — extrair para `Ofertio.Business`).
 
 - [ ] **MetricsController.cs** — API e Orquestrador. (Ação: idem.)
 
@@ -40,20 +40,20 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### DTOs espelhados (Portal vs Business)
 
-- [x] **MetricDto.cs**, **CampaignDto.cs**, **DashboardSummaryDto.cs** — DTOs locais removidos de `TecFlow.Portal/Models/Responses/` e `TecFlow.WebUi/Models/Responses/`; UI consome `TecFlow.Business/Dto/` (`*ResponseDto`, `DashboardSummaryDto`) e entidades `TecFlow.Core.Entities` (`Campaign`, `Metric`).
+- [x] **MetricDto.cs**, **CampaignDto.cs**, **DashboardSummaryDto.cs** — DTOs locais removidos de `Ofertio.Portal/Models/Responses/` e `Ofertio.WebUi/Models/Responses/`; UI consome `Ofertio.Business/Dto/` (`*ResponseDto`, `DashboardSummaryDto`) e entidades `Ofertio.Core.Entities` (`Campaign`, `Metric`).
 
 ### Migração Portal → WebUi (Fase 3)
 
-- [x] **TecFlow.WebUi/** — projeto Blazor canônico na solution com referência a `TecFlow.Business`.
+- [x] **Ofertio.WebUi/** — projeto Blazor canônico na solution com referência a `Ofertio.Business`.
 - [x] **DashboardApiService.cs** (WebUi) — deserializa `CampaignResponseDto` / `MetricResponseDto` e expõe `DataList` para os widgets.
 - [x] **CampaignExtensions.cs** — helper `IsActive()` para entidade `Campaign`.
 - [x] DTOs locais removidos: `CampaignDto.cs`, `MetricDto.cs`, `DashboardSummaryDto.cs` (WebUi).
-- [x] **TecFlow.Portal/** — removido da solution e excluído do disco (substituído por WebUi).
-- [x] **TecFlow.Dashboard/** — removido da solution e excluído do disco (scaffold MVC obsoleto).
+- [x] **Ofertio.Portal/** — removido da solution e excluído do disco (substituído por WebUi).
+- [x] **Ofertio.Dashboard/** — removido da solution e excluído do disco (scaffold MVC obsoleto).
 
 ### WebUi — arquitetura Filter / Dto / ResponseDto (Fase 3)
 
-- [x] **TecFlow.WebUi.csproj** — referência explícita a `TecFlow.Database` (tipos `*Filter`).
+- [x] **Ofertio.WebUi.csproj** — referência explícita a `Ofertio.Database` (tipos `*Filter`).
 - [x] **Extensions/FilterQueryStringExtensions.cs** — serializa `*Filter` em query string para GET.
 - [x] **Extensions/ResponseDtoExtensions.cs** — valida `Status`/`Descricao` dos envelopes na UI.
 - [x] **Services/Http/HttpService.cs** — `GetAsync(url, filter)`, `PutAsync` para POST/PUT com Dto; 401 sem corpo vira mensagem de sessão (não CORS).
@@ -66,225 +66,225 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### Fase 6.4 — Observabilidade e telemetria (jun/2026)
 
-- [x] **TecFlow.Observability/** — `AddTecFlowTelemetry`, `UseTecFlowTelemetry`, `TecFlowBusinessMetrics`, `TelemetryRecentErrorRecorder`, `TelemetryErrorRecordingMiddleware`.
+- [x] **Ofertio.Observability/** — `AddOfertioTelemetry`, `UseOfertioTelemetry`, `OfertioBusinessMetrics`, `TelemetryRecentErrorRecorder`, `TelemetryErrorRecordingMiddleware`.
 - [x] **Pacotes:** OpenTelemetry (Hosting, AspNetCore, Http, Runtime), OTLP, Console, Prometheus.AspNetCore, Serilog.Sinks.Seq.
-- [x] **TecFlow.API/Program.cs**, **TecFlow.Worker/Program.cs**, **TecFlow.Orquestrador/Program.cs** — telemetria ativada por host.
+- [x] **Ofertio.API/Program.cs**, **Ofertio.Worker/Program.cs**, **Ofertio.Orquestrador/Program.cs** — telemetria ativada por host.
 - [x] **appsettings.json** (API, Worker, Orquestrador) — seção `Telemetry`.
-- [x] **TecFlow.Infrastructure.Services/Health/PlatformHealthService.cs** — health checks DB/RabbitMQ/Shopee/TikTok.
-- [x] **TecFlow.Orquestrador/Controllers/HealthDashboardController.cs** — `GET /api/saude/dashboard`.
-- [x] **TecFlow.SharedUi/Components/Pages/PainelSaude.razor**, **Components/Health/HealthStatusCard.razor**.
+- [x] **Ofertio.Infrastructure.Services/Health/PlatformHealthService.cs** — health checks DB/RabbitMQ/Shopee/TikTok.
+- [x] **Ofertio.Orquestrador/Controllers/HealthDashboardController.cs** — `GET /api/saude/dashboard`.
+- [x] **Ofertio.SharedUi/Components/Pages/PainelSaude.razor**, **Components/Health/HealthStatusCard.razor**.
 - [x] Instrumentação: **SocialMediaCommentConsumer**, **AffiliateAnalyticsService**.
 
 ### Fase 7.3 — Controle avançado de estoque físico (jun/2026)
 
-- [x] **TecFlow.Core/Enums/InventoryMovementType.cs** — EntradaPorCompra, SaidaPorVenda, AjusteManual, Reserva, CancelamentoReserva.
-- [x] **TecFlow.Core/Entities/Inventory.cs** — PhysicalQuantity, ReservedQuantity, AvailableQuantity (calculado), MinimumStock.
-- [x] **TecFlow.Core/Entities/InventoryMovement.cs** — kardex com SalesOrderId.
-- [x] **TecFlow.Business/Interfaces/Inventory/IInventoryService.cs** — ReserveStock, ConfirmStockDebit, ReleaseStockReservation.
-- [x] **TecFlow.Business/Interfaces/Inventory/IInventoryAlertHook.cs** — gancho para push (Fase 4).
-- [x] **TecFlow.Business/Domain/Inventory/InsufficientStockException.cs**.
-- [x] **TecFlow.Infrastructure.Services/Stock/InventoryService.cs** — transações Serializable + retry de concorrência.
-- [x] **TecFlow.Infrastructure.Services/Stock/LoggingInventoryAlertHook.cs** — log estruturado de estoque mínimo.
+- [x] **Ofertio.Core/Enums/InventoryMovementType.cs** — EntradaPorCompra, SaidaPorVenda, AjusteManual, Reserva, CancelamentoReserva.
+- [x] **Ofertio.Core/Entities/Inventory.cs** — PhysicalQuantity, ReservedQuantity, AvailableQuantity (calculado), MinimumStock.
+- [x] **Ofertio.Core/Entities/InventoryMovement.cs** — kardex com SalesOrderId.
+- [x] **Ofertio.Business/Interfaces/Inventory/IInventoryService.cs** — ReserveStock, ConfirmStockDebit, ReleaseStockReservation.
+- [x] **Ofertio.Business/Interfaces/Inventory/IInventoryAlertHook.cs** — gancho para push (Fase 4).
+- [x] **Ofertio.Business/Domain/Inventory/InsufficientStockException.cs**.
+- [x] **Ofertio.Infrastructure.Services/Stock/InventoryService.cs** — transações Serializable + retry de concorrência.
+- [x] **Ofertio.Infrastructure.Services/Stock/LoggingInventoryAlertHook.cs** — log estruturado de estoque mínimo.
 - [x] Integração: **SalesOrderService** (reserva na criação; débito em Pago; liberação em Cancelado), **InvoiceOrchestrator** (débito idempotente).
-- [x] **TecFlow.API/Controllers/InventoryController.cs** — `api/estoque`.
-- [x] **TecFlow.Infrastructure/Migrations/20260604141216_AddPhysicalInventory.cs**.
+- [x] **Ofertio.API/Controllers/InventoryController.cs** — `api/estoque`.
+- [x] **Ofertio.Infrastructure/Migrations/20260604141216_AddPhysicalInventory.cs**.
 
 ### Fase 7.2 — Core de Vendas, Faturamento e ERP Local (jun/2026)
 
-- [x] **TecFlow.Core/Enums/OrderStatus.cs** — Pendente, Pago, Faturado, Enviado, Concluido, Cancelado.
-- [x] **TecFlow.Core/Entities/Customer.cs** — cliente com endereço completo e `TenantId`.
-- [x] **TecFlow.Core/Entities/SalesOrder.cs** — pedido de venda (`OrderNumber`, totais, `ShopId`, status).
-- [x] **TecFlow.Core/Entities/SalesOrderItem.cs** — itens do pedido.
-- [x] **TecFlow.Business/Domain/Sales/OrderStateMachine.cs** — transições rígidas de estado.
-- [x] **TecFlow.Business/Interfaces/Sales/IInvoiceOrchestrator.cs** — `PrepareInvoiceAsync` + payload NF-e mockado.
-- [x] **TecFlow.Infrastructure.Services/Sales/InvoiceOrchestrator.cs**, **SalesOrderService.cs**.
-- [x] **TecFlow.API/Controllers/CustomersController.cs** — `api/vendas/clientes`.
-- [x] **TecFlow.API/Controllers/SalesOrdersController.cs** — `api/vendas/pedidos`, `PUT .../status`, `POST .../faturar`.
-- [x] **TecFlow.Database/Filter/** — `CustomerFilter`, `SalesOrderFilter`.
-- [x] **TecFlow.Business/Dto/** — `CustomerDto`, `SalesOrderDto`, `InvoicePayloadDto`, envelopes `*ResponseDto`.
-- [x] **TecFlow.Infrastructure/Migrations/20260604140643_AddSalesOrderCore.cs**.
-- [x] **TecFlow.Tests/Unit/Sales/OrderStateMachineTests.cs**.
+- [x] **Ofertio.Core/Enums/OrderStatus.cs** — Pendente, Pago, Faturado, Enviado, Concluido, Cancelado.
+- [x] **Ofertio.Core/Entities/Customer.cs** — cliente com endereço completo e `TenantId`.
+- [x] **Ofertio.Core/Entities/SalesOrder.cs** — pedido de venda (`OrderNumber`, totais, `ShopId`, status).
+- [x] **Ofertio.Core/Entities/SalesOrderItem.cs** — itens do pedido.
+- [x] **Ofertio.Business/Domain/Sales/OrderStateMachine.cs** — transições rígidas de estado.
+- [x] **Ofertio.Business/Interfaces/Sales/IInvoiceOrchestrator.cs** — `PrepareInvoiceAsync` + payload NF-e mockado.
+- [x] **Ofertio.Infrastructure.Services/Sales/InvoiceOrchestrator.cs**, **SalesOrderService.cs**.
+- [x] **Ofertio.API/Controllers/CustomersController.cs** — `api/vendas/clientes`.
+- [x] **Ofertio.API/Controllers/SalesOrdersController.cs** — `api/vendas/pedidos`, `PUT .../status`, `POST .../faturar`.
+- [x] **Ofertio.Database/Filter/** — `CustomerFilter`, `SalesOrderFilter`.
+- [x] **Ofertio.Business/Dto/** — `CustomerDto`, `SalesOrderDto`, `InvoicePayloadDto`, envelopes `*ResponseDto`.
+- [x] **Ofertio.Infrastructure/Migrations/20260604140643_AddSalesOrderCore.cs**.
+- [x] **Ofertio.Tests/Unit/Sales/OrderStateMachineTests.cs**.
 
 ### Fase 7.1 — Multi-Tenant / Multi-Conta Marketplace (jun/2026)
 
-- [x] **TecFlow.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
-- [x] **TecFlow.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens; `TrackingId`/`ShopId`/`AppKey`/`AppSecret` anuláveis para registros antigos.
-- [x] **TecFlow.Business/Mappings/MarketplaceAccountMapper.cs** — projeção nula-segura para `MarketplaceAccountDto` e `ConvertLinkResponseDto`.
-- [x] **TecFlow.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** — se o UserId do JWT não existir em `Usuarios`, usa o primeiro usuário do SQL Server (ou cria o demo de homologação) antes de gravar `MarketplaceAccount.UserId`.
-- [x] **TecFlow.Infrastructure.Services/Integrations/MarketplaceAccountService.cs** — `PrepareForPersistAsync` grava `TenantId` de `dbo.Tenants` e `UserId` de `dbo.Usuarios`.
-- [x] **TecFlow.Tests/Unit/MultiTenancy/TenantProvisioningServiceTests.cs** — cria `Tenant Principal` quando `Tenants` está vazia.
-- [x] **TecFlow.Data/Migrations/20260922233000_AddMarketplaceAccountOptionalCredentials.cs** — colunas opcionais `TrackingId`/`AppKey`/`AppSecret`.
-- [x] **TecFlow.Data/Migrations/20260922250000_AddShortAffiliateLinkAffiliateUrlAndAccount.cs** — `AffiliateUrl` e `MarketplaceAccountId` em `ShortAffiliateLinks` (SQL Server).
-- [x] **TecFlow.Infrastructure.Services/ShortLinks/ShortLinkService.cs** — persiste `ShortAffiliateLink` com `SaveChangesAsync()` no SQLEXPRESS.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/ShortLinkPersistenceTests.cs** — garante `SaveChanges` de `OriginalUrl`/`AffiliateUrl`/`Code`/`Platform`/`MarketplaceAccountId`.
-- [x] **appsettings.Homologacao.json** — `Database:Provider=SqlServer` / `AutomacaoSociais` (mesmo banco do `appsettings.json`).
-- [x] **TecFlow.Infrastructure/Migrations/20260922240000_AddMarketplaceAccountOptionalCredentialsPg.cs** — mesmas colunas no PostgreSQL do IIS (`Homologacao`) para evitar Npgsql `42703`.
-- [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** — `dotnet ef database update` no SQL Server (`TecFlow.Data`) para Development e Homologacao IIS.
+- [x] **Ofertio.Core/Entities/Tenant.cs** — inquilino corporativo (assinante SaaS).
+- [x] **Ofertio.Core/Entities/MarketplaceAccount.cs** — vínculo Tenant + ShopId + tokens; `TrackingId`/`ShopId`/`AppKey`/`AppSecret` anuláveis para registros antigos.
+- [x] **Ofertio.Business/Mappings/MarketplaceAccountMapper.cs** — projeção nula-segura para `MarketplaceAccountDto` e `ConvertLinkResponseDto`.
+- [x] **Ofertio.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** — se o UserId do JWT não existir em `Usuarios`, usa o primeiro usuário do SQL Server (ou cria o demo de homologação) antes de gravar `MarketplaceAccount.UserId`.
+- [x] **Ofertio.Infrastructure.Services/Integrations/MarketplaceAccountService.cs** — `PrepareForPersistAsync` grava `TenantId` de `dbo.Tenants` e `UserId` de `dbo.Usuarios`.
+- [x] **Ofertio.Tests/Unit/MultiTenancy/TenantProvisioningServiceTests.cs** — cria `Tenant Principal` quando `Tenants` está vazia.
+- [x] **Ofertio.Data/Migrations/20260922233000_AddMarketplaceAccountOptionalCredentials.cs** — colunas opcionais `TrackingId`/`AppKey`/`AppSecret`.
+- [x] **Ofertio.Data/Migrations/20260922250000_AddShortAffiliateLinkAffiliateUrlAndAccount.cs** — `AffiliateUrl` e `MarketplaceAccountId` em `ShortAffiliateLinks` (SQL Server).
+- [x] **Ofertio.Infrastructure.Services/ShortLinks/ShortLinkService.cs** — persiste `ShortAffiliateLink` com `SaveChangesAsync()` no SQLEXPRESS.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/ShortLinkPersistenceTests.cs** — garante `SaveChanges` de `OriginalUrl`/`AffiliateUrl`/`Code`/`Platform`/`MarketplaceAccountId`.
+- [x] **appsettings.Homologacao.json** — `Database:Provider=SqlServer` / `Ofertio` (mesmo banco do `appsettings.json`).
+- [x] **Ofertio.Infrastructure/Migrations/20260922240000_AddMarketplaceAccountOptionalCredentialsPg.cs** — mesmas colunas no PostgreSQL do IIS (`Homologacao`) para evitar Npgsql `42703`.
+- [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** — `dotnet ef database update` no SQL Server (`Ofertio.Data`) para Development e Homologacao IIS.
 - [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** — registro das Fases 1 a 31 e entregas `[x]`; o `README.md` ficou só com regras permanentes e Fases 32–34.
-- [x] **TecFlow.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
-- [x] **TecFlow.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
-- [x] **TecFlow.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.
-- [x] **TecFlow.Core/Abstractions/ITenantScopedEntity.cs**, **IShopScopedEntity.cs** — contratos de isolamento.
-- [x] **TecFlow.Core/Security/TecFlowClaimTypes.cs** — claims `tenant_id`, `shop_id` (movido de SharedUi).
+- [x] **Ofertio.Infrastructure/Migrations/20260920215452_AddMarketplaceAccountsTable.cs** — colunas `UserId`, `FriendlyName` e `IsActive` em `MarketplaceAccounts`.
+- [x] **Ofertio.Data/** — assembly de migrations SQL Server (`SqlServerMigrations`, `20260920224523_InitialSqlServerMigration`).
+- [x] **Ofertio.Database/Data/RelationalDatabaseOptions.cs** — `UseSqlServer` / `UseNpgsql` conforme `Database:Provider`.
+- [x] **Ofertio.Core/Abstractions/ITenantScopedEntity.cs**, **IShopScopedEntity.cs** — contratos de isolamento.
+- [x] **Ofertio.Core/Security/OfertioClaimTypes.cs** — claims `tenant_id`, `shop_id` (movido de SharedUi).
 - [x] **TenantId** em: `UserAccount`, `Product`, `Campaign`, `Affiliate`, `Content`, `Conversion`, `Metric`, `MarketplaceToken`, `MarketplaceOrder`, `MarketplaceOrderLine`, `GlobalAdvertisingProduct`, `MarketplaceAffiliateLink`, `UserDeviceToken`.
-- [x] **TecFlow.Database/MultiTenancy/** — `ICurrentTenantService`, `NullCurrentTenantService`, `TenantQueryFilterExtensions`, `TenantDbSetExtensions`.
-- [x] **TecFlow.Database/AppDbContext.cs** — filtros globais, `SaveChanges` com `TenantId`, criptografia em `MarketplaceAccount`.
-- [x] **TecFlow.Infrastructure/Security/CurrentTenantService.cs** — JWT + header `X-TecFlow-Shop-Id`.
-- [x] **TecFlow.Infrastructure/Security/JwtTokenService.cs** — claim `TecFlow:tenant_id`; emite `aud=TecFlowClient`.
-- [x] **TecFlow.Infrastructure.Services/Tenancy/TenantProvisioningService.cs** — `EnsurePersistedTenantAsync` cria `Tenant Principal` se `dbo.Tenants` estiver vazia; `EnsureTenantForUserAsync` corrige `Usuarios.TenantId` órfão.
-- [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceAccountRepository.cs** — listagem consolidada / por loja.
+- [x] **Ofertio.Database/MultiTenancy/** — `ICurrentTenantService`, `NullCurrentTenantService`, `TenantQueryFilterExtensions`, `TenantDbSetExtensions`.
+- [x] **Ofertio.Database/AppDbContext.cs** — filtros globais, `SaveChanges` com `TenantId`, criptografia em `MarketplaceAccount`.
+- [x] **Ofertio.Infrastructure/Security/CurrentTenantService.cs** — JWT + header `X-Ofertio-Shop-Id`.
+- [x] **Ofertio.Infrastructure/Security/JwtTokenService.cs** — claim `Ofertio:tenant_id`; emite `aud=OfertioClient`.
+- [x] **Ofertio.Infrastructure.Services/Tenancy/TenantProvisioningService.cs** — `EnsurePersistedTenantAsync` cria `Tenant Principal` se `dbo.Tenants` estiver vazia; `EnsureTenantForUserAsync` corrige `Usuarios.TenantId` órfão.
+- [x] **Ofertio.Infrastructure.Services/Repositories/MarketplaceAccountRepository.cs** — listagem consolidada / por loja.
 - [x] Repositórios adaptados: **ProductRepository**, **MarketplaceTokenRepository**, **MarketplaceOrderRepository** (`ListConsolidated*`, `ListForShop*`).
-- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — persiste `MarketplaceAccount` no OAuth.
-- [x] **TecFlow.Infrastructure/Migrations/20260604135726_AddMultiTenantArchitecture.cs** — schema + tenant padrão para dados legados.
-- [x] **TecFlow.Database/Filter/** — `TenantFilter`, `MarketplaceAccountFilter`; **ProductFilter** + `ShopId`/`TenantId`.
-- [x] **TecFlow.Business/Dto/** — `TenantDto`, `TenantResponseDto`, `MarketplaceAccountDto`, `MarketplaceAccountResponseDto`.
-- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** — callback OAuth exige `[Authorize]`.
-- [x] **TecFlow.API/Controllers/AuthController.cs** — `GET /api/auth/status` e `GET /api/auth/providers/status` (alias); login, register, vincular/desvincular provedores.
-- [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/` em dev Kestrel; `http://localhost:5001/` no IIS Homologacao).
-- [x] **TecFlow.WebUi/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS).
-- [x] **TecFlow.API/web.config** — `stdoutLogEnabled="true"`, `requestTimeout="20:00:00"` para o UserBot contínuo no IIS.
-- [x] **Configurar-Logs-IIS.ps1** — cria `logs\` em `C:\inetpub\tecflow\api` e `webui`; `FullControl` para `IIS_IUSRS`, `DefaultAppPool` e app pools dedicados.
-- [x] **Liberar-Logs-WebUi.ps1** — cria `C:\inetpub\tecflow\webui\logs\` e concede `FullControl` a `IIS_IUSRS` / app pools.
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — persiste `MarketplaceAccount` no OAuth.
+- [x] **Ofertio.Infrastructure/Migrations/20260604135726_AddMultiTenantArchitecture.cs** — schema + tenant padrão para dados legados.
+- [x] **Ofertio.Database/Filter/** — `TenantFilter`, `MarketplaceAccountFilter`; **ProductFilter** + `ShopId`/`TenantId`.
+- [x] **Ofertio.Business/Dto/** — `TenantDto`, `TenantResponseDto`, `MarketplaceAccountDto`, `MarketplaceAccountResponseDto`.
+- [x] **Ofertio.API/Controllers/MarketplaceAuthController.cs** — callback OAuth exige `[Authorize]`.
+- [x] **Ofertio.API/Controllers/AuthController.cs** — `GET /api/auth/status` e `GET /api/auth/providers/status` (alias); login, register, vincular/desvincular provedores.
+- [x] **Ofertio.SharedUi/Services/Auth/AccountSecurityApiService.cs** — consome `GET api/auth/status` via `OrquestradorApi:BaseUrl` (`https://localhost:7001/` em dev Kestrel; `http://localhost:5001/` no IIS Homologacao).
+- [x] **Ofertio.WebUi/web.config** — `stdoutLogEnabled="true"`, `stdoutLogFile=".\logs\stdout"` (diagnóstico IIS).
+- [x] **Ofertio.API/web.config** — `stdoutLogEnabled="true"`, `requestTimeout="20:00:00"` para o UserBot contínuo no IIS.
+- [x] **Configurar-Logs-IIS.ps1** — cria `logs\` em `C:\inetpub\ofertio\api` e `webui`; `FullControl` para `IIS_IUSRS`, `DefaultAppPool` e app pools dedicados.
+- [x] **Liberar-Logs-WebUi.ps1** — cria `C:\inetpub\ofertio\webui\logs\` e concede `FullControl` a `IIS_IUSRS` / app pools.
 - [x] **HttpService.cs** / **WebAccessTokenProvider.cs** — 401 vazio vira mensagem de sessão; login sem JWT continua permitido.
-- [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — seção `Serilog.MinimumLevel` (Information em homolog).
-- [x] **TecFlow.WebUi/Program.cs** — Serilog Console + `logs/app-.txt`, `UseSerilogRequestLogging`, `Log.CloseAndFlush`.
-- [x] **TecFlow.WebUi/Logging/BlazorCircuitLoggingHandler.cs** — log de abertura/fechamento/reconexão de circuitos SignalR.
-- [x] **TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs** — captura 500, log contextual seguro, `application/problem+json`.
-- [x] **TecFlow.API/Controllers/AuthController.cs** — `LogError` em login/registro inesperados.
-- [x] **TecFlow.Infrastructure.Services/Security/PlatformAuthService.cs** — `LogError` em falhas não previstas de login.
-- [x] **TecFlow.SharedUi/Services/Auth/AccountSecurityApiService.cs**, **UserRegistrationApiService.cs** — `ILogger` nos catches de auth.
-- [x] **TecFlow.WebUi/Extensions/AuthEndpointExtensions.cs** — `LogError` no callback OAuth.
+- [x] **Ofertio.API/appsettings.json**, **appsettings.Homologacao.json** — seção `Serilog.MinimumLevel` (Information em homolog).
+- [x] **Ofertio.WebUi/Program.cs** — Serilog Console + `logs/app-.txt`, `UseSerilogRequestLogging`, `Log.CloseAndFlush`.
+- [x] **Ofertio.WebUi/Logging/BlazorCircuitLoggingHandler.cs** — log de abertura/fechamento/reconexão de circuitos SignalR.
+- [x] **Ofertio.API/Middlewares/ExceptionHandlingMiddleware.cs** — captura 500, log contextual seguro, `application/problem+json`.
+- [x] **Ofertio.API/Controllers/AuthController.cs** — `LogError` em login/registro inesperados.
+- [x] **Ofertio.Infrastructure.Services/Security/PlatformAuthService.cs** — `LogError` em falhas não previstas de login.
+- [x] **Ofertio.SharedUi/Services/Auth/AccountSecurityApiService.cs**, **UserRegistrationApiService.cs** — `ILogger` nos catches de auth.
+- [x] **Ofertio.WebUi/Extensions/AuthEndpointExtensions.cs** — `LogError` no callback OAuth.
 
 ### Fase 6.3 — Produtos globais de propaganda (jun/2026)
 
-- [x] **TecFlow.Core/Entities/GlobalAdvertisingProduct.cs** — FriendlyName, GlobalCategory, MainImageUrl, AveragePrice, `GlobalProductUid`.
-- [x] **TecFlow.Core/Entities/MarketplaceAffiliateLink.cs** — vínculos Shopee/TikTok com links gerados e tracking JSON.
-- [x] **TecFlow.Infrastructure/Migrations/*AddGlobalAdvertisingProducts*** — tabelas `ProdutosPropagandaGlobal`, `MarketplaceAffiliateLinks`.
-- [x] **TecFlow.Database/AppDbContext.cs** — DbSets + índices/relacionamentos.
-- [x] **TecFlow.Business/Dto/** — `GlobalAdvertisingProductDto`, `MarketplaceAffiliateLinkDto`, `OptimizedPostPayloadDto`, `GlobalAdvertisingProductResponseDto`.
-- [x] **TecFlow.Business/Interfaces/Services/IAdvertisingProductService.cs**.
-- [x] **TecFlow.Infrastructure.Services/Advertising/AdvertisingProductService.cs**.
-- [x] **TecFlow.Orquestrador/Controllers/AdvertisingProductsController.cs**.
-- [x] **TecFlow.SharedUi/Components/Pages/ProdutosPropaganda.razor** — formulário 1 col (mobile) / 2 cols (desktop), cards com copiar link.
-- [x] **TecFlow.SharedUi/wwwroot/tecflow-clipboard.js** — área de transferência Web/Mobile.
-- [x] **TecFlow.Tests/Unit/Advertising/AdvertisingProductServiceTests.cs**.
+- [x] **Ofertio.Core/Entities/GlobalAdvertisingProduct.cs** — FriendlyName, GlobalCategory, MainImageUrl, AveragePrice, `GlobalProductUid`.
+- [x] **Ofertio.Core/Entities/MarketplaceAffiliateLink.cs** — vínculos Shopee/TikTok com links gerados e tracking JSON.
+- [x] **Ofertio.Infrastructure/Migrations/*AddGlobalAdvertisingProducts*** — tabelas `ProdutosPropagandaGlobal`, `MarketplaceAffiliateLinks`.
+- [x] **Ofertio.Database/AppDbContext.cs** — DbSets + índices/relacionamentos.
+- [x] **Ofertio.Business/Dto/** — `GlobalAdvertisingProductDto`, `MarketplaceAffiliateLinkDto`, `OptimizedPostPayloadDto`, `GlobalAdvertisingProductResponseDto`.
+- [x] **Ofertio.Business/Interfaces/Services/IAdvertisingProductService.cs**.
+- [x] **Ofertio.Infrastructure.Services/Advertising/AdvertisingProductService.cs**.
+- [x] **Ofertio.Orquestrador/Controllers/AdvertisingProductsController.cs**.
+- [x] **Ofertio.SharedUi/Components/Pages/ProdutosPropaganda.razor** — formulário 1 col (mobile) / 2 cols (desktop), cards com copiar link.
+- [x] **Ofertio.SharedUi/wwwroot/ofertio-clipboard.js** — área de transferência Web/Mobile.
+- [x] **Ofertio.Tests/Unit/Advertising/AdvertisingProductServiceTests.cs**.
 
 ### Fase 6.2 — Painel de conciliação financeira de afiliado (jun/2026)
 
-- [x] **TecFlow.Business/Dto/AffiliatePerformanceDto.cs** — cliques, conversões, CVR, comissão estimada/paga, retidos.
-- [x] **TecFlow.Business/Dto/CommissionDiscrepancyReportDto.cs** — divergências marketplace vs. TecFlow.
-- [x] **TecFlow.Business/Dto/MarketplaceCommissionLineDto.cs**, **AffiliateReconciliationResponseDto.cs**.
-- [x] **TecFlow.Database/Filter/AffiliateReconciliationFilter.cs** — período, affiliateId, paginação.
-- [x] **TecFlow.Business/Interfaces/Services/IAffiliateAnalyticsService.cs**.
-- [x] **TecFlow.Infrastructure.Services/Analytics/AffiliateAnalyticsService.cs** — fetch APIs + reconciliação.
-- [x] **TecFlow.Orquestrador/Controllers/AffiliateAnalyticsController.cs** — `api/afiliados/analytics/conciliacao`.
-- [x] **TecFlow.SharedUi/Components/Pages/ConciliacaoFinanceira.razor** — painel KPI + lista responsiva.
-- [x] **TecFlow.SharedUi/Components/Pages/ConciliacaoDetalhes.razor** — detalhe de linha divergente.
-- [x] **TecFlow.SharedUi/Services/Analytics/** — `IAffiliateAnalyticsApiService`, `AffiliateAnalyticsApiService`.
-- [x] **TecFlow.SharedUi/wwwroot/app.css** — `.conciliation-kpi-grid`, `.data-list-card--danger`.
-- [x] **TecFlow.Tests/Unit/Analytics/AffiliateAnalyticsServiceTests.cs**.
+- [x] **Ofertio.Business/Dto/AffiliatePerformanceDto.cs** — cliques, conversões, CVR, comissão estimada/paga, retidos.
+- [x] **Ofertio.Business/Dto/CommissionDiscrepancyReportDto.cs** — divergências marketplace vs. Ofertio.
+- [x] **Ofertio.Business/Dto/MarketplaceCommissionLineDto.cs**, **AffiliateReconciliationResponseDto.cs**.
+- [x] **Ofertio.Database/Filter/AffiliateReconciliationFilter.cs** — período, affiliateId, paginação.
+- [x] **Ofertio.Business/Interfaces/Services/IAffiliateAnalyticsService.cs**.
+- [x] **Ofertio.Infrastructure.Services/Analytics/AffiliateAnalyticsService.cs** — fetch APIs + reconciliação.
+- [x] **Ofertio.Orquestrador/Controllers/AffiliateAnalyticsController.cs** — `api/afiliados/analytics/conciliacao`.
+- [x] **Ofertio.SharedUi/Components/Pages/ConciliacaoFinanceira.razor** — painel KPI + lista responsiva.
+- [x] **Ofertio.SharedUi/Components/Pages/ConciliacaoDetalhes.razor** — detalhe de linha divergente.
+- [x] **Ofertio.SharedUi/Services/Analytics/** — `IAffiliateAnalyticsApiService`, `AffiliateAnalyticsApiService`.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** — `.conciliation-kpi-grid`, `.data-list-card--danger`.
+- [x] **Ofertio.Tests/Unit/Analytics/AffiliateAnalyticsServiceTests.cs**.
 
 ### Fase 6.1 — Filas RabbitMQ e automação de engajamento (jun/2026)
 
-- [x] **TecFlow.Business/Messaging/** — `SocialMediaCommentReceivedEvent`, `AffiliateLinkDeliveryRequestedEvent`, `RabbitMqOptions`, `EngagementKeywordTriageOptions`.
-- [x] **TecFlow.Business/Interfaces/Messaging/** — `IEngagementEventPublisher`, `ICommentKeywordTriageService`, `IAffiliateLinkDeliveryNotifier`.
-- [x] **TecFlow.Business/Dto/SocialMediaCommentWebhookRequest.cs** — payload do webhook.
-- [x] **TecFlow.Infrastructure.Services/Messaging/** — `EngagementMessagingRegistrationExtensions`, `MassTransitEngagementEventPublisher`, `CommentKeywordTriageService`, `AffiliateLinkDeliveryNotifier`.
-- [x] **TecFlow.Infrastructure.Services/Messaging/Consumers/SocialMediaCommentConsumer.cs** — triagem e disparo simulado de link.
-- [x] **TecFlow.API/Controllers/SocialMediaWebhookController.cs** — `POST /api/webhooks/social-media/comments` → 202 + publicação na fila.
-- [x] **TecFlow.API/Program.cs**, **TecFlow.Worker/Program.cs**, **TecFlow.Orquestrador/Program.cs** — DI MassTransit (Publisher / Consumer).
+- [x] **Ofertio.Business/Messaging/** — `SocialMediaCommentReceivedEvent`, `AffiliateLinkDeliveryRequestedEvent`, `RabbitMqOptions`, `EngagementKeywordTriageOptions`.
+- [x] **Ofertio.Business/Interfaces/Messaging/** — `IEngagementEventPublisher`, `ICommentKeywordTriageService`, `IAffiliateLinkDeliveryNotifier`.
+- [x] **Ofertio.Business/Dto/SocialMediaCommentWebhookRequest.cs** — payload do webhook.
+- [x] **Ofertio.Infrastructure.Services/Messaging/** — `EngagementMessagingRegistrationExtensions`, `MassTransitEngagementEventPublisher`, `CommentKeywordTriageService`, `AffiliateLinkDeliveryNotifier`.
+- [x] **Ofertio.Infrastructure.Services/Messaging/Consumers/SocialMediaCommentConsumer.cs** — triagem e disparo simulado de link.
+- [x] **Ofertio.API/Controllers/SocialMediaWebhookController.cs** — `POST /api/webhooks/social-media/comments` → 202 + publicação na fila.
+- [x] **Ofertio.API/Program.cs**, **Ofertio.Worker/Program.cs**, **Ofertio.Orquestrador/Program.cs** — DI MassTransit (Publisher / Consumer).
 - [x] **appsettings.json** (API, Worker, Orquestrador) — seções `RabbitMq` e `EngagementTriage`.
-- [x] **TecFlow.Orquestrador/docker-compose.yml** — serviço `rabbitmq` (5672 / 15672).
-- [x] **TecFlow.Tests/Unit/Messaging/CommentKeywordTriageServiceTests.cs**, **SocialMediaWebhookControllerTests.cs**.
+- [x] **Ofertio.Orquestrador/docker-compose.yml** — serviço `rabbitmq` (5672 / 15672).
+- [x] **Ofertio.Tests/Unit/Messaging/CommentKeywordTriageServiceTests.cs**, **SocialMediaWebhookControllerTests.cs**.
 
 ### Fase 5.0 — Domínio afiliados e contratos de orquestração (jun/2026)
 
-- [x] **TecFlow.Core/Enums/SocialMediaType.cs** — Instagram, TikTok, YouTube, Facebook.
-- [x] **TecFlow.Core/Enums/EngagementStatus.cs** — Pendente, Processado, LinkEnviado, Falhou.
-- [x] **TecFlow.Core/Enums/CommissionStatus.cs** — Rastreado, Retido, Pago, Cancelado.
-- [x] **TecFlow.Core/Entities/AffiliateLink.cs** — produto de divulgação, `OriginalUrl`, `ShopeeTrackedUrl`, `TikTokShopTrackedUrl`, IDs externos e `TrackingCode`.
-- [x] **TecFlow.Business/Domain/Engagement/SocialEngagementEvent.cs** — evento de comentário/mensagem para triagem.
-- [x] **TecFlow.Business/Domain/Engagement/EngagementOrchestrationResult.cs** — resultado do disparo de link.
-- [x] **TecFlow.Business/Domain/Commission/CommissionAuditLine.cs** — linha de auditoria marketplace vs. local.
-- [x] **TecFlow.Business/Domain/Commission/CommissionConciliationResult.cs** — envelope da conciliação.
-- [x] **TecFlow.Business/Interfaces/Orchestration/IEngagementOrchestrator.cs** — contrato Orquestrador (engajamento).
-- [x] **TecFlow.Business/Interfaces/Orchestration/ICommissionConciliator.cs** — contrato Orquestrador (comissões).
-- [x] **TecFlow.Business/Dto/AffiliateLinkDto.cs**, **AffiliateLinkResponseDto.cs** — contratos API/UI futuros.
-- [x] **TecFlow.Database** — `MarketplaceAffiliateLink` persistido (Fase 6.3); `AffiliateLink` legado permanece conceitual.
-- [ ] **TecFlow.Orquestrador** — implementações concretas de `IEngagementOrchestrator` / `ICommissionConciliator` (Fase 6).
+- [x] **Ofertio.Core/Enums/SocialMediaType.cs** — Instagram, TikTok, YouTube, Facebook.
+- [x] **Ofertio.Core/Enums/EngagementStatus.cs** — Pendente, Processado, LinkEnviado, Falhou.
+- [x] **Ofertio.Core/Enums/CommissionStatus.cs** — Rastreado, Retido, Pago, Cancelado.
+- [x] **Ofertio.Core/Entities/AffiliateLink.cs** — produto de divulgação, `OriginalUrl`, `ShopeeTrackedUrl`, `TikTokShopTrackedUrl`, IDs externos e `TrackingCode`.
+- [x] **Ofertio.Business/Domain/Engagement/SocialEngagementEvent.cs** — evento de comentário/mensagem para triagem.
+- [x] **Ofertio.Business/Domain/Engagement/EngagementOrchestrationResult.cs** — resultado do disparo de link.
+- [x] **Ofertio.Business/Domain/Commission/CommissionAuditLine.cs** — linha de auditoria marketplace vs. local.
+- [x] **Ofertio.Business/Domain/Commission/CommissionConciliationResult.cs** — envelope da conciliação.
+- [x] **Ofertio.Business/Interfaces/Orchestration/IEngagementOrchestrator.cs** — contrato Orquestrador (engajamento).
+- [x] **Ofertio.Business/Interfaces/Orchestration/ICommissionConciliator.cs** — contrato Orquestrador (comissões).
+- [x] **Ofertio.Business/Dto/AffiliateLinkDto.cs**, **AffiliateLinkResponseDto.cs** — contratos API/UI futuros.
+- [x] **Ofertio.Database** — `MarketplaceAffiliateLink` persistido (Fase 6.3); `AffiliateLink` legado permanece conceitual.
+- [ ] **Ofertio.Orquestrador** — implementações concretas de `IEngagementOrchestrator` / `ICommissionConciliator` (Fase 6).
 
 ### Fase 4.3 — Push FCM/APNs + Deep Links (jun/2026)
 
-- [x] **TecFlow.Core/Entities/UserDeviceToken.cs** — registo de tokens por utilizador.
-- [x] **TecFlow.Infrastructure/Migrations/*AddUserDeviceTokens*** — tabela `UserDeviceTokens`.
-- [x] **TecFlow.Business/** — `INotificationHubService`, DTOs `DeviceRegisterDto`, `PushNotificationDto`, `FirebaseOptions`.
-- [x] **TecFlow.Infrastructure.Services/Integrations/Notifications/NotificationHubService.cs** — Firebase Admin SDK (FCM).
-- [x] **TecFlow.API/Controllers/DevicesController.cs** — `POST /api/devices/register`.
-- [x] **TecFlow.SharedUi/Navigation/DeepLinkRoutes.cs** — esquema `tecflow://` → rotas Blazor.
-- [x] **TecFlow.SharedUi/Components/Shared/DeepLinkListener.razor** — navegação a partir de push/deep link.
-- [x] **TecFlow.SharedUi/Components/Pages/EngajamentoFila.razor**, **ConciliacaoDetalhes.razor**.
-- [x] **TecFlow.Mobile/Platforms/Android/TecFlowFirebaseMessagingService.cs** — FCM foreground/background.
-- [x] **TecFlow.Mobile/Platforms/iOS/AppDelegate.cs** — `UNUserNotificationCenter` + URL scheme.
-- [x] **TecFlow.Mobile/Platforms/Android/MainActivity.cs** — intent-filter `tecflow://`.
-- [x] **TecFlow.Tests/Unit/Controllers/DevicesControllerTests.cs**.
+- [x] **Ofertio.Core/Entities/UserDeviceToken.cs** — registo de tokens por utilizador.
+- [x] **Ofertio.Infrastructure/Migrations/*AddUserDeviceTokens*** — tabela `UserDeviceTokens`.
+- [x] **Ofertio.Business/** — `INotificationHubService`, DTOs `DeviceRegisterDto`, `PushNotificationDto`, `FirebaseOptions`.
+- [x] **Ofertio.Infrastructure.Services/Integrations/Notifications/NotificationHubService.cs** — Firebase Admin SDK (FCM).
+- [x] **Ofertio.API/Controllers/DevicesController.cs** — `POST /api/devices/register`.
+- [x] **Ofertio.SharedUi/Navigation/DeepLinkRoutes.cs** — esquema `ofertio://` → rotas Blazor.
+- [x] **Ofertio.SharedUi/Components/Shared/DeepLinkListener.razor** — navegação a partir de push/deep link.
+- [x] **Ofertio.SharedUi/Components/Pages/EngajamentoFila.razor**, **ConciliacaoDetalhes.razor**.
+- [x] **Ofertio.Mobile/Platforms/Android/OfertioFirebaseMessagingService.cs** — FCM foreground/background.
+- [x] **Ofertio.Mobile/Platforms/iOS/AppDelegate.cs** — `UNUserNotificationCenter` + URL scheme.
+- [x] **Ofertio.Mobile/Platforms/Android/MainActivity.cs** — intent-filter `ofertio://`.
+- [x] **Ofertio.Tests/Unit/Controllers/DevicesControllerTests.cs**.
 
 ### Fase 4.2 — Shell MAUI Blazor Hybrid + RCL SharedUi (jun/2026)
 
-- [x] **TecFlow.SharedUi/** — Razor Class Library: componentes (Layout, Dashboard, Pages, Auth), `wwwroot/app.css`, serviços HTTP/API, extensões Filter/ResponseDto.
-- [x] **TecFlow.SharedUi/Extensions/ServiceCollectionExtensions.cs** — `AddTecFlowClientServices()` (HttpClient Orquestrador; ignora SSL autoassinado em Development/Homologacao).
-- [x] **TecFlow.SharedUi/Services/Http/IAccessTokenProvider.cs** — abstração de token para Web e MAUI.
-- [x] **TecFlow.WebUi/** — host fino: OAuth/cookies (`AuthCookieService`, `WebAccessTokenProvider`), `Routes.razor` único no host com `AdditionalAssemblies` → SharedUi.
-- [x] **TecFlow.SharedUi/Components/AppRoutes.razor** — router do MAUI/AppShell (nome distinto de `Routes` do WebUi).
-- [x] **TecFlow.WebUi/Program.cs** — repassa `builder.Environment` para `AddWebUiServices` (SSL bypass do HttpClient Orquestrador em dev/homolog).
-- [x] **TecFlow.WebUi/Extensions/WebUiServiceCollectionExtensions.cs** — encaminha `IHostEnvironment` para `AddTecFlowClientServices`.
-- [x] **TecFlow.Mobile/** — MAUI Blazor Hybrid (`MainPage.xaml` + `BlazorWebView` → `AppRoutes` SharedUi); TFM Windows sem iOS/Mac Catalyst.
-- [x] **TecFlow.Mobile/MauiProgram.cs** — DI compartilhada + `MobileAuthenticationStateProvider` + `SessionAuthCookieService`.
-- [x] **TecFlow.API/Program.cs** — política CORS `AllowAll` antes de `UseAuthentication`/`UseAuthorization`.
-- [x] **TecFlow.Mobile/Platforms/Android/AndroidManifest.xml** — permissões `INTERNET` e `ACCESS_NETWORK_STATE`.
-- [x] **TecFlow.Mobile/Platforms/iOS/Info.plist** — `NSAppTransportSecurity` / rede local.
-- [x] **TecFlow.Mobile/appsettings.json** — URL do Orquestrador (emulador Android `10.0.2.2`).
-- [x] **docs/TecFlow_MOBILE_BUILD.md** — comandos `dotnet publish` Android/iOS/Windows.
+- [x] **Ofertio.SharedUi/** — Razor Class Library: componentes (Layout, Dashboard, Pages, Auth), `wwwroot/app.css`, serviços HTTP/API, extensões Filter/ResponseDto.
+- [x] **Ofertio.SharedUi/Extensions/ServiceCollectionExtensions.cs** — `AddOfertioClientServices()` (HttpClient Orquestrador; ignora SSL autoassinado em Development/Homologacao).
+- [x] **Ofertio.SharedUi/Services/Http/IAccessTokenProvider.cs** — abstração de token para Web e MAUI.
+- [x] **Ofertio.WebUi/** — host fino: OAuth/cookies (`AuthCookieService`, `WebAccessTokenProvider`), `Routes.razor` único no host com `AdditionalAssemblies` → SharedUi.
+- [x] **Ofertio.SharedUi/Components/AppRoutes.razor** — router do MAUI/AppShell (nome distinto de `Routes` do WebUi).
+- [x] **Ofertio.WebUi/Program.cs** — repassa `builder.Environment` para `AddWebUiServices` (SSL bypass do HttpClient Orquestrador em dev/homolog).
+- [x] **Ofertio.WebUi/Extensions/WebUiServiceCollectionExtensions.cs** — encaminha `IHostEnvironment` para `AddOfertioClientServices`.
+- [x] **Ofertio.Mobile/** — MAUI Blazor Hybrid (`MainPage.xaml` + `BlazorWebView` → `AppRoutes` SharedUi); TFM Windows sem iOS/Mac Catalyst.
+- [x] **Ofertio.Mobile/MauiProgram.cs** — DI compartilhada + `MobileAuthenticationStateProvider` + `SessionAuthCookieService`.
+- [x] **Ofertio.API/Program.cs** — política CORS `AllowAll` antes de `UseAuthentication`/`UseAuthorization`.
+- [x] **Ofertio.Mobile/Platforms/Android/AndroidManifest.xml** — permissões `INTERNET` e `ACCESS_NETWORK_STATE`.
+- [x] **Ofertio.Mobile/Platforms/iOS/Info.plist** — `NSAppTransportSecurity` / rede local.
+- [x] **Ofertio.Mobile/appsettings.json** — URL do Orquestrador (emulador Android `10.0.2.2`).
+- [x] **docs/Ofertio_MOBILE_BUILD.md** — comandos `dotnet publish` Android/iOS/Windows.
 
 ### Fase 4.1 — Mobile-First WebUi e contratos paginados (jun/2026)
 
-- [x] **TecFlow.WebUi/Components/Layout/MainLayout.razor** — shell com sidebar colapsável (hambúrguer &lt; 992px), backdrop e navegação touch-friendly.
-- [x] **TecFlow.WebUi/Components/Layout/MainLayout.razor.css** — ícone do menu.
-- [x] **TecFlow.WebUi/wwwroot/app.css** — breakpoints mobile-first, `.btn-touch` (44px), `.responsive-data-table` (tabela ↔ cards), sidebar e toolbar do painel.
-- [x] **TecFlow.WebUi/Components/Dashboard/CampaignsWidget.razor** — listagem em cards no mobile + rodapé de paginação.
-- [x] **TecFlow.WebUi/Components/Dashboard/MetricsWidget.razor** — idem métricas/comissões.
-- [x] **TecFlow.WebUi/Components/Dashboard/CampaignFilterForm.razor** — colunas `col-12` em mobile, botões touch.
-- [x] **TecFlow.WebUi/Components/Dashboard/MetricFilterForm.razor** — idem.
-- [x] **TecFlow.WebUi/Components/Dashboard/CampaignCreateForm.razor** — formulário responsivo.
-- [x] **TecFlow.WebUi/Components/Pages/Dashboard.razor** — toolbar responsiva, âncoras `#campanhas` / `#metricas`.
-- [x] **TecFlow.WebUi/Components/Pages/Home.razor** — botões de plataforma touch-friendly.
-- [x] **TecFlow.Database/Filter/IPagedFilter.cs** — contrato `Page` / `PageSize` nos filtros de listagem.
-- [x] **TecFlow.Database/Filter/CampaignFilter.cs**, **MetricFilter.cs**, **ProductFilter.cs**, **AffiliateFilter.cs** — implementam `IPagedFilter`.
-- [x] **TecFlow.Database/Pagin/PagedListHelper.cs** — fatia listas (máx. 30 itens/página).
-- [x] **TecFlow.Business/Dto/PagingInfoDto.cs** — metadados no envelope `*ResponseDto`.
-- [x] **TecFlow.Business/Dto/CampaignResponseDto.cs**, **MetricResponseDto.cs**, **ProductResponseDto.cs**, **AffiliateResponseDto.cs** — propriedade `Paging`.
-- [x] **TecFlow.API/Controllers/** — `CampaignsController`, `MetricsController`, `ProductsController`, `AffiliatesController` com paginação.
-- [x] **TecFlow.Orquestrador/Controllers/CampaignsController.cs**, **MetricsController.cs** — alinhados ao padrão `*Filter` → `*ResponseDto` + `Paging` (WebUi).
-- [x] **TecFlow.Tests/Unit/Database/PagedListHelperTests.cs**, **ProductsControllerPagingTests.cs**.
+- [x] **Ofertio.WebUi/Components/Layout/MainLayout.razor** — shell com sidebar colapsável (hambúrguer &lt; 992px), backdrop e navegação touch-friendly.
+- [x] **Ofertio.WebUi/Components/Layout/MainLayout.razor.css** — ícone do menu.
+- [x] **Ofertio.WebUi/wwwroot/app.css** — breakpoints mobile-first, `.btn-touch` (44px), `.responsive-data-table` (tabela ↔ cards), sidebar e toolbar do painel.
+- [x] **Ofertio.WebUi/Components/Dashboard/CampaignsWidget.razor** — listagem em cards no mobile + rodapé de paginação.
+- [x] **Ofertio.WebUi/Components/Dashboard/MetricsWidget.razor** — idem métricas/comissões.
+- [x] **Ofertio.WebUi/Components/Dashboard/CampaignFilterForm.razor** — colunas `col-12` em mobile, botões touch.
+- [x] **Ofertio.WebUi/Components/Dashboard/MetricFilterForm.razor** — idem.
+- [x] **Ofertio.WebUi/Components/Dashboard/CampaignCreateForm.razor** — formulário responsivo.
+- [x] **Ofertio.WebUi/Components/Pages/Dashboard.razor** — toolbar responsiva, âncoras `#campanhas` / `#metricas`.
+- [x] **Ofertio.WebUi/Components/Pages/Home.razor** — botões de plataforma touch-friendly.
+- [x] **Ofertio.Database/Filter/IPagedFilter.cs** — contrato `Page` / `PageSize` nos filtros de listagem.
+- [x] **Ofertio.Database/Filter/CampaignFilter.cs**, **MetricFilter.cs**, **ProductFilter.cs**, **AffiliateFilter.cs** — implementam `IPagedFilter`.
+- [x] **Ofertio.Database/Pagin/PagedListHelper.cs** — fatia listas (máx. 30 itens/página).
+- [x] **Ofertio.Business/Dto/PagingInfoDto.cs** — metadados no envelope `*ResponseDto`.
+- [x] **Ofertio.Business/Dto/CampaignResponseDto.cs**, **MetricResponseDto.cs**, **ProductResponseDto.cs**, **AffiliateResponseDto.cs** — propriedade `Paging`.
+- [x] **Ofertio.API/Controllers/** — `CampaignsController`, `MetricsController`, `ProductsController`, `AffiliatesController` com paginação.
+- [x] **Ofertio.Orquestrador/Controllers/CampaignsController.cs**, **MetricsController.cs** — alinhados ao padrão `*Filter` → `*ResponseDto` + `Paging` (WebUi).
+- [x] **Ofertio.Tests/Unit/Database/PagedListHelperTests.cs**, **ProductsControllerPagingTests.cs**.
 
 ### Integrações TikTok Shop & Shopee — Fase 3.1 (Infraestrutura Core)
 
-- [x] **TecFlow.Business/Integrations/Common/** — `IExternalIntegrationClient`, `IntegrationHttpClientNames`, `IntegrationResilienceOptions`.
-- [x] **TecFlow.Business/Integrations/TikTokShop/** — `ITikTokShopIntegrationClient`, `TikTokShopIntegrationOptions` (AppKey/AppSecret).
-- [x] **TecFlow.Business/Integrations/Shopee/** — `IShopeeIntegrationClient`, `ShopeeIntegrationOptions` (PartnerId/PartnerKey/AppKey/AppSecret/AppSignature).
-- [x] **TecFlow.Infrastructure.Services/Integrations/Common/** — `ExternalApiLoggingHandler`, `IntegrationResiliencePolicies` (Polly retry + circuit breaker).
-- [x] **TecFlow.Infrastructure.Services/Integrations/TikTokShop/TikTokShopIntegrationClient.cs** — implementação HTTP.
-- [x] **TecFlow.Infrastructure.Services/Integrations/Shopee/ShopeeIntegrationClient.cs** — implementação HTTP.
-- [x] **IntegrationHttpClientRegistrationExtensions.cs** — `AddTecFlowIntegrationHttpClients()` registrado em `ServiceRegistrationExtensions`.
+- [x] **Ofertio.Business/Integrations/Common/** — `IExternalIntegrationClient`, `IntegrationHttpClientNames`, `IntegrationResilienceOptions`.
+- [x] **Ofertio.Business/Integrations/TikTokShop/** — `ITikTokShopIntegrationClient`, `TikTokShopIntegrationOptions` (AppKey/AppSecret).
+- [x] **Ofertio.Business/Integrations/Shopee/** — `IShopeeIntegrationClient`, `ShopeeIntegrationOptions` (PartnerId/PartnerKey/AppKey/AppSecret/AppSignature).
+- [x] **Ofertio.Infrastructure.Services/Integrations/Common/** — `ExternalApiLoggingHandler`, `IntegrationResiliencePolicies` (Polly retry + circuit breaker).
+- [x] **Ofertio.Infrastructure.Services/Integrations/TikTokShop/TikTokShopIntegrationClient.cs** — implementação HTTP.
+- [x] **Ofertio.Infrastructure.Services/Integrations/Shopee/ShopeeIntegrationClient.cs** — implementação HTTP.
+- [x] **IntegrationHttpClientRegistrationExtensions.cs** — `AddOfertioIntegrationHttpClients()` registrado em `ServiceRegistrationExtensions`.
 - [x] **appsettings.json** (API + Orquestrador) — seção `Integrations` com chaves de produção (vazias; usar User Secrets/env).
 
 ### Integrações TikTok Shop & Shopee — Fase 3.2 (OAuth2)
 
-- [x] **TecFlow.Core/Entities/MarketplaceToken.cs** — persistência de tokens por loja (`ShopId`, `MarketplaceType`, `AccessToken`, `RefreshToken`, `ExpiresAt`, `RefreshExpiresAt`).
-- [x] **TecFlow.Core/Enums/MarketplaceType.cs** — `Shopee`, `TikTokShop`.
-- [x] **TecFlow.Business/Integrations/Auth/** — `IMarketplaceAuthService`, `IMarketplaceSignatureService`, `MarketplaceTokenResult`.
-- [x] **TecFlow.Business/Integrations/Common/MarketplaceSignatureHelper.cs** — HMAC-SHA256 Shopee e TikTok Shop.
-- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — authorize URL, callback, refresh automático.
-- [x] **TecFlow.Infrastructure.Services/Repositories/MarketplaceTokenRepository.cs** — upsert por `ShopId` + `MarketplaceType`.
+- [x] **Ofertio.Core/Entities/MarketplaceToken.cs** — persistência de tokens por loja (`ShopId`, `MarketplaceType`, `AccessToken`, `RefreshToken`, `ExpiresAt`, `RefreshExpiresAt`).
+- [x] **Ofertio.Core/Enums/MarketplaceType.cs** — `Shopee`, `TikTokShop`.
+- [x] **Ofertio.Business/Integrations/Auth/** — `IMarketplaceAuthService`, `IMarketplaceSignatureService`, `MarketplaceTokenResult`.
+- [x] **Ofertio.Business/Integrations/Common/MarketplaceSignatureHelper.cs** — HMAC-SHA256 Shopee e TikTok Shop.
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** — authorize URL, callback, refresh automático.
+- [x] **Ofertio.Infrastructure.Services/Repositories/MarketplaceTokenRepository.cs** — upsert por `ShopId` + `MarketplaceType`.
 - [x] **MarketplaceAuthController** — `GET api/marketplace-auth/lojas` lê `MarketplaceAccounts` por `UserId`.
 - [x] **IntegracaoLojaService.ListByUserAsync** — `AsNoTracking` em `MarketplaceAccounts`.
 - [x] **IntegracaoLojaApiService.ListAsync** / **MinhasLojas.razor** — recarrega lojas após vínculo.
@@ -292,19 +292,19 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 ### Integrações TikTok Shop & Shopee — Fase 3.3 (Catálogo / Produtos)
 
-- [x] **TecFlow.Core/Entities/Product.cs** — campos `[NotMapped]` `ExternalProductId`, `SkuCode`, `MarketplaceSource` para sincronização.
-- [x] **TecFlow.Business/Integrations/Catalog/IMarketplaceProductService.cs** — `FetchProductsFromPlatformAsync`, `ConvertToInternalProductDto` (Shopee/TikTok).
-- [x] **TecFlow.Business/Integrations/Shopee/Payloads/** — envelopes e DTOs `get_item_list`, `get_item_base_info`, `get_model_list`.
-- [x] **TecFlow.Business/Integrations/TikTokShop/Payloads/** — envelope e DTOs `products/search` (categorias, attributes, skus, price, stock).
+- [x] **Ofertio.Core/Entities/Product.cs** — campos `[NotMapped]` `ExternalProductId`, `SkuCode`, `MarketplaceSource` para sincronização.
+- [x] **Ofertio.Business/Integrations/Catalog/IMarketplaceProductService.cs** — `FetchProductsFromPlatformAsync`, `ConvertToInternalProductDto` (Shopee/TikTok).
+- [x] **Ofertio.Business/Integrations/Shopee/Payloads/** — envelopes e DTOs `get_item_list`, `get_item_base_info`, `get_model_list`.
+- [x] **Ofertio.Business/Integrations/TikTokShop/Payloads/** — envelope e DTOs `products/search` (categorias, attributes, skus, price, stock).
 - [x] **ShopeeIntegrationOptions** / **TikTokShopIntegrationOptions** — paths de catálogo configuráveis.
 - [x] **MarketplaceProductService.cs** — HTTP resiliente + token OAuth + assinatura HMAC + adapter → `ProductResponseDto`.
 - [x] **MarketplaceProductMapper.cs** — conversão unificada (ID externo, SKU, nome, descrição, preço, estoque, origem).
-- [x] **MarketplaceProductRegistrationExtensions.cs** — `AddTecFlowMarketplaceCatalog()` em `ServiceRegistrationExtensions`.
-- [x] **TecFlow.API/Controllers/MarketplaceProductsController.cs** — `GET api/marketplace-products/sync`.
+- [x] **MarketplaceProductRegistrationExtensions.cs** — `AddOfertioMarketplaceCatalog()` em `ServiceRegistrationExtensions`.
+- [x] **Ofertio.API/Controllers/MarketplaceProductsController.cs** — `GET api/marketplace-products/sync`.
 
 ### Integrações TikTok Shop & Shopee — Fase 3.4 (Pedidos & Estoque)
 
-- [x] **TecFlow.Core/Entities/MarketplaceOrder.cs** / **MarketplaceOrderLine.cs** — pedidos externos com índice único (idempotência).
+- [x] **Ofertio.Core/Entities/MarketplaceOrder.cs** / **MarketplaceOrderLine.cs** — pedidos externos com índice único (idempotência).
 - [x] **Product.cs** — colunas persistidas `IdExterno`, `SkuCodigo`, `MarketplaceOrigem`, `MarketplaceShopId`.
 - [x] **IMarketplaceOrderRepository** / **MarketplaceOrderRepository.cs**
 - [x] **IProductRepository** — `GetByMarketplaceSkuAsync`, `AdjustStockAsync` (transação).
@@ -318,7 +318,7 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **ProductsController** — propaga alteração de estoque para marketplace quando SKU vinculado.
 - [x] **Migration AddMarketplaceOrdersAndProductSku**
 
-### TecFlow.Tests — Cobertura Fase 3 (Integrações & ResponseDto)
+### Ofertio.Tests — Cobertura Fase 3 (Integrações & ResponseDto)
 
 - [x] **Helpers/StubHttpMessageHandler.cs** — mock HTTP sem chamadas externas.
 - [x] **Helpers/MarketplaceTestOptionsFactory.cs** — opções Shopee/TikTok para testes.
@@ -332,19 +332,19 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 - [x] **Unit/Controllers/MarketplaceAuthControllerTests.cs** — authorize-url e callback com falha.
 - [x] **Unit/Controllers/MarketplaceWebhookControllerTests.cs** — 401 assinatura inválida / 200 OK.
 - [x] **Unit/Database/ProductFilterExtensionsTests.cs** — `ProductFilter` → `DataList` padronizado.
-- [x] **TecFlow.Tests.csproj** — referências `TecFlow.API`, `TecFlow.Database`, `Microsoft.AspNetCore.Mvc.Testing`.
+- [x] **Ofertio.Tests.csproj** — referências `Ofertio.API`, `Ofertio.Database`, `Microsoft.AspNetCore.Mvc.Testing`.
 
 ### Colisão semântica (nome enganoso)
 
-- [ ] **AuthController.cs** — `TecFlow.Application/Controller/AuthController.cs` **não é controller** (classe DTO com `CampaignId`, `Revenue`). Conflito de nome com `TecFlow.Orquestrador/Controllers/AuthController.cs`. (Ação: renomear para `CampaignSummaryDto` ou deletar se obsoleto; remover projeto `Application` da cadeia se ficar vazio.)
+- [ ] **AuthController.cs** — `Ofertio.Application/Controller/AuthController.cs` **não é controller** (classe DTO com `CampaignId`, `Revenue`). Conflito de nome com `Ofertio.Orquestrador/Controllers/AuthController.cs`. (Ação: renomear para `CampaignSummaryDto` ou deletar se obsoleto; remover projeto `Application` da cadeia se ficar vazio.)
 
 ### Registro DI fragmentado (não duplica tipo, duplica responsabilidade)
 
-- [ ] **ServiceRegistrationExtensions.cs** + **CoreServiceRegistrationExtensions.cs** + **ExternalServiceRegistrationExtensions.cs** + **InfrastructureDataServiceRegistrationExtensions.cs** — todos em `TecFlow.Infrastructure.Services/`. (Ação: consolidar em um único `ServiceRegistrationExtensions.cs` conforme plano anterior.)
+- [ ] **ServiceRegistrationExtensions.cs** + **CoreServiceRegistrationExtensions.cs** + **ExternalServiceRegistrationExtensions.cs** + **InfrastructureDataServiceRegistrationExtensions.cs** — todos em `Ofertio.Infrastructure.Services/`. (Ação: consolidar em um único `ServiceRegistrationExtensions.cs` conforme plano anterior.)
 
 ### API legada no Infrastructure (sobreposição com Business + Services)
 
-- [ ] **TikTokShopApi.cs**, **TikTokAdsApi.cs**, **ShopeeApi.cs** — `TecFlow.Infrastructure/API/` vs implementações HttpClient em `TecFlow.Infrastructure.Services/Service/ExternalServices/`. (Ação: definir camada única de integração externa; deletar stubs antigos em `Infrastructure/API` se não forem registrados no DI.)
+- [ ] **TikTokShopApi.cs**, **TikTokAdsApi.cs**, **ShopeeApi.cs** — `Ofertio.Infrastructure/API/` vs implementações HttpClient em `Ofertio.Infrastructure.Services/Service/ExternalServices/`. (Ação: definir camada única de integração externa; deletar stubs antigos em `Infrastructure/API` se não forem registrados no DI.)
 
 ---
 
@@ -352,34 +352,34 @@ Use esta lista como painel de controle para garantir que nenhuma classe antiga f
 
 Arquivos já no projeto físico correto, mas com `namespace` desalinhado da pasta/projeto:
 
-- [ ] **ExceptionMiddleware.cs** — ~~Em `TecFlow.Core/Exceptions/`, namespace `TecFlow.API.Middlewares`~~ **Resolvido:** removido do Core; usar `TecFlow.API/Middlewares/ExceptionHandlingMiddleware.cs`.
+- [ ] **ExceptionMiddleware.cs** — ~~Em `Ofertio.Core/Exceptions/`, namespace `Ofertio.API.Middlewares`~~ **Resolvido:** removido do Core; usar `Ofertio.API/Middlewares/ExceptionHandlingMiddleware.cs`.
 
-- [ ] **CoreServiceRegistrationExtensions.cs** — Em `TecFlow.Infrastructure.Services/`, namespace `TecFlow.Infrastructure`. (Ação: `TecFlow.Infrastructure.Services`.)
+- [ ] **CoreServiceRegistrationExtensions.cs** — Em `Ofertio.Infrastructure.Services/`, namespace `Ofertio.Infrastructure`. (Ação: `Ofertio.Infrastructure.Services`.)
 
-- [ ] **Serilog.cs** — Em `TecFlow.Infrastructure.Services/`, namespace `TecFlow.Configuracao`, **excluído do compile**. (Ação: mover para `TecFlow.Infrastructure/Configuration` com namespace alinhado ou deletar.)
+- [ ] **Serilog.cs** — Em `Ofertio.Infrastructure.Services/`, namespace `Ofertio.Configuracao`, **excluído do compile**. (Ação: mover para `Ofertio.Infrastructure/Configuration` com namespace alinhado ou deletar.)
 
-- [ ] **ITikTokShopApiService.cs** — Em `TecFlow.Infrastructure.Services/Interfaces/`, namespace `TecFlow.Core.Interfaces.Services`. (Ação: mover para `TecFlow.Business/Interfaces/Services` ou `TecFlow.Core` conforme regra de contratos.)
+- [ ] **ITikTokShopApiService.cs** — Em `Ofertio.Infrastructure.Services/Interfaces/`, namespace `Ofertio.Core.Interfaces.Services`. (Ação: mover para `Ofertio.Business/Interfaces/Services` ou `Ofertio.Core` conforme regra de contratos.)
 
-- [ ] **AnaliseCalculoService.cs**, **IAnaliseCalculoService.cs** — Pasta `Service/`, namespace `TecFlow.Infrastructure.Services.Services` (`.Services` duplicado). (Ação: `TecFlow.Infrastructure.Services.Service`.)
+- [ ] **AnaliseCalculoService.cs**, **IAnaliseCalculoService.cs** — Pasta `Service/`, namespace `Ofertio.Infrastructure.Services.Services` (`.Services` duplicado). (Ação: `Ofertio.Infrastructure.Services.Service`.)
 
-- [ ] **TikTokShopApiService.cs**, **TikTokAdsApiService.cs** — Pasta `Service/ExternalServices/`, namespace `TecFlow.Infrastructure.Services.ExternalServices` (falta segmento `.Service`). (Ação: alinhar com pasta ou renomear pasta.)
+- [ ] **TikTokShopApiService.cs**, **TikTokAdsApiService.cs** — Pasta `Service/ExternalServices/`, namespace `Ofertio.Infrastructure.Services.ExternalServices` (falta segmento `.Service`). (Ação: alinhar com pasta ou renomear pasta.)
 
-- [ ] **AnaliseService.cs** — Em `TecFlow.Business/Interfaces/Services/`, comentário assume `TecFlow.Core.Services`. (Ação: confirmar namespace `TecFlow.Business.Interfaces.Services` e remover comentário legado.)
+- [ ] **AnaliseService.cs** — Em `Ofertio.Business/Interfaces/Services/`, comentário assume `Ofertio.Core.Services`. (Ação: confirmar namespace `Ofertio.Business.Interfaces.Services` e remover comentário legado.)
 
-- [ ] **OrquestradorPrincipalTests.cs** — `TecFlow.Tests/UnitTests/Core/`, namespace `TecFlow.Tests.UnitTests.Colore` (typo). (Ação: `TecFlow.Tests.UnitTests.Core`.)
+- [ ] **OrquestradorPrincipalTests.cs** — `Ofertio.Tests/UnitTests/Core/`, namespace `Ofertio.Tests.UnitTests.Colore` (typo). (Ação: `Ofertio.Tests.UnitTests.Core`.)
 
-- [ ] **CampanhaConfiguration.cs**, **AfiliadoConfiguration.cs** — `TecFlow.Infrastructure/Data/Configurations/`, nomes em português para entidades em inglês (`Campaign`, `Affiliate`). (Ação: renomear classes/arquivos para inglês ou mover configs para `TecFlow.Database`.)
+- [ ] **CampanhaConfiguration.cs**, **AfiliadoConfiguration.cs** — `Ofertio.Infrastructure/Data/Configurations/`, nomes em português para entidades em inglês (`Campaign`, `Affiliate`). (Ação: renomear classes/arquivos para inglês ou mover configs para `Ofertio.Database`.)
 
 ### Movidos e com namespace correto (referência — sem ação)
 
-- `TecFlow.Database`: `AppDbContext`, `Entity/`, `Filter/`, `Pagin/`, `Repositorio/` → namespaces `TecFlow.Database.*` ✓  
-- `TecFlow.Business`: `Dto/`, `Interfaces/`, `Pipelines/`, `Service/Application/` → `TecFlow.Business.*` ✓  
-- `TecFlow.API` controllers refatorados → `TecFlow.API.Controllers` ✓  
+- `Ofertio.Database`: `AppDbContext`, `Entity/`, `Filter/`, `Pagin/`, `Repositorio/` → namespaces `Ofertio.Database.*` ✓  
+- `Ofertio.Business`: `Dto/`, `Interfaces/`, `Pipelines/`, `Service/Application/` → `Ofertio.Business.*` ✓  
+- `Ofertio.API` controllers refatorados → `Ofertio.API.Controllers` ✓  
 
 ### Pendência arquitetural: Migrations vs DbContext
 
-- [ ] **AppDbContext.cs** — em `TecFlow.Database/`.  
-- [ ] **Migrations/** — ainda em `TecFlow.Infrastructure/Migrations/` (6 migrações + snapshot). (Ação: mover pasta de migrations para `TecFlow.Database` ou configurar `MigrationsAssembly` apontando para Infrastructure até concluir a mudança; hoje há risco de `dotnet ef` gerar no projeto errado.)
+- [ ] **AppDbContext.cs** — em `Ofertio.Database/`.  
+- [ ] **Migrations/** — ainda em `Ofertio.Infrastructure/Migrations/` (6 migrações + snapshot). (Ação: mover pasta de migrations para `Ofertio.Database` ou configurar `MigrationsAssembly` apontando para Infrastructure até concluir a mudança; hoje há risco de `dotnet ef` gerar no projeto errado.)
 
 ---
 
@@ -389,55 +389,55 @@ Arquivos já no projeto físico correto, mas com `namespace` desalinhado da past
 
 - [ ] **`**/bin/**` e `**/obj/**`** em todos os projetos — contêm `Tecso.API.deps.json`, `Tecso.Core.AssemblyInfo.cs`, `Tecso.Orquestrador.*`, etc. (Ação: `dotnet clean`; garantir `.gitignore` com `bin/`, `obj/`, `artifacts/`.)
 
-- [ ] **`artifacts/orquestrador-publish/`** — publish com assembly `Tecso.Orquestrador`. (Ação: excluir pasta ou regenerar publish com nome TecFlow.)
+- [ ] **`artifacts/orquestrador-publish/`** — publish com assembly `Tecso.Orquestrador`. (Ação: excluir pasta ou regenerar publish com nome Ofertio.)
 
 - [ ] **`.vs/Tecso.Automacao/`** — cache Visual Studio com caminhos `Tecso.Infrastructure.Services\...`. (Ação: excluir do disco; não commitar.)
 
 ### Arquivos excluídos do compile mas ainda no disco (fantasmas)
 
-- [ ] `TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApi.cs`  
-- [ ] `TecFlow.Infrastructure.Services/Interfaces/IShopeeApi.cs`  
-- [ ] `TecFlow.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs`  
-- [ ] `TecFlow.Infrastructure.Services/Serilog.cs`  
-- [ ] `TecFlow.Infrastructure.Services/Service/ExternalServices/OrquestradorService.cs`  
+- [ ] `Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApi.cs`  
+- [ ] `Ofertio.Infrastructure.Services/Interfaces/IShopeeApi.cs`  
+- [ ] `Ofertio.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs`  
+- [ ] `Ofertio.Infrastructure.Services/Serilog.cs`  
+- [ ] `Ofertio.Infrastructure.Services/Service/ExternalServices/OrquestradorService.cs`  
 (Ação: deletar arquivos **ou** reintegrar ao compile — não manter `<Compile Remove>` indefinidamente.)
 
 ### Templates / testes de scaffold
 
-- [ ] `TecFlow.API/WeatherForecast.cs` + `Controllers/WeatherForecastController.cs`  
-- [ ] `TecFlow.API/Controllers/TestController.cs`  
-- [x] `TecFlow.Dashboard/` — projeto removido (WeatherForecast scaffold eliminado com a pasta).
+- [ ] `Ofertio.API/WeatherForecast.cs` + `Controllers/WeatherForecastController.cs`  
+- [ ] `Ofertio.API/Controllers/TestController.cs`  
+- [x] `Ofertio.Dashboard/` — projeto removido (WeatherForecast scaffold eliminado com a pasta).
 (Ação API: excluir scaffolds se não usados em produção.)
 
 ### Projeto Application quase vazio
 
-- [ ] `TecFlow.Application/` — apenas `Controller/AuthController.cs` (stub incorreto). Referenciado por `TecFlow.API`. (Ação: migrar serviços restantes para `TecFlow.Business` e remover referência de projeto, ou repopular Application com casos de uso reais.)
+- [ ] `Ofertio.Application/` — apenas `Controller/AuthController.cs` (stub incorreto). Referenciado por `Ofertio.API`. (Ação: migrar serviços restantes para `Ofertio.Business` e remover referência de projeto, ou repopular Application com casos de uso reais.)
 
 ### Pasta API sem middleware (limpeza pós-merge)
 
-- [ ] `TecFlow.API/Middleware/` — pasta vazia após remoção de `ExceptionMiddleware.cs`. (Ação: remover diretório vazio.)
+- [ ] `Ofertio.API/Middleware/` — pasta vazia após remoção de `ExceptionMiddleware.cs`. (Ação: remover diretório vazio.)
 
 ### Arquivos de usuário IDE (opcional)
 
-- [ ] `TecFlow.API/Tecso.API.csproj.user`  
-- [ ] `TecFlow.API/TecFlow.API.csproj.user`  
+- [ ] `Ofertio.API/Tecso.API.csproj.user`  
+- [ ] `Ofertio.API/Ofertio.API.csproj.user`  
 (Ação: excluir e adicionar `*.csproj.user` ao `.gitignore`.)
 
 ### Duplicata de teste
 
-- [ ] `TecFlow.Tests/Integration/OrquestradorPrincipalTests.cs` e `TecFlow.Tests/UnitTests/Core/OrquestradorPrincipalTests.cs` — mesmo nome de arquivo. (Ação: renomear um (ex.: `OrquestradorPrincipalIntegrationTests.cs`).)
+- [ ] `Ofertio.Tests/Integration/OrquestradorPrincipalTests.cs` e `Ofertio.Tests/UnitTests/Core/OrquestradorPrincipalTests.cs` — mesmo nome de arquivo. (Ação: renomear um (ex.: `OrquestradorPrincipalIntegrationTests.cs`).)
 
 ---
 
 ## 🛠️ 4. Estrutura de Pastas Alvo (Arquitetura Atual)
 
 ```
-TecFlow.sln
-├── TecFlow.Core/                    # Domínio: entidades, exceções, middleware global
+Ofertio.sln
+├── Ofertio.Core/                    # Domínio: entidades, exceções, middleware global
 │   ├── Entities/                    # Campaign, Product, UserAccount, ...
 │   └── Exceptions/                  # NotFoundException, ExceptionMiddleware ⚠ namespace API
 │
-├── TecFlow.Database/                # Persistência (isolado) ✓
+├── Ofertio.Database/                # Persistência (isolado) ✓
 │   ├── AppDbContext.cs
 │   ├── Entity/                      # UserEntity
 │   ├── Filter/                      # *Filter + FilterQueryExtensions
@@ -445,7 +445,7 @@ TecFlow.sln
 │   ├── Repositorio/                 # AppDbContextFactory
 │   └── Prompts/
 │
-├── TecFlow.Business/                # Regras + contratos + DTOs (isolado) ✓
+├── Ofertio.Business/                # Regras + contratos + DTOs (isolado) ✓
 │   ├── Dto/                         # *Dto, *ResponseDto, ResponseDto
 │   ├── Interfaces/
 │   │   ├── Repositories/
@@ -454,30 +454,30 @@ TecFlow.sln
 │   └── Service/
 │       └── Application/             # *ApplicationService, DI extensions
 │
-├── TecFlow.Infrastructure/          # EF migrations, segurança, configs legadas
-│   ├── Migrations/                  # ⚠ deveria alinhar com TecFlow.Database
+├── Ofertio.Infrastructure/          # EF migrations, segurança, configs legadas
+│   ├── Migrations/                  # ⚠ deveria alinhar com Ofertio.Database
 │   ├── Data/                        # DataService, Configurations (PT-BR)
 │   ├── API/                         # TikTok/Shopee stubs legados
 │   ├── Security/
 │   └── Services/Security/
 │
-├── TecFlow.Infrastructure.Services/ # Implementações: repos, APIs externas, DI
+├── Ofertio.Infrastructure.Services/ # Implementações: repos, APIs externas, DI
 │   ├── Repositories/
 │   ├── Service/
 │   │   └── ExternalServices/
 │   ├── Interfaces/                  # ⚠ fantasmas + namespace Core
 │   └── *ServiceRegistrationExtensions.cs (4 arquivos)
 │
-├── TecFlow.Application/             # ⚠ quase vazio — 1 arquivo stub
-├── TecFlow.API/                     # Host HTTP principal
-├── TecFlow.Orquestrador/            # Host orquestração (controllers espelhados)
-├── TecFlow.WebUi/                   # Blazor UI canônico → Business + Database (Filter)
+├── Ofertio.Application/             # ⚠ quase vazio — 1 arquivo stub
+├── Ofertio.API/                     # Host HTTP principal
+├── Ofertio.Orquestrador/            # Host orquestração (controllers espelhados)
+├── Ofertio.WebUi/                   # Blazor UI canônico → Business + Database (Filter)
 │   ├── Components/Dashboard/        # FilterForm, CreateForm, Widgets (ResponseDto)
 │   ├── Extensions/                  # FilterQueryString, ResponseDto, Campaign
 │   └── Services/Dashboard/          # Filter → API → ResponseDto
-├── TecFlow.Worker/
-├── TecFlow.Tests/
-├── TecFlow.Util/                    # ValidationHelper, Encryption, CEP
+├── Ofertio.Worker/
+├── Ofertio.Tests/
+├── Ofertio.Util/                    # ValidationHelper, Encryption, CEP
 └── (externo) ../Tecso.LerArquivos/  # Utilitário fora do repo principal
 ```
 
@@ -491,21 +491,21 @@ API / Orquestrador / Worker / WebUi
   → Infrastructure → Business, Core, Database, Util
 ```
 
-**Isolamento desejado:** `TecFlow.Business` e `TecFlow.Database` **não** devem referenciar `Infrastructure` — hoje **ok** no `.csproj`. Implementações ficam em `Infrastructure` + `Infrastructure.Services`.
+**Isolamento desejado:** `Ofertio.Business` e `Ofertio.Database` **não** devem referenciar `Infrastructure` — hoje **ok** no `.csproj`. Implementações ficam em `Infrastructure` + `Infrastructure.Services`.
 
 ### Fase 19.1.1 — Credenciais de afiliado Shopee (appsettings)
 
-- [x] **TecFlow.API/appsettings.json**, **appsettings.Homologacao.json** — `Integrations:Shopee` com `PartnerId`, `PartnerKey`, `AppSecret`, `AppKey`, `AppSignature` (placeholders `""`).
-- [x] **TecFlow.Business/Integrations/Shopee/ShopeeIntegrationOptions.cs** — bind das chaves de afiliado.
-- [x] **TecFlow.Infrastructure.Services/LinkStrategies/ShopeeAffiliateLinkClient.cs** — fallback `AppKey`/`AppSecret`/`AppSignature`.
-- [x] **TecFlow.WebUi** — sem seção Shopee (credenciais ficam só na API).
+- [x] **Ofertio.API/appsettings.json**, **appsettings.Homologacao.json** — `Integrations:Shopee` com `PartnerId`, `PartnerKey`, `AppSecret`, `AppKey`, `AppSignature` (placeholders `""`).
+- [x] **Ofertio.Business/Integrations/Shopee/ShopeeIntegrationOptions.cs** — bind das chaves de afiliado.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/ShopeeAffiliateLinkClient.cs** — fallback `AppKey`/`AppSecret`/`AppSignature`.
+- [x] **Ofertio.WebUi** — sem seção Shopee (credenciais ficam só na API).
 
 ### Fase 19.1.2 — Fallback/Sandbox Shopee
 
-- [x] **TecFlow.Business/Integrations/Shopee/ShopeeSandboxLinkBuilder.cs** — URL de homologação com `tracking_code`/`sub_id` (`tecflow_sandbox_subid`).
+- [x] **Ofertio.Business/Integrations/Shopee/ShopeeSandboxLinkBuilder.cs** — URL de homologação com `tracking_code`/`sub_id` (`tecflow_sandbox_subid`).
 - [x] **ShopeeIntegrationClient** — modo sandbox quando credenciais vazias (não lança; não chama HTTP).
 - [x] **ShopeeAffiliateLinkClient** / **ShopeeLinkStrategy** — geração local de URL rastreada sem exceção.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/ShopeeLinkConversionTests.cs** — credenciais, sandbox e tracking.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/ShopeeLinkConversionTests.cs** — credenciais, sandbox e tracking.
 
 ### Fase 19.2.1 — PlatformLinkResolver, unshorten e extração ShopId/ItemId
 
@@ -515,7 +515,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ShopeeLinkStrategy** / **PlatformLinkResolver** — regex `i.(shopId).(itemId)` no desktop; Universal Link `https://shopee.com.br/universal-link/product/{shopId}/{itemId}?sub_id=...` sem Open API.
 - [x] **ConnectStoreModal.razor** / **MinhasLojas.razor** — Shopee: plataforma, apelido e campo `ID do Afiliado (Affiliate ID / Tracking ID)` (ex.: `6512300000`); persistido em `MarketplaceAccounts.AffiliateTrackingId`.
 - [x] **MarketplaceStoreCard.razor** — exibe `Shop ID` e `Affiliate ID` no card de Minhas Lojas.
-- [x] **TecFlow.Data/Migrations/20260922220000_AddAffiliateTrackingId.cs** — coluna `AffiliateTrackingId` (`nvarchar(64)`) em `MarketplaceAccounts` e `IntegracaoLoja`.
+- [x] **Ofertio.Data/Migrations/20260922220000_AddAffiliateTrackingId.cs** — coluna `AffiliateTrackingId` (`nvarchar(64)`) em `MarketplaceAccounts` e `IntegracaoLoja`.
 
 ### Fase 19.2.2 — URL rastreada de comissão
 
@@ -528,12 +528,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **LinkClickLog.cs** — TenantId, ShopId, OriginalUrl, ConvertedUrl, Platform, CreatedAt, EventKind e metadados de acesso.
 - [x] **AffiliateLinkGenerationService** / **LinkClickTelemetryService.RecordGenerationAsync** — grava telemetria após conversão Shopee.
 - [x] **20260916231111_AddLinkClickLogGenerationTelemetry** — colunas novas na tabela `LinkClickLog`.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/LinkClickLogTests.cs** — TenantId/ShopId da sessão, campos obrigatórios e FK do encurtador.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/LinkClickLogTests.cs** — TenantId/ShopId da sessão, campos obrigatórios e FK do encurtador.
 
 ### Fase 19.3.1 — Integração GeradorLinks.razor
 
 - [x] **GeradorLinks.razor** — POST com URL + StoreId/TenantId/ShopId da loja ativa; `_isLoading`, spinner, alerta vermelho e `StateHasChanged()` no sucesso.
-- [x] **TecFlow.Util/Text/SlugHelper.cs** — `GenerateSlug` / `ShortLinkPublicUrl` (`@Achadinhos de Aaz` → `AchadinhosDeAaz`; URL `{host}/{storeSlug}/{code}`).
+- [x] **Ofertio.Util/Text/SlugHelper.cs** — `GenerateSlug` / `ShortLinkPublicUrl` (`@Achadinhos de Aaz` → `AchadinhosDeAaz`; URL `{host}/{storeSlug}/{code}`).
 - [x] **ShortLinkRedirectController.cs** — `GET /{storeSlug}/{code}` resolve `ShortAffiliateLinks` pelo hash e registra clique; `/r/{code}` permanece como alias.
 - [x] **AffiliateLinkApiService** — `api/links/convert` (alias `api/afiliados/links/gerar`) via `HttpService`; 200 OK com `originalUrl`, `affiliateUrl` e `shortenedUrl`.
 - [x] **GerarLinkAfiliadoResponseDto** — `OriginalUrl`, `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`/{storeSlug}/{code}`).
@@ -547,7 +547,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **GeradorLinks.razor** — checkboxes e Selecionar todas; gera para todas as contas marcadas.
 - [x] **LinkGeneratorResultPanel.razor** — combo "Conta selecionada" quando há mais de uma conta ativa.
 - [x] **HistoricoLinks.razor** — ação Editar com modal de contas (inativação lógica).
-- [x] **TecFlow.Data/Migrations/20260923200000_AddShortAffiliateLinkAccounts.cs** — tabela e backfill no SQL Server.
+- [x] **Ofertio.Data/Migrations/20260923200000_AddShortAffiliateLinkAccounts.cs** — tabela e backfill no SQL Server.
 
 ### Fase 19.4 — TikTok Shop Link Strategy
 
@@ -644,16 +644,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **AffiliateTrackingIdValidator** — regex `mmp_pid=an_`, `utm_source=an_`, `affiliate_id`, `sub_id`; hosts `shope.ee` / `s.shopee.com.br`.
 - [x] **UrlExpansionService** / **PlatformLinkResolver.ExpandIfShortenedAsync** — HTTP unshorten com `AllowAutoRedirect`.
 - [x] **UrlUnshortenerService.cs** — `ResolveToFinalSupportedMarketplaceAsync`: loop `while` de até 5 iterações; para em Amazon/Shopee/Magalu/ML/Kabum/TikTok/Casas Bahia; senão hop via Location, meta-refresh ou `window.location`.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/UrlUnshortenerServiceTests.cs** — `promoby.me/6nf9k3d5` → `amazon.com.br`; `ofertou.ai/drXB-Magalu` → `magazineluiza.com.br`.
-- [x] **TecFlow.Business/Service/Application/ShortAffiliateLinkService.cs** — contas Magalu com alias flexível e Tracking ID.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/UrlUnshortenerServiceTests.cs** — `promoby.me/6nf9k3d5` → `amazon.com.br`; `ofertou.ai/drXB-Magalu` → `magazineluiza.com.br`.
+- [x] **Ofertio.Business/Service/Application/ShortAffiliateLinkService.cs** — contas Magalu com alias flexível e Tracking ID.
 - [x] **IntegracaoLojaScopeResolver.cs** — `AreSamePlatform` ao resolver a loja Magalu (ex.: Affiliate ID `5321952`).
 - [x] **MagazineLuizaCommissionUrlBuilder** — ID numérico injeta `promoter_id` (remove tags do concorrente).
 - [x] **ProductMetadataHtmlParser** — slug Magalu (`.../smart-tv-50-tcl.../p/{id}`) vira ProductName com `UrlDecode` + TitleCase/acrônimos.
 - [x] **GeradorLinks.razor** — detecta `ofertou.ai/drXB-Magalu` e lista contas Magalu com comparação flexível.
 - [x] **PlatformLinkResolverTests.cs** — `ofertou.ai/UjGXJ` (Kabum), `ofertou.ai/drXB-Magalu` (TV Magalu + `promoter_id=5321952`) e `promoby.me/6nf9k3d5` (Amazon).
-- [x] **TecFlow.Business/Service/LinkStrategies/UniversalLinkResolverEngine.cs** — unshortener universal (10 saltos, JS/meta-refresh), mapa domínio→plataforma e injeção de comissão.
+- [x] **Ofertio.Business/Service/LinkStrategies/UniversalLinkResolverEngine.cs** — unshortener universal (10 saltos, JS/meta-refresh), mapa domínio→plataforma e injeção de comissão.
 - [x] **ProductMetadataService.cs** / **PlatformLinkResolver.cs** — `ResolveFinalDestinationUrlAsync` no pipeline de metadados e de geração.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/UniversalResolverTests.cs** — ofertou Magalu `5321952`, promoby Amazon sem `promobit-d-20`, ofertou Kabum.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/UniversalResolverTests.cs** — ofertou Magalu `5321952`, promoby Amazon sem `promobit-d-20`, ofertou Kabum.
 - [x] **PlatformLinkResolver.cs** / **ShortAffiliateLinkService.cs** — unshorten primeiro; valida domínio só na URL final; agregadores (`promoby.me`, `ofertou.ai`, `bit.ly`, `t.me`) não são rejeitados na cola.
 - [x] **GeradorLinks.razor** — "Não reconhecemos este domínio" apenas se o destino final não for marketplace.
 - [x] **PlatformLinkResolverTests.cs** — `ResolveFromInputAsync("https://promoby.me/6nf9k3d5")` chega em `amazon.com.br/dp/B0C4BW38R4` sem "Não reconhecemos este domínio"; remove `tag=promobit-d-20` e injeta a tag da conta.
@@ -731,8 +731,8 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.3.2 — Cópia e compartilhamento
 
-- [x] **tecflow-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.
-- [x] **LinkGeneratorResultPanel.razor** — três cards de cópia: afiliado longo, encurtado Shopee (`br.shp.ee`) e rastreio TecFlow.
+- [x] **ofertio-clipboard.js** — `copyText` com Clipboard API e fallback `execCommand`.
+- [x] **LinkGeneratorResultPanel.razor** — três cards de cópia: afiliado longo, encurtado Shopee (`br.shp.ee`) e rastreio Ofertio.
 - [x] **AffiliateShareLinkBuilder.cs** — URIs `api.whatsapp.com/send` e `t.me/share/url` com URL encoding.
 - [x] **AffiliateShareLinkBuilderTests.cs** — encoding de espaços, `&` e query string.
 
@@ -741,7 +741,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **AppDbContext.ApplyTenantQueryFilters** — lambdas de instância (`CurrentTenantId == null` visível no login).
 - [x] **TenantQueryFilterExtensions.cs** — documentação: não capturar `ICurrentTenantService` no modelo EF.
 - [x] **UserAccountRepository.GetByEmailAsync** — `IgnoreQueryFilters` na busca por e-mail.
-- [x] **TecFlow.Tests/Unit/MultiTenancy/TenantQueryFilterTests.cs** — visível sem tenant; isolado com tenant.
+- [x] **Ofertio.Tests/Unit/MultiTenancy/TenantQueryFilterTests.cs** — visível sem tenant; isolado com tenant.
 
 ### OAuth Minhas Lojas / Integrações
 
@@ -751,7 +751,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **MarketplaceAccountRepository** — listagens e `GetByShopAsync` com `AsNoTracking()`.
 - [x] **MarketplaceOAuthConnectService.cs** — ticket pendente + GET `api/marketplace-auth/{plataforma}/authorize-url`.
 - [x] **MarketplaceAuthController** — rota `{plataforma}/authorize-url` e DTO `authorizeUrl`.
-- [x] **TecFlow.Tests/Unit/SharedUi/MarketplaceOAuthConnectServiceTests.cs** — path, DTO e erro da API.
+- [x] **Ofertio.Tests/Unit/SharedUi/MarketplaceOAuthConnectServiceTests.cs** — path, DTO e erro da API.
 - [x] **ShopeeAuthorizationUrlFactory.cs** — PartnerId/PartnerKey sandbox quando vazios (sem HTTP 500).
 - [x] **MarketplaceAuthController** — try/catch em authorize-url; Shopee devolve 200 com URL sandbox.
 - [x] **appsettings.json / appsettings.Homologacao.json** — `Integrations:Shopee` com PartnerId/PartnerKey padrão de homologação.
@@ -759,7 +759,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **ConnectStoreModal.razor** — botão `type="button"` `@onclick="VincularManualmenteDirect"` chama a API direto; Shop ID/`code_teste` com fallback.
 - [x] **IntegracaoLojaService / MarketplaceAuthService** — vínculo manual homologa sem HTTP remoto e devolve mensagem de sucesso de homologação.
 - [x] **IntegracaoLojaApiService** — log do payload bruto se o envelope não deserializar; trata ProblemDetails.
-- [x] **TecFlow.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** — vínculo manual simulado.
+- [x] **Ofertio.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** — vínculo manual simulado.
 - [x] **HttpServiceVincularManualTests.cs** — POST `vincular-manual` com JSON real e falha de desserialização.
 - [x] **AccountSecurityApiServiceTests.cs** — envelope inválido sem exceção.
 - [x] **IntegracaoLojaDto.cs** / **MarketplaceTypeJsonConverter.cs** — JSON camelCase + ShopId string/long.
@@ -770,13 +770,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **IntegracaoLojaApiService / HttpService** — HTML/500 bruto no modal; corpo vazio/`HttpRequestException` vira alerta CORS/porta 5001.
 - [x] **MarketplaceAuthControllerTests.cs** — vínculo manual 400/500 JSON.
 - [x] **MarketplaceAccountDto / MarketplaceAccountResponseDto** — envelope de vínculo sem entidade EF.
-- [x] **TecFlowJsonOptions** — case-insensitive + números em string; log de JsonException.
+- [x] **OfertioJsonOptions** — case-insensitive + números em string; log de JsonException.
 - [x] **AuthControllerSecurityTests / AffiliateLinksControllerTests / DashboardControllerTests** — 401/500 e JSON de formulário.
 
 ### Fase 19.26 — Página pública de conversão (slug versionado)
 
 - [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`).
-- [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio TecFlow) com Copiar/Abrir.
+- [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio Ofertio) com Copiar/Abrir.
 - [x] **app.css** — `.public-converter-platforms` (padding `0.4rem 0.6rem`, min/max-width e ícones menores).
 - [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.
 - [x] **ShortAffiliateLinks.Source** — conversão pública grava `PublicPage` no `UserId` do afiliado e aparece no Histórico de Links.
@@ -806,14 +806,14 @@ API / Orquestrador / Worker / WebUi
 
 - [x] **WhatsAppGroup.cs** / **WhatsAppBroadcastCampaign.cs** — grupos (`Jid`, admin) e campanhas (`Pending/Processing/Completed/Failed`).
 - [x] **EvolutionApiService** — `FetchUserGroupsAsync`, `SendMediaMessageAsync`.
-- [x] **WhatsAppBroadcastWorker.cs** — BackgroundService no TecFlow.API com `IntervalSeconds` ≥ 15s.
+- [x] **WhatsAppBroadcastWorker.cs** — BackgroundService no Ofertio.API com `IntervalSeconds` ≥ 15s.
 - [x] **WhatsAppAgendador.razor** — sincronizar grupos, multi-check, `[LINK_COMISSAO]`, agenda e tabela.
 - [x] **WhatsAppBroadcastRulesTests.cs** — intervalo anti-bloqueio e tag de comissão.
 - [x] **20261001003616_AddWhatsAppBroadcastCampaigns** — tabelas `WhatsAppGroups` e `WhatsAppBroadcastCampaigns`.
 
 ### Segurança defensiva Telegram/WhatsApp
 
-- [x] **DataEncryptionService.cs** — AES-256 (`ENC1:`) em `TecFlow.Infrastructure/Security`; `IEncryptionService` no DbContext.
+- [x] **DataEncryptionService.cs** — AES-256 (`ENC1:`) em `Ofertio.Infrastructure/Security`; `IEncryptionService` no DbContext.
 - [x] **WhatsAppIntegration** / **TelegramIntegration** — `Token`, `ApiKey`, `SessionData` com `EncryptedStringConverter`.
 - [x] **WebhookSecurityAttribute.cs** / **WebhookSecurityFilter** — header `X-Webhook-Secret` fail-closed.
 - [x] **WhatsAppWebhookController** / **TelegramWebhookController** — `[WebhookSecurity]` em `POST .../webhook`.
@@ -922,7 +922,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorRulesTests.cs** — regex HTTP ampla; filtro Shopee, ML, Amazon, AliExpress, Magalu, Casas Bahia, Pelando, Promobit e encurtadores; `api_id` numérico e PIN de 5 dígitos.
 - [x] **UserBotHelpModal.razor** — tutorial de 7 passos, badges Bot Token/Chat ID e Copiar exemplo.
 - [x] **Conexoes.razor** — badges amarelo/azul no bloco UserBot e abre `UserBotHelpModal`.
-- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `C:\ProgramData\TecFlow\telegram-sessions` (sobrevive ao publish IIS; fallback TEMP) e código de verificação.
+- [x] **TelegramUserBotSessionStore.cs** / **TelegramUserBotCodeStore.cs** — sessão em `C:\ProgramData\Ofertio\telegram-sessions` (sobrevive ao publish IIS; fallback TEMP) e código de verificação.
 - [x] **TelegramUserBotSessionStoreTests.cs** — garante pasta `telegram-sessions` resolvida sem falhar o processo.
 - [x] **TelegramUserMonitorWorker.cs** / **TelegramUserMonitorHost.cs** — catch-up por `chats` (Dialogs/Slice) + `GetHistory` (1500/48h), botões inline e persistência no sync; sessão em `ProgramData`.
 - [x] **UserBotCatchUpResult.cs** — resultado do catch-up (offline vs persistidas) para o botão Sincronizar.
@@ -993,7 +993,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **OfficialCatalogSearchService.cs** — log `Busca concluída para '{query}': ML=…`.
 - [x] **OfficialCatalogSearchRulesTests.cs** / **MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchServiceTests.cs**.
 - [x] **MercadoLivreSearchDtos.cs** — `results` / `title` / `price` / `permalink` / `thumbnail`.
-- [x] **MercadoLivreApiService.cs** — User-Agent `TecFlowApp/1.0`, `GET sites/MLB/search?q=&limit=20` e `Erro na API ML: {status}`.
+- [x] **MercadoLivreApiService.cs** — User-Agent `OfertioApp/1.0`, `GET sites/MLB/search?q=&limit=20` e `Erro na API ML: {status}`.
 - [x] **MercadoLivreApiService.cs** — Chrome/120, `SendAsync`, log do body e `OfficialCatalogChannelResult.Failed`.
 - [x] **BuscaGlobal.razor** — badge `error` com ❌ e mensagem HTTP/JSON.
 - [x] **MercadoLivreIntegrationOptions.cs** / **appsettings.json** — `Integrations:MercadoLivre` AppId/SecretKey/AccessToken.
@@ -1016,7 +1016,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **BuscaGlobal.razor** — grid com `_items.Count > 0` e `InvokeAsync(StateHasChanged)`.
 - [x] **MercadoLivreApiService.cs** — não devolve lista vazia em HTTP ≠ 200; `LogError` e `Failed("ML HTTP …")`.
 - [x] **MercadoLivreHtmlParser.cs** — HtmlAgilityPack (`ui-search-layout__item` / `ui-search-result`) + regex de fallback.
-- [x] **TecFlow.Business.csproj** — pacote `HtmlAgilityPack` 1.11.72.
+- [x] **Ofertio.Business.csproj** — pacote `HtmlAgilityPack` 1.11.72.
 - [x] **BuscaGlobal.razor** — alerta vermelho com `ex.Message` / mensagem do canal `error`; `StateHasChanged` no `finally`.
 - [x] **MercadoLivreApiService.cs** — `HttpClient` `MercadoLivreLista` com cookies, descompressão e headers Chrome para a vitrine.
 - [x] **WhatsAppEvolutionRegistrationExtensions.cs** — registro do named client `MercadoLivreLista`.
@@ -1148,7 +1148,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **GruposMonitorados.razor** — botão **Limpar** (`HandleResetAllAsync`); sincronização só no botão **Sincronizar grupos**.
 - [x] **GroupOfferCaptureRules.cs** — `TemporaryLimitTenOffers = false`; paginação 10/25/50/100 (padrão 25).
 - [x] **TelegramUserMonitorRules.cs** / **TelegramUserMonitorHost.cs** — catch-up para ao gravar 10 ofertas com foto.
-- [x] **ProductUploadsStaticFilesExtensions.cs** — mapeia `/uploads` para `inetpub/tecflow/api/wwwroot/uploads`.
+- [x] **ProductUploadsStaticFilesExtensions.cs** — mapeia `/uploads` para `inetpub/ofertio/api/wwwroot/uploads`.
 - [x] **GroupOfferCaptureRules.cs** — `DeduplicateOffers` / `IsSameCapturedOffer` por mensagem e URL.
 - [x] **GroupCapturedMessagesService.cs** — `SaveValidatedOfferAsync` recusa duplicata de `ExternalMessageId` ou URL.
 - [x] **MonitoredGroupService.ListAsync** / **GruposMonitorados.razor** — lista e tela só aceitam oferta nova se ainda não estiver visível.
@@ -1160,7 +1160,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **UserAccount.cs** — `Role` (SuperAdmin / SuporteTecnico / FinanceiroSaaS / TenantUser) e `IsActive`.
 - [x] **Tenant.cs** — `Status`, `StatusReason`, `PlanCode`, `BillingCycle`, `TrialEndsAt`, `RenewalAt`, `CanceledAt`, IDs do gateway.
 - [x] **MasterAuditLog.cs** / **SystemSetting.cs** / **SaasPlan.cs** / **SaasPayment.cs** / **SystemBanner.cs** / **TenantNotification.cs** / **ProductChangelogEntry.cs** — novas entidades do backoffice.
-- [x] **TecFlowClaimTypes.cs** — claims de emulação (`ImpersonatorId`, `ImpersonatorAccessToken`, `ImpersonatedTenantName`, `ViewMode`).
+- [x] **OfertioClaimTypes.cs** — claims de emulação (`ImpersonatorId`, `ImpersonatorAccessToken`, `ImpersonatedTenantName`, `ViewMode`).
 
 **Business**
 - [x] **Service/Master/MasterRbac.cs** — `MasterRoles`, `MasterPermissions`, `MasterPolicies`, `MasterPermissionMatrix`.
@@ -1250,7 +1250,7 @@ API / Orquestrador / Worker / WebUi
 ### Fase 45 — Navegação, hierarquia da sidebar, paletas e segregação do Vault
 
 **SharedUi / WebUi**
-- [x] **Components/Layout/NavigationScrollReset.razor** — ilha interativa que escuta `LocationChanged` e chama `tecFlowAppInterop.resetScroll`.
+- [x] **Components/Layout/NavigationScrollReset.razor** — ilha interativa que escuta `LocationChanged` e chama `ofertioAppInterop.resetScroll`.
 - [x] **wwwroot/app-interop.js** — `resetScroll` (janela + `.main-content`) e fallback no evento `enhancedload`.
 - [x] **Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** — `.main-content`, `NavigationScrollReset`; Master com `data-bs-theme="dark"`.
 - [x] **Components/Layout/NavMenu.razor** — renderização Categoria → Menu pai → Submenu.
@@ -1293,7 +1293,7 @@ API / Orquestrador / Worker / WebUi
 **SharedUi**
 - [x] **Pages/Master/MasterMenuPermissions.razor** — linhas arrastáveis, modal "Nova pasta", exclusão de pasta vazia.
 - [x] **Components/Layout/NavMenu.razor** — árvore do banco (sem accordion fixo), pastas aninhadas, selos, recarga por navegação.
-- [x] **wwwroot/app-interop.js** — `tecFlowMenuDnd` (zona antes/dentro/depois e indicadores visuais); **wwwroot/app.css** — estilos do drag & drop.
+- [x] **wwwroot/app-interop.js** — `ofertioMenuDnd` (zona antes/dentro/depois e indicadores visuais); **wwwroot/app.css** — estilos do drag & drop.
 - [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs** — clientes das novas rotas.
 - [x] **Pages/Dashboard.razor**, **EngajamentoFila.razor**, **ConciliacaoFinanceira.razor**, **ProdutosPropaganda.razor**, **PainelSaude.razor** — rotas novas do roadmap (`/campanhas`, `/metricas`, `/fila-engajamento`, `/conciliacao-financeira`, `/produtos-propaganda`, `/saude-sistema`).
 
@@ -1302,278 +1302,291 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 47 - Cofre de chaves: alterações em segredos mascarados
 
-- [x] **TecFlow.Business/Service/Master/SystemSettingCatalog.cs** - `IsUnchangedMask` (comparação exata com a máscara atual) e `ContainsMaskCharacter`.
-- [x] **TecFlow.Infrastructure.Services/Master/SystemSettingsService.cs** - ignora só a máscara idêntica, rejeita máscara editada sem gravar nada e salva o restante com AES + recarga da configuração.
-- [x] **TecFlow.SharedUi/Components/Pages/Master/MasterSettings.razor** (`/master/vault`) - `@bind-value:event="oninput"`, `_hasChanges`, selo "Alterações não salvas", destaque do campo alterado, seleção da máscara ao focar e ícone de olho (`_showSecretMap` / `ToggleVisibility` / `IsSecretVisible`) para mostrar/ocultar segredos.
-- [x] **TecFlow.Tests/Unit/Master/MasterRulesTests.cs** / **MasterServicesTests.cs** - regras da máscara e gravação/rejeição de segredos.
+- [x] **Ofertio.Business/Service/Master/SystemSettingCatalog.cs** - `IsUnchangedMask` (comparação exata com a máscara atual) e `ContainsMaskCharacter`.
+- [x] **Ofertio.Infrastructure.Services/Master/SystemSettingsService.cs** - ignora só a máscara idêntica, rejeita máscara editada sem gravar nada e salva o restante com AES + recarga da configuração.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterSettings.razor** (`/master/vault`) - `@bind-value:event="oninput"`, `_hasChanges`, selo "Alterações não salvas", destaque do campo alterado, seleção da máscara ao focar e ícone de olho (`_showSecretMap` / `ToggleVisibility` / `IsSecretVisible`) para mostrar/ocultar segredos.
+- [x] **Ofertio.Tests/Unit/Master/MasterRulesTests.cs** / **MasterServicesTests.cs** - regras da máscara e gravação/rejeição de segredos.
 
 ### MLBSearchOAuthFallback - Token de aplicação e vitrine na busca do Mercado Livre
 
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `IOptionsMonitor` (Vault ao vivo), token de usuário → token de aplicação `client_credentials` em cache → `Authorization: Bearer`; 401/403/escopo cai em `SearchViaListaAsync` (`lista.mercadolivre.com.br`) com `matt_tool`.
-- [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `IsMercadoLivreSearchRefused`, `IsMercadoLivreVerificationPage`, `CountVisibleOffers` e nova mensagem de 403.
-- [x] **TecFlow.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - badge do Mercado Livre com a contagem de ofertas visíveis.
-- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchRulesTests.cs** - token de aplicação (e cache), fallback em 403/escopo, vitrine bloqueada e contagem do badge.
-- [x] **TecFlow.Business/Integrations/Auth/OAuthRedirectUriNormalizer.cs** (novo) - `redirect_uri` limpa para túneis Ngrok (https, sem porta local, sem query/fragmento, caminho `/integracoes/oauth/callback`).
-- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - `ResolveMercadoLivreRedirectUri` normaliza a URI no authorize e na troca do code.
-- [x] **TecFlow.WebUi/Extensions/IntegracoesEndpointExtensions.cs** / **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - callback pendente gravado já normalizado (retorno à origem sem porta).
-- [x] **TecFlow.Tests/Unit/Integrations/OAuthRedirectUriNormalizerTests.cs** (novo) / **MarketplaceAuthServiceTests.cs** - Ngrok com `:7002`/`:5000`, origem sem caminho e hosts locais preservados.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `IOptionsMonitor` (Vault ao vivo), token de usuário → token de aplicação `client_credentials` em cache → `Authorization: Bearer`; 401/403/escopo cai em `SearchViaListaAsync` (`lista.mercadolivre.com.br`) com `matt_tool`.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `IsMercadoLivreSearchRefused`, `IsMercadoLivreVerificationPage`, `CountVisibleOffers` e nova mensagem de 403.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - badge do Mercado Livre com a contagem de ofertas visíveis.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **OfficialCatalogSearchRulesTests.cs** - token de aplicação (e cache), fallback em 403/escopo, vitrine bloqueada e contagem do badge.
+- [x] **Ofertio.Business/Integrations/Auth/OAuthRedirectUriNormalizer.cs** (novo) - `redirect_uri` limpa para túneis Ngrok (https, sem porta local, sem query/fragmento, caminho `/integracoes/oauth/callback`).
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - `ResolveMercadoLivreRedirectUri` normaliza a URI no authorize e na troca do code.
+- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** / **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor** - callback pendente gravado já normalizado (retorno à origem sem porta).
+- [x] **Ofertio.Tests/Unit/Integrations/OAuthRedirectUriNormalizerTests.cs** (novo) / **MarketplaceAuthServiceTests.cs** - Ngrok com `:7002`/`:5000`, origem sem caminho e hosts locais preservados.
 
 ### Callback do Mercado Livre sem sessão (state selado)
 
-- [x] **TecFlow.Business/Integrations/Auth/MarketplaceOAuthState.cs** (novo) - `MarketplaceOAuthState`, `IOAuthStateProtector` e `MarketplaceOAuthStateRules` (prefixo `tfs1.`, validade, URL de retorno `/marketplace-accounts?status=`).
-- [x] **TecFlow.Business/Dto/MarketplaceOAuthCallbackDtos.cs** (novo) - request (`Code`, `State`, `Error`) e resultado (`Success`, `Message`, `ReturnUrl`).
-- [x] **TecFlow.Infrastructure.Services/Integrations/Auth/OAuthStateProtector.cs** (novo) - AES-256-GCM com chave derivada por HKDF de `Encryption:Key`; registrado em `MarketplaceAuthRegistrationExtensions`.
-- [x] **TecFlow.API/Controllers/MarketplaceAuthController.cs** - `authorize-url` sela o state do ML para o usuário do JWT; `POST mercadolivre/callback` anônimo com nonce de uso único (`IMemoryCache`) e identidade do state para os filtros de tenant.
-- [x] **TecFlow.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - callback `.AllowAnonymous()`, repasse do state selado à API e redirecionamento ao `ReturnUrl`; `/oauth/start` envia JWT e apelido.
-- [x] **TecFlow.SharedUi/Components/Pages/MinhasLojas.razor** - feedback de `?status=success|error` em `/marketplace-accounts`.
-- [x] **TecFlow.Tests/Unit/Integrations/MarketplaceOAuthStateTests.cs** (novo) / **Controllers/MarketplaceAuthControllerTests.cs** - selagem, adulteração/expiração, retorno à origem, callback anônimo, replay e state forjado.
+- [x] **Ofertio.Business/Integrations/Auth/MarketplaceOAuthState.cs** (novo) - `MarketplaceOAuthState`, `IOAuthStateProtector` e `MarketplaceOAuthStateRules` (prefixo `tfs1.`, validade, URL de retorno `/marketplace-accounts?status=`).
+- [x] **Ofertio.Business/Dto/MarketplaceOAuthCallbackDtos.cs** (novo) - request (`Code`, `State`, `Error`) e resultado (`Success`, `Message`, `ReturnUrl`).
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/OAuthStateProtector.cs** (novo) - AES-256-GCM com chave derivada por HKDF de `Encryption:Key`; registrado em `MarketplaceAuthRegistrationExtensions`.
+- [x] **Ofertio.API/Controllers/MarketplaceAuthController.cs** - `authorize-url` sela o state do ML para o usuário do JWT; `POST mercadolivre/callback` anônimo com nonce de uso único (`IMemoryCache`) e identidade do state para os filtros de tenant.
+- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - callback `.AllowAnonymous()`, repasse do state selado à API e redirecionamento ao `ReturnUrl`; `/oauth/start` envia JWT e apelido.
+- [x] **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor** - feedback de `?status=success|error` em `/marketplace-accounts`.
+- [x] **Ofertio.Tests/Unit/Integrations/MarketplaceOAuthStateTests.cs** (novo) / **Controllers/MarketplaceAuthControllerTests.cs** - selagem, adulteração/expiração, retorno à origem, callback anônimo, replay e state forjado.
 
 ### MLBOAuthSearchTokenFix - Token OAuth da conta do tenant na busca MLB
 
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - conta ML ativa filtrada pelo `TenantId` do usuário; `Bearer` da conta por requisição; HTTP 401/403 → `RefreshAccountTokenAsync` (`refresh_token` com `AppId`/`SecretKey` do Vault), persistência e nova tentativa antes da vitrine; log `[ML Busca]` com o nome da conta.
-- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - 403 com token vigente → refresh → retry com o novo Bearer e banco atualizado; falha no refresh → vitrine; isolamento por tenant.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - conta ML ativa filtrada pelo `TenantId` do usuário; `Bearer` da conta por requisição; HTTP 401/403 → `RefreshAccountTokenAsync` (`refresh_token` com `AppId`/`SecretKey` do Vault), persistência e nova tentativa antes da vitrine; log `[ML Busca]` com o nome da conta.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - 403 com token vigente → refresh → retry com o novo Bearer e banco atualizado; falha no refresh → vitrine; isolamento por tenant.
 
 ### MLBScraperPrimary - Vitrine pública como motor primário da busca ML
 
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `UseOfficialSearchApi` (padrão `false`).
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 129 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
-- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - cliente do ML com `HttpClientHandler` (`GZip | Deflate | Brotli`).
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `UseOfficialSearchApi` (padrão `false`).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem API oficial vai direto a `SearchViaListaAsync` (retorna ofertas + flag de bloqueio), headers de Chrome 129 (`ApplyDocumentHeaders`) e log `[ML Busca]` com a contagem.
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - cliente do ML com `HttpClientHandler` (`GZip | Deflate | Brotli`).
 
 ### MLBPublicSearch - Busca pública leve do Mercado Livre
 
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `TrySearchPublicApiAsync` (`sites/MLB/search` anônimo, sem `access_token`) antes da vitrine; `SearchViaApiAsync` aceita token nulo.
-- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - API pública com sucesso (`matt_tool=97303724`, sem Authorization), 403 → vitrine, tudo bloqueado → mensagem amigável.
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs** - preço atual com centavos, preço original (`--previous` / `<s>`), link `poly-component__title` e imagem `data-src` em lazy-load.
-- [x] **TecFlow.Business/Service/Radar/OfficialCatalogSearchRules.cs** - detecção do `bot_challenge` (`_bmstate`, `micro-landing-container`) e `MercadoLivreScraperBlockedMessage`.
-- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.
-- [x] **TecFlow.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **MercadoLivreHtmlParserTests.cs** - vitrine primária com `matt_tool`, desafio anti-robô, preços/imagem do poly-card.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `TrySearchPublicApiAsync` (`sites/MLB/search` anônimo, sem `access_token`) antes da vitrine; `SearchViaApiAsync` aceita token nulo.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - API pública com sucesso (`matt_tool=97303724`, sem Authorization), 403 → vitrine, tudo bloqueado → mensagem amigável.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs** - preço atual com centavos, preço original (`--previous` / `<s>`), link `poly-component__title` e imagem `data-src` em lazy-load.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - detecção do `bot_challenge` (`_bmstate`, `micro-landing-container`) e `MercadoLivreScraperBlockedMessage`.
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `SocketsHttpHandler` com `AutomaticDecompression` no cliente do ML.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** / **MercadoLivreHtmlParserTests.cs** - vitrine primária com `matt_tool`, desafio anti-robô, preços/imagem do poly-card.
 
 ### MarketplaceTokensDataProtection - Criptografia em repouso dos tokens de marketplace
 
-- [x] **TecFlow.Util/Security/ISecurityEncryptionService.cs** (novo) - contrato `Protect` / `Unprotect`.
-- [x] **TecFlow.Util/Security/EntityFramework/EncryptedStringConverter.cs** - `CreateProtected(ISecurityEncryptionService)`.
-- [x] **TecFlow.Infrastructure/Security/SecurityEncryptionService.cs** (novo) - `IDataProtector` (prefixo `DP1:`, purpose `TecFlow.MarketplaceTokens.v1`), leitura do AES `ENC1:` e do texto puro legado.
-- [x] **TecFlow.Infrastructure/Security/DataProtectionRegistrationExtensions.cs** (novo) - `AddTecFlowDataProtection` (app `TecFlow`, chaves em `C:\ProgramData\TecFlow\DataProtectionKeys` / `DataProtection:KeysPath`, DPAPI, Singleton).
-- [x] **TecFlow.Database/AppDbContext.cs** - `ISecurityEncryptionService` opcional no construtor; conversor protegido em `MarketplaceAccount.AccessToken` / `RefreshToken` / `AppSecret`.
-- [x] **TecFlow.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs** - chama `AddTecFlowDataProtection` junto do `IEncryptionService`.
-- [x] **TecFlow.API/Program.cs** - `AddTecFlowDataProtection(builder.Configuration)`.
-- [x] **TecFlow.Tests/Unit/Security/SecurityEncryptionServiceTests.cs** (novo) - round trip `DP1:`, idempotência, AES legado, texto puro, anel de chaves diferente e conversor EF.
+- [x] **Ofertio.Util/Security/ISecurityEncryptionService.cs** (novo) - contrato `Protect` / `Unprotect`.
+- [x] **Ofertio.Util/Security/EntityFramework/EncryptedStringConverter.cs** - `CreateProtected(ISecurityEncryptionService)`.
+- [x] **Ofertio.Infrastructure/Security/SecurityEncryptionService.cs** (novo) - `IDataProtector` (prefixo `DP1:`, purpose `TecFlow.MarketplaceTokens.v1`), leitura do AES `ENC1:` e do texto puro legado.
+- [x] **Ofertio.Infrastructure/Security/DataProtectionRegistrationExtensions.cs** (novo) - `AddOfertioDataProtection` (app legado `TecFlow`, chaves em `App_Data/OfertioDataProtectionKeys` via `DataProtection:KeysPath`, DPAPI, Singleton).
+- [x] **Ofertio.Database/AppDbContext.cs** - `ISecurityEncryptionService` opcional no construtor; conversor protegido em `MarketplaceAccount.AccessToken` / `RefreshToken` / `AppSecret`.
+- [x] **Ofertio.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs** - chama `AddOfertioDataProtection` junto do `IEncryptionService`.
+- [x] **Ofertio.API/Program.cs** - `AddOfertioDataProtection(builder.Configuration)`.
+- [x] **Ofertio.Tests/Unit/Security/SecurityEncryptionServiceTests.cs** (novo) - round trip `DP1:`, idempotência, AES legado, texto puro, anel de chaves diferente e conversor EF.
 
 ### TelegramMediaPersistenceFix - Gravação confiável das fotos do Telegram
 
-- [x] **TecFlow.Business/Service/Groups/ProductImageStorageRules.cs** - `BuildRelativeDirectory` (`uploads/products/{tenant}/{yyyy}/{MM}` invariante), usado por `BuildSaveTarget` / `BuildPhysicalDirectory`.
-- [x] **TecFlow.Infrastructure.Services/Groups/ImageOptimizationService.cs** - `CreateDirectory` com log, WebP em `.tmp` + `Flush(true)` + `File.Move`, confirmação `File.Exists`, fallback JPEG sem arquivo órfão e logs de falha com caminho.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferProductMediaStore.cs** - `try/catch` separados para download e conversão, `LogWarning` detalhado e URL só com arquivo físico confirmado.
-- [x] **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - `PersistTelegramPhotoAsync` sem `UPDATE` cru e com log em Warning; reprocessamento grava por `UserId` + `GroupKey` e reverte para nulo quando o download falha.
-- [x] **TecFlow.Business/Interfaces/Services/IGroupCapturedMessagesService.cs** / **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `UpdateImageUrlAsync` filtra `UserId`/`GroupKey` e exige arquivo no disco; novo `ClearMissingImageUrlAsync`; `ILogger` injetado.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ignora `ProductImageUrl` local sem arquivo no disco (Warning).
-- [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - pasta criada e arquivo confirmado, falha de download, falha de conversão sem arquivo e caminho com cultura `de-DE`.
+- [x] **Ofertio.Business/Service/Groups/ProductImageStorageRules.cs** - `BuildRelativeDirectory` (`uploads/products/{tenant}/{yyyy}/{MM}` invariante), usado por `BuildSaveTarget` / `BuildPhysicalDirectory`.
+- [x] **Ofertio.Infrastructure.Services/Groups/ImageOptimizationService.cs** - `CreateDirectory` com log, WebP em `.tmp` + `Flush(true)` + `File.Move`, confirmação `File.Exists`, fallback JPEG sem arquivo órfão e logs de falha com caminho.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferProductMediaStore.cs** - `try/catch` separados para download e conversão, `LogWarning` detalhado e URL só com arquivo físico confirmado.
+- [x] **Ofertio.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - `PersistTelegramPhotoAsync` sem `UPDATE` cru e com log em Warning; reprocessamento grava por `UserId` + `GroupKey` e reverte para nulo quando o download falha.
+- [x] **Ofertio.Business/Interfaces/Services/IGroupCapturedMessagesService.cs** / **Ofertio.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `UpdateImageUrlAsync` filtra `UserId`/`GroupKey` e exige arquivo no disco; novo `ClearMissingImageUrlAsync`; `ILogger` injetado.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ignora `ProductImageUrl` local sem arquivo no disco (Warning).
+- [x] **Ofertio.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - pasta criada e arquivo confirmado, falha de download, falha de conversão sem arquivo e caminho com cultura `de-DE`.
 
-### ExternalUploadsFolder - Uploads em C:\inetpub\tecflow\uploads
+### ExternalUploadsFolder - Uploads em C:\inetpub\ofertio\uploads
 
-- [x] **TecFlow.Business/Service/Groups/UploadStorageRules.cs** (novo) - `UploadStorage:RootPath`, `/uploads`, `ResolveUploadsRoot` (configurado ou `{WebRootPath}/uploads`, exige pasta `uploads`) e `ResolveMediaRoot`.
-- [x] **TecFlow.Business/Interfaces/Services/IUploadStorage.cs** (novo) - `UploadsRoot` / `MediaRoot`.
-- [x] **TecFlow.Infrastructure.Services/Groups/UploadStorage.cs** (novo) - implementação + `AddTecFlowUploadStorage` (Singleton), registrada em `WhatsAppEvolutionRegistrationExtensions` e `MasterBackofficeRegistrationExtensions`.
-- [x] **TecFlow.Infrastructure.Services/Groups/ImageOptimizationService.cs** / **OfferProductMediaStore.cs** / **GroupCapturedMessagesService.cs** / **ProductImageCleanupService.cs** - `IUploadStorage` no lugar de `IWebHostEnvironment`.
-- [x] **TecFlow.Infrastructure.Services/Master/TenantAdminService.cs** / **Radar/OfferMediaStudio.cs** - disco por tenant e vídeos na pasta externa.
-- [x] **TecFlow.API/Workers/TelegramUserMonitorWorker.cs** - cria `uploads/products` na pasta externa.
-- [x] **TecFlow.API/Program.cs** - `UseStaticFiles` com `PhysicalFileProvider(UploadsRoot)` em `/uploads`.
-- [x] **TecFlow.WebUi/Extensions/ProductUploadsStaticFilesExtensions.cs** - pasta configurada como primeira opção de `/uploads`.
-- [x] **TecFlow.API/appsettings.json** / **TecFlow.WebUi/appsettings.json** - `UploadStorage:RootPath = C:\inetpub\tecflow\uploads`.
-- [x] **TecFlow.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** / **ImageOptimizationServiceTests.cs** - gravação na pasta externa, raiz configurada, fallback para `WebRootPath` e rejeição de pasta fora do padrão.
+- [x] **Ofertio.Business/Service/Groups/UploadStorageRules.cs** (novo) - `UploadStorage:RootPath`, `/uploads`, `ResolveUploadsRoot` (configurado ou `{WebRootPath}/uploads`, exige pasta `uploads`) e `ResolveMediaRoot`.
+- [x] **Ofertio.Business/Interfaces/Services/IUploadStorage.cs** (novo) - `UploadsRoot` / `MediaRoot`.
+- [x] **Ofertio.Infrastructure.Services/Groups/UploadStorage.cs** (novo) - implementação + `AddOfertioUploadStorage` (Singleton), registrada em `WhatsAppEvolutionRegistrationExtensions` e `MasterBackofficeRegistrationExtensions`.
+- [x] **Ofertio.Infrastructure.Services/Groups/ImageOptimizationService.cs** / **OfferProductMediaStore.cs** / **GroupCapturedMessagesService.cs** / **ProductImageCleanupService.cs** - `IUploadStorage` no lugar de `IWebHostEnvironment`.
+- [x] **Ofertio.Infrastructure.Services/Master/TenantAdminService.cs** / **Radar/OfferMediaStudio.cs** - disco por tenant e vídeos na pasta externa.
+- [x] **Ofertio.API/Workers/TelegramUserMonitorWorker.cs** - cria `uploads/products` na pasta externa.
+- [x] **Ofertio.API/Program.cs** - `UseStaticFiles` com `PhysicalFileProvider(UploadsRoot)` em `/uploads`.
+- [x] **Ofertio.WebUi/Extensions/ProductUploadsStaticFilesExtensions.cs** - pasta configurada como primeira opção de `/uploads`.
+- [x] **Ofertio.API/appsettings.json** / **Ofertio.WebUi/appsettings.json** - `UploadStorage:RootPath = C:\inetpub\ofertio\uploads`.
+- [x] **Ofertio.Tests/Unit/Groups/OfferProductMediaStoreTests.cs** / **ImageOptimizationServiceTests.cs** - gravação na pasta externa, raiz configurada, fallback para `WebRootPath` e rejeição de pasta fora do padrão.
 
 ### OfferIntegrityFilters - Vitrine genérica, preço suspeito e revalidação periódica
 
-- [x] **TecFlow.Core/Entities/GroupOfferStatuses.cs** - novos status `Inativo`, `VitrineGenerica`, `PrecoSuspeito`, rótulos e helpers `IsInactive` / `IsRevalidatable`.
-- [x] **TecFlow.Business/Service/Groups/OfferIntegrityRules.cs** (novo) - `IsGenericStorefrontUrl`, `ContainsClosedListingPhrase`, `IsHighValueProduct`, `IsSuspiciousPrice` (< R$ 5,00) e `ApplyPriceSanity`.
-- [x] **TecFlow.Business/Service/Groups/OfferRevalidationOptions.cs** (novo) - seção `OfferRevalidation` (`Enabled`, `IntervalHours`, `InitialDelayMinutes`, `BatchSize`, `DelayBetweenChecksMs`) com limites.
-- [x] **TecFlow.Business/Dto/OfferValidationDtos.cs** - `FinalUrl` no resultado e `OfferRevalidationSummaryDto`.
-- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `IOfferValidationService.ValidateFromPageAsync` e `IOfferRevalidationService`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine antes/depois de resolver e após o GET (`VitrineGenerica`), anúncio encerrado/pausado (`Inativo`), status da página repassado ao resultado.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - rejeição de vitrine na entrada com log e `PrecoSuspeito` no lugar de `Ativo`.
-- [x] **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - checagem da página antes das APIs oficiais, inativação imediata e trava de preço ao gravar.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - clonagem bloqueada para status inativos e `PrecoSuspeito`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** (novo) - `OfferRevalidationService` (lote de ofertas ativas vencidas) + `OfferRevalidationHost` (laço com intervalo configurável).
-- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro das opções, do serviço (Scoped) e do host (Singleton).
-- [x] **TecFlow.API/Workers/OfferRevalidationWorker.cs** (novo) - `BackgroundService` registrado em `Program.cs`.
-- [x] **TecFlow.API/appsettings.json** - seção `OfferRevalidation` (2h, lote 200).
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - selos de `Inativo`, `Vitrine Genérica` e `Preço Suspeito`.
-- [x] **TecFlow.Tests/Unit/Groups/OfferIntegrityRulesTests.cs** (novo) / **OfferRevalidationServiceTests.cs** (novo) / **OfferValidationServiceTests.cs** - detecção de vitrine, preço suspeito, anúncio encerrado e seleção do lote de revalidação.
+- [x] **Ofertio.Core/Entities/GroupOfferStatuses.cs** - novos status `Inativo`, `VitrineGenerica`, `PrecoSuspeito`, rótulos e helpers `IsInactive` / `IsRevalidatable`.
+- [x] **Ofertio.Business/Service/Groups/OfferIntegrityRules.cs** (novo) - `IsGenericStorefrontUrl`, `ContainsClosedListingPhrase`, `IsHighValueProduct`, `IsSuspiciousPrice` (< R$ 5,00) e `ApplyPriceSanity`.
+- [x] **Ofertio.Business/Service/Groups/OfferRevalidationOptions.cs** (novo) - seção `OfferRevalidation` (`Enabled`, `IntervalHours`, `InitialDelayMinutes`, `BatchSize`, `DelayBetweenChecksMs`) com limites.
+- [x] **Ofertio.Business/Dto/OfferValidationDtos.cs** - `FinalUrl` no resultado e `OfferRevalidationSummaryDto`.
+- [x] **Ofertio.Business/Interfaces/Services/IGroupOfferServices.cs** - `IOfferValidationService.ValidateFromPageAsync` e `IOfferRevalidationService`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine antes/depois de resolver e após o GET (`VitrineGenerica`), anúncio encerrado/pausado (`Inativo`), status da página repassado ao resultado.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - rejeição de vitrine na entrada com log e `PrecoSuspeito` no lugar de `Ativo`.
+- [x] **Ofertio.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - checagem da página antes das APIs oficiais, inativação imediata e trava de preço ao gravar.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - clonagem bloqueada para status inativos e `PrecoSuspeito`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferRevalidationService.cs** (novo) - `OfferRevalidationService` (lote de ofertas ativas vencidas) + `OfferRevalidationHost` (laço com intervalo configurável).
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro das opções, do serviço (Scoped) e do host (Singleton).
+- [x] **Ofertio.API/Workers/OfferRevalidationWorker.cs** (novo) - `BackgroundService` registrado em `Program.cs`.
+- [x] **Ofertio.API/appsettings.json** - seção `OfferRevalidation` (2h, lote 200).
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - selos de `Inativo`, `Vitrine Genérica` e `Preço Suspeito`.
+- [x] **Ofertio.Tests/Unit/Groups/OfferIntegrityRulesTests.cs** (novo) / **OfferRevalidationServiceTests.cs** (novo) / **OfferValidationServiceTests.cs** - detecção de vitrine, preço suspeito, anúncio encerrado e seleção do lote de revalidação.
 
 ### AffiliateOpenLink - "Abrir Link Original" com matt_tool
 
-- [x] **TecFlow.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** (novo) - detecta Mercado Livre, troca link curto pela URL direta e injeta `matt_tool`/`matt_word` via `MercadoLivreCommissionUrlBuilder.InjectMattTool`.
-- [x] **TecFlow.Business/Interfaces/Services/IAffiliateUrlBuilderService.cs** (novo) - `ResolveMercadoLivreMattToolAsync` e `BuildAffiliateUrl`.
-- [x] **TecFlow.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** (novo) - `TrackingId` da conta ML ativa do tenant com fallback para `DefaultAffiliateTrackingId`; registrado (Scoped) em `WhatsAppEvolutionRegistrationExtensions`.
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** / **TecFlow.API/appsettings.json** - `DefaultAffiliateTrackingId = 97303724`.
-- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.AffiliateUrl`.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - preenche `AffiliateUrl` na listagem.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - "Abrir Link Original" usa `ResolveOpenUrl` (`AffiliateUrl`) em nova aba.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/AffiliateUrlBuilderServiceTests.cs** (novo) - anexar/substituir `matt_tool`, link curto, outros marketplaces, conta do tenant e fallback.
+- [x] **Ofertio.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** (novo) - detecta Mercado Livre, troca link curto pela URL direta e injeta `matt_tool`/`matt_word` via `MercadoLivreCommissionUrlBuilder.InjectMattTool`.
+- [x] **Ofertio.Business/Interfaces/Services/IAffiliateUrlBuilderService.cs** (novo) - `ResolveMercadoLivreMattToolAsync` e `BuildAffiliateUrl`.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** (novo) - `TrackingId` da conta ML ativa do tenant com fallback para `DefaultAffiliateTrackingId`; registrado (Scoped) em `WhatsAppEvolutionRegistrationExtensions`.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** / **Ofertio.API/appsettings.json** - `DefaultAffiliateTrackingId = 97303724`.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.AffiliateUrl`.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - preenche `AffiliateUrl` na listagem.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - "Abrir Link Original" usa `ResolveOpenUrl` (`AffiliateUrl`) em nova aba.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/AffiliateUrlBuilderServiceTests.cs** (novo) - anexar/substituir `matt_tool`, link curto, outros marketplaces, conta do tenant e fallback.
 
 ### ShopeePriceIntegrity - Parcelamento, divergência de preço e esgotado
 
-- [x] **TecFlow.Business/Service/Groups/OfferPriceTextRules.cs** (novo) - preço à vista ignorando parcelas e "De/Por", `IsInstallmentContext`, `IsPlausiblePrice` (< R$ 1.000.000) e `IsSignificantDivergence` (≥ 30%).
-- [x] **TecFlow.Business/Integrations/Shopee/ShopeeProductPageRules.cs** (novo) - `IsSoldOut` (frases, JSON e classe) e `TryExtractActivePrice` (meta / JSON-LD).
-- [x] **TecFlow.Business/Service/Groups/StructuredOfferParserService.cs** / **GroupOfferCaptureRules.cs** - extração de preço do Telegram via `OfferPriceTextRules`; fallback numérico pula multiplicador `12x`.
-- [x] **TecFlow.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - primeiro preço plausível entre as fontes e `R$` do HTML sem parcelas.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - Shopee esgotada vira `Esgotado`; preço ativo da Shopee prevalece e divergência é logada.
-- [x] **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - corrige `ExtractedPrice` em divergência significativa com log (`ILogger` injetado).
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - preço da página substitui o da mensagem em divergência significativa.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - botão "Clonar" desabilitado para esgotado, inativo ou preço suspeito (`CanClone`).
-- [x] **TecFlow.Tests/Unit/Groups/OfferPriceTextRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** - parcelamento, De/Por, divergência, HTML com `price_min` bruto, esgotado e preço ativo da Shopee.
+- [x] **Ofertio.Business/Service/Groups/OfferPriceTextRules.cs** (novo) - preço à vista ignorando parcelas e "De/Por", `IsInstallmentContext`, `IsPlausiblePrice` (< R$ 1.000.000) e `IsSignificantDivergence` (≥ 30%).
+- [x] **Ofertio.Business/Integrations/Shopee/ShopeeProductPageRules.cs** (novo) - `IsSoldOut` (frases, JSON e classe) e `TryExtractActivePrice` (meta / JSON-LD).
+- [x] **Ofertio.Business/Service/Groups/StructuredOfferParserService.cs** / **GroupOfferCaptureRules.cs** - extração de preço do Telegram via `OfferPriceTextRules`; fallback numérico pula multiplicador `12x`.
+- [x] **Ofertio.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - primeiro preço plausível entre as fontes e `R$` do HTML sem parcelas.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - Shopee esgotada vira `Esgotado`; preço ativo da Shopee prevalece e divergência é logada.
+- [x] **Ofertio.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - corrige `ExtractedPrice` em divergência significativa com log (`ILogger` injetado).
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - preço da página substitui o da mensagem em divergência significativa.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - botão "Clonar" desabilitado para esgotado, inativo ou preço suspeito (`CanClone`).
+- [x] **Ofertio.Tests/Unit/Groups/OfferPriceTextRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** - parcelamento, De/Por, divergência, HTML com `price_min` bruto, esgotado e preço ativo da Shopee.
 
 ### CouponsTab - Aba de Cupons & Promoções por marketplace
 
-- [x] **TecFlow.Core/Enums/OfferType.cs** (novo) - `Product = 0`, `Coupon = 1`.
-- [x] **TecFlow.Core/Entities/GroupCapturedMessage.cs** - coluna `Type` (`OfferType`, padrão `Product`).
-- [x] **TecFlow.Database/AppDbContext.cs** - índice `UserId, Type, IsIgnored, ReceivedAt` em `GroupCapturedMessages`.
-- [x] **TecFlow.Data/Migrations/20261018001558_AddGroupCapturedMessageOfferType.cs** (novo, + Designer e snapshot) - coluna `Type int NOT NULL DEFAULT 0` e índice.
-- [x] **TecFlow.Business/Service/Groups/CouponMessageRules.cs** (novo) - `Classify`, `ExtractCouponCode`, `ExtractDiscount`, `ExtractMinimumPurchase`, `ExtractValidity`, `ExtractRules`, `DetectPlatformFromText`, `ExtractHeadline` e filtros `Todos`/`Outros`.
-- [x] **TecFlow.Business/Dto/OfferDataExtraction.cs** / **StructuredOfferParserService.cs** - `Type` classificado no parse; código de cupom pelo extrator estrito (CUPOM / CÓDIGO / USAR CUPOM) com fallback na regex antiga; `IsShowcaseUrl` público.
-- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.Type`, `CouponDiscount`, `CouponValidity`, `CouponRules`.
-- [x] **TecFlow.Business/Service/Groups/GroupOfferCaptureRules.cs** - deduplicação de cupons por mensagem + grupo ou código + plataforma (nunca pela URL da loja).
-- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** / **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** / **TecFlow.API/Controllers/MonitoredGroupsController.cs** - `ListAsync` com `type` e `couponPlatform`; feed de produtos só `Type = Product`; campos do cupom lidos do `RawText`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - desvio de cupons (`SaveCouponAsync`) sem validação de página nem pacote atômico; foto extraída para `ResolveLocalPhotoAsync`.
-- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` mantém cupons sem link de produto ou loja conectada; `SaveCouponAsync` com deduplicação de 24h.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** - revalidação periódica ignora cupons.
-- [x] **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - mensagens de cupom sem link também entram no pipeline.
-- [x] **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - query `type` e `couponPlatform`.
-- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** (novo) - código em destaque com copiar, desconto, validade, regras e "Ir para a loja" (`AffiliateUrl`, nova aba).
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - aba `Cupons & Promoções` com pills Todos / Mercado Livre / Shopee / Amazon / Outros.
-- [x] **TecFlow.Tests/Unit/Groups/CouponMessageRulesTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - classificação, extração, deduplicação e filtro de relevância de cupons.
+- [x] **Ofertio.Core/Enums/OfferType.cs** (novo) - `Product = 0`, `Coupon = 1`.
+- [x] **Ofertio.Core/Entities/GroupCapturedMessage.cs** - coluna `Type` (`OfferType`, padrão `Product`).
+- [x] **Ofertio.Database/AppDbContext.cs** - índice `UserId, Type, IsIgnored, ReceivedAt` em `GroupCapturedMessages`.
+- [x] **Ofertio.Data/Migrations/20261018001558_AddGroupCapturedMessageOfferType.cs** (novo, + Designer e snapshot) - coluna `Type int NOT NULL DEFAULT 0` e índice.
+- [x] **Ofertio.Business/Service/Groups/CouponMessageRules.cs** (novo) - `Classify`, `ExtractCouponCode`, `ExtractDiscount`, `ExtractMinimumPurchase`, `ExtractValidity`, `ExtractRules`, `DetectPlatformFromText`, `ExtractHeadline` e filtros `Todos`/`Outros`.
+- [x] **Ofertio.Business/Dto/OfferDataExtraction.cs** / **StructuredOfferParserService.cs** - `Type` classificado no parse; código de cupom pelo extrator estrito (CUPOM / CÓDIGO / USAR CUPOM) com fallback na regex antiga; `IsShowcaseUrl` público.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.Type`, `CouponDiscount`, `CouponValidity`, `CouponRules`.
+- [x] **Ofertio.Business/Service/Groups/GroupOfferCaptureRules.cs** - deduplicação de cupons por mensagem + grupo ou código + plataforma (nunca pela URL da loja).
+- [x] **Ofertio.Business/Interfaces/Services/IGroupOfferServices.cs** / **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** / **Ofertio.API/Controllers/MonitoredGroupsController.cs** - `ListAsync` com `type` e `couponPlatform`; feed de produtos só `Type = Product`; campos do cupom lidos do `RawText`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - desvio de cupons (`SaveCouponAsync`) sem validação de página nem pacote atômico; foto extraída para `ResolveLocalPhotoAsync`.
+- [x] **Ofertio.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` mantém cupons sem link de produto ou loja conectada; `SaveCouponAsync` com deduplicação de 24h.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferRevalidationService.cs** - revalidação periódica ignora cupons.
+- [x] **Ofertio.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - mensagens de cupom sem link também entram no pipeline.
+- [x] **Ofertio.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - query `type` e `couponPlatform`.
+- [x] **Ofertio.SharedUi/Components/Integrations/CouponCard.razor** (novo) - código em destaque com copiar, desconto, validade, regras e "Ir para a loja" (`AffiliateUrl`, nova aba).
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - aba `Cupons & Promoções` com pills Todos / Mercado Livre / Shopee / Amazon / Outros.
+- [x] **Ofertio.Tests/Unit/Groups/CouponMessageRulesTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - classificação, extração, deduplicação e filtro de relevância de cupons.
 
 ### CompactOffersUi - Layout compacto de Grupos Monitorados
 
-- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** (novo) - card de oferta extraído da página: imagem 64px, título 2 linhas, badges `badge-sm` sutis e ações em grade 2x2 compacta (Abrir Link Original, Verificar anúncio, Clonar Oferta / Restaurar, Sem interesse).
-- [x] **TecFlow.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** (novo) - modal "Filtros Avançados ⚙️" com Período, Preço mín./máx., Loja e Ofertas por página.
-- [x] **TecFlow.SharedUi/Models/MonitoredOfferFilters.cs** (novo) - record dos filtros avançados com `ActiveCount`.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - cabeçalho compacto sem texto explicativo, busca + grupo + botão de filtros, toast de 5s no lugar do alerta de status, sem "Só com cupom", `#ofertas-container` com scroll suave ao paginar.
-- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** - mesmo padrão compacto (badge-sm, ações em grade).
-- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.badge-sm`, botões compactos do card, `.monitored-search`, `.monitored-toast`, `.monitored-subpills`, `scroll-margin-top` da lista.
+- [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor** (novo) - card de oferta extraído da página: imagem 64px, título 2 linhas, badges `badge-sm` sutis e ações em grade 2x2 compacta (Abrir Link Original, Verificar anúncio, Clonar Oferta / Restaurar, Sem interesse).
+- [x] **Ofertio.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** (novo) - modal "Filtros Avançados ⚙️" com Período, Preço mín./máx., Loja e Ofertas por página.
+- [x] **Ofertio.SharedUi/Models/MonitoredOfferFilters.cs** (novo) - record dos filtros avançados com `ActiveCount`.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - cabeçalho compacto sem texto explicativo, busca + grupo + botão de filtros, toast de 5s no lugar do alerta de status, sem "Só com cupom", `#ofertas-container` com scroll suave ao paginar.
+- [x] **Ofertio.SharedUi/Components/Integrations/CouponCard.razor** - mesmo padrão compacto (badge-sm, ações em grade).
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.badge-sm`, botões compactos do card, `.monitored-search`, `.monitored-toast`, `.monitored-subpills`, `scroll-margin-top` da lista.
 
 ### GlobalToasts - Notificações Toast globais
 
-- [x] **TecFlow.SharedUi/Services/UI/IToastService.cs** (novo) - `ToastType`, `ToastMessage` (Id, Message, Type, Duration 10s, CreatedAt) e contrato `ShowSuccess/ShowError/ShowWarning/ShowInfo/Dismiss/Clear`.
-- [x] **TecFlow.SharedUi/Services/UI/ToastService.cs** (novo) - fila thread-safe (máx. 5, sem duplicatas), auto-dismiss por `Task.Delay` e evento `OnChange`.
-- [x] **TecFlow.SharedUi/Components/Shared/ToastContainer.razor** (novo) - container flutuante `InteractiveServer` com ícone, mensagem, botão fechar e barra de progresso.
-- [x] **TecFlow.SharedUi/Extensions/ServiceCollectionExtensions.cs** - `AddScoped<IToastService, ToastService>()`.
-- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `<ToastContainer />`.
-- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.monitored-toast` substituído por `.tecflow-toast-container` / `.tecflow-toast--success|error|warning|info`.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - alertas fixos e toast local trocados por `IToastService`.
-- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** - `OnCopied` removido; cópia do código notificada via `IToastService`.
-- [x] **TecFlow.Tests/Unit/SharedUi/ToastServiceTests.cs** (novo) - duração padrão, tipos, mensagens vazias, duplicatas, limite, dismiss e auto-dismiss.
+- [x] **Ofertio.SharedUi/Services/UI/IToastService.cs** (novo) - `ToastType`, `ToastMessage` (Id, Message, Type, Duration 10s, CreatedAt) e contrato `ShowSuccess/ShowError/ShowWarning/ShowInfo/Dismiss/Clear`.
+- [x] **Ofertio.SharedUi/Services/UI/ToastService.cs** (novo) - fila thread-safe (máx. 5, sem duplicatas), auto-dismiss por `Task.Delay` e evento `OnChange`.
+- [x] **Ofertio.SharedUi/Components/Shared/ToastContainer.razor** (novo) - container flutuante `InteractiveServer` com ícone, mensagem, botão fechar e barra de progresso.
+- [x] **Ofertio.SharedUi/Extensions/ServiceCollectionExtensions.cs** - `AddScoped<IToastService, ToastService>()`.
+- [x] **Ofertio.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `<ToastContainer />`.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.monitored-toast` substituído por `.ofertio-toast-container` / `.ofertio-toast--success|error|warning|info`.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - alertas fixos e toast local trocados por `IToastService`.
+- [x] **Ofertio.SharedUi/Components/Integrations/CouponCard.razor** - `OnCopied` removido; cópia do código notificada via `IToastService`.
+- [x] **Ofertio.Tests/Unit/SharedUi/ToastServiceTests.cs** (novo) - duração padrão, tipos, mensagens vazias, duplicatas, limite, dismiss e auto-dismiss.
 
 ### CouponFeedCleanup - Cupons fora do feed de produtos
 
-- [x] **TecFlow.Business/Service/Groups/CouponMessageRules.cs** - `IsCouponAnnouncement` (título de anúncio ou 2+ códigos), `ExtractCouponCodes`, remoção de "Limite de R$" / "OFF em R$" no cálculo de preço, URLs e palavras acentuadas ignoradas na leitura de códigos.
-- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `ICouponReclassificationService`.
-- [x] **TecFlow.Infrastructure.Services/Groups/CouponReclassificationService.cs** (novo) - reclassificação em lotes dos itens `Product` legados + `CouponReclassificationHost` (execução única no startup).
-- [x] **TecFlow.API/Workers/CouponReclassificationWorker.cs** (novo) - `BackgroundService` que dispara a reclassificação.
-- [x] **TecFlow.API/Program.cs** / **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro do worker, host e serviço.
-- [x] **TecFlow.Infrastructure.Services/Radar/OfferMiningEngine.cs**, **ProductArbitrageService.cs**, **GlobalTrendingDealsEngine.cs**, **OfficialCatalogSearchService.cs** - filtro `Type == OfferType.Product`.
-- [x] **TecFlow.Tests/Unit/Groups/CouponMessageRulesTests.cs** / **CouponReclassificationServiceTests.cs** (novo) - anúncios reais de cupom, produtos com cupom único e idempotência da reclassificação.
+- [x] **Ofertio.Business/Service/Groups/CouponMessageRules.cs** - `IsCouponAnnouncement` (título de anúncio ou 2+ códigos), `ExtractCouponCodes`, remoção de "Limite de R$" / "OFF em R$" no cálculo de preço, URLs e palavras acentuadas ignoradas na leitura de códigos.
+- [x] **Ofertio.Business/Interfaces/Services/IGroupOfferServices.cs** - `ICouponReclassificationService`.
+- [x] **Ofertio.Infrastructure.Services/Groups/CouponReclassificationService.cs** (novo) - reclassificação em lotes dos itens `Product` legados + `CouponReclassificationHost` (execução única no startup).
+- [x] **Ofertio.API/Workers/CouponReclassificationWorker.cs** (novo) - `BackgroundService` que dispara a reclassificação.
+- [x] **Ofertio.API/Program.cs** / **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro do worker, host e serviço.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfferMiningEngine.cs**, **ProductArbitrageService.cs**, **GlobalTrendingDealsEngine.cs**, **OfficialCatalogSearchService.cs** - filtro `Type == OfferType.Product`.
+- [x] **Ofertio.Tests/Unit/Groups/CouponMessageRulesTests.cs** / **CouponReclassificationServiceTests.cs** (novo) - anúncios reais de cupom, produtos com cupom único e idempotência da reclassificação.
 
 ### UserProfileMenu - Cabeçalho limpo com menu de perfil
 
-- [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** (novo) - pílula com o nome do usuário e dropdown `<details>` (Minha Conta, Super Admin, Modo de Visão, Sair), funcional no layout SSR estático.
-- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** - removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; cabeçalho só com `UserProfileMenu`.
-- [x] **TecFlow.SharedUi/Components/Layout/MasterMainLayout.razor** - `MasterProfileSwitcher` + `SessionStatusBadge` trocados por `UserProfileMenu`.
-- [x] **TecFlow.SharedUi/Components/Shared/SessionStatusBadge.razor** (removido) - badge "Sessão ativa (plataforma)".
-- [x] **TecFlow.SharedUi/Components/Shared/ActiveStoreScopeSelector.razor** (removido) - dropdown "Todas as lojas"; as páginas seguem usando `IActiveStoreScopeService` com a loja salva no navegador.
-- [x] **TecFlow.SharedUi/wwwroot/app.css** - estilos `.active-store-scope*` trocados por `.tecflow-profile-*`.
-- [x] **TecFlow.SharedUi/wwwroot/app-interop.js** - fecha o menu de perfil ao clicar fora, em um item ou com Esc.
+- [x] **Ofertio.SharedUi/Components/Layout/UserProfileMenu.razor** (novo) - pílula com o nome do usuário e dropdown `<details>` (Minha Conta, Super Admin, Modo de Visão, Sair), funcional no layout SSR estático.
+- [x] **Ofertio.SharedUi/Components/Layout/MainLayout.razor** - removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; cabeçalho só com `UserProfileMenu`.
+- [x] **Ofertio.SharedUi/Components/Layout/MasterMainLayout.razor** - `MasterProfileSwitcher` + `SessionStatusBadge` trocados por `UserProfileMenu`.
+- [x] **Ofertio.SharedUi/Components/Shared/SessionStatusBadge.razor** (removido) - badge "Sessão ativa (plataforma)".
+- [x] **Ofertio.SharedUi/Components/Shared/ActiveStoreScopeSelector.razor** (removido) - dropdown "Todas as lojas"; as páginas seguem usando `IActiveStoreScopeService` com a loja salva no navegador.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - estilos `.active-store-scope*` trocados por `.ofertio-profile-*`.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - fecha o menu de perfil ao clicar fora, em um item ou com Esc.
 
 ### HeaderRestore - Botões de visão de volta ao cabeçalho
 
-- [x] **TecFlow.SharedUi/Components/Master/MasterProfileSwitcher.razor** (restaurado) - grupo [Painel Master] [Visão Cliente] + badge de papel, no formato original.
-- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `MasterProfileSwitcher` antes do `UserProfileMenu`.
-- [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** - dropdown reduzido a Minha Conta, Super Admin e Sair.
-- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`; removido `.tecflow-profile-hint`.
+- [x] **Ofertio.SharedUi/Components/Master/MasterProfileSwitcher.razor** (restaurado) - grupo [Painel Master] [Visão Cliente] + badge de papel, no formato original.
+- [x] **Ofertio.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `MasterProfileSwitcher` antes do `UserProfileMenu`.
+- [x] **Ofertio.SharedUi/Components/Layout/UserProfileMenu.razor** - dropdown reduzido a Minha Conta, Super Admin e Sair.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`; removido `.ofertio-profile-hint`.
 
 ### ShowcaseBypass - Vitrines de divulgadores e matt_tool forçado (Mercado Livre)
 
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** (novo) - detecta vitrines `/social/` / `affiliate-profile` / `reco_client=home_affiliate-profile`, extrai o produto focado (`item_id`, `product_id`, `/p/MLB...`, `MLB-...`) como página direta e remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros.
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - constante `OfficialAffiliateTrackingId = "97303724"`, padrão de `DefaultAffiliateTrackingId`.
-- [x] **TecFlow.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** - `ResolveMercadoLivreTarget` (bypass de vitrine no link original e no resolvido) + limpeza dos matt_* alheios + `matt_tool` sempre aplicado (oficial quando nenhum for informado).
-- [x] **TecFlow.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** - fallback do `matt_tool` cai na constante oficial quando a configuração estiver vazia.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - "Clonar Oferta" do Mercado Livre envia a URL higienizada ao conversor e a usa como link quando não houver loja ML conectada.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine com produto focado é convertida antes da rejeição `VitrineGenerica` (link inicial, canônico e redirect final com novo GET do produto).
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ingestão valida o produto focado e grava em `PrimaryProductUrl` a página direta resolvida pelo redirect.
-- [x] **TecFlow.Business/Dto/LiveSearchDtos.cs** / **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - `ResolvedProductUrl` no snapshot; "Verificar anúncio" atualiza `PrimaryProductUrl` dos itens antigos (meli.la).
-- [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreShowcaseRulesTests.cs** (novo) / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - cobertura do bypass, da limpeza dos matt_* e do `matt_tool=97303724` forçado.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** (novo) - detecta vitrines `/social/` / `affiliate-profile` / `reco_client=home_affiliate-profile`, extrai o produto focado (`item_id`, `product_id`, `/p/MLB...`, `MLB-...`) como página direta e remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - constante `OfficialAffiliateTrackingId = "97303724"`, padrão de `DefaultAffiliateTrackingId`.
+- [x] **Ofertio.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** - `ResolveMercadoLivreTarget` (bypass de vitrine no link original e no resolvido) + limpeza dos matt_* alheios + `matt_tool` sempre aplicado (oficial quando nenhum for informado).
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** - fallback do `matt_tool` cai na constante oficial quando a configuração estiver vazia.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - "Clonar Oferta" do Mercado Livre envia a URL higienizada ao conversor e a usa como link quando não houver loja ML conectada.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine com produto focado é convertida antes da rejeição `VitrineGenerica` (link inicial, canônico e redirect final com novo GET do produto).
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ingestão valida o produto focado e grava em `PrimaryProductUrl` a página direta resolvida pelo redirect.
+- [x] **Ofertio.Business/Dto/LiveSearchDtos.cs** / **Ofertio.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - `ResolvedProductUrl` no snapshot; "Verificar anúncio" atualiza `PrimaryProductUrl` dos itens antigos (meli.la).
+- [x] **Ofertio.Tests/Unit/LinkStrategies/MercadoLivreShowcaseRulesTests.cs** (novo) / **AffiliateUrlBuilderServiceTests.cs** / **Ofertio.Tests/Unit/Groups/OfferValidationServiceTests.cs** - cobertura do bypass, da limpeza dos matt_* e do `matt_tool=97303724` forçado.
 
 ### OffersPageSize100 - 100 ofertas por página por padrão
 
-- [x] **TecFlow.Business/Service/Groups/GroupOfferCaptureRules.cs** - `OffersPageSize = 100` (antes 25); valor inválido de `take` cai em 100.
-- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** / **TecFlow.API/Controllers/MonitoredGroupsController.cs** / **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - default de `take` passa a usar `GroupOfferCaptureRules.OffersPageSize`.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - default de `take` pela constante e busca prévia para deduplicação sem o teto de 80 linhas (`take + 20` até 200), permitindo páginas de 100.
-- [x] **TecFlow.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** - `selected` explícito na opção atual e fallback para o padrão (100) quando o valor não está na lista.
-- [x] **TecFlow.Tests/Unit/Groups/GroupOfferCaptureRulesTests.cs** - default 100 e fallback de `take` inválido.
+- [x] **Ofertio.Business/Service/Groups/GroupOfferCaptureRules.cs** - `OffersPageSize = 100` (antes 25); valor inválido de `take` cai em 100.
+- [x] **Ofertio.Business/Interfaces/Services/IGroupOfferServices.cs** / **Ofertio.API/Controllers/MonitoredGroupsController.cs** / **Ofertio.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - default de `take` passa a usar `GroupOfferCaptureRules.OffersPageSize`.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - default de `take` pela constante e busca prévia para deduplicação sem o teto de 80 linhas (`take + 20` até 200), permitindo páginas de 100.
+- [x] **Ofertio.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** - `selected` explícito na opção atual e fallback para o padrão (100) quando o valor não está na lista.
+- [x] **Ofertio.Tests/Unit/Groups/GroupOfferCaptureRulesTests.cs** - default 100 e fallback de `take` inválido.
 
 ### MeliSocialCardReset - Vitrines /social/ resolvidas, card compacto e reset limpo
 
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - IDs extraídos dos parâmetros da vitrine (`item_id`, `product_id`, `wid`) viram `https://www.mercadolivre.com.br/p/{ITEM_ID}`.
-- [x] **TecFlow.Infrastructure.Services/LinkStrategies/UrlResolverService.cs** - após seguir os redirects, vitrine Meli Social com produto focado vira a página `/p/` antes da limpeza de rastreio (que descarta o fragmento).
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** / **OfferPipelineProcessor.cs** - links `/social/` do Mercado Livre não são mais rejeitados antes da resolução HTTP; viram `VitrineGenerica` só se a URL final continuar no perfil sem produto.
-- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** - data/hora da captura (`dd/MM/yyyy HH:mm`) em destaque no cabeçalho; botões "Abrir", "Verificar", "Clonar" e "Ocultar" com os ícones originais.
-- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.monitored-offer-captured` (pílula da data) e `.monitored-offer-actions` em uma linha com padding reduzido.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - IDs extraídos dos parâmetros da vitrine (`item_id`, `product_id`, `wid`) viram `https://www.mercadolivre.com.br/p/{ITEM_ID}`.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/UrlResolverService.cs** - após seguir os redirects, vitrine Meli Social com produto focado vira a página `/p/` antes da limpeza de rastreio (que descarta o fragmento).
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** / **OfferPipelineProcessor.cs** - links `/social/` do Mercado Livre não são mais rejeitados antes da resolução HTTP; viram `VitrineGenerica` só se a URL final continuar no perfil sem produto.
+- [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor** - data/hora da captura (`dd/MM/yyyy HH:mm`) em destaque no cabeçalho; botões "Abrir", "Verificar", "Clonar" e "Ocultar" com os ícones originais.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.monitored-offer-captured` (pílula da data) e `.monitored-offer-actions` em uma linha com padding reduzido.
 - [x] **ResetarOfertasLegadas.ps1** (novo) - reset limpo de `GroupCapturedMessages` e `uploads\products` (todos ou `-UserId`), com `-WhatIf`, confirmação "RESETAR", `-PararIis` e `-IncluirHistoricoPrecos`.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/UrlResolverServiceTests.cs** / **MercadoLivreShowcaseRulesTests.cs** / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - formato `/p/{ITEM_ID}`, redirect social ➔ produto e rejeição só na URL final.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/UrlResolverServiceTests.cs** / **MercadoLivreShowcaseRulesTests.cs** / **AffiliateUrlBuilderServiceTests.cs** / **Ofertio.Tests/Unit/Groups/OfferValidationServiceTests.cs** - formato `/p/{ITEM_ID}`, redirect social ➔ produto e rejeição só na URL final.
 
 ### FeedChronologicalOrder - Feed em ordem decrescente da mensagem capturada
 
-- [x] **TecFlow.Business/Service/Groups/CapturedMessageTimeRules.cs** (novo) - `OrderByCapturedAtDescending` (`ReceivedAt` desc + `Id` desc), `NormalizeUtc`, `FromUnixSeconds`, `ResolveReceivedAtUtc` e `ToBrasilia`.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - feed ordenado pela hora da mensagem (antes `CreatedAt`, hora da gravação) e `ReceivedAt` devolvido como UTC.
-- [x] **TecFlow.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** / **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - consultas de `GroupCapturedMessages` com a mesma ordenação.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - `ReceivedAt` normalizado em UTC com o horário de envio da mensagem.
-- [x] **TecFlow.Business/Service/WhatsApp/WhatsAppBotRules.cs** / **TecFlow.Business/Service/Telegram/TelegramBotRules.cs** - `SentAtUtc` lido de `messageTimestamp` (número, string ou Long protobuf) e `message.date`.
-- [x] **TecFlow.Infrastructure/Services/WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** - capturam com o horário de envio em vez de `DateTime.UtcNow`.
-- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** / **CouponCard.razor** - data/hora exibida no horário de Brasília (`dd/MM/yyyy HH:mm`).
-- [x] **TecFlow.Tests/Unit/Groups/CapturedMessageTimeRulesTests.cs** (novo) - ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23 com dados reais, desempate, UTC/Brasília e timestamps dos webhooks.
+- [x] **Ofertio.Business/Service/Groups/CapturedMessageTimeRules.cs** (novo) - `OrderByCapturedAtDescending` (`ReceivedAt` desc + `Id` desc), `NormalizeUtc`, `FromUnixSeconds`, `ResolveReceivedAtUtc` e `ToBrasilia`.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - feed ordenado pela hora da mensagem (antes `CreatedAt`, hora da gravação) e `ReceivedAt` devolvido como UTC.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** / **Ofertio.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - consultas de `GroupCapturedMessages` com a mesma ordenação.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - `ReceivedAt` normalizado em UTC com o horário de envio da mensagem.
+- [x] **Ofertio.Business/Service/WhatsApp/WhatsAppBotRules.cs** / **Ofertio.Business/Service/Telegram/TelegramBotRules.cs** - `SentAtUtc` lido de `messageTimestamp` (número, string ou Long protobuf) e `message.date`.
+- [x] **Ofertio.Infrastructure/Services/WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** - capturam com o horário de envio em vez de `DateTime.UtcNow`.
+- [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor** / **CouponCard.razor** - data/hora exibida no horário de Brasília (`dd/MM/yyyy HH:mm`).
+- [x] **Ofertio.Tests/Unit/Groups/CapturedMessageTimeRulesTests.cs** (novo) - ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23 com dados reais, desempate, UTC/Brasília e timestamps dos webhooks.
 
 ### SoldOutFeedRemoval - Remoção imediata de produtos esgotados
 
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreAvailabilityRules.cs** (novo) - anúncio pausado/encerrado (`Inativo`), sem estoque / só "Produtos relacionados" sem caixa de compra / redirect para `lista.mercadolivre.com.br` (`Esgotado`) e status da API `/items` (`available_quantity = 0`).
-- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - `TryGetMercadoLivreUri` passou a `internal` para ser reaproveitado.
-- [x] **TecFlow.Business/Service/Groups/OfferFeedVisibilityRules.cs** (novo) - `IsVisibleInFeed`, `RemoveFromFeed`, `ReplaceInFeed` e o toast "Produto esgotado. Oferta removida do feed.".
-- [x] **TecFlow.Core/Entities/GroupOfferStatuses.cs** - `FeedVisibleStatuses` (lista branca do feed) e `IsFeedVisible`.
-- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `MonitoredGroupsResponseDto.ValidatedOffer` e `OfferRemoved`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - detecção do Mercado Livre na verificação HTTP (botão Verificar e Worker de lote).
-- [x] **TecFlow.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - item pausado/encerrado ou com estoque zero marcado indisponível.
-- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` exige status da lista branca para produtos.
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` devolve a oferta revalidada e `OfferRemoved` sem recarregar o feed do grupo; `EnrichForFeedAsync` compartilhado com `ListAsync`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** - Worker de lote conta como desativada a oferta que sai do feed.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar remove o card esgotado da lista em memória, ajusta o total, chama `StateHasChanged()` e mostra o toast de aviso.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreAvailabilityRulesTests.cs** (novo) / **TecFlow.Tests/Unit/Groups/OfferFeedVisibilityRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** / **GroupCapturedMessagesServiceTests.cs** / **TecFlow.Tests/Unit/Radar/MercadoLivreItemParserTests.cs** - cobertura da detecção, do filtro estrito e da remoção em memória.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreAvailabilityRules.cs** (novo) - anúncio pausado/encerrado (`Inativo`), sem estoque / só "Produtos relacionados" sem caixa de compra / redirect para `lista.mercadolivre.com.br` (`Esgotado`) e status da API `/items` (`available_quantity = 0`).
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** - `TryGetMercadoLivreUri` passou a `internal` para ser reaproveitado.
+- [x] **Ofertio.Business/Service/Groups/OfferFeedVisibilityRules.cs** (novo) - `IsVisibleInFeed`, `RemoveFromFeed`, `ReplaceInFeed` e o toast "Produto esgotado. Oferta removida do feed.".
+- [x] **Ofertio.Core/Entities/GroupOfferStatuses.cs** - `FeedVisibleStatuses` (lista branca do feed) e `IsFeedVisible`.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** - `MonitoredGroupsResponseDto.ValidatedOffer` e `OfferRemoved`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - detecção do Mercado Livre na verificação HTTP (botão Verificar e Worker de lote).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - item pausado/encerrado ou com estoque zero marcado indisponível.
+- [x] **Ofertio.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` exige status da lista branca para produtos.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` devolve a oferta revalidada e `OfferRemoved` sem recarregar o feed do grupo; `EnrichForFeedAsync` compartilhado com `ListAsync`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferRevalidationService.cs** - Worker de lote conta como desativada a oferta que sai do feed.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar remove o card esgotado da lista em memória, ajusta o total, chama `StateHasChanged()` e mostra o toast de aviso.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/MercadoLivreAvailabilityRulesTests.cs** (novo) / **Ofertio.Tests/Unit/Groups/OfferFeedVisibilityRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** / **GroupCapturedMessagesServiceTests.cs** / **Ofertio.Tests/Unit/Radar/MercadoLivreItemParserTests.cs** - cobertura da detecção, do filtro estrito e da remoção em memória.
 
 ### ProductTagsFilter - Filtro por características de produtos
 
-- [x] **TecFlow.Core/Entities/ProductTag.cs** (novo) - entidade `ProductTag` e `ProductTagCatalog` (slugs, Ids fixos do seed e rótulo "Todas as Características").
-- [x] **TecFlow.Core/Entities/GroupCapturedMessage.cs** - navegação `Tags` (N:N).
-- [x] **TecFlow.Database/AppDbContext.cs** - `DbSet<ProductTag>`, tabela de junção `OfferTags` (cascata) e `HasData` do catálogo.
-- [x] **TecFlow.Data/Migrations/20261018140443_AddProductTags.cs** (novo) / **.Designer.cs** / **AppDbContextModelSnapshot.cs** - tabelas `ProductTags` e `OfferTags` com seed.
-- [x] **TecFlow.Business/Service/Groups/ProductTagClassifierRules.cs** (novo) - palavras-chave por característica, sem acento e por palavra inteira.
-- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** / **LiveSearchDtos.cs** - `ProductTagDto`, `MonitoredGroupsResponseDto.Tags` e `LiveSearchFilterDto.TagId`.
-- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `IProductTagBackfillService`.
-- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - vincula as tags na gravação de cada oferta nova (Telegram e WhatsApp).
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - filtro `Tags.Any(t => t.Id == selectedTagId)` e lista de características ativas na resposta.
-- [x] **TecFlow.Infrastructure.Services/Groups/ProductTagBackfillService.cs** (novo) - classifica em lotes as ofertas capturadas sem tags (`ProductTagBackfillHost`).
-- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** / **TecFlow.API/Program.cs** / **TecFlow.API/Workers/ProductTagBackfillWorker.cs** (novo) - registro do backfill na subida da API.
-- [x] **TecFlow.API/Controllers/MonitoredGroupsController.cs** / **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - parâmetro `tagId` na listagem.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** / **TecFlow.SharedUi/wwwroot/app.css** - combo de características à direita de "Ocultos / Descartados" (`.monitored-tag-select`).
-- [x] **TecFlow.Tests/Unit/Groups/ProductTagClassifierRulesTests.cs** (novo) / **ProductTagPersistenceTests.cs** (novo) - classificação, seed, vínculo na gravação, filtro por tag e backfill idempotente.
+- [x] **Ofertio.Core/Entities/ProductTag.cs** (novo) - entidade `ProductTag` e `ProductTagCatalog` (slugs, Ids fixos do seed e rótulo "Todas as Características").
+- [x] **Ofertio.Core/Entities/GroupCapturedMessage.cs** - navegação `Tags` (N:N).
+- [x] **Ofertio.Database/AppDbContext.cs** - `DbSet<ProductTag>`, tabela de junção `OfferTags` (cascata) e `HasData` do catálogo.
+- [x] **Ofertio.Data/Migrations/20261018140443_AddProductTags.cs** (novo) / **.Designer.cs** / **AppDbContextModelSnapshot.cs** - tabelas `ProductTags` e `OfferTags` com seed.
+- [x] **Ofertio.Business/Service/Groups/ProductTagClassifierRules.cs** (novo) - palavras-chave por característica, sem acento e por palavra inteira.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** / **LiveSearchDtos.cs** - `ProductTagDto`, `MonitoredGroupsResponseDto.Tags` e `LiveSearchFilterDto.TagId`.
+- [x] **Ofertio.Business/Interfaces/Services/IGroupOfferServices.cs** - `IProductTagBackfillService`.
+- [x] **Ofertio.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - vincula as tags na gravação de cada oferta nova (Telegram e WhatsApp).
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - filtro `Tags.Any(t => t.Id == selectedTagId)` e lista de características ativas na resposta.
+- [x] **Ofertio.Infrastructure.Services/Groups/ProductTagBackfillService.cs** (novo) - classifica em lotes as ofertas capturadas sem tags (`ProductTagBackfillHost`).
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** / **Ofertio.API/Program.cs** / **Ofertio.API/Workers/ProductTagBackfillWorker.cs** (novo) - registro do backfill na subida da API.
+- [x] **Ofertio.API/Controllers/MonitoredGroupsController.cs** / **Ofertio.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - parâmetro `tagId` na listagem.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** / **Ofertio.SharedUi/wwwroot/app.css** - combo de características à direita de "Ocultos / Descartados" (`.monitored-tag-select`).
+- [x] **Ofertio.Tests/Unit/Groups/ProductTagClassifierRulesTests.cs** (novo) / **ProductTagPersistenceTests.cs** (novo) - classificação, seed, vínculo na gravação, filtro por tag e backfill idempotente.
 
 ### AmazonUnitPriceFix - Preço total da Amazon sem valor por unidade
 
-- [x] **TecFlow.Business/Service/Groups/OfferPriceTextRules.cs** - `IsUnitPriceContext` / `IsNonCashContext`; `TryExtractCashPrice` ignora "/ unidade", "por frasco", "unidade R$ X".
-- [x] **TecFlow.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - leitura de valores monetários do HTML pula contextos de parcela e de preço unitário.
-- [x] **TecFlow.Business/Integrations/Amazon/AmazonProductPageRules.cs** (novo) - total da buy box (`apexPriceToPay`, `priceToPay`, `corePrice_feature_div`) sem preço riscado/unitário, com fallback `og:price:amount`.
-- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - páginas da Amazon usam o preço da buy box.
-- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** / **TecFlow.Business/Service/Groups/OfferFeedVisibilityRules.cs** - `PriceUpdated`, `HasDisplayedPriceChanged` e toast "Preço atualizado para R$ X".
-- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` compara o preço exibido antes/depois e sinaliza `PriceUpdated`.
-- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar substitui o card, chama `StateHasChanged()` e mostra o toast de aviso com o novo preço.
-- [x] **TecFlow.Tests/Unit/LinkStrategies/AmazonProductPageRulesTests.cs** (novo) / **OfferPriceTextRulesTests.cs** / **OfferValidationServiceTests.cs** / **OfferFeedVisibilityRulesTests.cs** - buy box, preço unitário, fallback og e toast.
+- [x] **Ofertio.Business/Service/Groups/OfferPriceTextRules.cs** - `IsUnitPriceContext` / `IsNonCashContext`; `TryExtractCashPrice` ignora "/ unidade", "por frasco", "unidade R$ X".
+- [x] **Ofertio.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - leitura de valores monetários do HTML pula contextos de parcela e de preço unitário.
+- [x] **Ofertio.Business/Integrations/Amazon/AmazonProductPageRules.cs** (novo) - total da buy box (`apexPriceToPay`, `priceToPay`, `corePrice_feature_div`) sem preço riscado/unitário, com fallback `og:price:amount`.
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - páginas da Amazon usam o preço da buy box.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** / **Ofertio.Business/Service/Groups/OfferFeedVisibilityRules.cs** - `PriceUpdated`, `HasDisplayedPriceChanged` e toast "Preço atualizado para R$ X".
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` compara o preço exibido antes/depois e sinaliza `PriceUpdated`.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar substitui o card, chama `StateHasChanged()` e mostra o toast de aviso com o novo preço.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/AmazonProductPageRulesTests.cs** (novo) / **OfferPriceTextRulesTests.cs** / **OfferValidationServiceTests.cs** / **OfferFeedVisibilityRulesTests.cs** - buy box, preço unitário, fallback og e toast.
+
+### RebrandOfertio - Migração de marca TecFlow → Ofertio
+
+- [x] **Ofertio.sln** (antes `TecFlow.sln`) e pastas/projetos **Ofertio.*/Ofertio.*.csproj** (antes `TecFlow.*`) - namespaces, assemblies, `ProjectReference` e `InternalsVisibleTo`.
+- [x] **Ofertio.Core/Security/OfertioClaimTypes.cs** / **Ofertio.Infrastructure.Services/Security/OfertioPasswordHasher.cs** / **OfertioUserStore.cs** / **Ofertio.Observability/OfertioActivitySources.cs** / **OfertioBusinessMetrics.cs** / **Ofertio.Business/Interfaces/Telemetry/IOfertioBusinessMetrics.cs** / **Ofertio.SharedUi/Serialization/OfertioJsonOptions.cs** / **Ofertio.Mobile/Platforms/Android/OfertioFirebaseMessagingService.cs** / **Ofertio.SharedUi/wwwroot/ofertio-clipboard.js** / **Ofertio.API/Ofertio.API.http** / **docs/Ofertio_MOBILE_BUILD.md** - arquivos renomeados.
+- [x] **Ofertio.Infrastructure/Migrations/20260603162948_InitialOfertio.cs** / **.Designer.cs** - arquivos renomeados mantendo o ID `20260603162948_InitialTecFlow` do histórico do PostgreSQL.
+- [x] **Ofertio.Infrastructure/Security/DataProtectionRegistrationExtensions.cs** - nome de aplicação legado `TecFlow`; `DataProtection:KeysPath` relativo à raiz da aplicação (`App_Data/OfertioDataProtectionKeys`).
+- [x] **Ofertio.Data/Migrations/20261018220917_RebrandOfertioSettings.cs** (novo) / **.Designer.cs** / **AppDbContextModelSnapshot.cs** - renomeia a chave `TecFlow:ShortLinks:PublicBaseUrl` em `SystemSettings`.
+- [x] **Ofertio.API/appsettings*.json** / **Ofertio.WebUi/appsettings*.json** / **Ofertio.Worker/appsettings.json** / **Ofertio.Orquestrador/appsettings.json** / **web.config** - banco `Ofertio`, uploads `C:\inetpub\ofertio(_dev)\uploads`, chaves em `App_Data`, seção `Ofertio:*`, JWT `OfertioAPI`/`OfertioClient`.
+- [x] **Ofertio.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** / **Pages/Home.razor** / **Ofertio.Mobile/wwwroot/index.html** - título "Ofertio — Inteligência em Ofertas".
+- [x] **.gitignore** - ignora `App_Data/OfertioDataProtectionKeys/` e `App_Data/OfertioDevKeys/`.
+- [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** / **AjustarPermissoesIIS.ps1** / **LiberarPermissoesWebUi.ps1** / **Configurar-Logs-IIS.ps1** / **Liberar-Logs-WebUi.ps1** / **ResetarOfertasLegadas.ps1** - pools, sites e pastas `Ofertio`; limpeza do deploy preserva `api\App_Data`.
+- [x] **Ofertio.Tests/Unit/Security/DataProtectionKeysPathTests.cs** (novo) - caminho relativo/absoluto/padrão das chaves e nome legado do Data Protection.
 
 ---
 
@@ -1585,7 +1598,7 @@ API / Orquestrador / Worker / WebUi
 | 2 | Corrigir namespace `ExceptionMiddleware` no Core | Médio |
 | 3 | Renomear/remover `Application/AuthController.cs` stub | Médio |
 | 4 | Consolidar DI (`*RegistrationExtensions`) | Médio |
-| 5 | Alinhar Migrations com `TecFlow.Database` | Alto — schema/EF |
+| 5 | Alinhar Migrations com `Ofertio.Database` | Alto — schema/EF |
 | 6 | `dotnet clean` + `.gitignore` para bin/obj/Tecso.* | Baixo — higiene Git |
 | 7 | Unificar `ValidationHelper` | Baixo |
 | 8 | WebUi usar DTOs de Business | Concluído |

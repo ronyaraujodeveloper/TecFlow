@@ -1,0 +1,456 @@
+﻿@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.LinkStrategies
+@using Ofertio.SharedUi.Helpers
+@using Ofertio.SharedUi.Services.LinkGenerator
+@inject IJSRuntime Js
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject ILogger<LinkGeneratorResultPanel> Logger
+
+@if (Response is { HasConvertedLink: true } response)
+{
+    <section id="link-generator-result"
+             class="link-generator-result card border-0 shadow-sm mt-4"
+             role="region"
+             aria-live="polite"
+             aria-label="Link de comissão gerado">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div>
+                    <span class="link-generator-result-badge">Link pronto</span>
+                    <h2 class="h5 fw-bold mb-1 mt-2">Seus links de comissão</h2>
+                    @if (!string.IsNullOrWhiteSpace(response.PlatformDetected))
+                    {
+                        <p class="text-muted small mb-0">
+                            Plataforma: <strong>@response.PlatformDetected</strong>
+                        </p>
+                    }
+                </div>
+                <span class="link-generator-result-check" aria-hidden="true">✓</span>
+            </div>
+
+            <article class="product-preview-card product-preview-card--compact mb-3" aria-label="Prévia do produto">
+                <ProductImagePreview ShowInput="false"
+                                     ShowRemove="false"
+                                     Size="sm"
+                                     ImageUrl="@response.ProductImageUrl" />
+                <div class="product-preview-body flex-grow-1 min-w-0">
+                    @if (!string.IsNullOrWhiteSpace(response.PlatformDetected))
+                    {
+                        <span class="marketplace-platform-badge">@response.PlatformDetected</span>
+                    }
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        @if (!string.IsNullOrWhiteSpace(response.ProductName))
+                        {
+                            <h3 class="product-preview-title mb-0 text-truncate">@response.ProductName</h3>
+                        }
+                        else
+                        {
+                            <input type="text"
+                                   class="form-control form-control-sm product-preview-title"
+                                   placeholder="Digite o nome do produto..."
+                                   value="@NameDraft"
+                                   @oninput="OnNameDraftChanged" />
+                        }
+                        @if (response.ProductPrice.HasValue)
+                        {
+                            <span class="product-preview-price text-nowrap">@ProductMetadataHtmlParser.FormatBrl(response.ProductPrice)</span>
+                        }
+                        else
+                        {
+                            <div class="input-group input-group-sm product-preview-price-input">
+                                <span class="input-group-text">R$</span>
+                                <input type="number"
+                                       class="form-control"
+                                       placeholder="0,00"
+                                       min="0"
+                                       step="0.01"
+                                       value="@PriceDraft"
+                                       @oninput="OnPriceDraftChanged" />
+                            </div>
+                        }
+                        @if (string.IsNullOrWhiteSpace(response.ProductName) || !response.ProductPrice.HasValue)
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm btn-icon"
+                                    title="Salvar"
+                                    aria-label="Salvar"
+                                    disabled="@_isSavingMetadata"
+                                    @onclick="SaveLinkMetadataAsync">
+                                <i class="bi bi-floppy" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </div>
+                    <div class="mt-3">
+                        <ProductImagePreview InputId="generated-product-image"
+                                             ImageUrl="@ImageDraft"
+                                             ImageUrlChanged="OnImageDraftChanged" />
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm mt-2"
+                                title="Salvar imagem"
+                                disabled="@_isSavingMetadata"
+                                @onclick="SaveLinkMetadataAsync">
+                            <i class="bi bi-floppy" aria-hidden="true"></i> Salvar imagem
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            @if ((response.Accounts ?? []).Count(account => account is not null && account.IsActive && account.StoreId > 0) > 1)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="selected-commission-account">Conta selecionada:</label>
+                    <select id="selected-commission-account"
+                            class="form-select"
+                            value="@_selectedStoreId"
+                            @onchange="HandleAccountChanged">
+                        @foreach (var account in (response.Accounts ?? []).Where(item => item is { IsActive: true }))
+                        {
+                            <option value="@account.StoreId">@account.StoreName</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div class="link-row-stack" role="list">
+                @if (!string.IsNullOrWhiteSpace(response.AffiliateUrl))
+                {
+                    <article class="link-row" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link direto (@(string.IsNullOrWhiteSpace(response.PlatformDetected) ? "Marketplace" : response.PlatformDetected))</span>
+                            <output id="generated-affiliate-url"
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.AffiliateUrl">
+                                @response.AffiliateUrl
+                            </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do link direto">
+                            <button type="button"
+                                    class="btn btn-sm btn-icon @(_copiedAffiliate ? "btn-success" : "btn-outline-primary")"
+                                    title="Copiar"
+                                    aria-label="Copiar link direto"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.AffiliateUrl, CopyTarget.Affiliate)">
+                                <i class="bi @(_copiedAffiliate ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
+                            </button>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.AffiliateUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar link direto no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.AffiliateUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar link direto no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(response.ShortenedShopeeUrl))
+                {
+                    <article class="link-row link-row--shopee" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link encurtado oficial</span>
+                            <output id="generated-shopee-short-url"
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.ShortenedShopeeUrl">
+                                @response.ShortenedShopeeUrl
+                            </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do link oficial">
+                            <button type="button"
+                                    class="btn btn-sm btn-icon @(_copiedShopeeShort ? "btn-success" : "btn-outline-orange")"
+                                    title="Copiar"
+                                    aria-label="Copiar link oficial"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.ShortenedShopeeUrl, CopyTarget.ShopeeShort)">
+                                <i class="bi @(_copiedShopeeShort ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
+                            </button>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ShortenedShopeeUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar link oficial no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ShortenedShopeeUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar link oficial no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
+                {
+                    <article class="link-row link-row--ofertio" role="listitem">
+                        <div class="link-row-meta min-w-0">
+                            <span class="link-row-label">Link de rastreio Ofertio</span>
+                            <output id="generated-short-url"
+                                    class="link-row-url font-monospace"
+                                    for="product-url"
+                                    title="@response.ResolvedShortUrl">
+                                @response.ResolvedShortUrl
+                            </output>
+                        </div>
+                        <div class="link-row-actions" role="group" aria-label="Ações do rastreio Ofertio">
+                            <button type="button"
+                                    class="btn btn-sm btn-icon @(_copiedShort ? "btn-success" : "btn-outline-primary")"
+                                    title="Copiar"
+                                    aria-label="Copiar rastreio Ofertio"
+                                    disabled="@_isCopying"
+                                    @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
+                                <i class="bi @(_copiedShort ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
+                            </button>
+                            <a class="btn btn-sm btn-icon btn-success"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="WhatsApp"
+                               aria-label="Enviar rastreio Ofertio no WhatsApp">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a class="btn btn-sm btn-icon btn-info text-white"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="Telegram"
+                               aria-label="Enviar rastreio Ofertio no Telegram">
+                                <i class="bi bi-telegram" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_actionMessage))
+            {
+                <p class="small mt-3 mb-0 @(_actionIsError ? "text-danger" : "text-success")" role="status">
+                    @_actionMessage
+                </p>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public GerarLinkAfiliadoResponseDto? Response { get; set; }
+
+    private bool _copiedAffiliate;
+    private bool _copiedShort;
+    private bool _copiedShopeeShort;
+    private bool _isCopying;
+    private string? _actionMessage;
+    private bool _actionIsError;
+    private string? _lastResponseKey;
+    private int _selectedStoreId;
+    private string NameDraft { get; set; } = string.Empty;
+    private string PriceDraft { get; set; } = string.Empty;
+    private string ImageDraft { get; set; } = string.Empty;
+    private bool _isSavingMetadata;
+
+    protected override void OnParametersSet()
+    {
+        var key = $"{Response?.LinkGroupId}|{Response?.OriginalUrl}|{Response?.AffiliateUrl}|{Response?.ShortenedUrl}|{Response?.ShortenedShopeeUrl}|{Response?.Accounts?.Count}";
+        if (!string.Equals(key, _lastResponseKey, StringComparison.Ordinal))
+        {
+            _lastResponseKey = key;
+            ResetActionState();
+            _selectedStoreId = Response?.SelectedStoreId
+                ?? Response?.Accounts?.FirstOrDefault(account => account is { IsActive: true })?.StoreId
+                ?? 0;
+            if (_selectedStoreId > 0)
+            {
+                Response?.ApplySelectedAccount(_selectedStoreId);
+            }
+
+            NameDraft = Response?.ProductName ?? string.Empty;
+            PriceDraft = Response?.ProductPrice.HasValue == true
+                ? Response.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+            ImageDraft = Response?.ProductImageUrl ?? string.Empty;
+        }
+    }
+
+    private void OnNameDraftChanged(ChangeEventArgs e) =>
+        NameDraft = e.Value?.ToString() ?? string.Empty;
+
+    private void OnPriceDraftChanged(ChangeEventArgs e) =>
+        PriceDraft = e.Value?.ToString() ?? string.Empty;
+
+    private void OnImageDraftChanged(string? url)
+    {
+        ImageDraft = url ?? string.Empty;
+        if (Response is not null)
+        {
+            Response.ProductImageUrl = string.IsNullOrWhiteSpace(ImageDraft) ? null : ImageDraft;
+        }
+    }
+
+    private async Task SaveLinkMetadataAsync()
+    {
+        if (Response is null || Response.AffiliateLinkId == Guid.Empty)
+        {
+            return;
+        }
+
+        _isSavingMetadata = true;
+        _actionMessage = null;
+        try
+        {
+            decimal? price = Response.ProductPrice.HasValue ? Response.ProductPrice : null;
+            if (!price.HasValue
+                && decimal.TryParse(
+                    PriceDraft,
+                    System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var parsed)
+                && parsed > 0)
+            {
+                price = decimal.Round(parsed, 2, MidpointRounding.AwayFromZero);
+            }
+
+            var result = await AffiliateLinkApi.UpdateProductMetadataAsync(
+                Response.AffiliateLinkId,
+                new UpdateAffiliateProductMetadataDto
+                {
+                    ProductName = string.IsNullOrWhiteSpace(Response.ProductName) ? NameDraft : Response.ProductName,
+                    ProductPrice = price,
+                    ProductImageUrl = ImageDraft
+                });
+
+            if (result.Success && result.Data is not null)
+            {
+                Response.ProductName = result.Data.ProductName;
+                Response.ProductPrice = result.Data.ProductPrice;
+                Response.ProductImageUrl = result.Data.ProductImageUrl;
+                NameDraft = result.Data.ProductName ?? string.Empty;
+                PriceDraft = result.Data.ProductPrice.HasValue
+                    ? result.Data.ProductPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    : string.Empty;
+                ImageDraft = result.Data.ProductImageUrl ?? string.Empty;
+                _actionIsError = false;
+                _actionMessage = "Dados do produto atualizados.";
+                return;
+            }
+
+            _actionIsError = true;
+            _actionMessage = result.ErrorMessage ?? "Não foi possível salvar o nome do produto.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao salvar metadados do preview. AffiliateLinkId={AffiliateLinkId}", Response.AffiliateLinkId);
+            _actionIsError = true;
+            _actionMessage = "Não foi possível salvar o nome do produto.";
+        }
+        finally
+        {
+            _isSavingMetadata = false;
+        }
+    }
+
+    private void HandleAccountChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var storeId) || Response is null)
+        {
+            return;
+        }
+
+        _selectedStoreId = storeId;
+        Response.ApplySelectedAccount(storeId);
+        ResetActionState();
+    }
+
+    private async Task CopyLinkAsync(string? url, CopyTarget target)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        _isCopying = true;
+        _actionMessage = null;
+
+        try
+        {
+            var copied = await CopyViaClipboardInteropAsync(url);
+            if (copied)
+            {
+                _copiedAffiliate = target == CopyTarget.Affiliate;
+                _copiedShort = target == CopyTarget.Short;
+                _copiedShopeeShort = target == CopyTarget.ShopeeShort;
+                _actionIsError = false;
+                _actionMessage = target switch
+                {
+                    CopyTarget.Affiliate => "Link de afiliado copiado para a área de transferência.",
+                    CopyTarget.ShopeeShort => "Link encurtado da Shopee copiado para a área de transferência.",
+                    _ => "Link com rastreio Ofertio copiado para a área de transferência."
+                };
+                StateHasChanged();
+                await Task.Delay(2200);
+                _copiedAffiliate = false;
+                _copiedShort = false;
+                _copiedShopeeShort = false;
+                _actionMessage = null;
+            }
+            else
+            {
+                _actionIsError = true;
+                _actionMessage = "Não foi possível copiar o link. Tente selecionar e copiar manualmente.";
+            }
+        }
+        catch (Exception)
+        {
+            _actionIsError = true;
+            _actionMessage = "Erro ao copiar o link.";
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> CopyViaClipboardInteropAsync(string url)
+    {
+        try
+        {
+            return await Js.InvokeAsync<bool>("ofertioClipboard.copyText", url);
+        }
+        catch (JSException)
+        {
+            return await Js.InvokeAsync<bool>("ofertioAppInterop.copyToClipboard", url);
+        }
+    }
+
+    private void ResetActionState()
+    {
+        _copiedAffiliate = false;
+        _copiedShort = false;
+        _copiedShopeeShort = false;
+        _isCopying = false;
+        _isSavingMetadata = false;
+        _actionMessage = null;
+        _actionIsError = false;
+    }
+
+    private enum CopyTarget
+    {
+        Affiliate,
+        Short,
+        ShopeeShort
+    }
+}

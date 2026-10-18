@@ -1,10 +1,10 @@
-# 📊 ANÁLISE PROFUNDA COMPLETA - WORKSPACE TecFlow
+# 📊 ANÁLISE PROFUNDA COMPLETA - WORKSPACE Ofertio
 
 [« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
 
 **Data**: 26 de Maio de 2026 | **Atualização de caminhos**: 3 de junho de 2026 | **Status**: ✅ Exploração Completa (referência histórica + gaps atuais)
 
-> **Árvore atual na raiz da solution** (`Tecso.AutomacaoCusor/`): hosts (`TecFlow.API`, `TecFlow.Orquestrador`, **`TecFlow.WebUi`**, `TecFlow.Worker`), domínio em `TecFlow.Core/Entities` e `TecFlow.Core/Exceptions`, contratos e DTOs em **`TecFlow.Business/`**, persistência em **`TecFlow.Database/`** (`AppDbContext`, `Filter/`, `Entity/`, `Pagin/`), implementações em `TecFlow.Infrastructure` + `TecFlow.Infrastructure.Services`. **`TecFlow.Portal`** e **`TecFlow.Dashboard`** foram descontinuados (jun/2026) — UI canônica em WebUi. Para duplicatas e limpeza pós-migração, use **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)**.
+> **Árvore atual na raiz da solution** (`Tecso.AutomacaoCusor/`): hosts (`Ofertio.API`, `Ofertio.Orquestrador`, **`Ofertio.WebUi`**, `Ofertio.Worker`), domínio em `Ofertio.Core/Entities` e `Ofertio.Core/Exceptions`, contratos e DTOs em **`Ofertio.Business/`**, persistência em **`Ofertio.Database/`** (`AppDbContext`, `Filter/`, `Entity/`, `Pagin/`), implementações em `Ofertio.Infrastructure` + `Ofertio.Infrastructure.Services`. **`Ofertio.Portal`** e **`Ofertio.Dashboard`** foram descontinuados (jun/2026) — UI canônica em WebUi. Para duplicatas e limpeza pós-migração, use **[LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)**.
 
 ---
 
@@ -32,8 +32,8 @@
 ### 📊 Estatísticas
 | Métrica | Valor |
 |---------|-------|
-| Interfaces em TecFlow.Core | 21 |
-| Implementações em TecFlow.Infrastructure.Services | 6 Repositories + 7 Services |
+| Interfaces em Ofertio.Core | 21 |
+| Implementações em Ofertio.Infrastructure.Services | 6 Repositories + 7 Services |
 | Application Services | 11 (com 3 duplicatas) |
 | Service Registration Files | 4 (desorganizado) |
 | Controllers | 11 (API) |
@@ -60,11 +60,11 @@
 
 ## 🏗️ ESTRUTURA DE PROJETOS
 
-### 1️⃣ **TecFlow.Core** - Domínio (Foundation Layer)
+### 1️⃣ **Ofertio.Core** - Domínio (Foundation Layer)
 **Responsabilidade**: Interfaces, Entidades, Exceções, DTOs genéricos
 
 ```
-TecFlow.Core/
+Ofertio.Core/
 ├── Interfaces/ (21 arquivos)
 │   ├── Repositories/ (9)
 │   │   ├── IRepository.cs (interface genérica base)
@@ -113,18 +113,18 @@ TecFlow.Core/
 │   ├── GeracaoDescricao.cs
 │   ├── GeracaoRoteiro.cs
 │   └── GeracaoTitulo.cs
-└── TecFlow.Core.csproj
+└── Ofertio.Core.csproj
 ```
 
 **Status**: 🔴 Organização comprometida por files não-interface na pasta Services
 
 ---
 
-### 2️⃣ **TecFlow.Application** - Lógica de Aplicação (Application Layer)
+### 2️⃣ **Ofertio.Application** - Lógica de Aplicação (Application Layer)
 **Responsabilidade**: Application Services, DTOs por agregado
 
 ```
-TecFlow.Application/
+Ofertio.Application/
 ├── Services/ (11 services)
 │   ├── ApplicationServiceCollectionExtensions.cs ⚠️ (3 duplicatas)
 │   ├── AIApplicationService.cs
@@ -154,18 +154,18 @@ TecFlow.Application/
 │   │   ├── CreateUsuarioDto.cs
 │   │   └── UsuarioResponseDto.cs
 │   └── LoginDto.cs
-└── TecFlow.Application.csproj
+└── Ofertio.Application.csproj
 ```
 
 **Status**: 🟡 Bom design de DTOs, mas service registration com duplicatas
 
 ---
 
-### 3️⃣ **TecFlow.Infrastructure** - Dados e APIs Externas (Infrastructure Layer - Part 1)
+### 3️⃣ **Ofertio.Infrastructure** - Dados e APIs Externas (Infrastructure Layer - Part 1)
 **Responsabilidade**: DbContext, integrações com APIs externas, configurações
 
 ```
-TecFlow.Infrastructure/
+Ofertio.Infrastructure/
 ├── Configuration/ (2)
 │   ├── AppConfiguration.cs
 │   └── SerilogLogger.cs
@@ -192,36 +192,36 @@ TecFlow.Infrastructure/
 ├── Security/ (?)
 ├── AIProvider.cs (fora de pasta - ❌ desorganizado)
 ├── ShopeeProductResult.cs (fora de pasta - ❌ desorganizado)
-└── TecFlow.Infrastructure.csproj
+└── Ofertio.Infrastructure.csproj
 ```
 
 **Status**: 🟡 Organização parcial, alguns files soltos, interfaces mixadas
 
 ---
 
-### 4️⃣ **TecFlow.Infrastructure.Services** - Implementações de Serviços
+### 4️⃣ **Ofertio.Infrastructure.Services** - Implementações de Serviços
 **Responsabilidade**: Repositories, Serviços de IA, Serviços de APIs Externas
 
 ```
-TecFlow.Infrastructure.Services/
+Ofertio.Infrastructure.Services/
 ├── ⚠️ SERVICE REGISTRATION (4 ARQUIVOS - DESORGANIZADO)
 │   ├── ServiceRegistrationExtensions.cs
-│   │   └── AddTecFlowInfrastructureServices()
+│   │   └── AddOfertioInfrastructureServices()
 │   │       ├── AddHttpClient<IShopeeApi, ShopeeApiService>()
 │   │       ├── AddHttpClient<ITikTokShopApi, TikTokShopApiService>() (2x - DUPLICADO!)
 │   │       ├── AddHttpClient<ITikTokAdsApiService, TikTokAdsApiService>()
 │   │       └── Polly retry policy
 │   ├── CoreServiceRegistrationExtensions.cs
-│   │   └── AddTecFlowCoreServices()
+│   │   └── AddOfertioCoreServices()
 │   │       ├── IAnaliseCalculoService → AnaliseCalculoService
 │   │       └── IScoreService → ScoreService
 │   ├── ExternalServiceRegistrationExtensions.cs
-│   │   └── AddTecFlowExternalServices()
+│   │   └── AddOfertioExternalServices()
 │   │       ├── HttpClient<IGeminiService, GeminiService>()
 │   │       ├── HttpClient<IAIService, OpenAIService>()
 │   │       └── HttpClient<IShopeeApi, ShopeeApiService>() (DUPLICADO!)
 │   └── InfrastructureDataServiceRegistrationExtensions.cs
-│       └── AddTecFlowInfrastructureData()
+│       └── AddOfertioInfrastructureData()
 │           ├── DbContext<AppDbContext>() (DUPLICADO em API/Program!)
 │           ├── IProdutoRepository → ProdutoRepository
 │           ├── ICampanhaRepository → CampanhaRepository
@@ -252,32 +252,32 @@ TecFlow.Infrastructure.Services/
 │   ├── IAnaliseCalculoService.cs
 │   └── ScoreService.cs
 │
-├── Interfaces/ (4 - ❌ DEVEM ESTAR EM TecFlow.CORE!)
+├── Interfaces/ (4 - ❌ DEVEM ESTAR EM Ofertio.CORE!)
 │   ├── IShopeeApi.cs
 │   ├── ITikTokAdsApiService.cs
 │   ├── ITikTokShopApi.cs
 │   └── ITikTokShopApiService.cs
 │
 ├── Serilog.cs (arquivo solto)
-└── TecFlow.Infrastructure.Services.csproj
+└── Ofertio.Infrastructure.Services.csproj
 ```
 
 **Status**: 🔴 CRÍTICO - Múltiplos problemas: 4 arquivos de registration, duplicatas massivas, interfaces desorganizadas
 
 ---
 
-### 5️⃣ **TecFlow.API** - Apresentação (REST API)
+### 5️⃣ **Ofertio.API** - Apresentação (REST API)
 **Responsabilidade**: Endpoints HTTP, Controllers, Middleware
 
 ```
-TecFlow.API/
+Ofertio.API/
 ├── Program.cs (configuração principal)
 │   ├── AddDbContext<AppDbContext>()
 │   ├── AddAuthorization()
 │   ├── JWT Authentication setup
 │   ├── Middleware (ExceptionMiddleware, Swagger, Static Files)
-│   ├── AddTecFlowInfrastructureData(connectionString)
-│   ├── AddTecFlowInfrastructureServices(builder.Configuration)
+│   ├── AddOfertioInfrastructureData(connectionString)
+│   ├── AddOfertioInfrastructureServices(builder.Configuration)
 │   └── MapControllers()
 │
 ├── Controllers/ (11)
@@ -299,19 +299,19 @@ TecFlow.API/
 ├── Properties/
 ├── appsettings.json
 ├── appsettings.Development.json
-├── TecFlow.API.http (requisições para teste)
-└── TecFlow.API.csproj
+├── Ofertio.API.http (requisições para teste)
+└── Ofertio.API.csproj
 ```
 
 **Status**: 🟢 Bem organizado, controllers bem estruturados
 
 ---
 
-### 6️⃣ **TecFlow.WebUi** - Apresentação (Blazor Server)
+### 6️⃣ **Ofertio.WebUi** - Apresentação (Blazor Server)
 **Responsabilidade**: Interface web canônica — login OAuth, painel e consumo da API/Orquestrador via `*ResponseDto`
 
 ```
-TecFlow.WebUi/
+Ofertio.WebUi/
 ├── Program.cs
 ├── Components/
 │   ├── Pages/ (Home, Dashboard, Login TikTok/Shopee, Error)
@@ -325,19 +325,19 @@ TecFlow.WebUi/
 ├── Models/ (ApiResult, enums, PipelineStatusDto — sem DTOs duplicados de Business)
 ├── Configuration/, Security/, wwwroot/
 ├── appsettings.json, appsettings.Development.json
-└── TecFlow.WebUi.csproj
-    └── Referências: TecFlow.Business, TecFlow.Util
+└── Ofertio.WebUi.csproj
+    └── Referências: Ofertio.Business, Ofertio.Util
 ```
 
-**Status**: 🟢 Frontend ativo; substitui `TecFlow.Portal` e `TecFlow.Dashboard` (removidos jun/2026)
+**Status**: 🟢 Frontend ativo; substitui `Ofertio.Portal` e `Ofertio.Dashboard` (removidos jun/2026)
 
 ---
 
-### 7️⃣ **TecFlow.Orquestrador** - Console App / Background Processing
+### 7️⃣ **Ofertio.Orquestrador** - Console App / Background Processing
 **Responsabilidade**: Orquestração de pipelines, processamento em batch
 
 ```
-TecFlow.Orquestrador/
+Ofertio.Orquestrador/
 ├── Program.cs (❌ VAZIO - "Hello, World!")
 │   └── Entry point não configurado!
 │
@@ -369,31 +369,31 @@ TecFlow.Orquestrador/
 │   ├── PublicacaoPipeline.cs
 │   └── FileName.cs
 │
-└── TecFlow.Orquestrador.csproj
+└── Ofertio.Orquestrador.csproj
 ```
 
 **Status**: 🔴 CRÍTICO - Program.cs vazio, tudo replicado em Configurator.cs, OrquestradorPrincipal é hybrid
 
 ---
 
-### 8️⃣ **TecFlow.Worker** - Windows Service
+### 8️⃣ **Ofertio.Worker** - Windows Service
 **Responsabilidade**: Processamento em background via Windows Service
 
 ```
-TecFlow.Worker/
+Ofertio.Worker/
 ├── WorkerService.cs (implementação não explorada)
-└── TecFlow.Worker.csproj
+└── Ofertio.Worker.csproj
 ```
 
 **Status**: 🟡 Pouco desenvolvido
 
 ---
 
-### 9️⃣ **TecFlow.Tests** - Testes
+### 9️⃣ **Ofertio.Tests** - Testes
 **Responsabilidade**: Testes unitários, integração, API
 
 ```
-TecFlow.Tests/
+Ofertio.Tests/
 ├── UnitTests/
 │   └── Core/
 │       └── OrquestradorPrincipalTests.cs
@@ -408,23 +408,23 @@ TecFlow.Tests/
 │   ├── MockDataService.cs (implementa IDataService)
 │   └── MockAIService.cs (implementa IAIService)
 ├── Unit/ (pasta)
-└── TecFlow.Tests.csproj
+└── Ofertio.Tests.csproj
 ```
 
 **Status**: 🟡 Estrutura básica, pode ser expandida
 
 ---
 
-### 🔟 **TecFlow.Util** - Utilidades Compartilhadas
+### 🔟 **Ofertio.Util** - Utilidades Compartilhadas
 **Responsabilidade**: Helpers, extensões, utilitários comuns
 
 ```
-TecFlow.Util/
+Ofertio.Util/
 ├── Dependências:
 │   ├── AutoMapper (16.1.1)
 │   ├── FluentValidation (12.1.1)
 │   └── Newtonsoft.Json (13.0.4)
-└── TecFlow.Util.csproj
+└── Ofertio.Util.csproj
 ```
 
 **Status**: 🟡 Funcional
@@ -435,7 +435,7 @@ TecFlow.Util/
 
 ### Contagem Total por Tipo
 ```
-INTERFACES:        21 (em TecFlow.Core e 4 em TecFlow.Infrastructure.Services)
+INTERFACES:        21 (em Ofertio.Core e 4 em Ofertio.Infrastructure.Services)
 IMPLEMENTAÇÕES:    30+ (repositories + services + external services)
 ENTITIES:          11
 DTOS:              15+ (distribuídos entre Core e Application)
@@ -507,12 +507,12 @@ TEST CLASSES:      6+
 
 ```
 API/Program.cs
-├─ AddTecFlowInfrastructureData(connectionString)
+├─ AddOfertioInfrastructureData(connectionString)
 │  ├─ DbContext
 │  ├─ Repositories (6x)
 │  └─ IShopeeApi ⚠️
 │
-├─ AddTecFlowInfrastructureServices(config)
+├─ AddOfertioInfrastructureServices(config)
 │  ├─ HttpClient<IShopeeApi> ⚠️ DUPLICADO
 │  ├─ HttpClient<ITikTokShopApi> (2x)
 │  └─ HttpClient<ITikTokAdsApiService>
@@ -552,7 +552,7 @@ Application/ApplicationServiceCollectionExtensions.cs (NÃO CHAMADO EM LUGAR NEN
 ## ⚠️ PROBLEMAS CRÍTICOS IDENTIFICADOS
 
 ### 🔴 CRÍTICO #1: Replicação Massiva em Orquestrador
-**Arquivo**: `TecFlow.Orquestrador/Configurator.cs`
+**Arquivo**: `Ofertio.Orquestrador/Configurator.cs`
 **Problema**: 
 - Replica TODAS as dependências da API manualmente
 - Se algo mudar na API, Orquestrador fica quebrado
@@ -581,7 +581,7 @@ Application/ApplicationServiceCollectionExtensions.cs (NÃO CHAMADO EM LUGAR NEN
 ---
 
 ### 🔴 CRÍTICO #3: Interfaces em Locações Erradas
-**Locação 1**: `TecFlow.Core/Interfaces/Services/` - Correto ✓
+**Locação 1**: `Ofertio.Core/Interfaces/Services/` - Correto ✓
 ```
 IAIService.cs
 IAnaliseService.cs
@@ -593,7 +593,7 @@ IRankingService.cs
 IScoreService.cs
 ```
 
-**Locação 2**: `TecFlow.Infrastructure.Services/Interfaces/` - ❌ Errado!
+**Locação 2**: `Ofertio.Infrastructure.Services/Interfaces/` - ❌ Errado!
 ```
 IShopeeApi.cs
 ITikTokAdsApiService.cs
@@ -603,12 +603,12 @@ ITikTokShopApiService.cs
 
 **Problema**: Interfaces de API externas não devem estar em Infrastructure.Services
 **Impacto**: Médio - confusão arquitetural
-**Solução**: Mover para `TecFlow.Core/Interfaces/Services/ExternalApis/`
+**Solução**: Mover para `Ofertio.Core/Interfaces/Services/ExternalApis/`
 
 ---
 
 ### 🟠 CRÍTICO #4: Implementações de Services na Pasta de Interfaces
-**Arquivo**: `TecFlow.Core/Interfaces/Services/`
+**Arquivo**: `Ofertio.Core/Interfaces/Services/`
 ```
 AnaliseService.cs (❌ implementação, não interface!)
 CampanhaService.cs (❌ implementação, não interface!)
@@ -622,12 +622,12 @@ UsuarioService.cs (❌ implementação, não interface!)
 - Parecem interfaces mas são implementações
 
 **Impacto**: Médio - confusão em manutenção
-**Solução**: Mover para `TecFlow.Infrastructure.Services/Service/` ou `TecFlow.Application/Services/`
+**Solução**: Mover para `Ofertio.Infrastructure.Services/Service/` ou `Ofertio.Application/Services/`
 
 ---
 
 ### 🟠 CRÍTICO #5: Duplicatas em ApplicationServiceCollectionExtensions.cs
-**Arquivo**: `TecFlow.Application/Services/ApplicationServiceCollectionExtensions.cs`
+**Arquivo**: `Ofertio.Application/Services/ApplicationServiceCollectionExtensions.cs`
 
 ```csharp
 services.AddScoped<GeminiApplicationService>(); // Linha X
@@ -648,7 +648,7 @@ services.AddScoped<PublicacaoApplicationService>(); // Linha Y+1 ❌ DUPLICADA
 ---
 
 ### 🟠 CRÍTICO #6: Program.cs do Orquestrador Vazio
-**Arquivo**: `TecFlow.Orquestrador/Program.cs`
+**Arquivo**: `Ofertio.Orquestrador/Program.cs`
 
 ```csharp
 Console.WriteLine("Hello, World!");
@@ -665,7 +665,7 @@ Console.WriteLine("Hello, World!");
 ---
 
 ### 🟠 CRÍTICO #7: OrquestradorPrincipal é um ControllerBase Híbrido
-**Arquivo**: `TecFlow.Orquestrador/OrquestradorPrincipal.cs`
+**Arquivo**: `Ofertio.Orquestrador/OrquestradorPrincipal.cs`
 
 ```csharp
 [ApiController]
@@ -716,7 +716,7 @@ services.AddHttpClient<IGeminiService, GeminiService>();
 ---
 
 ### 🟡 IMPORTANTE #9: Pasta Security Vazia/Não Explorada
-**Arquivo**: `TecFlow.Infrastructure/Security/`
+**Arquivo**: `Ofertio.Infrastructure/Security/`
 **Problema**: Não há código explorado aqui, pode ter lógica de segurança faltando
 **Solução**: Verificar se há código aqui que deveria estar sendo usado
 
@@ -724,8 +724,8 @@ services.AddHttpClient<IGeminiService, GeminiService>();
 
 ### 🟡 IMPORTANTE #10: Files Soltos Não Organizados
 **Arquivos**:
-- `TecFlow.Infrastructure/AIProvider.cs`
-- `TecFlow.Infrastructure/ShopeeProductResult.cs`
+- `Ofertio.Infrastructure/AIProvider.cs`
+- `Ofertio.Infrastructure/ShopeeProductResult.cs`
 
 **Problema**: Fora de pastas, sem organização
 **Solução**: Colocar em pastas apropriadas (API/Shopee/ ou Models/)
@@ -739,63 +739,63 @@ services.AddHttpClient<IGeminiService, GeminiService>();
 #### **REPOSITORIES**
 | Interface | Arquivo | Implementação | Arquivo | Status |
 |-----------|---------|--------------|---------|--------|
-| IRepository | TecFlow.Core/Interfaces/Repositories/IRepository.cs | - | - | ❌ Genérica sem impl |
-| IAfiliadoRepository | TecFlow.Core/Interfaces/Repositories/IAfiliadoRepository.cs | AfiliadoRepository | TecFlow.Infrastructure.Services/Repositories/AfiliadoRepository.cs | ✓ |
-| ICampanhaRepository | TecFlow.Core/Interfaces/Repositories/ICampanhaRepository.cs | CampanhaRepository | TecFlow.Infrastructure.Services/Repositories/CampanhaRepository.cs | ✓ |
-| IConteudoRepository | TecFlow.Core/Interfaces/Repositories/IConteudoRepository.cs | ConteudoRepository | TecFlow.Infrastructure.Services/Repositories/ConteudoRepository.cs | ✓ |
-| IMetricaRepository | TecFlow.Core/Interfaces/Repositories/IMetricaRepository.cs | MetricaRepository | TecFlow.Infrastructure.Services/Repositories/MetricaRepository.cs | ✓ |
-| IProdutoRepository | TecFlow.Core/Interfaces/Repositories/IProdutoRepository.cs | ProdutoRepository | TecFlow.Infrastructure.Services/Repositories/ProdutoRepository.cs | ✓ |
-| IUsuarioRepository | TecFlow.Core/Interfaces/Repositories/IUsuarioRepository.cs | UsuarioRepository | TecFlow.Infrastructure.Services/Repositories/UsuarioRepository.cs | ✓ |
-| IOrquestradorRepository | TecFlow.Core/Interfaces/Repositories/IOrquestradorRepository.cs | - | - | ❌ Sem impl |
-| IAIProvider | TecFlow.Core/Interfaces/Repositories/IAIProvider.cs | - | - | ❓ |
+| IRepository | Ofertio.Core/Interfaces/Repositories/IRepository.cs | - | - | ❌ Genérica sem impl |
+| IAfiliadoRepository | Ofertio.Core/Interfaces/Repositories/IAfiliadoRepository.cs | AfiliadoRepository | Ofertio.Infrastructure.Services/Repositories/AfiliadoRepository.cs | ✓ |
+| ICampanhaRepository | Ofertio.Core/Interfaces/Repositories/ICampanhaRepository.cs | CampanhaRepository | Ofertio.Infrastructure.Services/Repositories/CampanhaRepository.cs | ✓ |
+| IConteudoRepository | Ofertio.Core/Interfaces/Repositories/IConteudoRepository.cs | ConteudoRepository | Ofertio.Infrastructure.Services/Repositories/ConteudoRepository.cs | ✓ |
+| IMetricaRepository | Ofertio.Core/Interfaces/Repositories/IMetricaRepository.cs | MetricaRepository | Ofertio.Infrastructure.Services/Repositories/MetricaRepository.cs | ✓ |
+| IProdutoRepository | Ofertio.Core/Interfaces/Repositories/IProdutoRepository.cs | ProdutoRepository | Ofertio.Infrastructure.Services/Repositories/ProdutoRepository.cs | ✓ |
+| IUsuarioRepository | Ofertio.Core/Interfaces/Repositories/IUsuarioRepository.cs | UsuarioRepository | Ofertio.Infrastructure.Services/Repositories/UsuarioRepository.cs | ✓ |
+| IOrquestradorRepository | Ofertio.Core/Interfaces/Repositories/IOrquestradorRepository.cs | - | - | ❌ Sem impl |
+| IAIProvider | Ofertio.Core/Interfaces/Repositories/IAIProvider.cs | - | - | ❓ |
 
 ---
 
 #### **BUSINESS SERVICES**
 | Interface | Arquivo | Implementação | Arquivo | Status |
 |-----------|---------|--------------|---------|--------|
-| IDataService | TecFlow.Core/Interfaces/Services/IDataService.cs | DataService | TecFlow.Infrastructure/Data/DataService.cs | ✓ |
-| IAnaliseService | TecFlow.Core/Interfaces/Services/IAnaliseService.cs | AnaliseService | TecFlow.Core/Interfaces/Services/AnaliseService.cs ❌ | ⚠️ Wrong loc |
-| IRankingService | TecFlow.Core/Interfaces/Services/IRankingService.cs | RankingService | TecFlow.Infrastructure.Services/Service/ExternalServices/RankingService.cs | ✓ |
-| IScoreService | TecFlow.Core/Interfaces/Services/IScoreService.cs | ScoreService | TecFlow.Infrastructure.Services/Service/ScoreService.cs | ✓ |
+| IDataService | Ofertio.Core/Interfaces/Services/IDataService.cs | DataService | Ofertio.Infrastructure/Data/DataService.cs | ✓ |
+| IAnaliseService | Ofertio.Core/Interfaces/Services/IAnaliseService.cs | AnaliseService | Ofertio.Core/Interfaces/Services/AnaliseService.cs ❌ | ⚠️ Wrong loc |
+| IRankingService | Ofertio.Core/Interfaces/Services/IRankingService.cs | RankingService | Ofertio.Infrastructure.Services/Service/ExternalServices/RankingService.cs | ✓ |
+| IScoreService | Ofertio.Core/Interfaces/Services/IScoreService.cs | ScoreService | Ofertio.Infrastructure.Services/Service/ScoreService.cs | ✓ |
 
 ---
 
 #### **IA SERVICES**
 | Interface | Arquivo | Implementação | Arquivo | Status |
 |-----------|---------|--------------|---------|--------|
-| IAIService | TecFlow.Core/Interfaces/Services/IAIService.cs | OpenAIService | TecFlow.Infrastructure.Services/Service/ExternalServices/OpenAIService.cs | ✓ |
-| IGeminiService | TecFlow.Core/Interfaces/Services/IGeminiService.cs | GeminiService | TecFlow.Infrastructure.Services/Service/ExternalServices/GeminiService.cs | ✓ |
+| IAIService | Ofertio.Core/Interfaces/Services/IAIService.cs | OpenAIService | Ofertio.Infrastructure.Services/Service/ExternalServices/OpenAIService.cs | ✓ |
+| IGeminiService | Ofertio.Core/Interfaces/Services/IGeminiService.cs | GeminiService | Ofertio.Infrastructure.Services/Service/ExternalServices/GeminiService.cs | ✓ |
 
 ---
 
 #### **EXTERNAL API SERVICES** (⚠️ Interfaces fora do lugar!)
 | Interface | Arquivo | Implementação | Arquivo | Status |
 |-----------|---------|--------------|---------|--------|
-| IShopeeApi | TecFlow.Infrastructure.Services/Interfaces/IShopeeApi.cs ❌ | ShopeeApiService | TecFlow.Infrastructure.Services/Service/ExternalServices/ShopeeApiService.cs | ⚠️ Interface mislocalized |
-| ITikTokShopApi | TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApi.cs ❌ | TikTokShopApiService | TecFlow.Infrastructure.Services/Service/ExternalServices/TikTokShopApiService.cs | ⚠️ Interface mislocalized |
-| ITikTokAdsApiService | TecFlow.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs ❌ | TikTokAdsApiService | TecFlow.Infrastructure.Services/Service/ExternalServices/TikTokAdsApiService.cs | ⚠️ Interface mislocalized |
-| ITikTokShopApiService | TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApiService.cs ❌ | - | - | ⚠️ Possível duplicata com ITikTokShopApi |
+| IShopeeApi | Ofertio.Infrastructure.Services/Interfaces/IShopeeApi.cs ❌ | ShopeeApiService | Ofertio.Infrastructure.Services/Service/ExternalServices/ShopeeApiService.cs | ⚠️ Interface mislocalized |
+| ITikTokShopApi | Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApi.cs ❌ | TikTokShopApiService | Ofertio.Infrastructure.Services/Service/ExternalServices/TikTokShopApiService.cs | ⚠️ Interface mislocalized |
+| ITikTokAdsApiService | Ofertio.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs ❌ | TikTokAdsApiService | Ofertio.Infrastructure.Services/Service/ExternalServices/TikTokAdsApiService.cs | ⚠️ Interface mislocalized |
+| ITikTokShopApiService | Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApiService.cs ❌ | - | - | ⚠️ Possível duplicata com ITikTokShopApi |
 
 ---
 
 #### **APPLICATION SERVICES** (não registrados em alguns projetos!)
 | Classe | Arquivo | Onde Registrado | Status |
 |--------|---------|-----------------|--------|
-| AIApplicationService | TecFlow.Application/Services/AIApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| AnaliseApplicationService | TecFlow.Application/Services/AnaliseApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| CampanhasApplicationService | TecFlow.Application/Services/CampanhasApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| ConfiguracaoApplicationService | TecFlow.Application/Services/ConfiguracaoApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| GeminiApplicationService | TecFlow.Application/Services/GeminiApplicationService.cs | ApplicationServiceCollectionExtensions (2x) | ⚠️ Duplicada |
-| MetricasApplicationService | TecFlow.Application/Services/MetricasApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| OrquestradorApplicationService | TecFlow.Application/Services/OrquestradorApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| ProdutosApplicationService | TecFlow.Application/Services/ProdutosApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| PromocoesApplicationService | TecFlow.Application/Services/PromocoesApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
-| PublicacaoApplicationService | TecFlow.Application/Services/PublicacaoApplicationService.cs | ApplicationServiceCollectionExtensions (2x) | ⚠️ Duplicada |
+| AIApplicationService | Ofertio.Application/Services/AIApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| AnaliseApplicationService | Ofertio.Application/Services/AnaliseApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| CampanhasApplicationService | Ofertio.Application/Services/CampanhasApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| ConfiguracaoApplicationService | Ofertio.Application/Services/ConfiguracaoApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| GeminiApplicationService | Ofertio.Application/Services/GeminiApplicationService.cs | ApplicationServiceCollectionExtensions (2x) | ⚠️ Duplicada |
+| MetricasApplicationService | Ofertio.Application/Services/MetricasApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| OrquestradorApplicationService | Ofertio.Application/Services/OrquestradorApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| ProdutosApplicationService | Ofertio.Application/Services/ProdutosApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| PromocoesApplicationService | Ofertio.Application/Services/PromocoesApplicationService.cs | ApplicationServiceCollectionExtensions | ✓ |
+| PublicacaoApplicationService | Ofertio.Application/Services/PublicacaoApplicationService.cs | ApplicationServiceCollectionExtensions (2x) | ⚠️ Duplicada |
 
 **Problema crítico**: `ApplicationServiceCollectionExtensions` NUNCA é chamado em lugar nenhum!
-- Não está em `TecFlow.API/Program.cs` ❌
-- Não está em `TecFlow.Orquestrador/Configurator.cs` ❌
+- Não está em `Ofertio.API/Program.cs` ❌
+- Não está em `Ofertio.Orquestrador/Configurator.cs` ❌
 - Application Services não são registradas em lugar nenhum!
 
 ---
@@ -805,7 +805,7 @@ services.AddHttpClient<IGeminiService, GeminiService>();
 ### ❌ ESTRUTURA ATUAL (Problemática)
 
 ```
-TecFlow.Core/
+Ofertio.Core/
 ├── Interfaces/Services/
 │   ├── ✓ Interface files
 │   ├── ❌ AnaliseService.cs (implementação!)
@@ -814,7 +814,7 @@ TecFlow.Core/
 │   └── ❌ UsuarioService.cs (implementação!)
 └── [resto ok]
 
-TecFlow.Infrastructure.Services/
+Ofertio.Infrastructure.Services/
 ├── ❌ ServiceRegistrationExtensions.cs
 ├── ❌ CoreServiceRegistrationExtensions.cs
 ├── ❌ ExternalServiceRegistrationExtensions.cs
@@ -822,17 +822,17 @@ TecFlow.Infrastructure.Services/
 └── Interfaces/
     └── ❌ IShopeeApi, ITikTokShopApi, ITikTokAdsApiService (devem estar em Core!)
 
-TecFlow.Application/
+Ofertio.Application/
 ├── Services/
 │   └── ❌ ApplicationServiceCollectionExtensions (nunca é chamada!)
 └── [resto ok]
 
-TecFlow.API/Program.cs
-├── ✓ AddTecFlowInfrastructureData()
-├── ✓ AddTecFlowInfrastructureServices()
-└── ❌ NÃO chama AddTecFlowApplicationServices()
+Ofertio.API/Program.cs
+├── ✓ AddOfertioInfrastructureData()
+├── ✓ AddOfertioInfrastructureServices()
+└── ❌ NÃO chama AddOfertioApplicationServices()
 
-TecFlow.Orquestrador/
+Ofertio.Orquestrador/
 ├── Program.cs: "Hello, World!" ❌
 ├── Configurator.cs: REPLICA TUDO MANUALMENTE ❌
 └── OrquestradorPrincipal: ControllerBase híbrido ❌
@@ -843,7 +843,7 @@ TecFlow.Orquestrador/
 ### ✅ ESTRUTURA PROPOSTA (Corrigida)
 
 ```
-TecFlow.Core/
+Ofertio.Core/
 ├── Interfaces/
 │   ├── Repositories/ (9 interfaces)
 │   ├── Services/
@@ -855,15 +855,15 @@ TecFlow.Core/
 ├── Dto/ (DTOs genéricos)
 └── [resto ok]
 
-TecFlow.Application/
+Ofertio.Application/
 ├── Services/
 │   ├── ApplicationServices/ (11 services)
 │   └── ServiceRegistrationExtensions.cs (ÚNICO para Application)
 └── Dto/ (DTOs por agregado)
 
-TecFlow.Infrastructure.Services/
+Ofertio.Infrastructure.Services/
 ├── ✅ InfrastructureServiceRegistrationExtensions.cs (CONSOLIDADO)
-│   └── AddTecFlowInfrastructureServices(config)
+│   └── AddOfertioInfrastructureServices(config)
 │       ├── DbContext
 │       ├── Repositories (6)
 │       ├── External API HttpClients (Shopee, TikTok)
@@ -874,17 +874,17 @@ TecFlow.Infrastructure.Services/
     ├── ExternalServices/ (7 serviços de API)
     └── [Business services]
 
-TecFlow.API/Program.cs
-├── ✅ AddTecFlowInfrastructureServices(config)
-├── ✅ AddTecFlowApplicationServices()
-├── ✅ AddTecFlowAuthentication(config)
+Ofertio.API/Program.cs
+├── ✅ AddOfertioInfrastructureServices(config)
+├── ✅ AddOfertioApplicationServices()
+├── ✅ AddOfertioAuthentication(config)
 └── [resto ok]
 
-TecFlow.Orquestrador/
+Ofertio.Orquestrador/
 ├── Program.cs
 │   └── ✅ Chama ConfigureAndRunAsync(config) usando mesmos extensions methods
 ├── Configurator.cs
-│   └── ✅ Usa AddTecFlowInfrastructureServices() + AddTecFlowApplicationServices()
+│   └── ✅ Usa AddOfertioInfrastructureServices() + AddOfertioApplicationServices()
 └── OrquestradorService.cs (novo - serviço puro)
     └── ✅ Executar pipelines (sem herdar de ControllerBase)
 ```
@@ -899,16 +899,16 @@ TecFlow.Orquestrador/
 
 #### Task 1.1: Consolidar Service Registration
 - [ ] Consolidar 4 arquivos em 2:
-  - `TecFlow.Infrastructure.Services/ServiceRegistrationExtensions.cs` (ÚNICO)
-  - `TecFlow.Application/Services/ServiceRegistrationExtensions.cs` (ÚNICO)
+  - `Ofertio.Infrastructure.Services/ServiceRegistrationExtensions.cs` (ÚNICO)
+  - `Ofertio.Application/Services/ServiceRegistrationExtensions.cs` (ÚNICO)
 - [ ] Remover duplicatas de HttpClient
 - [ ] Remover duplicatas de Repositories
 
 #### Task 1.2: Remover Implementações da Pasta Interfaces
-- [ ] Mover `TecFlow.Core/Interfaces/Services/AnaliseService.cs` → ???
-- [ ] Mover `TecFlow.Core/Interfaces/Services/CampanhaService.cs` → ???
-- [ ] Mover `TecFlow.Core/Interfaces/Services/ProdutoService.cs` → ???
-- [ ] Mover `TecFlow.Core/Interfaces/Services/UsuarioService.cs` → ???
+- [ ] Mover `Ofertio.Core/Interfaces/Services/AnaliseService.cs` → ???
+- [ ] Mover `Ofertio.Core/Interfaces/Services/CampanhaService.cs` → ???
+- [ ] Mover `Ofertio.Core/Interfaces/Services/ProdutoService.cs` → ???
+- [ ] Mover `Ofertio.Core/Interfaces/Services/UsuarioService.cs` → ???
 
 #### Task 1.3: Remover Duplicatas em ApplicationServiceCollectionExtensions
 - [ ] Remover segunda linha de `AddScoped<GeminiApplicationService>()`
@@ -921,22 +921,22 @@ TecFlow.Orquestrador/
 **Impacto**: Alto
 
 #### Task 2.1: Mover Interfaces de APIs Externas
-- [ ] Criar pasta `TecFlow.Core/Interfaces/Services/ExternalApis/`
-- [ ] Mover `TecFlow.Infrastructure.Services/Interfaces/IShopeeApi.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/IShopeeApi.cs`
-- [ ] Mover `TecFlow.Infrastructure.Services/Interfaces/ITikTokShopApi.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/ITikTokShopApi.cs`
-- [ ] Mover `TecFlow.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs` → `TecFlow.Core/Interfaces/Services/ExternalApis/ITikTokAdsApiService.cs`
+- [ ] Criar pasta `Ofertio.Core/Interfaces/Services/ExternalApis/`
+- [ ] Mover `Ofertio.Infrastructure.Services/Interfaces/IShopeeApi.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/IShopeeApi.cs`
+- [ ] Mover `Ofertio.Infrastructure.Services/Interfaces/ITikTokShopApi.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/ITikTokShopApi.cs`
+- [ ] Mover `Ofertio.Infrastructure.Services/Interfaces/ITikTokAdsApiService.cs` → `Ofertio.Core/Interfaces/Services/ExternalApis/ITikTokAdsApiService.cs`
 - [ ] Verificar se `ITikTokShopApiService.cs` é duplicata de `ITikTokShopApi.cs`
 
 #### Task 2.2: Criar Estrutura de Organização para Business Services
-- [ ] Criar pasta `TecFlow.Infrastructure.Services/Service/Business/` (ou onde estão implementações)
+- [ ] Criar pasta `Ofertio.Infrastructure.Services/Service/Business/` (ou onde estão implementações)
 - [ ] Verificar onde `AnaliseService`, `CampanhaService`, etc. devem ir
 
 #### Task 2.3: Limpar Arquivos Soltos
-- [ ] Organizar `TecFlow.Infrastructure/AIProvider.cs` (mover para pasta apropriada)
-- [ ] Organizar `TecFlow.Infrastructure/ShopeeProductResult.cs` (mover para `API/Shopee/Models/` ou similar)
+- [ ] Organizar `Ofertio.Infrastructure/AIProvider.cs` (mover para pasta apropriada)
+- [ ] Organizar `Ofertio.Infrastructure/ShopeeProductResult.cs` (mover para `API/Shopee/Models/` ou similar)
 
 #### Task 2.4: Criar OrquestradorService Puro
-- [ ] Criar `TecFlow.Orquestrador/Services/OrquestradorService.cs` (lógica pura)
+- [ ] Criar `Ofertio.Orquestrador/Services/OrquestradorService.cs` (lógica pura)
 - [ ] Mover lógica de `OrquestradorPrincipal` para novo service
 - [ ] Converter `OrquestradorPrincipal` em controller puro que chama o service
 
@@ -953,10 +953,10 @@ TecFlow.Orquestrador/
   ```
 
 #### Task 3.2: Consolidar Configurator.cs
-- [ ] Usar `AddTecFlowInfrastructureServices()` do TecFlow.Infrastructure.Services
-- [ ] Usar `AddTecFlowApplicationServices()` do TecFlow.Application
+- [ ] Usar `AddOfertioInfrastructureServices()` do Ofertio.Infrastructure.Services
+- [ ] Usar `AddOfertioApplicationServices()` do Ofertio.Application
 - [ ] Remover código duplicado manual
-- [ ] Usar extensão method `AddTecFlowAuthentication()` se necessária
+- [ ] Usar extensão method `AddOfertioAuthentication()` se necessária
 
 #### Task 3.3: Atualizar Injeção de Dependência
 - [ ] Remover registros manuais de dependências duplicadas em Configurator
@@ -969,11 +969,11 @@ TecFlow.Orquestrador/
 **Impacto**: Alto
 
 #### Task 4.1: Verificar e Ativar ApplicationServices em API
-- [ ] `TecFlow.API/Program.cs` deve chamar `AddTecFlowApplicationServices()`
+- [ ] `Ofertio.API/Program.cs` deve chamar `AddOfertioApplicationServices()`
 - [ ] Testar injeção de Application Services em Controllers
 
 #### Task 4.2: Consolidar Autenticação
-- [ ] Criar `AddTecFlowAuthentication()` extension method
+- [ ] Criar `AddOfertioAuthentication()` extension method
 - [ ] Mover lógica de JWT do `Program.cs` para método
 - [ ] Usar método em ambos API e Orquestrador se necessário
 
@@ -1025,42 +1025,42 @@ TecFlow.Orquestrador/
 
 ### Arquivos a CRIAR
 ```
-✓ TecFlow.Core/Interfaces/Services/ExternalApis/ (pasta)
-✓ TecFlow.Orquestrador/Services/OrquestradorService.cs (serviço puro)
-✓ TecFlow.Infrastructure.Services/ServiceRegistrationExtensions.cs (CONSOLIDADO)
-✓ TecFlow.Application/Services/ServiceRegistrationExtensions.cs (limpo)
-✓ TecFlow.Infrastructure.Services/ServiceExtensions/IAuthenticationServiceExtension.cs (novo)
+✓ Ofertio.Core/Interfaces/Services/ExternalApis/ (pasta)
+✓ Ofertio.Orquestrador/Services/OrquestradorService.cs (serviço puro)
+✓ Ofertio.Infrastructure.Services/ServiceRegistrationExtensions.cs (CONSOLIDADO)
+✓ Ofertio.Application/Services/ServiceRegistrationExtensions.cs (limpo)
+✓ Ofertio.Infrastructure.Services/ServiceExtensions/IAuthenticationServiceExtension.cs (novo)
 ```
 
 ### Arquivos a MOVER
 ```
-→ IShopeeApi.cs: TecFlow.Infrastructure.Services/Interfaces/ → TecFlow.Core/Interfaces/Services/ExternalApis/
-→ ITikTokShopApi.cs: TecFlow.Infrastructure.Services/Interfaces/ → TecFlow.Core/Interfaces/Services/ExternalApis/
-→ ITikTokAdsApiService.cs: TecFlow.Infrastructure.Services/Interfaces/ → TecFlow.Core/Interfaces/Services/ExternalApis/
-→ AnaliseService.cs: TecFlow.Core/Interfaces/Services/ → (TBD)
-→ CampanhaService.cs: TecFlow.Core/Interfaces/Services/ → (TBD)
-→ ProdutoService.cs: TecFlow.Core/Interfaces/Services/ → (TBD)
-→ UsuarioService.cs: TecFlow.Core/Interfaces/Services/ → (TBD)
-→ AIProvider.cs: TecFlow.Infrastructure/ → TecFlow.Infrastructure/Configuration/ ou Models/
-→ ShopeeProductResult.cs: TecFlow.Infrastructure/ → TecFlow.Infrastructure/API/Shopee/Models/
+→ IShopeeApi.cs: Ofertio.Infrastructure.Services/Interfaces/ → Ofertio.Core/Interfaces/Services/ExternalApis/
+→ ITikTokShopApi.cs: Ofertio.Infrastructure.Services/Interfaces/ → Ofertio.Core/Interfaces/Services/ExternalApis/
+→ ITikTokAdsApiService.cs: Ofertio.Infrastructure.Services/Interfaces/ → Ofertio.Core/Interfaces/Services/ExternalApis/
+→ AnaliseService.cs: Ofertio.Core/Interfaces/Services/ → (TBD)
+→ CampanhaService.cs: Ofertio.Core/Interfaces/Services/ → (TBD)
+→ ProdutoService.cs: Ofertio.Core/Interfaces/Services/ → (TBD)
+→ UsuarioService.cs: Ofertio.Core/Interfaces/Services/ → (TBD)
+→ AIProvider.cs: Ofertio.Infrastructure/ → Ofertio.Infrastructure/Configuration/ ou Models/
+→ ShopeeProductResult.cs: Ofertio.Infrastructure/ → Ofertio.Infrastructure/API/Shopee/Models/
 ```
 
 ### Arquivos a DELETAR
 ```
-✗ TecFlow.Infrastructure.Services/CoreServiceRegistrationExtensions.cs (consolidar)
-✗ TecFlow.Infrastructure.Services/ExternalServiceRegistrationExtensions.cs (consolidar)
-✗ TecFlow.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs (consolidar)
+✗ Ofertio.Infrastructure.Services/CoreServiceRegistrationExtensions.cs (consolidar)
+✗ Ofertio.Infrastructure.Services/ExternalServiceRegistrationExtensions.cs (consolidar)
+✗ Ofertio.Infrastructure.Services/InfrastructureDataServiceRegistrationExtensions.cs (consolidar)
 ```
 
 ### Arquivos a EDITAR
 ```
-~ TecFlow.Core/Interfaces/Services/ServiceRegistrationExtensions.cs (consolidar)
-~ TecFlow.API/Program.cs (chamar AddTecFlowApplicationServices())
-~ TecFlow.Orquestrador/Program.cs (NÃO MAIS "Hello, World!")
-~ TecFlow.Orquestrador/Configurator.cs (usar extension methods, não replicar)
-~ TecFlow.Application/Services/ApplicationServiceCollectionExtensions.cs (remover duplicatas)
-~ TecFlow.Infrastructure.Services/Interfaces/ (deletar ou mover)
-~ TecFlow.Orquestrador/OrquestradorPrincipal.cs (refatorar ou mover lógica)
+~ Ofertio.Core/Interfaces/Services/ServiceRegistrationExtensions.cs (consolidar)
+~ Ofertio.API/Program.cs (chamar AddOfertioApplicationServices())
+~ Ofertio.Orquestrador/Program.cs (NÃO MAIS "Hello, World!")
+~ Ofertio.Orquestrador/Configurator.cs (usar extension methods, não replicar)
+~ Ofertio.Application/Services/ApplicationServiceCollectionExtensions.cs (remover duplicatas)
+~ Ofertio.Infrastructure.Services/Interfaces/ (deletar ou mover)
+~ Ofertio.Orquestrador/OrquestradorPrincipal.cs (refatorar ou mover lógica)
 ```
 
 ---
@@ -1068,7 +1068,7 @@ TecFlow.Orquestrador/
 ## 🎯 CONCLUSÃO
 
 ### Situação Atual
-O workspace `Tecso.AutomacaoCusor` (solution **TecFlow.sln**) possui uma arquitetura bem pensada em **camadas**, mas com **implementação problemática** em termos de:
+O workspace `Tecso.AutomacaoCusor` (solution **Ofertio.sln**) possui uma arquitetura bem pensada em **camadas**, mas com **implementação problemática** em termos de:
 - Duplicação massiva de configuração de dependências
 - Organização inconsistente de arquivos
 - Falta de consolidação de service registration

@@ -1,0 +1,55 @@
+﻿@page "/novidades"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject ISystemCommunicationApiService Api
+
+<PageTitle>Novidades — Ofertio</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">O que há de novo</h1>
+        <p class="text-muted small mb-0">Funcionalidades e melhorias recentes do Ofertio.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="text-muted">Carregando...</p>
+    }
+    else if (_entries.Count == 0)
+    {
+        <p class="text-muted">Nenhuma novidade publicada ainda.</p>
+    }
+
+    @foreach (var entry in _entries)
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge text-bg-primary">@entry.Version</span>
+                    <h2 class="h6 fw-semibold mb-0">@entry.Title</h2>
+                    <span class="text-muted small ms-auto">@entry.PublishedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                </div>
+                @foreach (var line in entry.Body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    <p class="small mb-1">@line</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ProductChangelogDto> _entries = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Api.ChangelogAsync();
+        if (result.Success && result.Data is not null)
+        {
+            _entries = result.Data;
+        }
+
+        _loading = false;
+    }
+}

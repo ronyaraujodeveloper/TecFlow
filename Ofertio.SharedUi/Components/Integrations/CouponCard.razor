@@ -1,0 +1,160 @@
+﻿@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Groups
+@using Ofertio.Core.Enums
+@inject IJSRuntime Js
+@inject IToastService ToastService
+
+<article class="card border-0 shadow-sm h-100 coupon-card">
+    <div class="card-body p-3 d-flex flex-column gap-2">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+            <span class="marketplace-platform-badge badge-sm @PlatformBadgeHelper.GetPlatformBadgeClass(Item.PlatformName)">
+                @PlatformLabel
+            </span>
+            <small class="text-muted text-end">@Item.GroupName · @CapturedMessageTimeRules.ToBrasilia(Item.ReceivedAt).ToString("dd/MM/yyyy HH:mm")</small>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Item.Title))
+        {
+            <h2 class="fw-semibold mb-0 text-break monitored-offer-title">@Item.Title</h2>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Item.CouponCode))
+        {
+            <div class="coupon-card-code d-flex align-items-center justify-content-between gap-2 rounded border border-2 border-success-subtle bg-success-subtle px-3 py-2">
+                <span class="font-monospace fs-5 fw-bold text-success text-break" aria-label="Código do cupom">@Item.CouponCode</span>
+                <button type="button"
+                        class="btn btn-sm @(_copied ? "btn-success" : "btn-outline-success") text-nowrap"
+                        title="Copiar código do cupom"
+                        @onclick="CopyCodeAsync">
+                    <i class="bi @(_copied ? "bi-check2" : "bi-clipboard")" aria-hidden="true"></i>
+                    @(_copied ? "Copiado" : "Copiar")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="rounded border border-dashed bg-light px-3 py-2 text-muted small">
+                Promoção sem código — o desconto é aplicado direto na loja.
+            </div>
+        }
+
+        <dl class="mb-0 small d-flex flex-column gap-1">
+            @if (!string.IsNullOrWhiteSpace(Item.CouponDiscount))
+            {
+                <div class="d-flex gap-2">
+                    <dt class="fw-semibold text-nowrap"><i class="bi bi-tag" aria-hidden="true"></i> Desconto</dt>
+                    <dd class="mb-0">@Item.CouponDiscount</dd>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Item.CouponValidity))
+            {
+                <div class="d-flex gap-2">
+                    <dt class="fw-semibold text-nowrap"><i class="bi bi-clock" aria-hidden="true"></i> Validade</dt>
+                    <dd class="mb-0">@Item.CouponValidity</dd>
+                </div>
+            }
+        </dl>
+
+        @if (Item.CouponRules.Count > 0)
+        {
+            <ul class="small text-muted mb-0 ps-3">
+                @foreach (var rule in Item.CouponRules)
+                {
+                    <li>@rule</li>
+                }
+            </ul>
+        }
+
+        <div class="mt-auto monitored-offer-actions">
+            @if (HasStoreUrl)
+            {
+                <a class="btn btn-primary" href="@StoreUrl" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-bag" aria-hidden="true"></i>
+                    <span>Ir para a loja</span>
+                </a>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary" disabled title="A mensagem não trouxe link da loja">
+                    <span>Ir para a loja</span>
+                </button>
+            }
+
+            @if (ShowRestore)
+            {
+                <button type="button" class="btn btn-outline-success" disabled="@IsBusy" @onclick="() => OnRestore.InvokeAsync(Item.Id)">
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    <span>Restaurar</span>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-danger" disabled="@IsBusy" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
+                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                    <span>Sem interesse</span>
+                </button>
+            }
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public GroupCapturedOfferDto Item { get; set; } = default!;
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public bool ShowRestore { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnIgnore { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnRestore { get; set; }
+
+    private bool _copied;
+
+    private string StoreUrl => string.IsNullOrWhiteSpace(Item.AffiliateUrl) ? Item.OriginalUrl : Item.AffiliateUrl;
+
+    private bool HasStoreUrl => Uri.TryCreate(StoreUrl, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private string PlatformLabel => Item.PlatformType is null && string.IsNullOrWhiteSpace(Item.PlatformName)
+        ? "Outras lojas"
+        : PlatformBadgeHelper.GetPlatformLabel(Item.PlatformName, Item.PlatformType);
+
+    private async Task CopyCodeAsync()
+    {
+        var code = Item.CouponCode;
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return;
+        }
+
+        bool copied;
+        try
+        {
+            copied = await Js.InvokeAsync<bool>("ofertioClipboard.copyText", code);
+        }
+        catch (JSException)
+        {
+            copied = await Js.InvokeAsync<bool>("ofertioAppInterop.copyToClipboard", code);
+        }
+
+        _copied = copied;
+        if (!copied)
+        {
+            ToastService.ShowError("Não foi possível copiar o código do cupom.");
+            return;
+        }
+
+        ToastService.ShowSuccess($"Cupom {code} copiado.");
+
+        StateHasChanged();
+        await Task.Delay(2000);
+        _copied = false;
+        StateHasChanged();
+    }
+}

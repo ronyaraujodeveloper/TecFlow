@@ -9,7 +9,7 @@
 
     -UserId limita a limpeza a um usuário (pasta uploads\products\<UserId>).
     -IncluirHistoricoPrecos também zera ProductPriceHistory (global; ignorado quando -UserId é informado).
-    -PararIis para os pools TecFlow antes da limpeza (evita o UserBot gravar no meio) e os inicia no final.
+    -PararIis para os pools Ofertio antes da limpeza (evita o UserBot gravar no meio) e os inicia no final.
     -WhatIf mostra o que seria apagado sem alterar nada.
 
 .EXAMPLE
@@ -20,8 +20,8 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string]$Server = 'localhost\SQLEXPRESS',
-    [string]$Database = 'AutomacaoSociais',
-    [string]$UploadsRoot = 'C:\inetpub\tecflow\uploads',
+    [string]$Database = 'Ofertio',
+    [string]$UploadsRoot = 'C:\inetpub\ofertio\uploads',
     [int]$UserId = 0,
     [switch]$IncluirHistoricoPrecos,
     [switch]$PararIis,
@@ -29,7 +29,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pools = @('TecFlowApiPool', 'TecFlowWebUiPool')
+$pools = @('OfertioApiPool', 'OfertioWebUiPool')
 
 function Invoke-Sql([string]$query) {
     $output = sqlcmd -S $Server -d $Database -E -b -W -h -1 -f 65001 -Q "SET NOCOUNT ON; $query"
@@ -99,7 +99,7 @@ finally {
         foreach ($pool in $pools) {
             Start-WebAppPool -Name $pool
         }
-        Write-Host 'Pools TecFlow iniciados.'
+        Write-Host 'Pools Ofertio iniciados.'
     }
 }
 

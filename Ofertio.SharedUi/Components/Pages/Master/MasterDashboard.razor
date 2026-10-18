@@ -1,0 +1,98 @@
+﻿@page "/master"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Painel Master — Ofertio</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Dashboard executivo SaaS</h1>
+            <p class="text-muted small mb-0">Saúde financeira, crescimento e uso de infraestrutura da plataforma.</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-touch" disabled="@Busy" @onclick="LoadAsync">
+            @(Busy ? "Atualizando..." : "Atualizar")
+        </button>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_data is not null)
+    {
+        <h2 class="h6 text-uppercase text-muted fw-semibold mb-2">Saúde financeira</h2>
+        <div class="row g-3 mb-4">
+            @Kpi("MRR", Money(_data.Mrr), "Receita recorrente mensal")
+            @Kpi("ARR", Money(_data.Arr), "Receita recorrente anual")
+            @Kpi("ARPU", Money(_data.Arpu), "Ticket médio por inquilino pagante")
+            @Kpi("Receita líquida (mês)", Money(_data.NetRevenueMonth), "Após taxas do gateway")
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted fw-semibold mb-2">Crescimento e retenção</h2>
+        <div class="row g-3 mb-4">
+            @Kpi("Pagantes", _data.PayingTenants.ToString(PtBr), $"{_data.TotalTenants} inquilinos no total")
+            @Kpi("Em trial", _data.TrialTenants.ToString(PtBr), $"{_data.OverdueTenants} inadimplentes")
+            @Kpi("Conversão de trial", $"{_data.TrialConversionPercent:N1}%", "Trials que viraram pagantes")
+            @Kpi("Churn (30 dias)", $"{_data.ChurnRatePercent:N1}%", "Cancelamentos sobre a base ativa")
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Novos assinantes por mês</h2>
+                @{
+                    var max = Math.Max(1, _data.NewSubscribers.Count == 0 ? 1 : _data.NewSubscribers.Max(point => point.Count));
+                }
+                <div class="d-flex align-items-end gap-3" style="height: 160px;">
+                    @foreach (var point in _data.NewSubscribers)
+                    {
+                        <div class="d-flex flex-column align-items-center flex-grow-1 h-100 justify-content-end">
+                            <span class="small fw-semibold">@point.Count</span>
+                            <div class="bg-primary rounded-top w-100" style="height: @(Math.Max(4, point.Count * 120 / max))px;"></div>
+                            <span class="small text-muted mt-1">@point.Month</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted fw-semibold mb-2">Uso da infraestrutura (últimas 24h)</h2>
+        <div class="row g-3">
+            @Kpi("Links convertidos", _data.LinksConverted24h.ToString("N0", PtBr), $"{_data.LinkClicks24h:N0} cliques")
+            @Kpi("Disparos WhatsApp", _data.WhatsAppDispatches24h.ToString("N0", PtBr), "Campanhas concluídas")
+            @Kpi("Disparos Telegram", _data.TelegramDispatches24h.ToString("N0", PtBr), "Campanhas concluídas")
+            @Kpi("Requisições à API", _data.ApiRequests24h.ToString("N0", PtBr), "Desde o último restart")
+        </div>
+        <p class="text-muted small mt-3 mb-0">Gerado em @DateTimeText(_data.GeneratedAt)</p>
+    }
+</div>
+
+@code {
+    private MasterDashboardDto? _data;
+
+    protected override async Task LoadAsync()
+    {
+        Busy = true;
+        var result = await Api.DashboardAsync();
+        if (Accept(result))
+        {
+            _data = result.Data;
+        }
+
+        Busy = false;
+    }
+
+    private static RenderFragment Kpi(string title, string value, string hint) => __builder =>
+    {
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">@title</div>
+                    <div class="fs-4 fw-bold">@value</div>
+                    <div class="text-muted small">@hint</div>
+                </div>
+            </div>
+        </div>
+    };
+}

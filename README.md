@@ -1,15 +1,15 @@
-﻿# 📝 TecFlow - Roadmap, Arquitetura & Contexto Geral
+﻿# 📝 Ofertio - Roadmap, Arquitetura & Contexto Geral
 
 > **Painel principal do projeto** (antigo `TODO.md`). Regras de código, stack e checklist **ativo** (Fases 32 a 34). O histórico das Fases 1 a 31 está em [`docs/HISTORICO_FASES_CONCLUIDAS.md`](./docs/HISTORICO_FASES_CONCLUIDAS.md) (ver `.cursorrules`).
 
 ## 🎯 Objetivo do Projeto
-Plataforma de **automação e inteligência para afiliados de alta escala**: orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend **`TecFlow.WebUi`** para controle, auditoria e monitoramento em produção.
+Plataforma de **automação e inteligência para afiliados de alta escala**: orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`Ofertio.API`, `Ofertio.Worker`, `Ofertio.Orquestrador`) com o frontend **`Ofertio.WebUi`** para controle, auditoria e monitoramento em produção.
 
 ## 🛠️ Stack Tecnológica Definida
 - **Backend:** .NET 8.0 Web API (C#)
-- **Frontend:** Blazor WebApp — projeto **`TecFlow.WebUi`** (ASP.NET Core .NET 8.0)
-- **Banco de Dados:** SQL Server (`localhost\SQLEXPRESS` / `AutomacaoSociais`) via `Database:Provider=SqlServer` no Development e na Homologação IIS; PostgreSQL permanece apenas como assembly de migrations legado em `TecFlow.Infrastructure`.
-- **ORM:** Entity Framework Core 8 — `UseSqlServer` (`TecFlow.Data`) ou `UseNpgsql` (`TecFlow.Infrastructure`) conforme o provider
+- **Frontend:** Blazor WebApp — projeto **`Ofertio.WebUi`** (ASP.NET Core .NET 8.0)
+- **Banco de Dados:** SQL Server (`localhost\SQLEXPRESS` / `Ofertio`) via `Database:Provider=SqlServer` no Development e na Homologação IIS; PostgreSQL permanece apenas como assembly de migrations legado em `Ofertio.Infrastructure`.
+- **ORM:** Entity Framework Core 8 — `UseSqlServer` (`Ofertio.Data`) ou `UseNpgsql` (`Ofertio.Infrastructure`) conforme o provider
 
 ---
 
@@ -21,10 +21,10 @@ Para evitar que a acentuação em PT-BR fique quebrada (ex: exibir '??' ou carac
    - Todos os arquivos de código-fonte criados ou modificados (`.razor`, `.cs`, `.html`, `.css`, `.json`) **DEVEM** ser salvos explicitamente utilizando a codificação **UTF-8 com assinatura (BOM)**. Isso garante que o IIS e o compilador do .NET processem os acentos corretamente em ambientes Windows/Server.
 
 2. **Cultura e Localização Nativa (PT-BR):**
-   - O portal frontend `TecFlow.WebUi` opera sob a cultura `pt-BR`. O pipeline de inicialização configura globalmente as propriedades `DefaultThreadCurrentCulture` e `DefaultThreadCurrentUICulture` para garantir consistência em formatações de data, moeda e decodificação textual.
+   - O portal frontend `Ofertio.WebUi` opera sob a cultura `pt-BR`. O pipeline de inicialização configura globalmente as propriedades `DefaultThreadCurrentCulture` e `DefaultThreadCurrentUICulture` para garantir consistência em formatações de data, moeda e decodificação textual.
 
 3. **Persistência de Dados:**
-   - SQL Server (`Database:Provider=SqlServer`): `UseSqlServer` e migrations em `TecFlow.Data`.
+   - SQL Server (`Database:Provider=SqlServer`): `UseSqlServer` e migrations em `Ofertio.Data`.
    - PostgreSQL (Homologação IIS): driver `Npgsql` com `Client Encoding=UTF8;Encoding=UTF8;` na connection string.
 
 ---
@@ -44,11 +44,11 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 1. **Idioma:** Código em inglês (classes, métodos, variáveis), comentários e documentação em português.
 
 2. **Arquitetura Racional de Dados (Apenas 3 Objetos por Entidade):** Para evitar redundância de arquivos (como Create/Update Dtos), cada entidade deve possuir estritamente:
-   - **`[Nome]Filter`** (na pasta `TecFlow.Database/Filter/`): Contém as propriedades escalares da Entity como opcionais/nullable (`?`). Usado **EXCLUSIVAMENTE** para parâmetros de busca em listagens e consultas (**GET**). Não incluir objetos de navegação — apenas IDs (`CampaignId`, `OwnerId`, etc.).
-   - **`[Nome]Dto`** (na pasta `TecFlow.Business/Dto/`): Contém as propriedades limpas que a tela envia para o formulário. Usado **EXCLUSIVAMENTE** para receber dados de escrita (**POST** e **PUT**). Não deve conter objetos complexos de navegação inteiros, apenas seus IDs correspondentes.
-   - **`[Nome]ResponseDto`** (na pasta `TecFlow.Business/Dto/`): Envelope padrão de retorno que encapsula propriedades de controle (`Status` [bool], `Descricao` [string]) e a Entity real (`Data` [[Nome]?] e `DataList` [List<[Nome]>?]).
+   - **`[Nome]Filter`** (na pasta `Ofertio.Database/Filter/`): Contém as propriedades escalares da Entity como opcionais/nullable (`?`). Usado **EXCLUSIVAMENTE** para parâmetros de busca em listagens e consultas (**GET**). Não incluir objetos de navegação — apenas IDs (`CampaignId`, `OwnerId`, etc.).
+   - **`[Nome]Dto`** (na pasta `Ofertio.Business/Dto/`): Contém as propriedades limpas que a tela envia para o formulário. Usado **EXCLUSIVAMENTE** para receber dados de escrita (**POST** e **PUT**). Não deve conter objetos complexos de navegação inteiros, apenas seus IDs correspondentes.
+   - **`[Nome]ResponseDto`** (na pasta `Ofertio.Business/Dto/`): Envelope padrão de retorno que encapsula propriedades de controle (`Status` [bool], `Descricao` [string]) e a Entity real (`Data` [[Nome]?] e `DataList` [List<[Nome]>?]).
 
-   > A **Entity** continua em `TecFlow.Core/Entities/` ou `TecFlow.Database/Entity/`. Exemplo `Estoque`: `EstoqueFilter`, `EstoqueDto`, `EstoqueResponseDto` + Entity.
+   > A **Entity** continua em `Ofertio.Core/Entities/` ou `Ofertio.Database/Entity/`. Exemplo `Estoque`: `EstoqueFilter`, `EstoqueDto`, `EstoqueResponseDto` + Entity.
 
 3. **Padrão de Retorno de Métodos (Controllers e Services):** Métodos **GET** retornam `[Nome]ResponseDto` com `Data` ou `DataList`. Métodos **POST/PUT** recebem `[Nome]Dto` e retornam `[Nome]ResponseDto` quando aplicável.
 
@@ -56,19 +56,19 @@ Sempre que criar ou editar código neste projeto, você DEVE seguir estes padrõ
 
 5. **Criptografia de credenciais:** Qualquer campo, propriedade ou dado que se refira a senhas ou tokens de acesso (como senhas de usuários, tokens do TikTok ou Shopee) DEVE ser criptografado antes de ser salvo no banco de dados e descriptografado apenas no momento do uso.
 
-6. **Validações Obrigatórias:** Cadastros de e-mail, celular/WhatsApp, CPF, CNPJ alfanumérico e CEP devem passar estritamente pelos métodos do `ValidationHelper` em `TecFlow.Business/Service` antes de qualquer persistência.
+6. **Validações Obrigatórias:** Cadastros de e-mail, celular/WhatsApp, CPF, CNPJ alfanumérico e CEP devem passar estritamente pelos métodos do `ValidationHelper` em `Ofertio.Business/Service` antes de qualquer persistência.
 
-7. **Design Responsivo & Mentalidade Mobile First:** Qualquer novo componente visual, página ou layout criado no projeto `TecFlow.WebUi` DEVE obrigatoriamente contemplar design responsivo (Mobile First). É proibido o uso de larguras fixas em pixels para containers principais e tabelas densas; utilize grids fluidos, flexbox e classes utilitárias responsivas (Bootstrap/Tailwind) para garantir que a interface se adapte nativamente a PCs, Celulares e Tablets.
+7. **Design Responsivo & Mentalidade Mobile First:** Qualquer novo componente visual, página ou layout criado no projeto `Ofertio.WebUi` DEVE obrigatoriamente contemplar design responsivo (Mobile First). É proibido o uso de larguras fixas em pixels para containers principais e tabelas densas; utilize grids fluidos, flexbox e classes utilitárias responsivas (Bootstrap/Tailwind) para garantir que a interface se adapte nativamente a PCs, Celulares e Tablets.
 
 8. **Auto-atualização do Roadmap:** Ao concluir uma tarefa das Fases **32 a 34** neste arquivo, marque `[ ]` para `[x]`. Quando a fase inteira estiver concluída, **mova o bloco** para `docs/HISTORICO_FASES_CONCLUIDAS.md`. Sincronize também `docs/LISTA_ARQUIVOS_MUDANCAS.md` e `docs/DIAGRAMAS_ARQUITETURA.md` conforme `.cursorrules`.
 
-## 🧪 Suíte de Testes e Qualidade (TecFlow.Tests)
+## 🧪 Suíte de Testes e Qualidade (Ofertio.Tests)
 
 Diagnóstico das Fases **8** (auth/multi-loja), **10** (links backend), **11** (gerador UI) e **19** (homolog Shopee): a suíte cobre serialização JSON de DTOs, envio do formulário de vínculo manual, escopo `lojaId`, 401 sem JWT e envelopes 500 em vez de exceção não tratada. Telas Blazor (`MinhasLojas.razor`, `GeradorLinks.razor`) são validadas via serviços HTTP e o validador extraído do formulário (`ConnectStoreManualLinkForm`), sem bUnit. A lista detalhada de testes já cobertos está no [histórico de fases](./docs/HISTORICO_FASES_CONCLUIDAS.md).
 
 ### 💻 Comandos no terminal
 - **Toda a suíte:** `dotnet test`
-- **Projeto isolado:** `dotnet test .\TecFlow.Tests\TecFlow.Tests.csproj`
+- **Projeto isolado:** `dotnet test .\Ofertio.Tests\Ofertio.Tests.csproj`
 - **Logs detalhados:** `dotnet test --logger "console;verbosity=detailed"`
 - **Filtro por módulo:** `dotnet test --filter "FullyQualifiedName~Shopee"`
 - **Filtro auth/loja:** `dotnet test --filter "FullyQualifiedName~Integracoes|FullyQualifiedName~AuthController"`
@@ -77,13 +77,13 @@ Diagnóstico das Fases **8** (auth/multi-loja), **10** (links backend), **11** (
 
 1. **BANCO DE DADOS OFICIAL:**
    - O único banco de dados oficial do projeto é o **SQL Server**.
-   - O nome do banco de dados na string de conexão deve ser estritamente **`AutomacaoSociais`**.
+   - O nome do banco de dados na string de conexão deve ser estritamente **`Ofertio`**.
    - O provider do Entity Framework Core deve ser obrigatoriamente **`SqlServer`** (`Microsoft.EntityFrameworkCore.SqlServer`).
-   - É **EXTREMAMENTE PROIBIDO** alterar a configuração do `appsettings.json` para `PostgreSQL` / `Npgsql` ou criar bancos com outros nomes (como `TecFlowDb`).
+   - É **EXTREMAMENTE PROIBIDO** alterar a configuração do `appsettings.json` para `PostgreSQL` / `Npgsql` ou criar bancos com outros nomes (como `OfertioDb`).
 
 2. **COMPATIBILIDADE E ENCODING:**
    - Todos os arquivos editados ou criados devem ser salvos com a codificação **UTF-8 com BOM**.
-   - As migrations do EF Core devem ser geradas e executadas exclusivamente para a sintaxe T-SQL / SQL Server direcionadas ao banco `AutomacaoSociais`.
+   - As migrations do EF Core devem ser geradas e executadas exclusivamente para a sintaxe T-SQL / SQL Server direcionadas ao banco `Ofertio`.
 
 PRINCIPIO DE PRESERVAÇÃO TOTAL (REGRA INVIOLÁVEL):
 1. Altere APENAS o arquivo e o trecho de código explicitamente solicitados nesta instrução.
@@ -105,7 +105,7 @@ PRINCIPIO DE PRESERVAÇÃO TOTAL (REGRA INVIOLÁVEL):
 
 ## 🛠️ ROADMAP DE PLATAFORMAS (MULTI-MARKETPLACE)
 
-O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a adição plug-and-play de novas plataformas de afiliados e marketplaces.
+O **Ofertio** foi projetado sob o padrão **Strategy Pattern** para permitir a adição plug-and-play de novas plataformas de afiliados e marketplaces.
 
 ### 📌 Status de Suporte por Plataforma
 
@@ -122,7 +122,7 @@ O **TecFlow** foi projetado sob o padrão **Strategy Pattern** para permitir a a
 
 ## 🎨 Padronização Visual de Plataformas (Badges & Branding)
 
-Sempre que exibir o nome, tag ou selo de uma plataforma no TecFlow (listas, buscas, cards ou formulários), utilize a paleta de cores corporativas oficial com texto em alto contraste:
+Sempre que exibir o nome, tag ou selo de uma plataforma no Ofertio (listas, buscas, cards ou formulários), utilize a paleta de cores corporativas oficial com texto em alto contraste:
 
 - **Amazon:** `#FF9900` (Laranja) | Texto: `#FFFFFF`
 - **Mercado Livre:** `#FFE600` (Amarelo) | Texto: `#000000` (ou `#2D3277`)
@@ -138,7 +138,7 @@ Deve seguir o padrão de cantos arredondados (`rounded-full` ou `rounded-md`), f
 
 ## 🔲 Padronização de Modais e Diálogos de Confirmação
 
-Para manter a consistência visual e a elegância da interface em toda a plataforma TecFlow, **é estritamente proibido o uso de diálogos nativos do navegador** (`window.confirm`, `window.alert` ou `window.prompt`).
+Para manter a consistência visual e a elegância da interface em toda a plataforma Ofertio, **é estritamente proibido o uso de diálogos nativos do navegador** (`window.confirm`, `window.alert` ou `window.prompt`).
 
 ### Diretrizes de Modais:
 1. **Ações Críticas (Exclusão / Edição / Desconexão):**
@@ -190,7 +190,7 @@ Para evitar que botões de ação em listas/tabelas fiquem inativos após refato
 
 ## 🗂️ Arquitetura do Menu Lateral (Sidebar Navigation)
 
-O menu lateral do TecFlow deve seguir rigorosamente a seguinte estrutura hierárquica e agrupamento de módulos:
+O menu lateral do Ofertio deve seguir rigorosamente a seguinte estrutura hierárquica e agrupamento de módulos:
 
 1. **Mensageria & Bots** (Core operacional diário):
    - Conexões (WA & Telegram)
@@ -233,7 +233,7 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
    - Adicionar o Enum da plataforma em `PlatformType.cs`.
    - Garantir que a tabela `MarketplaceAccounts` no SQL Server armazene as credenciais (`AppKey`, `AppSecret`, `TrackingId`) associadas à nova plataforma.
 
-2. **Implementação da Estratégia (`TecFlow.Domain` / `TecFlow.Services`):**
+2. **Implementação da Estratégia (`Ofertio.Domain` / `Ofertio.Services`):**
    - Criar a classe `NomePlataformaLinkStrategy.cs` implementando a interface `IPlatformLinkStrategy`.
    - Implementar o método `CanHandle(string url)` para reconhecer os domínios da plataforma via Regex.
    - Implementar a sanitização do link, injeção das tags de afiliado e a chamada ao SDK/API oficial para encurtamento.
@@ -247,7 +247,7 @@ Instruções para o Cursor Agent / Desenvolvedores ao adicionar uma nova platafo
      - `OriginalUrl`: Link bruto colado pelo usuário.
      - `AffiliateUrl`: Link direto da plataforma com tag de afiliado.
      - `ShortenedShopeeUrl` / `ShortenedPlatformUrl`: Link reduzido oficial da plataforma.
-     - `TecFlowTrackingUrl`: Link interno de telemetria `/{storeSlug}/{code}`.
+     - `OfertioTrackingUrl`: Link interno de telemetria `/{storeSlug}/{code}`.
 
 ## 🔒 Segurança de Dados, Criptografia e Conformidade (LGPD)
 
@@ -260,8 +260,9 @@ Para manter a conformidade com a **Lei Geral de Proteção de Dados (LGPD)** e g
    - **Nunca** grave tokens ou segredos em texto puro (*Plain Text*) na base de dados.
 
 2. **Gestão do Diretório de Chaves de Criptografia:**
-   - As chaves de proteção do `DataProtection` devem residir **fora do diretório de publicação da aplicação** (exemplo: `C:\ProgramData\TecFlow\DataProtectionKeys`).
-   - **Atenção no Deploy/Publish:** Nunca limpe ou elimine o diretório de chaves durante uma atualização de código. A eliminação das chaves tornará impossível a descriptografia dos tokens salvos no SQLite, exigindo que todos os utilizadores reautorizem as suas contas de marketplace.
+   - As chaves de proteção do `DataProtection` residem em `C:\inetpub\ofertio\api\App_Data\OfertioDataProtectionKeys` (`DataProtection:KeysPath = App_Data/OfertioDataProtectionKeys`, relativo à raiz da API); o Development aponta para o mesmo anel de chaves porque o banco `Ofertio` é compartilhado.
+   - **Atenção no Deploy/Publish:** a limpeza da pasta da API **deve preservar `App_Data`**. A eliminação das chaves tornará impossível a descriptografia dos tokens salvos no banco, exigindo que todos os utilizadores reautorizem as suas contas de marketplace.
+   - O nome de aplicação do Data Protection (`"TecFlow"`) e o purpose `TecFlow.MarketplaceTokens.v1` são identificadores dos payloads já gravados e **não podem ser renomeados**.
 
 3. **Cadeia de Fallback Mantida (`Unprotect`):**
    - O serviço de segurança deve manter a cadeia de compatibilidade retroativa:
@@ -346,8 +347,8 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 ## 🔒 Criptografia em Repouso dos Tokens de Marketplace (`MarketplaceTokensDataProtection`)
 
 - [x] **ASP.NET Core Data Protection:**
-  - `AddTecFlowDataProtection` com `SetApplicationName("TecFlow")`, chaves persistidas fora da pasta publicada (`C:\ProgramData\TecFlow\DataProtectionKeys`, configurável em `DataProtection:KeysPath`) e protegidas por DPAPI da máquina; a pasta fica restrita a SYSTEM, Administradores, `IIS APPPOOL\TecFlowApiPool` e ao usuário de desenvolvimento.
-  - Registrado no `Program.cs` da API e em `AddTecFlowInfrastructureData` (API, Worker e Orquestrador compartilham o mesmo anel de chaves).
+  - `AddOfertioDataProtection` com `SetApplicationName("TecFlow")` (nome legado mantido para os payloads existentes), chaves em `App_Data/OfertioDataProtectionKeys` da API (configurável em `DataProtection:KeysPath`) e protegidas por DPAPI da máquina; a pasta fica restrita a SYSTEM, Administradores, `IIS APPPOOL\OfertioApiPool` e ao usuário de desenvolvimento.
+  - Registrado no `Program.cs` da API e em `AddOfertioInfrastructureData` (API, Worker e Orquestrador compartilham o mesmo anel de chaves).
 - [x] **`ISecurityEncryptionService` / `SecurityEncryptionService` (Singleton):**
   - `Protect` grava `DP1:` + payload do `IDataProtector` (purpose `TecFlow.MarketplaceTokens.v1`), sem cifrar duas vezes.
   - `Unprotect` lê `DP1:`, depois o AES legado `ENC1:` e, por fim, devolve o texto puro; falha criptográfica é registrada sem o valor e retorna a string armazenada.
@@ -366,17 +367,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Falhas com log e URL nula:**
   - Download e conversão WebP em `try/catch` separados com `LogWarning` (tenant, chat, mensagem, bytes, caminho); sem arquivo confirmado a mensagem fica com `ProductImageUrl` nulo (placeholder "Processando mídia..." na tela) e `ClearMissingImageUrlAsync` limpa URLs que apontam para arquivos inexistentes quando o novo download falha.
 - [x] **Causa raiz no deploy:**
-  - A limpeza `Remove-Item C:\inetpub\tecflow\api\*` apagava `wwwroot\uploads` a cada publicação (198 de 300 mensagens recentes apontavam para arquivos removidos); a homologação passou a preservar `wwwroot\uploads`.
+  - A limpeza `Remove-Item C:\inetpub\ofertio\api\*` apagava `wwwroot\uploads` a cada publicação (198 de 300 mensagens recentes apontavam para arquivos removidos); a homologação passou a preservar `wwwroot\uploads`.
 
 ## 📁 Uploads em Pasta Externa ao Deploy (`ExternalUploadsFolder`)
 
-- [x] **Gravação em `C:\inetpub\tecflow\uploads\products\{tenantId}\{year}\{month}`:**
+- [x] **Gravação em `C:\inetpub\ofertio\uploads\products\{tenantId}\{year}\{month}`:**
   - `UploadStorage:RootPath` (`appsettings.json` da API e da WebUi) define a pasta servida em `/uploads`; `IUploadStorage` (Singleton) expõe `UploadsRoot` e `MediaRoot` para `ImageOptimizationService`, `OfferProductMediaStore`, `GroupCapturedMessagesService`, `ProductImageCleanupService`, `TenantAdminService`, `OfferMediaStudio` (vídeos/molduras) e `TelegramUserMonitorWorker`.
   - Sem configuração (testes, outra máquina) volta para `{WebRootPath}/uploads`; a pasta precisa se chamar `uploads`, porque as URLs no banco começam com `/uploads/`.
 - [x] **Servimento estático:**
-  - API: `app.UseStaticFiles` com `PhysicalFileProvider(C:\inetpub\tecflow\uploads)` e `RequestPath = "/uploads"` (antes do `wwwroot`); WebUi: `UseTecFlowProductUploads` usa a mesma pasta configurada.
+  - API: `app.UseStaticFiles` com `PhysicalFileProvider(C:\inetpub\ofertio\uploads)` e `RequestPath = "/uploads"` (antes do `wwwroot`); WebUi: `UseOfertioProductUploads` usa a mesma pasta configurada.
 - [x] **Deploy sem perda de mídia:**
-  - As 581 fotos existentes foram copiadas de `api\wwwroot\uploads` para `C:\inetpub\tecflow\uploads`; a limpeza literal `Remove-Item C:\inetpub\tecflow\api\*` voltou a ser segura.
+  - As 581 fotos existentes foram copiadas de `api\wwwroot\uploads` para `C:\inetpub\ofertio\uploads`; a limpeza literal `Remove-Item C:\inetpub\ofertio\api\*` voltou a ser segura.
 
 ## 🧹 Filtros de Integridade e Revalidação de Ofertas (`OfferIntegrityFilters`)
 
@@ -415,7 +416,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Abas da tela:**
   - `GruposMonitorados.razor` ganhou `[Cupons & Promoções]` ao lado de `[Feed de Ofertas]` e `[Ocultos / Descartados]`, com pills `Todos`, `Mercado Livre`, `Shopee`, `Amazon` e `Outros` (`couponPlatform` na API).
 - [x] **`CouponCard.razor`:**
-  - Código em destaque com botão copiar (`tecFlowClipboard`), desconto, validade e regras extraídas do texto (`CouponMessageRules`), e "Ir para a loja" em nova aba com o `AffiliateUrl` (`matt_tool` no Mercado Livre).
+  - Código em destaque com botão copiar (`ofertioClipboard`), desconto, validade e regras extraídas do texto (`CouponMessageRules`), e "Ir para a loja" em nova aba com o `AffiliateUrl` (`matt_tool` no Mercado Livre).
 
 ## 🧩 Layout Compacto de Grupos Monitorados (`CompactOffersUi`)
 
@@ -426,7 +427,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Busca compacta + Filtros Avançados ⚙️:**
   - Na tela ficam só a busca rápida e o seletor de grupo; Período, Preço mín./máx., Loja e Ofertas por página foram para `AdvancedOfferFiltersModal` (contador de filtros ativos no botão, "Limpar filtros"); o checkbox "Só com cupom" saiu.
 - [x] **Auto-scroll ao paginar:**
-  - `SetPageAsync` chama `tecFlowAppInterop.scrollIntoViewById("ofertas-container", "start")` com rolagem suave.
+  - `SetPageAsync` chama `ofertioAppInterop.scrollIntoViewById("ofertas-container", "start")` com rolagem suave.
 - [x] **`OfferCard.razor`:**
   - Card extraído da página, com botões em grade 2x2 de linha única (`padding: 4px 8px; font-size: 0.82rem`, ícones, sem quebra de texto) e badges de marketplace/status em pill sutil (`badge-sm`, cores `*-subtle`); `CouponCard` segue o mesmo padrão.
 
@@ -531,6 +532,21 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `AmazonProductPageRules` lê estritamente o total da buy box (`.apexPriceToPay` / `.priceToPay` / `#corePrice_feature_div` com `a-offscreen` ou `a-price-whole` + `a-price-fraction`), pulando preço riscado e unitário; sem buy box usa `og:price:amount`. `OfferValidationService` aplica essa leitura nas páginas da Amazon.
 - [x] **Verificar atualiza o preço na tela:**
   - Quando o preço real difere do salvo, `MonitoredGroupService.ValidateAsync` devolve `PriceUpdated`; o card é substituído em memória, `StateHasChanged()` redesenha e aparece o toast "Preço atualizado para R$ 55,00".
+
+## 🚀 Migração de Marca TecFlow → Ofertio (`RebrandOfertio`)
+
+- [x] **Solução, projetos e namespaces:**
+  - `Ofertio.sln` e projetos `Ofertio.*` (API, WebUi, SharedUi, Core, Business, Data, Database, Infrastructure, Infrastructure.Services, Util, Observability, Orquestrador, Worker, Mobile, Application, Tests); namespaces, assemblies (`Ofertio.API.dll` no `web.config`) e classes `Ofertio*` renomeados.
+- [x] **Interface Blazor:**
+  - Marca "Ofertio" no cabeçalho, no Master Console e nos títulos das páginas; título padrão "Ofertio — Inteligência em Ofertas" nos layouts, na tela inicial e no `index.html` do Mobile.
+- [x] **Banco de dados (SQL Server):**
+  - Banco `AutomacaoSociais` renomeado para `Ofertio` (dados preservados) e connection strings atualizadas; migração `RebrandOfertioSettings` renomeia a chave `TecFlow:ShortLinks:PublicBaseUrl` do cofre para `Ofertio:ShortLinks:PublicBaseUrl`.
+- [x] **Pastas, uploads e Data Protection:**
+  - Uploads em `C:\inetpub\ofertio\uploads` (produção) e `C:\inetpub\ofertio_dev\uploads` (Development); chaves em `App_Data/OfertioDataProtectionKeys`, preservado pela limpeza do deploy; sessão do Telegram em `C:\ProgramData\Ofertio\telegram-sessions`.
+- [x] **IIS:**
+  - Sites `Ofertio.API` / `Ofertio.WebUi`, pools `OfertioApiPool` / `OfertioWebUiPool` com login no SQL Server e pastas `C:\inetpub\ofertio\{api,webui,uploads}`.
+- [x] **Identificadores legados mantidos:**
+  - Nome de aplicação/purpose do Data Protection, ID da migração `InitialTecFlow`, prefixo `tecflow-u` das instâncias do WhatsApp, `demo@TecFlow.local` e IDs de rastreio/afiliado (`tecflow_kabum`, `tecflow_cb`, `tecflow_sandbox_subid`, `tecflow_test`, `utm_source=tecflow`), além das credenciais sandbox; credenciais do Mercado Livre (`matt_tool=97303724`, conta `ronyfaria`) intactas.
 
 ---
 

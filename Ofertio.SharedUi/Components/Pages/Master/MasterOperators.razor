@@ -1,0 +1,190 @@
+﻿@page "/master/operadores"
+@page "/master/usuarios"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Operadores & RBAC — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Operadores master e matriz de permissões</h1>
+        <p class="text-muted small mb-0">Equipe interna do Ofertio com acesso ao backoffice. Toda alteração é registrada na trilha de auditoria.</p>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (Can(MasterPermissions.ManageOperators))
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">@(_editingId is null ? "Novo operador" : "Editar operador")</h2>
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small mb-1">Nome</label>
+                        <input class="form-control" @bind="_form.Name" />
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small mb-1">E-mail</label>
+                        <input type="email" class="form-control" @bind="_form.Email" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small mb-1">Papel</label>
+                        <select class="form-select" @bind="_form.Role">
+                            @foreach (var role in MasterRoles.MasterRoleList)
+                            {
+                                <option value="@role">@MasterRoles.Label(role)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small mb-1">Senha @(_editingId is null ? string.Empty : "(opcional)")</label>
+                        <input type="password" class="form-control" autocomplete="new-password" @bind="_form.Password" />
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-2">
+                        <button type="button" class="btn btn-primary flex-grow-1" @onclick="SaveAsync">Salvar</button>
+                        @if (_editingId is not null)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">Cancelar</button>
+                        }
+                    </div>
+                </div>
+                <p class="text-muted small mt-2 mb-0">Se o e-mail já existir como usuário comum, ele é promovido ao papel escolhido.</p>
+            </div>
+        </div>
+    }
+
+    <div class="table-responsive card shadow-sm mb-4">
+        <table class="table align-middle mb-0 small">
+            <thead class="table-light">
+                <tr><th>Operador</th><th>Papel</th><th>Status</th><th>Desde</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var op in _operators)
+                {
+                    <tr>
+                        <td><div class="fw-semibold">@op.Name</div><div class="text-muted">@op.Email</div></td>
+                        <td>@op.RoleLabel</td>
+                        <td><span class="badge @(op.IsActive ? "text-bg-success" : "text-bg-secondary")">@(op.IsActive ? "Ativo" : "Inativo")</span></td>
+                        <td>@Date(op.CreatedAt)</td>
+                        <td class="text-end text-nowrap">
+                            @if (Can(MasterPermissions.ManageOperators))
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => Edit(op)">Editar</button>
+                                <button type="button" class="btn btn-sm @(op.IsActive ? "btn-outline-danger" : "btn-outline-success")" @onclick="() => ToggleActiveAsync(op)">
+                                    @(op.IsActive ? "Desativar" : "Ativar")
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (_matrix is not null)
+    {
+        <h2 class="h6 text-uppercase text-muted fw-semibold mb-2">Matriz RBAC</h2>
+        <div class="table-responsive card shadow-sm">
+            <table class="table table-sm align-middle mb-0 small text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start">Permissão</th>
+                        @foreach (var role in _matrix.Roles)
+                        {
+                            <th>@role.Label</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _matrix.Permissions)
+                    {
+                        <tr>
+                            <td class="text-start">@row.Label</td>
+                            @foreach (var role in _matrix.Roles)
+                            {
+                                <td>
+                                    @if (row.Roles.Contains(role.Code))
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success" aria-label="Permitido"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-dash-circle text-muted" aria-label="Negado"></i>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<MasterOperatorDto> _operators = [];
+    private MasterPermissionMatrixDto? _matrix;
+    private MasterOperatorSaveDto _form = new() { Role = MasterRoles.SuporteTecnico };
+    private int? _editingId;
+
+    protected override async Task LoadAsync()
+    {
+        var matrix = await Api.PermissionsAsync();
+        if (Accept(matrix))
+        {
+            _matrix = matrix.Data;
+        }
+
+        if (!Can(MasterPermissions.ManageOperators))
+        {
+            return;
+        }
+
+        var operators = await Api.OperatorsAsync();
+        if (Accept(operators))
+        {
+            _operators = operators.Data ?? [];
+        }
+    }
+
+    private void Edit(MasterOperatorDto op)
+    {
+        _editingId = op.Id;
+        _form = new MasterOperatorSaveDto { Name = op.Name, Email = op.Email, Role = op.Role, IsActive = op.IsActive };
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form = new MasterOperatorSaveDto { Role = MasterRoles.SuporteTecnico };
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await Api.SaveOperatorAsync(_editingId, _form);
+        if (Accept(result))
+        {
+            SetResult(true, "Operador salvo.");
+            ResetForm();
+            await LoadKeepingMessageAsync();
+        }
+    }
+
+    private async Task ToggleActiveAsync(MasterOperatorDto op)
+    {
+        if (AcceptOperation(await Api.SetOperatorActiveAsync(op.Id, !op.IsActive)))
+        {
+            await LoadKeepingMessageAsync();
+        }
+    }
+
+    private async Task LoadKeepingMessageAsync()
+    {
+        var info = Info;
+        await LoadAsync();
+        Info ??= info;
+    }
+}

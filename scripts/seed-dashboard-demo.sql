@@ -1,5 +1,5 @@
 /*
-  TecFlow — dados de demonstração (SQL Server — legado)
+  Ofertio — dados de demonstração (SQL Server — legado)
   Para PostgreSQL use: scripts/seed-dashboard-demo.postgresql.sql
   Ou deixe o Orquestrador inserir automaticamente em Development (DemoDataSeeder).
 
@@ -9,7 +9,7 @@
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
-USE [AutomacaoSociais];
+USE [Ofertio];
 GO
 
 BEGIN TRANSACTION;

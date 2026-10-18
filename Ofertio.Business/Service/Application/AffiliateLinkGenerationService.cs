@@ -1,0 +1,319 @@
+﻿using Ofertio.Business.Dto;
+using Ofertio.Business.Integrations.Shopee;
+using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.LinkStrategies;
+using Ofertio.Core.Enums;
+using Microsoft.Extensions.Logging;
+
+namespace Ofertio.Business.Service.Application;
+
+/// <summary>Orquestra resolução de estratégia, contexto de loja e mapeamento de erros amigáveis.</summary>
+public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationService
+{
+    private readonly PlatformLinkResolver _platformLinkResolver;
+    private readonly IIntegracaoLojaScopeResolver _storeScopeResolver;
+    private readonly IShortLinkService _shortLinkService;
+    private readonly ILinkClickTelemetryService _telemetryService;
+    private readonly IAffiliateLinkGenerationContext _generationContext;
+    private readonly IProductMetadataService _productMetadataService;
+    private readonly IShopeeService? _shopeeService;
+    private readonly ILogger<AffiliateLinkGenerationService> _logger;
+
+    public AffiliateLinkGenerationService(
+        PlatformLinkResolver platformLinkResolver,
+        IUrlExpansionService urlExpansionService,
+        IIntegracaoLojaScopeResolver storeScopeResolver,
+        IShortLinkService shortLinkService,
+        ILinkClickTelemetryService telemetryService,
+        IAffiliateLinkGenerationContext generationContext,
+        IProductMetadataService productMetadataService,
+        ILogger<AffiliateLinkGenerationService> logger,
+        IShopeeService? shopeeService = null)
+    {
+        _platformLinkResolver = platformLinkResolver;
+        _ = urlExpansionService;
+        _storeScopeResolver = storeScopeResolver;
+        _shortLinkService = shortLinkService;
+        _telemetryService = telemetryService;
+        _generationContext = generationContext;
+        _productMetadataService = productMetadataService;
+        _logger = logger;
+        _shopeeService = shopeeService;
+    }
+
+    public async Task<GerarLinkAfiliadoResponseDto> GenerateAsync(
+        GerarLinkAfiliadoDto request,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.OriginalUrl))
+        {
+            return Fail("Informe a URL do produto para gerar o link de afiliado.");
+        }
+
+        _generationContext.UserId = userId;
+        _generationContext.CustomNickname = request.CustomNickname;
+
+        try
+        {
+            var workingUrl = request.OriginalUrl.Trim();
+            var (strategy, resolvedUrl) = await _platformLinkResolver.ResolveFromInputAsync(
+                workingUrl,
+                cancellationToken);
+            var storeScopes = request.ResolveStoreScopes().ToList();
+            if (storeScopes.Count == 0)
+            {
+                var fallbackStore = await _storeScopeResolver.ResolveAsync(
+                    Guid.Empty,
+                    userId,
+                    strategy.PlatformType,
+                    cancellationToken);
+                storeScopes.Add(IntegracaoLojaScopeHelper.EncodeStoreScope(fallbackStore.Id));
+            }
+
+            var productMetadata = await ExtractProductMetadataSafelyAsync(resolvedUrl, cancellationToken);
+            productMetadata = await EnrichShopeeOfficialCatalogAsync(
+                productMetadata,
+                resolvedUrl,
+                strategy.PlatformType,
+                storeScopes[0],
+                userId,
+                cancellationToken);
+            var affiliateId = userId.ToString();
+            var linkGroupId = await _shortLinkService.ResolveLinkGroupIdAsync(
+                userId,
+                workingUrl,
+                strategy.PlatformType,
+                cancellationToken);
+
+            var variants = new List<AffiliateLinkAccountVariantDto>();
+            GerarLinkAfiliadoResponseDto? lastSuccess = null;
+
+            foreach (var storeScope in storeScopes)
+            {
+                _generationContext.OfficialShortenedShopeeUrl = null;
+
+                var generatedLink = await strategy.GenerateDeepLinkAsync(
+                    resolvedUrl,
+                    storeScope,
+                    affiliateId,
+                    cancellationToken);
+
+                var store = await _storeScopeResolver.ResolveAsync(
+                    storeScope,
+                    userId,
+                    strategy.PlatformType,
+                    cancellationToken);
+
+                var created = await _shortLinkService.EnsureForStoreAsync(
+                    generatedLink,
+                    workingUrl,
+                    strategy.PlatformType,
+                    userId,
+                    store.TenantId,
+                    store.Id,
+                    linkGroupId,
+                    request.CustomNickname,
+                    cancellationToken,
+                    productMetadata,
+                    request.Source,
+                    request.SourceGroup);
+
+                await _telemetryService.RecordGenerationAsync(
+                    created.AffiliateLinkId,
+                    store.TenantId,
+                    store.ShopId ?? string.Empty,
+                    workingUrl,
+                    generatedLink,
+                    strategy.PlatformType,
+                    _generationContext.ClientIpAddress,
+                    _generationContext.UserAgent,
+                    _generationContext.ReferrerUrl,
+                    cancellationToken);
+
+                var officialShort = string.Empty;
+                if (strategy.PlatformType == MarketplaceType.Shopee)
+                {
+                    officialShort = _generationContext.OfficialShortenedShopeeUrl?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(officialShort)
+                        || !ShopeeOfficialShortUrl.IsOfficialShortener(officialShort))
+                    {
+                        officialShort = generatedLink;
+                    }
+                }
+
+                variants.Add(new AffiliateLinkAccountVariantDto
+                {
+                    AffiliateLinkId = created.AffiliateLinkId,
+                    StoreId = store.Id,
+                    StoreName = string.IsNullOrWhiteSpace(store.FriendlyName)
+                        ? (store.ShopId ?? $"Loja {store.Id}")
+                        : store.FriendlyName,
+                    AffiliateUrl = generatedLink,
+                    ShortenedUrl = created.PublicShortUrl,
+                    ShortenedShopeeUrl = officialShort,
+                    IsActive = true
+                });
+
+                lastSuccess = new GerarLinkAfiliadoResponseDto
+                {
+                    Success = true,
+                    Status = true,
+                    Message = "Link de afiliado gerado com sucesso.",
+                    Descricao = "Link de afiliado gerado com sucesso.",
+                    OriginalUrl = workingUrl,
+                    AffiliateUrl = generatedLink,
+                    ConvertedUrl = generatedLink,
+                    ShortenedUrl = created.PublicShortUrl,
+                    ShortenedShopeeUrl = officialShort,
+                    PlatformDetected = strategy.PlatformName,
+                    ProductName = productMetadata.ProductName,
+                    ProductPrice = productMetadata.ProductPrice,
+                    ProductImageUrl = productMetadata.ProductImageUrl,
+                    AffiliateLinkId = created.AffiliateLinkId,
+                    LinkGroupId = linkGroupId,
+                    SelectedStoreId = store.Id
+                };
+            }
+
+            var selectedLojaIds = variants.Select(item => item.StoreId).Distinct().ToList();
+            await _shortLinkService.DeactivateUnselectedAccountsAsync(
+                linkGroupId,
+                selectedLojaIds,
+                cancellationToken);
+
+            if (lastSuccess is null)
+            {
+                return Fail("Não foi possível gerar o link de afiliado no momento. Tente novamente em instantes.");
+            }
+
+            lastSuccess.Accounts = variants.Where(item => item.IsActive).ToList();
+            lastSuccess.ApplySelectedAccount(lastSuccess.SelectedStoreId ?? lastSuccess.Accounts[0].StoreId);
+            return lastSuccess;
+        }
+        catch (AffiliateLinkGenerationException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Falha controlada ao gerar link de afiliado. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
+            return Fail(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Erro inesperado ao gerar link de afiliado. UserId={UserId} StoreId={StoreId} OriginalUrl={OriginalUrl} ExceptionType={ExceptionType} Causa={Causa}",
+                userId,
+                request.StoreId,
+                request.OriginalUrl,
+                ex.GetType().FullName,
+                ex.ToString());
+            return Fail("Não foi possível gerar o link de afiliado no momento. Tente novamente em instantes.");
+        }
+    }
+
+    private async Task<ProductMetadataDto> ExtractProductMetadataSafelyAsync(
+        string productUrl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var metadata = await _productMetadataService.ExtractAsync(productUrl, cancellationToken);
+            metadata.ProductName = ProductMetadataHtmlParser.NormalizePersistedProductName(metadata.ProductName);
+            return metadata;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Extração de metadados falhou; usando slug da URL. Url={Url}",
+                productUrl);
+            var fallback = ProductMetadataHtmlParser.FromUrlFallback(productUrl);
+            fallback.ProductName = ProductMetadataHtmlParser.NormalizePersistedProductName(fallback.ProductName);
+            return fallback;
+        }
+    }
+
+    private async Task<ProductMetadataDto> EnrichShopeeOfficialCatalogAsync(
+        ProductMetadataDto metadata,
+        string productUrl,
+        MarketplaceType platformType,
+        Guid storeScope,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        if (_shopeeService is null || platformType != MarketplaceType.Shopee)
+        {
+            return metadata;
+        }
+
+        var needsName = ProductMetadataHtmlParser.IsInvalidProductName(metadata.ProductName);
+        var needsPrice = metadata.ProductPrice is not > 0;
+        if (!needsName && !needsPrice)
+        {
+            return metadata;
+        }
+
+        try
+        {
+            var store = await _storeScopeResolver.ResolveAsync(
+                storeScope,
+                userId,
+                platformType,
+                cancellationToken);
+            var official = await _shopeeService.TryGetAffiliateItemDetailsAsync(
+                productUrl,
+                store,
+                cancellationToken);
+            if (official is null)
+            {
+                return metadata;
+            }
+
+            if (needsName && !ProductMetadataHtmlParser.IsInvalidProductName(official.ProductName))
+            {
+                metadata.ProductName = official.ProductName;
+            }
+
+            if (needsPrice && official.ProductPrice is > 0)
+            {
+                metadata.ProductPrice = official.ProductPrice;
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.ProductImageUrl)
+                && !string.IsNullOrWhiteSpace(official.ProductImageUrl))
+            {
+                metadata.ProductImageUrl = official.ProductImageUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(
+                ex,
+                "Fallback Shopee Open API indisponível. Url={Url}",
+                productUrl);
+        }
+
+        return metadata;
+    }
+
+    private static GerarLinkAfiliadoResponseDto Fail(string message) =>
+        new()
+        {
+            Success = false,
+            Status = false,
+            Message = message,
+            Descricao = message,
+            OriginalUrl = string.Empty,
+            AffiliateUrl = string.Empty,
+            ConvertedUrl = string.Empty,
+            ShortenedUrl = string.Empty,
+            ShortenedShopeeUrl = string.Empty,
+            PlatformDetected = string.Empty
+        };
+}

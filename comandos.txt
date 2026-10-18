@@ -9,14 +9,14 @@ sempre que atualizar classes de banco
   //------------------------------------------------------------------------------
 dotnet clean
 dotnet build
-dotnet ef database drop --project TecFlow.Infrastructure --startup-project TecFlow.API --force
-dotnet ef migrations remove --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef database drop --project Ofertio.Infrastructure --startup-project Ofertio.API --force
+dotnet ef migrations remove --project Ofertio.Infrastructure --startup-project Ofertio.API
 
-dotnet ef migrations add InitialMigration --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef migrations add InitialMigration --project Ofertio.Infrastructure --startup-project Ofertio.API
 
-dotnet ef migrations add InitialClean --project TecFlow.Infrastructure --startup-project TecFlow.API
-dotnet ef migrations add FixDecimalPrecisionAndRelationships --project TecFlow.Infrastructure --startup-project TecFlow.API
-dotnet ef database update --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef migrations add InitialClean --project Ofertio.Infrastructure --startup-project Ofertio.API
+dotnet ef migrations add FixDecimalPrecisionAndRelationships --project Ofertio.Infrastructure --startup-project Ofertio.API
+dotnet ef database update --project Ofertio.Infrastructure --startup-project Ofertio.API
   
   
   //------------------------------------------------------------------------------
@@ -25,69 +25,69 @@ dotnet clean
 dotnet build
 
 # 2. Exclui o banco atual para garantir que não haja sobras
-dotnet ef database drop --project TecFlow.Infrastructure --startup-project TecFlow.API --force
+dotnet ef database drop --project Ofertio.Infrastructure --startup-project Ofertio.API --force
 
 # 3. Remove todas as migrações anteriores (limpeza do histórico)
-# Certifique-se de deletar manualmente a pasta 'Migrations' dentro do projeto TecFlow.Infrastructure se ela existir
-dotnet ef migrations remove --project TecFlow.Infrastructure --startup-project TecFlow.API 
+# Certifique-se de deletar manualmente a pasta 'Migrations' dentro do projeto Ofertio.Infrastructure se ela existir
+dotnet ef migrations remove --project Ofertio.Infrastructure --startup-project Ofertio.API 
 
 # 4. Cria UMA ÚNICA migração contendo toda a estrutura atualizada
 # Isso evita problemas de ordem de criação de tabelas ou constraints conflitantes
-dotnet ef migrations add InitialMigration --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef migrations add InitialMigration --project Ofertio.Infrastructure --startup-project Ofertio.API
 
 # 5. Aplica ao banco
-dotnet ef database update --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef database update --project Ofertio.Infrastructure --startup-project Ofertio.API
   
   
-  dotnet run --project TecFlow.API
+  dotnet run --project Ofertio.API
   //------------------------------------------------------------------------------
   
-  dotnet ef migrations add InitialDashboard --project TecFlow.Infrastructure --startup-project TecFlow.API
-  dotnet ef database drop --project TecFlow.Infrastructure --startup-project TecFlow.API
-  dotnet ef database update --project TecFlow.Infrastructure --startup-project TecFlow.API
+  dotnet ef migrations add InitialDashboard --project Ofertio.Infrastructure --startup-project Ofertio.API
+  dotnet ef database drop --project Ofertio.Infrastructure --startup-project Ofertio.API
+  dotnet ef database update --project Ofertio.Infrastructure --startup-project Ofertio.API
   
-  dotnet ef database update --project TecFlow.Infrastructure --startup-project TecFlow.API
-  dotnet ef migrations add FixMetricaCascade --project TecFlow.Infrastructure --startup-project TecFlow.API
+  dotnet ef database update --project Ofertio.Infrastructure --startup-project Ofertio.API
+  dotnet ef migrations add FixMetricaCascade --project Ofertio.Infrastructure --startup-project Ofertio.API
   
   
-  dotnet ef migrations add FixDecimalTypes --project . --startup-project ../TecFlow.API
-  dotnet ef migrations add InitialCreate --project . --startup-project ../TecFlow.API
+  dotnet ef migrations add FixDecimalTypes --project . --startup-project ../Ofertio.API
+  dotnet ef migrations add InitialCreate --project . --startup-project ../Ofertio.API
   
-  cd C:\Programacao\TecFlow.Automacao\TecFlow.Infrastructure.Data
-  dotnet ef migrations add InitialCreate --project . --startup-project ../TecFlow.API
+  cd C:\Programacao\Ofertio.Automacao\Ofertio.Infrastructure.Data
+  dotnet ef migrations add InitialCreate --project . --startup-project ../Ofertio.API
   
-dotnet ef migrations add InitialCreate --project . --startup-project ../TecFlow.API
-dotnet ef migrations add AddMultiUserSupport --project TecFlow.Infrastructure.Data
-dotnet ef database update --project TecFlow.Infrastructure.Data
+dotnet ef migrations add InitialCreate --project . --startup-project ../Ofertio.API
+dotnet ef migrations add AddMultiUserSupport --project Ofertio.Infrastructure.Data
+dotnet ef database update --project Ofertio.Infrastructure.Data
 
-CD C:\Programacao\TecFlow.Automacao
-dotnet ef database update --project TecFlow.Infrastructure.Data --startup-project TecFlow.API
+CD C:\Programacao\Ofertio.Automacao
+dotnet ef database update --project Ofertio.Infrastructure.Data --startup-project Ofertio.API
 
 
 Quando eu deletar o banco e for criar novamente
-dotnet ef migrations add InitialClean --project TecFlow.Infrastructure --startup-project TecFlow.API
-dotnet ef database update --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef migrations add InitialClean --project Ofertio.Infrastructure --startup-project Ofertio.API
+dotnet ef database update --project Ofertio.Infrastructure --startup-project Ofertio.API
 
-CD C:\Programacao\TecFlow.Automacao
-dotnet ef migrations add RenameUsersToUsuario --project TecFlow.Infrastructure --startup-project TecFlow.API
-dotnet ef migrations add RenameUsersTable --project TecFlow.Infrastructure --startup-project TecFlow.API
+CD C:\Programacao\Ofertio.Automacao
+dotnet ef migrations add RenameUsersToUsuario --project Ofertio.Infrastructure --startup-project Ofertio.API
+dotnet ef migrations add RenameUsersTable --project Ofertio.Infrastructure --startup-project Ofertio.API
 
-dotnet ef migrations add AddMultiUserSupport --project TecFlow.Infrastructure --startup-project TecFlow.API
+dotnet ef migrations add AddMultiUserSupport --project Ofertio.Infrastructure --startup-project Ofertio.API
 
  
 dotnet ef migrations add AddMultiUserSupport
 
 
-CD C:\Programacao\TecFlow.Automacao
+CD C:\Programacao\Ofertio.Automacao
 dotnet clean
 dotnet build
-dotnet ef database update --project TecFlow.Infrastructure.Data --startup-project TecFlow.API
-dotnet run --project TecFlow.API
+dotnet ef database update --project Ofertio.Infrastructure.Data --startup-project Ofertio.API
+dotnet run --project Ofertio.API
 
 
-CD C:\Programacao\TecFlow.Automacao
+CD C:\Programacao\Ofertio.Automacao
 dotnet build
-dotnet run --project TecFlow.API
+dotnet run --project Ofertio.API
 
 {
   "nome": "Rony Araujo",
@@ -101,10 +101,10 @@ dotnet run --project TecFlow.API
   "password": "123456"
 }
 
-CD C:\Programacao\TecFlow.Automacao
-dotnet run --project TecFlow.API
+CD C:\Programacao\Ofertio.Automacao
+dotnet run --project Ofertio.API
 
-dotnet add package Microsoft.AspNetCore.Http -ProjectName TecFlow.Core -Force
+dotnet add package Microsoft.AspNetCore.Http -ProjectName Ofertio.Core -Force
 dotnet add package Microsoft.Extensions.Hosting --version 8.0.8
 
 dotnet add package Microsoft.Extensions.Http.Polly --version 8.0.8
@@ -117,11 +117,11 @@ dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer --version 8.0.8
 
 http://localhost:5274/swagger/index.html
 
-AutomacaoSociais
+Ofertio
 usuario: Us_Automacao
 Senha: tecban321@
 
-Usuario sysadmin da base AutomacaoSociais
+Usuario sysadmin da base Ofertio
  
  
  {
@@ -171,7 +171,7 @@ https://www.termsfeed.com/live/862832ff-bb0f-4379-9ca0-81e46e3beb14
 <p>For the purposes of these Terms and Conditions:</p>
 <ul>
 <li>
-<p><strong>Application</strong> means the software program provided by the Company downloaded by You on any electronic device, named TecFlow Automação Vendas</p>
+<p><strong>Application</strong> means the software program provided by the Company downloaded by You on any electronic device, named Ofertio Automação Vendas</p>
 </li>
 <li>
 <p><strong>Application Store</strong> means the digital distribution service operated and developed by Apple Inc. (Apple App Store) or Google Inc. (Google Play Store) in which the Application has been downloaded.</p>
@@ -183,7 +183,7 @@ https://www.termsfeed.com/live/862832ff-bb0f-4379-9ca0-81e46e3beb14
 <p><strong>Country</strong> refers to:  Brazil</p>
 </li>
 <li>
-<p><strong>Company</strong> (referred to as either &quot;the Company&quot;, &quot;We&quot;, &quot;Us&quot; or &quot;Our&quot; in these Terms and Conditions) refers to TecFlow Automação Vendas.</p>
+<p><strong>Company</strong> (referred to as either &quot;the Company&quot;, &quot;We&quot;, &quot;Us&quot; or &quot;Our&quot; in these Terms and Conditions) refers to Ofertio Automação Vendas.</p>
 </li>
 <li>
 <p><strong>Device</strong> means any device that can access the Service such as a computer, a cell phone or a digital tablet.</p>
@@ -250,13 +250,13 @@ You agree that the original English text shall prevail in the case of a dispute.
 <li>By email: rony.araujo@gmail.com</li>
 </ul>
 
-https://ronyaraujodeveloper.github.io/TecFlow-docs/termos.html
-https://ronyaraujodeveloper.github.io/TecFlow-docs/privacidade.html
+https://ronyaraujodeveloper.github.io/Ofertio-docs/termos.html
+https://ronyaraujodeveloper.github.io/Ofertio-docs/privacidade.html
 
-https://vercel.com/ronyaraujodevelopers-projects/TecFlow-docs
-https://TecFlow-automacao.vercel.app/termos.html
-https://TecFlow-automacao.vercel.app/privacidade.html
-https://TecFlow-automacao.vercel.app/painel.html
+https://vercel.com/ronyaraujodevelopers-projects/Ofertio-docs
+https://Ofertio-automacao.vercel.app/termos.html
+https://Ofertio-automacao.vercel.app/privacidade.html
+https://Ofertio-automacao.vercel.app/painel.html
 
 ///-----------------------------
 tiktok-developers-site-verification=YSKtk5IqJs2BsJzNnpvKfioggUKCh9Jo
@@ -269,7 +269,7 @@ https://www.termsfeed.com/live/862832ff-bb0f-4379-9ca0-81e46e3beb14
 Plataforma de automação e inteligência para e-commerce que gerencia produtos e publica conteúdo otimizado no TikTok Shop
 
 
-O TecFlow é uma plataforma B2B de automação projetada para lojistas e afiliados. O sistema funciona através de um pipeline de quatro etapas:
+O Ofertio é uma plataforma B2B de automação projetada para lojistas e afiliados. O sistema funciona através de um pipeline de quatro etapas:
 
 Ingestão de dados: O usuário conecta sua loja (Shopee/TikTok Shop) à nossa API, permitindo que centralizemos os dados dos produtos.
 Inteligência Artificial: Utilizamos IA para analisar as características dos produtos e gerar descrições e títulos otimizados focados em SEO e conversão de vendas.

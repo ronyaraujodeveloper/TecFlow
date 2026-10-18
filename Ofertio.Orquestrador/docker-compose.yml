@@ -1,0 +1,54 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: Ofertio-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: Ofertio-postgres
+    environment:
+      POSTGRES_USER: Us_Automacao
+      POSTGRES_PASSWORD: "tecban321@"
+      POSTGRES_DB: automacaosociais
+    ports:
+      - "5432:5432"
+    volumes:
+      - Ofertio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Us_Automacao -d automacaosociais"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  orquestrador:
+    build:
+      context: ..
+      dockerfile: Ofertio.Orquestrador/Dockerfile
+    container_name: Ofertio-orquestrador
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=automacaosociais;Username=Us_Automacao;Password=tecban321@;Include Error Detail=true"
+      Database__Provider: PostgreSQL
+      Encryption__Key: "z4wTRplZYgexzdRDmuV59SFL6cYlJ8sJGtPWtrxmiko="
+      Jwt__Key: "4F7A2D9E8C1B6A5F3D2C8E7B9A1F4D6C8E2A7B5D9F1C3A6E"
+      Jwt__Issuer: OfertioAPI
+      Jwt__Audience: OfertioClient
+    ports:
+      - "8080:8080"
+
+volumes:
+  Ofertio_pgdata:

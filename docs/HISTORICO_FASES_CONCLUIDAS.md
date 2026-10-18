@@ -1,6 +1,6 @@
-﻿# Registro Histórico de Fases Concluídas do TecFlow
+﻿# Registro Histórico de Fases Concluídas do Ofertio
 
-Este arquivo é o **Registro Histórico de Fases Concluídas** do TecFlow.
+Este arquivo é o **Registro Histórico de Fases Concluídas** do Ofertio.
 
 Ele preserva o checklist das **Fases 1 a 31** (e entregas equivalentes já marcadas como `[x]`), para reduzir o tamanho do `README.md` sem perder o rastro das implementações. O painel operacional atual — objetivo, stack, regras de código e **Fases 32 a 34** (pendentes) — permanece em [README.md](../README.md).
 
@@ -30,25 +30,25 @@ Quando uma fase ativa do README for concluída, mova o bloco correspondente para
 ## 🚀 Fases do Desenvolvimento e Reestruturação (Checklist)
 
 ### Fase 1: Transição de Arquitetura e Renomeação (Foco Atual) 📂
-- [x] Mudar o nome da Solution e dos projetos de 'Tecso' para 'TecFlow'.
-- [x] Estruturar o projeto **`TecFlow.Business`** com as pastas:
+- [x] Mudar o nome da Solution e dos projetos de 'Tecso' para 'Ofertio'.
+- [x] Estruturar o projeto **`Ofertio.Business`** com as pastas:
   - `Dto/` (Transições e as classes padrão de Response).
   - `Enum/` (Enumeradores separados por conceitos de domínio).
   - `Service/` (Serviços, regras de negócio e onde ficarão as classes herdadas de Criptografia e Validação).
-- [x] Estruturar o projeto **`TecFlow.Database`** com as pastas:
+- [x] Estruturar o projeto **`Ofertio.Database`** com as pastas:
   - `Entity/` (O coração do projeto).
   - `Filter/` (Objetos de busca baseados nas Entities).
   - `Interface/` (Contratos dos repositórios).
   - `Pagin/` (Classe de controle de paginação limitada a 30 registros).
   - `Repositorio/` (Implementação das consultas e queries que consomem os Filters).
-- [x] Mover o `DbContext` existente para a raiz ou pasta adequada do `TecFlow.Database`.
+- [x] Mover o `DbContext` existente para a raiz ou pasta adequada do `Ofertio.Database`.
 
 ### Fases Concluídas e Preservadas (A serem validadas na nova estrutura) ✅
 - [x] Instalação e configuração do PostgreSQL local (Porta 5432, base: `automacaosociais`).
-- [x] Criação do serviço de criptografia (agora alocado em `TecFlow.Business/Service`).
+- [x] Criação do serviço de criptografia (agora alocado em `Ofertio.Business/Service`).
 - [x] Implementação no `ValidationHelper` das validações de E-mail, CPF, CNPJ Alfanumérico, CEP (ViaCEP) e Força de Senhas.
 - [x] Implementação da validação rigorosa de celular brasileiro (`IsValidBrazilianCellPhone`).
-- [x] Estrutura base do Frontend criada (agora migrando para o projeto **`TecFlow.WebUi`**).
+- [x] Estrutura base do Frontend criada (agora migrando para o projeto **`Ofertio.WebUi`**).
 - [x] Telas iniciais de escolha (TikTok/Shopee) e cards de login mockados.
 - [x] Implementar fluxo de captura e persistência de Telefone/WhatsApp (com aplicação da validação do helper) para alertas do Orquestrador.
 
@@ -57,12 +57,12 @@ Quando uma fase ativa do README for concluída, mova o bloco correspondente para
 - [x] Criar a primeira Entity oficial (`User`) na pasta `Entity/`.
 - [x] Criar o objeto espelho `UserFilter` na pasta `Filter/`.
 - [x] Criar o `UserDto` e `UserResponseDto` na pasta `1.Business/Dto/`.
-- [x] Configurar a Connection String do PostgreSQL e aplicar a primeira Migration do ecossistema TecFlow.
+- [x] Configurar a Connection String do PostgreSQL e aplicar a primeira Migration do ecossistema Ofertio.
 
 ### Fase 3: Regras de Negócio, Telas e APIs Externas 🔄
 - [x] Refatorar Controllers para arquitetura de 3 objetos (Filter / Dto / ResponseDto) e remover Create/Update Dtos redundantes.
-- [x] Migrar o projeto 'TecFlow.Portal' e adaptar o projeto `TecFlow.WebUi` para consumir os novos Services que retornam o padrão `ResponseDto`.
-- [x] Descontinuar `TecFlow.Portal` e `TecFlow.Dashboard`; **`TecFlow.WebUi`** é o frontend canônico (Blazor).
+- [x] Migrar o projeto 'Ofertio.Portal' e adaptar o projeto `Ofertio.WebUi` para consumir os novos Services que retornam o padrão `ResponseDto`.
+- [x] Descontinuar `Ofertio.Portal` e `Ofertio.Dashboard`; **`Ofertio.WebUi`** é o frontend canônico (Blazor).
 - [x] Integrar os componentes de tela aos filtros de listagem compostos pela pasta `Filter`.
   - [ ] Integração real com as APIs de produção do TikTok Shop e Shopee.
   - [x] 3.1. Infraestrutura Core de Integração: Criar os HttpClient específicos, handlers de resiliência (Polly) e logs de requisições.
@@ -71,12 +71,12 @@ Quando uma fase ativa do README for concluída, mova o bloco correspondente para
   - [x] 3.4. Gestão de Pedidos & Estoque: Estruturar os endpoints/serviços para receber webhooks ou realizar polling de novos pedidos e atualizar estoque de forma bidirecional.
 
 ### Fase 4: Estratégia Mobile Híbrida (Android e iOS) 📱
-- [x] 4.1. Fundação Mobile-First no TecFlow.WebUi e Contratos de API
-  - [x] Auditar e refatorar layouts existentes do `TecFlow.WebUi` para conformidade Mobile First (breakpoints, tabelas responsivas, navegação touch-friendly).
+- [x] 4.1. Fundação Mobile-First no Ofertio.WebUi e Contratos de API
+  - [x] Auditar e refatorar layouts existentes do `Ofertio.WebUi` para conformidade Mobile First (breakpoints, tabelas responsivas, navegação touch-friendly).
   - [x] Padronizar contratos REST (`*Filter`, `*ResponseDto`) e autenticação para consumo estável por clientes móveis futuros.
 
 - [x] 4.2. Shell Híbrido Nativo (.NET MAUI / Blazor Hybrid)
-  - [x] Avaliar e estruturar projeto compartilhado (RCL) reutilizando componentes Blazor do `TecFlow.WebUi`.
+  - [x] Avaliar e estruturar projeto compartilhado (RCL) reutilizando componentes Blazor do `Ofertio.WebUi`.
   - [x] Configurar pipeline de build e publicação para Android e iOS (lojas ou distribuição interna).
 
 - [x] 4.3. Engajamento Móvel em Tempo Real
@@ -86,9 +86,9 @@ Quando uma fase ativa do README for concluída, mova o bloco correspondente para
 
 
 ### Fase 5: Visão de Negócio - Plataforma de Automação e Inteligência para Afiliados de Alta Escala 🚀
-**[x] Revisado e validado (jun/2026)** — domínio base, enums globais e contratos de orquestração consolidados em `TecFlow.Core` e `TecFlow.Business` para API, Worker, Orquestrador e WebUi.
+**[x] Revisado e validado (jun/2026)** — domínio base, enums globais e contratos de orquestração consolidados em `Ofertio.Core` e `Ofertio.Business` para API, Worker, Orquestrador e WebUi.
 
-Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`TecFlow.API`, `TecFlow.Worker`, `TecFlow.Orquestrador`) com o frontend `TecFlow.WebUi` / `TecFlow.SharedUi` / `TecFlow.Mobile` para controle, auditoria e monitoramento em produção.
+Orquestração de engajamento (comentários, mensagens e links), conciliação financeira de comissões, catálogo de produtos de divulgação e integrações com TikTok Shop e Shopee. O ecossistema combina backend robusto em C# (`Ofertio.API`, `Ofertio.Worker`, `Ofertio.Orquestrador`) com o frontend `Ofertio.WebUi` / `Ofertio.SharedUi` / `Ofertio.Mobile` para controle, auditoria e monitoramento em produção.
 
 - [x] 5.0. Fucomatos (Core + Business)
   - [x] Enums: `SocialMediaType`, `EngagementStatus`, `CommissionStatus`.
@@ -104,7 +104,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - [x] Consumidor `SocialMediaCommentConsumer` no Worker com triagem por palavras-chave configuráveis e entrega simulada de link por `PostId`.
   - [x] Retry automático e fila de erro (DLQ) `social-media-comment-received-error`.
 
-- [x] 6.2. Painel de Conciliação Financeira de Afiliado (TecFlow.WebUi / SharedUi)
+- [x] 6.2. Painel de Conciliação Financeira de Afiliado (Ofertio.WebUi / SharedUi)
   - [x] Página `ConciliacaoFinanceira.razor` mobile-first (KPIs em grid, tabela desktop / cards mobile com badges de divergência).
   - [x] `IAffiliateAnalyticsService` — importação de relatórios Shopee/TikTok (tokens válidos) + fallback pedidos locais.
   - [x] `ReconcileCommissionsAsync` — cruza rastreio local vs. repasse marketplace e classifica divergências (`CommissionDiscrepancyReportDto`).
@@ -116,7 +116,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - [x] API `api/propaganda/produtos` e página `ProdutosPropaganda.razor` (mobile-first, copiar link Shopee/TikTok).
 
 - [x] 6.4. Observabilidade e Telemetria (Monitoramento de Produção)
-  - [x] Projeto `TecFlow.Observability` com `AddTecFlowTelemetry` (traces, métricas OTLP/Console/Prometheus, logs OpenTelemetry).
+  - [x] Projeto `Ofertio.Observability` com `AddOfertioTelemetry` (traces, métricas OTLP/Console/Prometheus, logs OpenTelemetry).
   - [x] Métricas de negócio: `comentarios_processados_total`, `links_enviados_sucesso`, `erros_conciliacao_contagem`.
   - [x] Instrumentação em API, Worker e Orquestrador (HTTP Shopee/TikTok, consumer de engajamento, conciliação).
   - [x] Painel `PainelSaude.razor` + `GET /api/saude/dashboard` (DB, RabbitMQ, APIs, erros recentes).
@@ -154,7 +154,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Ajustar os controladores e serviços que alimentam o Dashboard para exigir ou receber o parâmetro opcional `?lojaId=...`, garantindo que as queries apliquem o filtro de isolamento e retornem os dados da conta selecionada.
 
 
-### Fase 9: Reformulação Visual e Componentes Multi-Contas no Frontend (TecFlow.WebUi) 🎨
+### Fase 9: Reformulação Visual e Componentes Multi-Contas no Frontend (Ofertio.WebUi) 🎨
 - [x] 9.1. Reformulação Visual da Tela de Login Principal
   - Remover os botões iniciais de login direto por marketplace (TikTok/Shopee) da página de entrada.
   - Redesenhar a interface utilizando abordagem Mobile-First com botões de provedores sociais centrais (Google, Apple, Facebook) e o formulário tradicional de E-mail/Senha com link para recuperação de senha.
@@ -182,10 +182,10 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Tratar payloads de links já encurtados pelas plataformas de origem (ex: links do tipo `s.shopee.com.br` ou encurtados de redes sociais), realizando o *unshorten* (rastreamento do redirecionamento HTTP) se necessário para extrair o ID real do produto antes de re-parametrizar.
 
 - [x] 10.3. Encurtador Interno Multi-Plataforma e Telemetria de Cliques
-  - Criar o mecanismo de redirecionamento dinâmico do TecFlow (ex: `tflow.link/xyz`).
+  - Criar o mecanismo de redirecionamento dinâmico do Ofertio (ex: `tflow.link/xyz`).
   - Modelar a tabela `LinkClickLog` para registrar a telemetria de acessos (data, hora, IP, localização simulada, dispositivo e plataforma de origem do produto).
 
-### Fase 11: Módulo Gerador de Links Omnichannel no Frontend (TecFlow.WebUi) 📱
+### Fase 11: Módulo Gerador de Links Omnichannel no Frontend (Ofertio.WebUi) 📱
 - [x] 11.1. Tela Universal "Gerador de Links de Comissão" (Mobile-First)
   - Desenvolver a interface Blazor (`GeradorLinks.razor`) com um campo de captura inteligente de URLs.
   - Exibir visualmente os logos de todos os marketplaces suportados pelo sistema (com sinalização de quais estão ativos ou configurados para a conta do usuário).
@@ -205,18 +205,18 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 #### 12.1. Integração com Google OAuth 2.0 (Login pelo Gmail)
 - [ ] **12.1.1. Configuração no Google Cloud Console:** Criar projeto, configurar a Tela de Consentimento OAuth (adicionando escopos `openid`, `profile`, `email`), registrar a URI de redirecionamento de homologação (`https://camcorder-bonding-sloppily.ngrok-free.dev/signin-google`) e gerar as chaves `ClientId` e `ClientSecret`.
-- [ ] **12.1.2. Implementação no Backend (TecFlow.API):** Instalar e configurar o pacote `Microsoft.AspNetCore.Authentication.Google`, mapear as chaves no `appsettings.json` e criar o endpoint de callback para receber o token do Google, validar/criar o usuário no PostgreSQL e emitir o JWT do sistema.
-- [ ] **12.1.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Desenvolver o botão "Entrar com Google" com design oficial, disparar o redirecionamento de segurança para o Google e tratar o retorno da sessão no Blazor Server.
+- [ ] **12.1.2. Implementação no Backend (Ofertio.API):** Instalar e configurar o pacote `Microsoft.AspNetCore.Authentication.Google`, mapear as chaves no `appsettings.json` e criar o endpoint de callback para receber o token do Google, validar/criar o usuário no PostgreSQL e emitir o JWT do sistema.
+- [ ] **12.1.3. Interface e Fluxo no Frontend (Ofertio.WebUi):** Desenvolver o botão "Entrar com Google" com design oficial, disparar o redirecionamento de segurança para o Google e tratar o retorno da sessão no Blazor Server.
 
 #### 12.2. Integração com Apple Identity (Login pelo iCloud)
 - [ ] **12.2.1. Configuração no Apple Developer Program:** Criar o *App ID* com a funcionalidade *Sign In with Apple* ativa, configurar o *Services ID* com a URL de redirecionamento correspondente e gerar a chave privada de assinatura (`.p8`).
-- [ ] **12.2.2. Implementação no Backend (TecFlow.API):** Configurar a autenticação da Apple utilizando criptografia de chaves (`ClientSecret` gerado dinamicamente via JWT assinado com a `.p8`) e validar o ID Token enviado pela Apple.
-- [ ] **12.2.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Acoplar o botão nativo "Sign in with Apple" respeitando as diretrizes estritas de UX da Apple e mapear o envio dos dados do usuário (nome/e-mail obtidos apenas no primeiro login).
+- [ ] **12.2.2. Implementação no Backend (Ofertio.API):** Configurar a autenticação da Apple utilizando criptografia de chaves (`ClientSecret` gerado dinamicamente via JWT assinado com a `.p8`) e validar o ID Token enviado pela Apple.
+- [ ] **12.2.3. Interface e Fluxo no Frontend (Ofertio.WebUi):** Acoplar o botão nativo "Sign in with Apple" respeitando as diretrizes estritas de UX da Apple e mapear o envio dos dados do usuário (nome/e-mail obtidos apenas no primeiro login).
 
 #### 12.3. Integração com Meta for Developers (Login pelo Facebook)
 - [ ] **12.3.1. Configuração no Meta Developers:** Criar um aplicativo do tipo "Consumidor", configurar o produto "Login do Facebook", adicionar as URIs de redirecionamento válidas e obter o *App ID* e *App Secret*.
-- [ ] **12.3.2. Implementação no Backend (TecFlow.API):** Instalar o pacote `Microsoft.AspNetCore.Authentication.Facebook`, configurar o middleware no pipeline e mapear o mapeamento de claims (id, email, name).
-- [ ] **12.3.3. Interface e Fluxo no Frontend (TecFlow.WebUi):** Inserir o botão "Entrar com Facebook" na página de login e ligar o fluxo de autenticação ao circuito Blazor.
+- [ ] **12.3.2. Implementação no Backend (Ofertio.API):** Instalar o pacote `Microsoft.AspNetCore.Authentication.Facebook`, configurar o middleware no pipeline e mapear o mapeamento de claims (id, email, name).
+- [ ] **12.3.3. Interface e Fluxo no Frontend (Ofertio.WebUi):** Inserir o botão "Entrar com Facebook" na página de login e ligar o fluxo de autenticação ao circuito Blazor.
 
 #### 12.4. Mecanismo de Auto-Linking e Vínculo de Contas
 - [ ] **12.4.1. Resolução de Conflito de E-mail Único:** Garantir no banco de dados que, se um usuário já cadastrado com `rony@...` via e-mail tentar clicar em "Entrar com Google" usando o mesmo e-mail, o sistema vincule com segurança a credencial do Google à conta existente em vez de gerar um registro duplicado ou estourar erro de constraint.
@@ -236,7 +236,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
   - Filtrar os resultados para garantir que o preço encontrado nas plataformas concorrentes seja **menor** que o preço do link original.
   - Ordenar o resultado de forma ascendente pelo preço e limitar o retorno a no máximo 3 sugestões alternativas, já gerando o link de comissão convertido para cada uma delas.
 
-### Fase 14: Painel de Otimização e Sugestões de Ofertas no Frontend (TecFlow.WebUi) 💸
+### Fase 14: Painel de Otimização e Sugestões de Ofertas no Frontend (Ofertio.WebUi) 💸
 - [ ] 14.1. Componente Reativo "Sugestões de Melhor Preço" (UI/UX)
   - Desenvolver uma seção dinâmica na página `GeradorLinks.razor` que exibe um *loader* de busca (ex: "Buscando preços melhores em outras plataformas...") logo após o link principal ser gerado.
   - Renderizar até 3 cards de sugestões alternativas utilizando abordagem Mobile-First.
@@ -255,14 +255,14 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 #### 15.1. Infraestrutura de Logs do Servidor (IIS)
 - [x] Criar script PowerShell `Configurar-Logs-IIS.ps1` para gerar as pastas físicas de log e gerenciar permissões de escrita (FullControl) para o pool do IIS (`IIS_IUSRS` / `DefaultAppPool`).
 
-- [x] Configurar o arquivo `web.config` do TecFlow.WebUi com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
+- [x] Configurar o arquivo `web.config` do Ofertio.WebUi com a flag de controle dinâmico: `stdoutLogEnabled="true"` e diretório `.\logs\stdout`.
 
-- [x] Configurar o arquivo `web.config` da TecFlow.API seguindo o mesmo padrão, mapeando os logs para `.\logs\stdout` orientado por flag de ativação.
+- [x] Configurar o arquivo `web.config` da Ofertio.API seguindo o mesmo padrão, mapeando os logs para `.\logs\stdout` orientado por flag de ativação.
 
 #### 15.2. Padronização do Log de Aplicação (.NET Serilog/ILogger)
-- [x] Inspecionar o arquivo `Program.cs` da TecFlow.API e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
+- [x] Inspecionar o arquivo `Program.cs` da Ofertio.API e garantir a injeção do provedor de Log (Console + Arquivo de Rolagem Diária `.txt`).
 
-- [x] Inspecionar o arquivo `Program.cs` do TecFlow.WebUi (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas (`BlazorCircuitLoggingHandler`, `UseSerilogRequestLogging`).
+- [x] Inspecionar o arquivo `Program.cs` do Ofertio.WebUi (Blazor Server) para capturar o ciclo de vida das conexões de circuitos SignalR e requisições HTTP internas (`BlazorCircuitLoggingHandler`, `UseSerilogRequestLogging`).
 
 - [x] Configurar os arquivos `appsettings.Homologacao.json` de ambos os projetos para definir o nível mínimo de log como `Information` (traces internos do framework em homolog).
 
@@ -272,9 +272,9 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] Validar que todos os blocos críticos de `try/catch` no fluxo de autenticação (OAuth, login tradicional, pontes de comunicação) invoquem explicitamente `_logger.LogError(ex, ...)` em vez de engolirem a exceção em silêncio.
 
 ### Fase 16: Identidade Digital e Infraestrutura de Produção (O Alicerce) 🗺️
-- [ ] **16.1.** Registro e Apontamento do Domínio: Registrar tecflow.com.br no Registro.br e configurar os servidores de DNS na Cloudflare.
+- [ ] **16.1.** Registro e Apontamento do Domínio: Registrar ofertio.com.br no Registro.br e configurar os servidores de DNS na Cloudflare.
 
-- [ ] **16.2.** Configuração do Servidor e SSL: Apontar o subdomínio homolog.tecflow.com.br para o servidor de homologação e instalar certificado SSL (Let's Encrypt).
+- [ ] **16.2.** Configuração do Servidor e SSL: Apontar o subdomínio homolog.ofertio.com.br para o servidor de homologação e instalar certificado SSL (Let's Encrypt).
 
 - [ ] **16.3.** Blindagem de E-mail (Entregabilidade): Configurar apontamentos TXT de SPF, DKIM e DMARC na zona de DNS para evitar bloqueios no Gmail e iCloud.
 
@@ -305,7 +305,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 ### 🛍️ Fase 19: Homologação Prática do Gerador e Conversor de Links de Afiliado (Shopee) 🔗
 
 #### 19.1. Parametrização e Configuração das Credenciais de Afiliado
-- [X] **19.1.1. Inspecionar e Ajustar `appsettings.json`:** Mapear as chaves de Afiliado da Shopee (`PartnerId`, `PartnerKey` / `AppSecret` / `AppKey` / `AppSignature`) na `TecFlow.API` e no `TecFlow.WebUi`.
+- [X] **19.1.1. Inspecionar e Ajustar `appsettings.json`:** Mapear as chaves de Afiliado da Shopee (`PartnerId`, `PartnerKey` / `AppSecret` / `AppKey` / `AppSignature`) na `Ofertio.API` e no `Ofertio.WebUi`.
 - [x] **19.1.2. Mapeamento de Fallback/Sandbox:** Implementar/validar o modo de simulação no `ShopeeIntegrationClient` para garantir que, caso as chaves reais de produção não estejam preenchidas, o sistema injete uma tag/sub_id de homologação sem estourar exceção.
 
 #### 19.2. Teste do Motor Backend de Unshorten e Re-parametrizador (Strategy)
@@ -313,9 +313,9 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.2.2. Geração da URL Rastreada de Comissão:** Validar o Universal Link com `sub_id` (Tracking ID, apelido ou UserId), sem dependência impeditiva da Open API.
 - [x] **19.2.3. Persistência de Telemetria:** Confirmar que a chamada grava corretamente um novo registro na tabela `LinkClickLog` com o `TenantId`/`ShopId` e metadados de acesso.
 
-#### 19.3. Conexão End-to-End no Frontend (TecFlow.WebUi)
+#### 19.3. Conexão End-to-End no Frontend (Ofertio.WebUi)
 - [x] **19.3.1. Integração da Tela `GeradorLinks.razor`:** Ligar o evento do botão "Gerar Link" da interface Blazor ao endpoint `POST /api/afiliados/links/gerar` do backend, com `_isLoading`, alerta vermelho se a loja não estiver selecionada e `StateHasChanged()` após sucesso.
-- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/{storeSlug}/{code}`) em cards com cópia independente via `tecflow-clipboard.js`. Combo **Conta selecionada** quando o produto tem mais de uma conta ativa.
+- [x] **19.3.2. Ações de Interface e Feedback Visual:** Renderizar `AffiliateUrl` (longa), `ShortenedShopeeUrl` (`br.shp.ee`) e `ShortenedUrl` (`http://localhost:5001/{storeSlug}/{code}`) em cards com cópia independente via `ofertio-clipboard.js`. Combo **Conta selecionada** quando o produto tem mais de uma conta ativa.
 - [x] **19.3.4. Múltiplas contas:** `ShortAffiliateLinkAccounts.IsActive`; geração em lote; inativação lógica ao desmarcar.
 - [x] **19.4. TikTok Shop:** `TikTokShopLinkStrategy` converte URLs oficiais/encurtadas com `sub_id` (Tracking ID ou nome amigável); cadastro na modal Conectar nova loja.
 - [x] **19.5. Mercado Livre:** `MercadoLivreLinkStrategy` injeta `matt_tool` e `matt_word`; cadastro com Matt Tool ID.
@@ -337,7 +337,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] **19.21. TikTok login redirect:** decodifica `redirect_url` recursivamente; aceita `@username` / `amz.indica` no Tracking ID.
 - [x] **19.22. Resolução de loja no gerador:** com o seletor em Todas (ou loja de outra plataforma), usa a primeira `MarketplaceAccounts` ativa da plataforma do link; só pede conexão se não houver nenhuma conta daquela plataforma.
 - [x] **19.23. Metadados Shopee:** nome primário pelo slug da URL expandida (`HttpUtility.UrlDecode`); preço via `price_min` / `price` / OpenGraph; histórico `R$ 28,70`.
-- [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`AutomacaoSociais` / `ShortAffiliateLinks`).
+- [ ] **19.3.3. Teste do Circuito Fechado (Ponta a Ponta):** Efetuar login por e-mail no sistema, colar a URL real de uma cadeira/produto da Shopee, converter, copiar o link de comissão e validar o registro no SQL Server (`Ofertio` / `ShortAffiliateLinks`).
 
 #### 19.4. Link Encurtado
 - [ ] **19.4.1. Encurtar link Shopee
@@ -350,7 +350,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 - [x] 19.5.5. Reformulação Visual da Tabela "Histórico de Links": Modificar a estrutura da tabela do histórico de links no Blazor removendo as colunas brutas LINK ORIGINAL e LINK ENCURTADO, substituindo-as por PRODUTO (Nome do Produto) e PREÇO (Valor formatado em R$). Preservar as colunas PLATAFORMA, DATA, CLIQUES e as ações Visualizar e Editar.
 - [x] 19.5.6. Tratamento de Exceções e Resiliência (Fallback): scraping bloqueado não interrompe a conversão; títulos genéricos (`Produto`/`Shopee`) gravam `NULL`; o afiliado informa nome/preço no preview e no histórico; fallback Shopee Open API (`get_item_base_info`) usa AppKey/AppSecret de `MarketplaceAccounts`.
 
-### 🛡️ 20. Estratégia de Resiliência, Defesa Anti-Bot e Formatação na Interface (TecFlow)
+### 🛡️ 20. Estratégia de Resiliência, Defesa Anti-Bot e Formatação na Interface (Ofertio)
 
 - [ ] 20.1. **Proteção Contra Captchas e Bloqueios WAF (Cloudflare/Shopee/Marketplaces):**
    - O pipeline de extração descarta nomes genéricos e hashes de anti-bot (ex: `Opaanlp`, `Nsbo`, `Produto`, `Shopee Brasil`, `Captcha`).
@@ -376,7 +376,7 @@ Orquestração de engajamento (comentários, mensagens e links), conciliação f
 
 ## Arquitetura Mobile & Sincronização SQLite/SQL Server
 
-O TecFlow.API (SQL Server `localhost\SQLEXPRESS` / `AutomacaoSociais`) é a fonte de verdade. O futuro app (`TecFlow.Mobile`) sincroniza via REST com os mesmos DTOs do Blazor; o SQLite local é cache offline, nunca substitui o servidor.
+O Ofertio.API (SQL Server `localhost\SQLEXPRESS` / `Ofertio`) é a fonte de verdade. O futuro app (`Ofertio.Mobile`) sincroniza via REST com os mesmos DTOs do Blazor; o SQLite local é cache offline, nunca substitui o servidor.
 
 | Recurso no SQL Server | Endpoint REST | DTO | SQLite (rascunho) |
 | --- | --- | --- | --- |
@@ -397,14 +397,14 @@ Contrato mínimo do registro de link (espelhado em `ShortAffiliateLink`): `Origi
 - [x] 21.1. Versionamento de slugs em `PublicConverterPages` (inativo + novo ativo com o mesmo `PublicCode`).
 - [x] 21.2. Deduplicação visual `DistinctBy(PlatformType)` e `FirstOrDefault` da conta ativa na conversão.
 - [x] 21.3. Conversões públicas no Histórico de Links (`Source=PublicPage`, badge Página pública).
-- [x] 21.4. Layout público compacto: badges ~35% menores, Converter/Limpar 50/50, divisor e duas linhas (comissao direta + rastreio TecFlow) com Copiar/Abrir.
+- [x] 21.4. Layout público compacto: badges ~35% menores, Converter/Limpar 50/50, divisor e duas linhas (comissao direta + rastreio Ofertio) com Copiar/Abrir.
 
 ---
 
 ## 🚀 Roadmap de Expansão: Integrações e Bots de Distribuição
 
 ### 🤖 22. Módulo Telegram (Bot & Agendador de Grupos)
-Permite que o usuário do TecFlow conecte seu próprio Bot do Telegram para escutar, converter e agendar ofertas em canais ou grupos.
+Permite que o usuário do Ofertio conecte seu próprio Bot do Telegram para escutar, converter e agendar ofertas em canais ou grupos.
 
 - [x] 22.1. Arquitetura de Conexão (BotFather UX):**
   - Token, ApiKey e SessionData em `TelegramIntegrations` com AES-256; máscara `****************` em `/integracoes/telegram`.
@@ -426,7 +426,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
   - Painel unificado `/integracoes/conexoes` (abas WhatsApp / Telegram), QR em modal e status com foto, nome e número.
   - Menu **Mensageria & Bots**: Conexões, Bot de Conversão (`/integracoes/bot-conversor`) e Agendador de Grupos (`/integracoes/agendador`), sem remover WhatsApp/Telegram originais.
   - NavMenu: Mensageria & Bots (Conexões, Agendador de Grupos, Bot), WhatsApp/Telegram (agendadores), Integrações (Lojas única, Gerador, Páginas) e accordion Próximos Desenvolvimentos.
-  - O TecFlow orquestra instâncias da **Evolution API** isoladas por `UserId`.
+  - O Ofertio orquestra instâncias da **Evolution API** isoladas por `UserId`.
   - `EvolutionApiService` trata HTTP 40x/50x com log do body, ignora instância já criada e busca o QR; a UI exibe alerta amigável em vez de 500 genérico.
   - O usuário acessa a aba *Integrações > WhatsApp*, clica em "Conectar WhatsApp" e o Blazor exibe o QR Code dinâmico obtido via polling da API.
   - Ao escanear com o celular no aplicativo do WhatsApp, a sessão fica salva e ativa no servidor (`WhatsAppIntegrations`).
@@ -512,7 +512,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 - [x] **31.3. Worker Global de Rastreamento de Tendências (`GlobalTrendingDealsWorker`):**
   - **Serviço em Segundo Plano Centralizado (`IHostedService`):** Worker executado no nível do sistema (sem vínculo com tenant específico) para varrer produtos em alta (*Trending Deals*).
   - **Algoritmo de Atratividade:** Cruzamento de alta taxa de engajamento nos grupos (mensagens duplicadas/encaminhadas com frequência) com redução súbita de preço (`PriceDropPercent >= 15%`).
-  - **Vitrine Global ("Pool de Achadinhos"):** Ingestão na tabela `GlobalTrendingDeals` para disponibilização e consumo via créditos por todos os assinantes do TecFlow.
+  - **Vitrine Global ("Pool de Achadinhos"):** Ingestão na tabela `GlobalTrendingDeals` para disponibilização e consumo via créditos por todos os assinantes do Ofertio.
 
 
 ---
@@ -529,7 +529,7 @@ Oferece uma experiência fluida para afiliados iniciantes conectarem seu número
 
 2. **Modal Auxiliar "Saiba onde obter o código":**
    - [x] Ao lado do campo Bot Token, incluir o botão/link **"Saiba onde obter o código"**.
-   - [x] Ao clicar, exibe um modal estilizado do TecFlow com o passo a passo ilustrado de como criar o robô no `@BotFather` e copiar o token gerado.
+   - [x] Ao clicar, exibe um modal estilizado do Ofertio com o passo a passo ilustrado de como criar o robô no `@BotFather` e copiar o token gerado.
 
 ## 🤖 Resiliência e Fallback na Conexão do Telegram
 
@@ -558,7 +558,7 @@ Para equiparar a experiência ao agendador do WhatsApp:
 ## 🕵️ Monitoramento de Canais de Terceiros como Membro Leitor (UserBot MTProto)
 
 Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégios de Admin):
-1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no TecFlow para conectar uma conta de usuário do Telegram.
+1. [x] **Credenciais MTProto:** Configuração de `ApiId` e `ApiHash` no Ofertio para conectar uma conta de usuário do Telegram.
 2. [x] **Escuta Passiva em Background:** O Worker (`TelegramUserMonitorWorker`) intercepta novas mensagens em todos os canais inscritos da conta.
 3. [x] **Catch-up histórico paginado:** o botão *Sincronizar* **aguarda** `Messages_GetHistory` nos chats (`Dialogs` ou `DialogsSlice`, até **1500** msgs/canal ou **48h**) via `ToInputPeer`, persiste links (texto, entidade e botão) e só então recarrega a lista.
 4. [x] **Fila desacoplada:** `Channel<UserBotCapturedPayload>` recebe o update MTProto sem bloquear o `WTelegramClient`; um leitor persiste no SQL. `HostOptions` + `requestTimeout="20:00:00"` no IIS evitam derrubar o `IHostedService`.
@@ -568,9 +568,9 @@ Para capturar ofertas em canais onde o usuário é apenas membro (sem privilégi
 ## 🛠️ Permissões de Sistema de Arquivos (Telegram Sessions)
 
 O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/escrita na pasta local de sessões:
-- **Diretório:** `C:\ProgramData\TecFlow\telegram-sessions` (fora do publish IIS; o wipe de `inetpub` não apaga o `.session`).
-- **Permissão do IIS:** `IIS_IUSRS` e o `TecFlowApiPool` com **FullControl** nessa pasta (`Configurar-Logs-IIS.ps1`).
-- [x] **Fallback TEMP:** se a criação da pasta falhar, a sessão vai para `%TEMP%\TecFlow\telegram-sessions` e a sincronização de canais via Bot Token segue independente.
+- **Diretório:** `C:\ProgramData\Ofertio\telegram-sessions` (fora do publish IIS; o wipe de `inetpub` não apaga o `.session`).
+- **Permissão do IIS:** `IIS_IUSRS` e o `OfertioApiPool` com **FullControl** nessa pasta (`Configurar-Logs-IIS.ps1`).
+- [x] **Fallback TEMP:** se a criação da pasta falhar, a sessão vai para `%TEMP%\Ofertio\telegram-sessions` e a sincronização de canais via Bot Token segue independente.
 
 ## 🤖 UX e Manual do UserBot MTProto (Escuta de Canais de Terceiros)
 
@@ -717,7 +717,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Deduplicação do feed monitorado:**
   - Nova oferta só entra se ainda não existir na tela/SQL pelo `ExternalMessageId` ou URL do produto (sem query string).
 - [x] **IIS 500.30 (API):**
-  - Seed de homologação não derruba mais a API; o pool `TecFlowApiPool` precisa de login Windows no SQL Server `AutomacaoSociais`.
+  - Seed de homologação não derruba mais a API; o pool `OfertioApiPool` precisa de login Windows no SQL Server `Ofertio`.
 
 
 
@@ -878,7 +878,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 
 ## 🎨 Navegação, Usabilidade e Paletas (Fase 45)
 
-- [x] **Fase 45 — UX Master × Cliente:** reset de scroll ao trocar de rota (`NavigationScrollReset` + `tecFlowAppInterop.resetScroll`), sidebar do cliente em três níveis (Categoria → Menu pai → Submenu, com "Minhas Lojas / Integrações" fixo em Integrações), console Master em slate escuro com laranja `#FF9900`, paleta clara do cliente e segregação `/master/vault` (chaves globais + diagnóstico) × `/master/marketplace-accounts` (somente contas corporativas de teste/dev).
+- [x] **Fase 45 — UX Master × Cliente:** reset de scroll ao trocar de rota (`NavigationScrollReset` + `ofertioAppInterop.resetScroll`), sidebar do cliente em três níveis (Categoria → Menu pai → Submenu, com "Minhas Lojas / Integrações" fixo em Integrações), console Master em slate escuro com laranja `#FF9900`, paleta clara do cliente e segregação `/master/vault` (chaves globais + diagnóstico) × `/master/marketplace-accounts` (somente contas corporativas de teste/dev).
 
 ## 🧲 Menu Dinâmico com Drag & Drop (Fase 46)
 
@@ -898,9 +898,9 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Token OAuth da conta na busca (`MLBOAuthSearchTokenFix`):** `MercadoLivreApiService` usa o `AccessToken` da conta ML ativa do tenant do usuário (Bearer por requisição); em HTTP 401/403 renova via `refresh_token` com `AppId`/`SecretKey` do Vault, grava o novo token em `MarketplaceAccounts` e repete a busca antes da vitrine; log `[ML Busca]` identifica a conta usada (ex.: `@Achadinhos de Aaz`).
 - [x] **Vitrine como motor primário (`MLBScraperPrimary`):** com `UseOfficialSearchApi=false` (padrão, enquanto o app aguarda homologação — a API respondia `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` em todos os endpoints de leitura), a busca vai direto a `lista.mercadolivre.com.br` com headers de Chrome 129 e `HttpClientHandler` GZip/Deflate/Brotli (o ML segue redirecionando para `account-verification`; o fallback via `suggest`/`autosuggest` foi descartado por responder 404/403 e não trazer ofertas); o parser extrai título, preço atual/original, imagem (`data-src`) e link com `matt_tool`; o desafio anti-robô é detectado e exibido como mensagem própria, sem banner de 403.
 - [x] **Busca pública leve (`MLBPublicSearch`):** antes da vitrine, `sites/MLB/search` é chamado sem token (mapeia `id`/`title`/`price`/`thumbnail`/`permalink`); 403 cai na vitrine e depois na mensagem amigável. `matt_tool=97303724` vem da conta ativa `AchadinhoCerto`; reautorização OAuth de 14/10 20:53 confirmada no log (`oauth/token` 200, tokens gravados). Em 17/10 a API anônima ainda respondia 403 e o `suggest` 404.
-- [x] **Tokens de marketplace com Data Protection (`MarketplaceTokensDataProtection`):** `AccessToken`, `RefreshToken` e `AppSecret` de `MarketplaceAccounts` passam por `ValueConverter` com `ISecurityEncryptionService` (Singleton, `IDataProtector` da aplicação `TecFlow`, prefixo `DP1:`); chaves em `C:\ProgramData\TecFlow\DataProtectionKeys` com DPAPI e ACL restrita; leitura tolerante a `ENC1:` (AES legado) e texto puro, com migração preguiçosa a cada regravação.
+- [x] **Tokens de marketplace com Data Protection (`MarketplaceTokensDataProtection`):** `AccessToken`, `RefreshToken` e `AppSecret` de `MarketplaceAccounts` passam por `ValueConverter` com `ISecurityEncryptionService` (Singleton, `IDataProtector` da aplicação `TecFlow`, prefixo `DP1:`); chaves em `C:\ProgramData\TecFlow\DataProtectionKeys` (hoje `C:\inetpub\ofertio\api\App_Data\OfertioDataProtectionKeys`) com DPAPI e ACL restrita; leitura tolerante a `ENC1:` (AES legado) e texto puro, com migração preguiçosa a cada regravação.
 - [x] **Fotos do Telegram gravadas com confirmação em disco (`TelegramMediaPersistenceFix`):** WebP gravado via `.tmp` + flush físico + move em `WebRootPath/uploads/products/{tenant}/{yyyy}/{MM}` (segmentos invariantes, pasta criada automaticamente); URL só vai ao banco com `File.Exists`, filtrada por `UserId` + `GroupKey` (o `UPDATE` só por `ExternalMessageId` podia atingir outro grupo); falhas de download/conversão em `LogWarning` deixam `ProductImageUrl` nulo. Causa raiz das imagens quebradas: a limpeza do deploy apagava `wwwroot\uploads` (198 de 300 mensagens recentes sem arquivo); a homologação passou a preservar a pasta.
-- [x] **Uploads fora da pasta publicada (`ExternalUploadsFolder`):** mídias gravadas em `C:\inetpub\tecflow\uploads\products\{tenant}\{yyyy}\{MM}` via `UploadStorage:RootPath` / `IUploadStorage` (fallback `{WebRootPath}/uploads`), servidas em `/uploads` por `PhysicalFileProvider` na API e na WebUi; as 581 fotos existentes foram copiadas para a pasta externa e a limpeza literal da pasta da API no deploy voltou a ser segura.
+- [x] **Uploads fora da pasta publicada (`ExternalUploadsFolder`):** mídias gravadas em `C:\inetpub\ofertio\uploads\products\{tenant}\{yyyy}\{MM}` via `UploadStorage:RootPath` / `IUploadStorage` (fallback `{WebRootPath}/uploads`), servidas em `/uploads` por `PhysicalFileProvider` na API e na WebUi; as 581 fotos existentes foram copiadas para a pasta externa e a limpeza literal da pasta da API no deploy voltou a ser segura.
 - [x] **Filtros de integridade e revalidação de ofertas (`OfferIntegrityFilters`):** links de vitrine (`/social/`, `/lists/`, `/perfil/`, `/perfil-vendedor/`) rejeitados na entrada e marcados `VitrineGenerica` na verificação; preço abaixo de R$ 5,00 em produtos de alto valor vira `PrecoSuspeito` (sem clonagem); "Verificar anúncio" faz o GET da página antes das APIs e inativa na hora anúncios encerrados/pausados (`Inativo`); `OfferRevalidationWorker` revalida a cada 2h (`OfferRevalidation:IntervalHours`) as ofertas ativas dos últimos 7 dias.
 - [x] **"Abrir Link Original" com afiliado (`AffiliateOpenLink`):** o card de Grupos Monitorados abre em nova aba o `AffiliateUrl` calculado na API por `AffiliateUrlBuilderService`; no Mercado Livre o `matt_tool` (ex.: `97303724`) vem da conta ML ativa do tenant ou de `Integrations:MercadoLivre:DefaultAffiliateTrackingId`, substituindo o de terceiros e preservando os demais parâmetros.
 - [x] **Preço à vista, divergência e esgotado na Shopee (`ShopeePriceIntegrity`):** o preço das mensagens ignora parcelas (`12x R$ 604,92`) e o "De" de "De/Por", ficando com o valor à vista (`R$ 6.678,28`); o preço ativo da página da Shopee (meta/JSON-LD) corrige no banco divergências de 30% ou mais com log; "Produto esgotado", `is_sold_out` ou `item_status: sold_out` deixam a oferta `Esgotado` e sem clonagem.
@@ -917,6 +917,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Remoção imediata de esgotados (`SoldOutFeedRemoval`):** a verificação do Mercado Livre detecta anúncio pausado, sem estoque, reduzido a "Produtos relacionados" ou redirecionado para a busca e marca `IsAvailable = false` (`Inativo`/`Esgotado`); o botão Verificar tira o card da tela na hora com o toast "Produto esgotado. Oferta removida do feed." e o feed só lista produtos com status da lista branca.
 - [x] **Filtro por características (`ProductTagsFilter`):** tabela `ProductTags` (seed Gamer, Eletrônicos, Informática, Casa & Cozinha, Smartphones, Moda/Beleza) ligada às ofertas por `OfferTags`; combo "Todas as Características" ao lado de "Ocultos / Descartados" filtra com `Tags.Any(t => t.Id == selectedTagId)`, e as ofertas novas e legadas são classificadas por palavras-chave.
 - [x] **Preço total da Amazon (`AmazonUnitPriceFix`):** o parser ignora valores por unidade ("R$ 16,60 / unidade", "por frasco") e, nas páginas da Amazon, lê o total da buy box (`apexPriceToPay` / `priceToPay` / `corePrice_feature_div`, fallback `og:price:amount`); o Verificar atualiza o card na hora com o toast "Preço atualizado para R$ X".
+- [x] **Migração de marca (`RebrandOfertio`):** solução, projetos, namespaces, interface e documentação passam de TecFlow para Ofertio; banco SQL Server renomeado para `Ofertio`, IIS em `C:\inetpub\ofertio` com pools/sites `Ofertio*`, uploads de produção e dev separados e chaves do Data Protection em `App_Data` preservado no deploy; identificadores gravados (Data Protection, migração inicial, instâncias do WhatsApp, IDs de afiliado) mantidos para não perder dados nem tokens.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)
@@ -946,7 +947,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ### 🔐 Fase 36: Controle de Permissões e Gestão de Operadores Master (`MasterAdminRBAC`)
 
 - [x] **36.1. Cadastro e Gestão de Operadores Internos (`MasterUsersManagement`):**
-  - Tela dedicada para criação, edição e inativação de contas administradoras do TecFlow com controle de credenciais via ASP.NET Core Identity.
+  - Tela dedicada para criação, edição e inativação de contas administradoras do Ofertio com controle de credenciais via ASP.NET Core Identity.
 - [x] **36.2. Matriz de Permissões por Papel (`RBACMatrix`):**
   - Atribuição granular de papéis (`SuperAdmin`, `SuporteTecnico`, `FinanceiroSaaS`), restringindo quem pode alterar chaves globais, alterar planos ou alternar para o modo de emulação.
 - [x] **36.3. Trilha de Auditoria do Master (`MasterAuditTrail`):**
@@ -1007,7 +1008,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **41.2. Disparo de Notificações Internas por Segmento (`TargetedNotifications`):**
   - Envio de alertas direcionados dentro da plataforma para grupos específicos de tenants (ex.: apenas para inadimplentes ou apenas para assinantes do Plano Starter).
 - [x] **41.3. Central de Changelog e Novidades do Produto (`ProductChangelog`):**
-  - Módulo para publicação de atualizações do sistema (*What's New*), permitindo que os clientes leiam as melhorias recém-lançadas no TecFlow.
+  - Módulo para publicação de atualizações do sistema (*What's New*), permitindo que os clientes leiam as melhorias recém-lançadas no Ofertio.
 
 ## 👑 Módulo Backoffice Master: Isolamento de Rotas, Contas de Desenvolvedor e Menu por Plano (Fases 42 a 44)
 
@@ -1028,7 +1029,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ### 🔑 Fase 43: Gerenciamento Master de Contas de Desenvolvedor e Testes (`MasterMarketplaceAccounts`)
 
 - [x] **43.1. Tela Específica de Infraestrutura `/master/marketplace-accounts`:**
-  - Desenvolvimento do painel Master para gerenciamento das **Contas de Desenvolvedor / App Credentials** (Mercado Livre AppId/SecretKey, Shopee AppKey/AppSecret, Amazon PA-API Keys) e contas de teste internas da empresa TecFlow.
+  - Desenvolvimento do painel Master para gerenciamento das **Contas de Desenvolvedor / App Credentials** (Mercado Livre AppId/SecretKey, Shopee AppKey/AppSecret, Amazon PA-API Keys) e contas de teste internas da empresa Ofertio.
 - [x] **43.2. Segregação Total de Escopo (`DeveloperAccountIsolation`):**
   - Isolamento do serviço para garantir que as credenciais globais e contas de homologação cadastradas no `/master/marketplace-accounts` fiquem armazenadas em tabela/escopo de sistema (`SystemDeveloperAccounts`), sem interferir nas contas de afiliados do cliente (`/marketplace-accounts`).
 - [x] **43.3. Teste de Conectividade e Saúde das APIs Globais:**
@@ -1041,7 +1042,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **44.1. Persistência de Menus no Banco de Dados (`MenuItems` & `PlanMenuPermissions`):**
   - Criação das tabelas `MenuItems` (cadastrando toda a árvore de menus com `Id`, `Title`, `Route`, `Icon`, `ParentId`, `Order`) e `PlanMenuPermissions` (mapeando a relação entre `PlanId` e `MenuItemId` com `IsVisible`).
 - [x] **44.2. Interface Master de Controle de Árvore `/master/menu-permissions`:**
-  - Desenvolvimento da tela Master exibindo a árvore hierárquica completa do menu do TecFlow em formato de matriz/tabela com colunas para cada plano (*Starter, Pro, Agency, Enterprise*).
+  - Desenvolvimento da tela Master exibindo a árvore hierárquica completa do menu do Ofertio em formato de matriz/tabela com colunas para cada plano (*Starter, Pro, Agency, Enterprise*).
   - Toggles/Checkboxes dinâmicos para você marcar ou desmarcar visualmente quais itens do menu cada plano enxergará na plataforma.
 - [x] **44.3. Renderização Dinâmica da Sidebar do Cliente (`DynamicNavMenu`):**
   - Refatoração do `NavMenu.razor` para carregar a estrutura de navegação diretamente da tabela de permissões com base no plano ativo do tenant logado, omitindo automaticamente rotas não contratadas ou indisponíveis.
@@ -1051,7 +1052,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 ### 🎨 Fase 45: Navegação, Usabilidade e Paleta de Cores (Master × Cliente)
 
 - [x] **45.1. Reset automático de scroll na navegação Blazor:**
-  - Componente `NavigationScrollReset` (ouvinte de `NavigationManager.LocationChanged` + JSInterop `tecFlowAppInterop.resetScroll`) nos layouts `MainLayout` e `MasterMainLayout`, retornando ao topo da janela e do container `.main-content` a cada troca de rota (âncoras `#` preservadas).
+  - Componente `NavigationScrollReset` (ouvinte de `NavigationManager.LocationChanged` + JSInterop `ofertioAppInterop.resetScroll`) nos layouts `MainLayout` e `MasterMainLayout`, retornando ao topo da janela e do container `.main-content` a cada troca de rota (âncoras `#` preservadas).
 - [x] **45.2. Hierarquia visual da Sidebar do cliente:**
   - Categorias (MENSAGERIA & BOTS, CANAIS, INTEGRAÇÕES) como cabeçalhos em caixa alta e cinza suave; Menus Pai com ícone destacado e texto em negrito; Submenus com recuo de `1.5rem`, linha guia e ícone menor.
   - "Minhas Lojas / Integrações" (`/marketplace-accounts`) como menu pai fixo da categoria Integrações, sempre visível conforme a matriz de permissão por plano.

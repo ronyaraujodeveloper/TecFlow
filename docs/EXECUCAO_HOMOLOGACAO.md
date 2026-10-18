@@ -14,17 +14,17 @@ $WarningPreference = 'SilentlyContinue';
 .\NormalizarEncodingPrecoce.ps1;
 ```
 
-1.2. Atualizar Migrations do Banco de Dados (SQL Server — `AutomacaoSociais`)
+1.2. Atualizar Migrations do Banco de Dados (SQL Server — `Ofertio`)
 
-O IIS (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`) e o `appsettings.Homologacao.json` usam **SQL Server** `localhost\SQLEXPRESS` / `AutomacaoSociais` (`Database:Provider=SqlServer`). Cadastro de lojas e conversão de links gravam nesse banco. O runtime garante um registro em `Tenants` (`Tenant Principal`) antes de inserir `MarketplaceAccounts` (FK `FK_MarketplaceAccounts_Tenants_TenantId`).
+O IIS (`web.config` → `ASPNETCORE_ENVIRONMENT=Homologacao`) e o `appsettings.Homologacao.json` usam **SQL Server** `localhost\SQLEXPRESS` / `Ofertio` (`Database:Provider=SqlServer`). Cadastro de lojas e conversão de links gravam nesse banco. O runtime garante um registro em `Tenants` (`Tenant Principal`) antes de inserir `MarketplaceAccounts` (FK `FK_MarketplaceAccounts_Tenants_TenantId`).
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
-dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 $env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
-dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 ```
-Migrations SQL Server: `TecFlow.Data` + `AppDbContext`. Não usar `TecFlow.Infrastructure` (PostgreSQL) para o fluxo de homologação IIS.
+Migrations SQL Server: `Ofertio.Data` + `AppDbContext`. Não usar `Ofertio.Infrastructure` (PostgreSQL) para o fluxo de homologação IIS.
 
 1.3. Recompilar a Solution (Clean e Build em Release)
 ```powershell
@@ -36,35 +36,36 @@ dotnet build -c Release
 2.1. Parar os Pools do IIS (Libera as DLLs travadas em memória para o Publish)
 ```powershell
 Import-Module WebAdministration
-Stop-WebAppPool -Name "TecFlowApiPool"
-Stop-WebAppPool -Name "TecFlowWebUiPool"
+Stop-WebAppPool -Name "OfertioApiPool"
+Stop-WebAppPool -Name "OfertioWebUiPool"
 Start-Sleep -Seconds 2
 ```
 
-2.2. Limpar Resíduos Físicos das Pastas do IIS
+2.2. Limpar Resíduos Físicos das Pastas do IIS (preservando `api\App_Data`, onde ficam as chaves do Data Protection)
 ```powershell
-Remove-Item -Path "C:\inetpub\tecflow\api\*" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "C:\inetpub\tecflow\webui\*" -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path "C:\inetpub\ofertio\api" -Force | Where-Object { $_.Name -ne 'App_Data' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\inetpub\ofertio\webui\*" -Recurse -Force -ErrorAction SilentlyContinue
 ```
+> ⚠️ Nunca apague `C:\inetpub\ofertio\api\App_Data\OfertioDataProtectionKeys`: sem essas chaves os tokens do Mercado Livre gravados com `DP1:` ficam ilegíveis.
 
 2.3. Gerar Novo Publish das Aplicações em Release nas pastas do IIS
 ```powershell
-dotnet publish .\TecFlow.API\TecFlow.API.csproj -c Release -o C:\inetpub\tecflow\api
-dotnet publish .\TecFlow.WebUi\TecFlow.WebUi.csproj -c Release -o C:\inetpub\tecflow\webui
+dotnet publish .\Ofertio.API\Ofertio.API.csproj -c Release -o C:\inetpub\ofertio\api
+dotnet publish .\Ofertio.WebUi\Ofertio.WebUi.csproj -c Release -o C:\inetpub\ofertio\webui
 ```
 
 2.3.1. Reaplicar migrations no SQL Server do IIS após o publish
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Homologacao'
-dotnet ef database update --project .\TecFlow.Data\TecFlow.Data.csproj --startup-project .\TecFlow.API\TecFlow.API.csproj --context AppDbContext
+dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 ```
-Garante que `MarketplaceAccounts`, `ShortAffiliateLinks` e `ShortAffiliateLinkAccounts` existam em `AutomacaoSociais` (SQLEXPRESS) usado pelo pool `TecFlowApiPool`.
+Garante que `MarketplaceAccounts`, `ShortAffiliateLinks` e `ShortAffiliateLinkAccounts` existam em `Ofertio` (SQLEXPRESS) usado pelo pool `OfertioApiPool`.
 
 2.4. Iniciar os Pools do IIS e Reciclar o Servidor
 ```powershell
 Import-Module WebAdministration
-Start-WebAppPool -Name "TecFlowApiPool"
-Start-WebAppPool -Name "TecFlowWebUiPool"
+Start-WebAppPool -Name "OfertioApiPool"
+Start-WebAppPool -Name "OfertioWebUiPool"
 iisreset
 ```
 

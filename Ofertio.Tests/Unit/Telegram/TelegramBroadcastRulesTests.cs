@@ -1,0 +1,41 @@
+﻿using Ofertio.Business.Service.Telegram;
+using Ofertio.Core.Entities;
+
+namespace Ofertio.Tests.Unit.Telegram;
+
+public class TelegramBroadcastRulesTests
+{
+    [Fact]
+    public void ApplyCommissionTag_ShouldReplacePlaceholder()
+    {
+        var text = TelegramBroadcastRules.ApplyCommissionTag(
+            "Oferta [LINK_COMISSAO]",
+            "https://ofertio.local/x");
+        Assert.Equal("Oferta https://ofertio.local/x", text);
+    }
+
+    [Fact]
+    public void ResolveFriendlyName_ShouldUseTitleOrUntitled()
+    {
+        Assert.Equal("achadinhos", TelegramBroadcastRules.ResolveFriendlyName("achadinhos", "-100707440297"));
+        Assert.Equal(TelegramBroadcastRules.UntitledGroupName, TelegramBroadcastRules.ResolveFriendlyName("  ", "-100707440297"));
+    }
+
+    [Fact]
+    public void ResolveChatIds_ShouldPreferJsonAndFallbackToLegacy()
+    {
+        var fromJson = TelegramBroadcastRules.ResolveChatIds("""["-1001","-1002"]""", "-1009");
+        Assert.Equal(["-1001", "-1002"], fromJson);
+
+        var legacy = TelegramBroadcastRules.ResolveChatIds("[]", "-100707440297");
+        Assert.Equal(["-100707440297"], legacy);
+    }
+
+    [Fact]
+    public void ToUiStatus_ShouldMapPending()
+    {
+        Assert.Equal("Agendada", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Pending));
+        Assert.Equal("Concluída", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Completed));
+        Assert.Equal("Pausada", TelegramBroadcastRules.ToUiStatus(TelegramBroadcastStatuses.Paused));
+    }
+}

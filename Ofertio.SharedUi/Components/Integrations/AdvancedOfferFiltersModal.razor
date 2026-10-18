@@ -1,0 +1,137 @@
+﻿@using Ofertio.SharedUi.Models
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block conexoes-qr-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="advanced-offer-filters-title">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content border-0 shadow" @onsubmit="ApplyAsync" @onsubmit:preventDefault="true">
+                <div class="modal-header border-0 pb-2">
+                    <h2 class="modal-title h6 fw-bold mb-0" id="advanced-offer-filters-title">
+                        <i class="bi bi-sliders" aria-hidden="true"></i>
+                        Filtros avançados
+                    </h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body pt-0 d-flex flex-column gap-3">
+                    <div>
+                        <span class="form-label small fw-semibold d-block mb-1">Período</span>
+                        <div class="btn-group btn-group-sm w-100" role="group" aria-label="Filtro de período">
+                            @foreach (var (hours, label) in PeriodOptions)
+                            {
+                                <button type="button"
+                                        class="btn @(_hours == hours ? "btn-primary" : "btn-outline-secondary")"
+                                        @onclick="() => _hours = hours">
+                                    @label
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1" for="advanced-filter-min">Preço mín.</label>
+                            <input id="advanced-filter-min" class="form-control form-control-sm" type="number" step="0.01" min="0" placeholder="R$" @bind="_minPrice" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1" for="advanced-filter-max">Preço máx.</label>
+                            <input id="advanced-filter-max" class="form-control form-control-sm" type="number" step="0.01" min="0" placeholder="R$" @bind="_maxPrice" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-semibold mb-1" for="advanced-filter-store">Loja</label>
+                        <input id="advanced-filter-store" class="form-control form-control-sm" placeholder="Shopee, Mercado Livre..." @bind="_store" />
+                    </div>
+                    @if (PageSizeOptions.Count > 0)
+                    {
+                        <div>
+                            <label class="form-label small fw-semibold mb-1" for="advanced-filter-page-size">Ofertas por página</label>
+                            <select id="advanced-filter-page-size" class="form-select form-select-sm" @bind="_pageSize">
+                                @foreach (var size in PageSizeOptions)
+                                {
+                                    <option value="@size" selected="@(size == _pageSize)">@size</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ResetAsync">Limpar filtros</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-light" @onclick="CloseAsync">Cancelar</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseAsync"></div>
+}
+
+@code {
+    private static readonly (int Hours, string Label)[] PeriodOptions =
+    [
+        (10, "10 horas"),
+        (24, "24 horas"),
+        (48, "2 dias")
+    ];
+
+    private int _hours;
+    private decimal? _minPrice;
+    private decimal? _maxPrice;
+    private string? _store;
+    private int _pageSize;
+    private bool _wasOpen;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter, EditorRequired]
+    public MonitoredOfferFilters Value { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<int> PageSizeOptions { get; set; } = [];
+
+    [Parameter]
+    public int DefaultPageSize { get; set; }
+
+    [Parameter]
+    public EventCallback<MonitoredOfferFilters> OnApply { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _hours = Value.Hours;
+            _minPrice = Value.MinPrice;
+            _maxPrice = Value.MaxPrice;
+            _store = Value.Store;
+            _pageSize = PageSizeOptions.Contains(Value.PageSize) ? Value.PageSize : DefaultPageSize;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    private Task ApplyAsync() =>
+        OnApply.InvokeAsync(new MonitoredOfferFilters(
+            _hours,
+            _minPrice is > 0 ? _minPrice : null,
+            _maxPrice is > 0 ? _maxPrice : null,
+            string.IsNullOrWhiteSpace(_store) ? null : _store.Trim(),
+            _pageSize));
+
+    private Task ResetAsync() =>
+        OnApply.InvokeAsync(new MonitoredOfferFilters(
+            MonitoredOfferFilters.DefaultHours,
+            null,
+            null,
+            null,
+            DefaultPageSize));
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+}

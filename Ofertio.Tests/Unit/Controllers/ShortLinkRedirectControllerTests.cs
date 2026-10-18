@@ -1,0 +1,98 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using Ofertio.API.Controllers;
+using Ofertio.Business.Interfaces.Repositories;
+using Ofertio.Business.Interfaces.Services;
+using Ofertio.Core.Entities;
+using Ofertio.Core.Enums;
+
+namespace Ofertio.Tests.Unit.Controllers;
+
+public class ShortLinkRedirectControllerTests
+{
+    [Fact]
+    public async Task RedirectAsync_ShouldReturnNotFound_WhenCodeIsInvalid()
+    {
+        var controller = CreateController(new Mock<IShortAffiliateLinkRepository>().Object, new Mock<ILinkClickTelemetryService>().Object);
+
+        var result = await controller.RedirectAsync("loja", "ab", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task RedirectAsync_ShouldEnqueueTelemetryAndRedirect()
+    {
+        var linkId = Guid.NewGuid();
+        var links = new Mock<IShortAffiliateLinkRepository>();
+        links.Setup(s => s.GetByShortCodeAsync("abc1234", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShortAffiliateLink
+            {
+                AffiliateLinkId = linkId,
+                ShortCode = "abc1234",
+                DestinationUrl = "https://shopee.com.br/produto",
+                OriginalUrl = "https://shopee.com.br/produto",
+                PlatformType = MarketplaceType.Shopee
+            });
+
+        var telemetry = new Mock<ILinkClickTelemetryService>();
+        var controller = CreateController(links.Object, telemetry.Object);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var result = await controller.RedirectAsync("AchadinhosDeAaz", "ABC1234", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("https://shopee.com.br/produto", redirect.Url);
+        telemetry.Verify(
+            s => s.EnqueueClickLog(
+                linkId,
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RedirectLegacyAsync_ShouldResolveByCodeWithoutStoreSlug()
+    {
+        var linkId = Guid.NewGuid();
+        var links = new Mock<IShortAffiliateLinkRepository>();
+        links.Setup(s => s.GetByShortCodeAsync("abc1234", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShortAffiliateLink
+            {
+                AffiliateLinkId = linkId,
+                ShortCode = "abc1234",
+                DestinationUrl = "https://shopee.com.br/produto",
+                OriginalUrl = "https://shopee.com.br/produto",
+                PlatformType = MarketplaceType.Shopee
+            });
+
+        var telemetry = new Mock<ILinkClickTelemetryService>();
+        var controller = CreateController(links.Object, telemetry.Object);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var result = await controller.RedirectLegacyAsync("abc1234", CancellationToken.None);
+
+        Assert.IsType<RedirectResult>(result);
+        telemetry.Verify(
+            s => s.EnqueueClickLog(
+                linkId,
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>()),
+            Times.Once);
+    }
+
+    private static ShortLinkRedirectController CreateController(
+        IShortAffiliateLinkRepository links,
+        ILinkClickTelemetryService telemetry) =>
+        new(links, telemetry, NullLogger<ShortLinkRedirectController>.Instance);
+}

@@ -1,0 +1,124 @@
+﻿using Ofertio.Core.Enums;
+using Ofertio.SharedUi.Services.Integrations;
+
+namespace Ofertio.Tests.Unit.SharedUi;
+
+public class ConnectStoreManualLinkFormTests
+{
+    [Fact]
+    public void TryValidate_ShouldAcceptHomologPayload()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            " code_teste ",
+            "123456",
+            out var code,
+            out var shopId,
+            out var error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("code_teste", code);
+        Assert.Equal("123456", shopId);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldAcceptShopeeShopIdEvenWhenAlphanumeric()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            "123456",
+            "code_teste",
+            out var code,
+            out var shopId,
+            out var error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("123456", code);
+        Assert.Equal("code_teste", shopId);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldDefaultShopIdInHomolog_WhenParseFails()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            "code_teste",
+            "code_teste",
+            out var code,
+            out var shopId,
+            out var error,
+            useHomologFallbacks: true);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("code_teste", shopId);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldAcceptShopeeFriendlyNameWithoutCredentials()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.Shopee,
+            "Loja Homolog",
+            authorizationCode: null,
+            shopId: null,
+            out _,
+            out _,
+            out var error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void TryValidate_ShouldRejectBlankFields_WhenTikTokShop()
+    {
+        var ok = ConnectStoreManualLinkForm.TryValidate(
+            MarketplaceType.TikTokShop,
+            "Loja",
+            "",
+            null,
+            out _,
+            out _,
+            out var error);
+
+        Assert.False(ok);
+        Assert.Contains("authorization code", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldReadMattToolFromAffiliateLink()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(
+            "https://www.mercadolivre.com.br/p/MLB123?matt_tool=12345678&matt_word=loja",
+            out var trackingId);
+
+        Assert.True(ok);
+        Assert.Equal("12345678", trackingId);
+    }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldKeepDigitsOnly()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(" 12345678 ", out var trackingId);
+
+        Assert.True(ok);
+        Assert.Equal("12345678", trackingId);
+    }
+
+    [Fact]
+    public void TryExtractMercadoLivreTrackingId_ShouldFailWhenLinkHasNoNumericId()
+    {
+        var ok = ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(
+            "https://meli.la/abc",
+            out var trackingId);
+
+        Assert.False(ok);
+        Assert.Equal(string.Empty, trackingId);
+    }
+}

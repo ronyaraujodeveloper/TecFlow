@@ -2,7 +2,7 @@
 
 [« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
 
-> **Raiz da solution:** `c:\Programacao\Tecso.AutomacaoCusor\` (`TecFlow.sln`).  
+> **Raiz da solution:** `c:\Programacao\Tecso.AutomacaoCusor\` (`Ofertio.sln`).  
 > **Painel de controle:** [README.md](../README.md) · **Varredura física:** 3 de junho de 2026  
 > **Divergências / limpeza:** [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)
 
@@ -10,10 +10,10 @@
 
 ## 🔌 INTEGRAÇÕES EXTERNAS — TikTok Shop & Shopee (Fase 3)
 
-> **Estratégia de acoplamento (jun/2026):** contratos e opções de configuração ficam em **`TecFlow.Business/Integrations/`**; implementações HTTP (HttpClient nomeado, Polly, logging handler) ficam em **`TecFlow.Infrastructure.Services/Integrations/`**. Os serviços legados em `Business/Interfaces/Services/` (`ITikTokShopApi`, `IShopeeApi`) serão gradualmente adaptados para delegar aos novos *Integration Clients* nas fases 3.2–3.4.
+> **Estratégia de acoplamento (jun/2026):** contratos e opções de configuração ficam em **`Ofertio.Business/Integrations/`**; implementações HTTP (HttpClient nomeado, Polly, logging handler) ficam em **`Ofertio.Infrastructure.Services/Integrations/`**. Os serviços legados em `Business/Interfaces/Services/` (`ITikTokShopApi`, `IShopeeApi`) serão gradualmente adaptados para delegar aos novos *Integration Clients* nas fases 3.2–3.4.
 
 ```
-TecFlow.Business/Integrations/
+Ofertio.Business/Integrations/
 ├── Common/                          # Opções compartilhadas, nomes de HttpClient
 ├── TikTokShop/                      # ITikTokShopIntegrationClient + Options (AppKey/AppSecret)
 └── Shopee/                          # IShopeeIntegrationClient + Options + sandbox (tecflow_sandbox_subid)
@@ -26,7 +26,7 @@ flowchart LR
   AFF[ShopeeAffiliateLinkClient]
   BLD[ShopeeCommissionUrlBuilder]
   SHORT[ShortAffiliateLink]
-  SQL[(SQL Server AutomacaoSociais)]
+  SQL[(SQL Server Ofertio)]
   LOG[LinkClickLog]
 
   STR -->|shopId/itemId| UNI[universal-link/product]
@@ -104,7 +104,7 @@ flowchart LR
   API --> STR
   MINHAS[MinhasLojas.razor] -->|GET/POST marketplace-auth| ACC[MarketplaceAccountsController]
   ACC --> LOJAS
-  PANEL[LinkGeneratorResultPanel] -->|tecFlowClipboard.copyText| CLIP[tecflow-clipboard.js]
+  PANEL[LinkGeneratorResultPanel] -->|ofertioClipboard.copyText| CLIP[ofertio-clipboard.js]
   PANEL -->|WhatsApp / Telegram encoded URI| SHARE[api.whatsapp.com / t.me]
   NAV[NavMenu InteractiveServer] -->|Próximos accordion isProximosOpen| DASH[Dashboard.razor]
   NAV -->|Integrações Gerador de Links| GER[GeradorLinks.razor]
@@ -159,17 +159,17 @@ flowchart LR
   GMUI[GruposMonitorados] -->|POST sync HTTP 202 EnqueueCatchUp| USERBOT
   GMUI -->|GET /uploads PhysicalFileProvider UploadStorage:RootPath| MEDIA
   APIUP[API Program.cs UseStaticFiles /uploads] -->|PhysicalFileProvider| MEDIA
-  UPS[IUploadStorage UploadsRoot MediaRoot] -->|C:\inetpub\tecflow\uploads| MEDIA
+  UPS[IUploadStorage UploadsRoot MediaRoot] -->|C:\inetpub\ofertio\uploads| MEDIA
   GMUI -->|GET status GetSyncStatus toast| ST
   USERBOT -->|GetHistory chats DialogsSlice + PersistAsync| GCAP
   USERBOT -->|await DownloadMediaAsync + IOfferProductMediaStore| OPT[ImageOptimizationService]
-  OPT -->|1080px WebP EXIF strip canvas neutro .tmp + Flush + Move| MEDIA[C:\inetpub\tecflow\uploads\products\tenant\yyyy\MM]
+  OPT -->|1080px WebP EXIF strip canvas neutro .tmp + Flush + Move| MEDIA[C:\inetpub\ofertio\uploads\products\tenant\yyyy\MM]
   OPT -->|File.Exists confirmado| STORE[OfferProductMediaStore URL ou null + LogWarning]
   USERBOT -->|UpdateImageUrlAsync UserId GroupKey ExternalMessageId so com arquivo| SQL
   USERBOT -->|download falhou ClearMissingImageUrlAsync ProductImageUrl null| SQL
   USERBOT -->|BackfillMediaPaths {ExternalMessageId}.webp| SQL
   GMUI -->|GET ListAsync DeduplicateOffers Id msg URL| SQL
-  APIIIS[TecFlowApiPool Integrated Security] -->|login Windows AutomacaoSociais| SQL
+  APIIIS[OfertioApiPool Integrated Security] -->|login Windows Ofertio| SQL
   USERBOT -->|Backfill ProductImageUrl nulo ou File.Exists falso| MEDIA
   PURGE[ProductImageCleanupWorker] -->|7 dias File.Delete + ProductImageUrl null| MEDIA
   DATAPURGE[DataPurgeWorker 03:00 UTC] -->|PurgeOldMediaFiles jpg/png/webp 7d| MEDIA
@@ -207,6 +207,9 @@ flowchart LR
   MONSVC -->|Tags.Any t.Id == selectedTagId + lista ProductTags ativas| SQL
   VAL -->|buy box apexPriceToPay/priceToPay/corePrice ignora / unidade + fallback og:price| AMZRULE[AmazonProductPageRules]
   GMUI -->|Verificar PriceUpdated + toast Preço atualizado para R$ X| MONSVC
+  IISAPI[IIS Ofertio.API OfertioApiPool] -->|App_Data/OfertioDataProtectionKeys DP1 app legado TecFlow| SQL
+  IISAPI -->|C:\inetpub\ofertio\uploads| MEDIA
+  SQL -->|banco Ofertio ex-AutomacaoSociais + SystemSettings Ofertio:ShortLinks| IISAPI
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL
@@ -224,7 +227,7 @@ flowchart LR
   COUPRECL -->|IsCouponAnnouncement / Classify| COUPRULE
   COUPRECL -->|Type=Coupon| SQL
   RADARENG[Mining / Arbitragem / Trending / Catálogo] -->|Type == Product| SQL
-  USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
+  USERBOT -->|session user-{id}.session| SESS[ProgramData/Ofertio/telegram-sessions]
   GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
   GMUI -->|POST midia/priorizar IDs visiveis| USERBOT
   MGAPI -->|lojas ativas + HasDirectProductUrl + IsIgnored + IsAvailable| GCAPSVC[GroupCapturedMessagesService]
@@ -289,18 +292,18 @@ flowchart LR
   WABS -->|WhatsAppGroups WhatsAppBroadcastCampaigns| SQL
 ```
 
-TecFlow.Infrastructure.Services/Integrations/
+Ofertio.Infrastructure.Services/Integrations/
 ├── Common/                          # ExternalApiLoggingHandler, políticas Polly
 ├── TikTokShop/                      # TikTokShopIntegrationClient
 ├── Shopee/                          # ShopeeIntegrationClient
-└── IntegrationHttpClientRegistrationExtensions.cs  # DI: AddTecFlowIntegrationHttpClients()
+└── IntegrationHttpClientRegistrationExtensions.cs  # DI: AddOfertioIntegrationHttpClients()
 ```
 
 ```mermaid
 flowchart LR
-  API[TecFlow.API / Orquestrador]
-  BUS[TecFlow.Business Integrations]
-  INFSVC[TecFlow.Infrastructure.Services Integrations]
+  API[Ofertio.API / Orquestrador]
+  BUS[Ofertio.Business Integrations]
+  INFSVC[Ofertio.Infrastructure.Services Integrations]
   TTS[TikTok Shop API]
   SHP[Shopee Open API]
 
@@ -318,7 +321,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant Lojista
-  participant API as TecFlow.API
+  participant API as Ofertio.API
   participant Auth as MarketplaceAuthService
   participant MP as TikTok/Shopee OAuth
   participant DB as MarketplaceTokens
@@ -362,12 +365,12 @@ sequenceDiagram
 ```
 
 ```
-TecFlow.Business/Integrations/
+Ofertio.Business/Integrations/
 ├── Catalog/                     # IMarketplaceProductService
 ├── Shopee/Payloads/             # get_item_list, get_item_base_info, get_model_list
 └── TikTokShop/Payloads/         # products/search
 
-TecFlow.Infrastructure.Services/Integrations/Catalog/
+Ofertio.Infrastructure.Services/Integrations/Catalog/
 ├── MarketplaceProductService.cs
 ├── MarketplaceProductMapper.cs
 └── MarketplaceProductRegistrationExtensions.cs
@@ -419,11 +422,11 @@ sequenceDiagram
 
 **Concorrência:** `StockConcurrencyGate` serializa por `marketplace:shopId:sku`; `AdjustStockAsync` usa transação no PostgreSQL.
 
-### Cobertura de testes automatizados (TecFlow.Tests)
+### Cobertura de testes automatizados (Ofertio.Tests)
 
 ```mermaid
 flowchart TB
-  TST[TecFlow.Tests xUnit + Moq]
+  TST[Ofertio.Tests xUnit + Moq]
   TST --> SIG[MarketplaceSignatureHelper / WebhookVerifier]
   TST --> AUTH[MarketplaceAuthService]
   TST --> CAT[MarketplaceProductService Convert]
@@ -432,11 +435,11 @@ flowchart TB
   TST --> HTTP[HttpService / AccountSecurity / vincular-manual / form loja]
   TST --> FLT[ProductFilter → ProductResponseDto]
 
-  SIG -.->|sem HTTP real| BUS[TecFlow.Business]
-  AUTH -.->|StubHttpMessageHandler| INFSVC[TecFlow.Infrastructure.Services]
+  SIG -.->|sem HTTP real| BUS[Ofertio.Business]
+  AUTH -.->|StubHttpMessageHandler| INFSVC[Ofertio.Infrastructure.Services]
   CAT --> INFSVC
   ORD --> INFSVC
-  API --> TecFlow.API
+  API --> Ofertio.API
 ```
 
 | Área Fase 3 | Classes de teste | Caminho feliz | Caminho triste |
@@ -458,16 +461,16 @@ flowchart TB
 Tecso.AutomacaoCusor/
 ├── README.md                    # Painel principal (regras + Fases 32–34)
 │   └── docs/HISTORICO_FASES_CONCLUIDAS.md  # Fases 1–31 concluídas
-├── TecFlow.sln
+├── Ofertio.sln
 ├── .gitignore
 ├── docs/                        # Documentação (este arquivo, LISTA, ANALISE, …)
 │
-├── TecFlow.Core/
+├── Ofertio.Core/
 │   ├── Entities/                # 11 entidades de domínio (Campaign, Product, …)
 │   ├── Enums/                   # MarketplaceType (Shopee, TikTokShop)
 │   └── Exceptions/              # BaseCustomException, NotFound, Unauthorized, ExceptionMiddleware
 │
-├── TecFlow.Business/
+├── Ofertio.Business/
 │   ├── Dto/                     # *Dto, *ResponseDto, ResponseDto, Auth/
 │   ├── Integrations/            # Contratos + Options + Auth (TikTokShop, Shopee)
 │   │   ├── Auth/                # IMarketplaceAuthService, IMarketplaceSignatureService
@@ -480,13 +483,13 @@ Tecso.AutomacaoCusor/
 │   │   └── Services/            # I*Service, ITikTok*, IShopee*, helpers legados
 │   ├── Pipelines/               # ColetaDados, GeracaoConteudo, Publicacao
 │   └── Service/
-│       ├── Application/         # *ApplicationService + AddTecFlowApplicationServices()
+│       ├── Application/         # *ApplicationService + AddOfertioApplicationServices()
 │       ├── CryptographyHelper.cs
 │       └── ValidationHelper.cs
 │
-├── TecFlow.Data/                # Migrations EF Core do SQL Server (`InitialSqlServerMigration`)
+├── Ofertio.Data/                # Migrations EF Core do SQL Server (`InitialSqlServerMigration`)
 │
-├── TecFlow.Database/
+├── Ofertio.Database/
 │   ├── AppDbContext.cs          # DbContext principal
 │   ├── Entity/                  # UserEntity
 │   ├── Filter/                  # *Filter + FilterQueryExtensions
@@ -495,10 +498,10 @@ Tecso.AutomacaoCusor/
 │   ├── Prompts/                 # GeracaoDescricao, Roteiro, Titulo
 │   └── Repositorio/             # AppDbContextFactory
 │
-├── TecFlow.Application/         # ⚠️ Residual
+├── Ofertio.Application/         # ⚠️ Residual
 │   └── Controller/              # AuthController.cs (stub — não é controller HTTP)
 │
-├── TecFlow.Infrastructure/
+├── Ofertio.Infrastructure/
 │   ├── API/                     # Shopee/, TikTok/ (+ Models/)
 │   ├── Configuration/           # AppConfiguration, SerilogLogger
 │   ├── Data/                    # DataService, Configurations/ (sem AppDbContext)
@@ -507,7 +510,7 @@ Tecso.AutomacaoCusor/
 │   ├── Security/                # JwtTokenService, UserContextProvider
 │   └── Services/Security/       # LegacyCredentialReEncrypt*
 │
-├── TecFlow.Infrastructure.Services/
+├── Ofertio.Infrastructure.Services/
 │   ├── Integrations/            # HttpClients, Polly, ExternalApiLoggingHandler — Fase 3.1+
 │   ├── Repositories/            # 6 repositórios (Affiliate, Campaign, Content, …)
 │   ├── Service/ExternalServices/ # Gemini, OpenAI, Shopee, TikTok*, Ranking, …
@@ -518,13 +521,13 @@ Tecso.AutomacaoCusor/
 │   ├── InfrastructureDataServiceRegistrationExtensions.cs
 │   └── DatabaseUrlConfiguration.cs
 │
-├── TecFlow.API/
+├── Ofertio.API/
 │   ├── Controllers/             # 11 controllers (+ WeatherForecast scaffold)
 │   ├── Program.cs               # DI: Core + Infra + Data + Application (Business)
 │   ├── Properties/
 │   └── (sem Middleware/*.cs — ExceptionMiddleware só no Core)
 │
-├── TecFlow.Orquestrador/
+├── Ofertio.Orquestrador/
 │   ├── Controllers/             # Auth, Campaigns, Dashboard, Metrics, UserAccounts
 │   ├── Extensions/              # DatabaseExtensions, DemoDataSeeder
 │   ├── Interfaces/
@@ -532,15 +535,15 @@ Tecso.AutomacaoCusor/
 │   ├── Program.cs               # DI alinhado à API
 │   └── OrquestradorPrincipal.cs
 │
-├── TecFlow.SharedUi/            # RCL UI compartilhada (Fase 4.2) — AppRoutes.razor (MAUI)
-├── TecFlow.WebUi/               # Host Blazor Server + OAuth (Fase 3/4) — Routes.razor único
-├── TecFlow.Mobile/              # MAUI Blazor Hybrid (Fase 4.2) — TFM Windows `net9.0-windows*` (sem iOS/Mac Catalyst)
+├── Ofertio.SharedUi/            # RCL UI compartilhada (Fase 4.2) — AppRoutes.razor (MAUI)
+├── Ofertio.WebUi/               # Host Blazor Server + OAuth (Fase 3/4) — Routes.razor único
+├── Ofertio.Mobile/              # MAUI Blazor Hybrid (Fase 4.2) — TFM Windows `net9.0-windows*` (sem iOS/Mac Catalyst)
 │   ├── Components/, Services/, Extensions/, Models/, wwwroot/, …
-│   └── → TecFlow.Business (*ResponseDto, DashboardSummaryDto)
+│   └── → Ofertio.Business (*ResponseDto, DashboardSummaryDto)
 │
-├── TecFlow.Worker/              # Program.cs, WorkerService.cs
-├── TecFlow.Tests/               # Mock/, Integration/, Unit/, Services/, …
-├── TecFlow.Util/                # Address/, Security/, Validation/
+├── Ofertio.Worker/              # Program.cs, WorkerService.cs
+├── Ofertio.Tests/               # Mock/, Integration/, Unit/, Services/, …
+├── Ofertio.Util/                # Address/, Security/, Validation/
 └── (externo na sln) ../Tecso.LerArquivos/
 ```
 
@@ -549,18 +552,18 @@ Tecso.AutomacaoCusor/
 ```mermaid
 flowchart TB
   subgraph hosts [Hosts]
-    API[TecFlow.API]
-    ORQ[TecFlow.Orquestrador]
-    WEBUI[TecFlow.WebUi]
-    WRK[TecFlow.Worker]
+    API[Ofertio.API]
+    ORQ[Ofertio.Orquestrador]
+    WEBUI[Ofertio.WebUi]
+    WRK[Ofertio.Worker]
   end
-  APP[TecFlow.Application]
-  BUS[TecFlow.Business]
-  DB[TecFlow.Database]
-  CORE[TecFlow.Core]
-  INF[TecFlow.Infrastructure]
-  INFSVC[TecFlow.Infrastructure.Services]
-  UTIL[TecFlow.Util]
+  APP[Ofertio.Application]
+  BUS[Ofertio.Business]
+  DB[Ofertio.Database]
+  CORE[Ofertio.Core]
+  INF[Ofertio.Infrastructure]
+  INFSVC[Ofertio.Infrastructure.Services]
+  UTIL[Ofertio.Util]
 
   API --> APP
   API --> BUS
@@ -596,13 +599,13 @@ flowchart TB
 
 | Item no diagrama antigo | Situação real (jun/2026) |
 |-------------------------|---------------------------|
-| `TecFlow.Core/Interfaces/` | **Removido** — contratos em `TecFlow.Business/Interfaces/` |
-| `TecFlow.Core/Dto`, `Prompts` | **Movidos** — Dtos em Business; Prompts em Database |
-| `TecFlow.Application/Services/*` | **Movidos** — `TecFlow.Business/Service/Application/` |
-| `Infrastructure/Data/AppDbContext` | **Movido** — `TecFlow.Database/AppDbContext.cs` |
+| `Ofertio.Core/Interfaces/` | **Removido** — contratos em `Ofertio.Business/Interfaces/` |
+| `Ofertio.Core/Dto`, `Prompts` | **Movidos** — Dtos em Business; Prompts em Database |
+| `Ofertio.Application/Services/*` | **Movidos** — `Ofertio.Business/Service/Application/` |
+| `Infrastructure/Data/AppDbContext` | **Movido** — `Ofertio.Database/AppDbContext.cs` |
 | `API/Middleware/ExceptionMiddleware` | **Removido da API** — único em `Core/Exceptions/` |
 | `Orquestrador` "Hello World" | **Obsoleto** — `Program.cs` completo com DI |
-| `TecFlow.Portal` / `TecFlow.Dashboard` | **Removidos** — UI canônica em `TecFlow.WebUi` |
+| `Ofertio.Portal` / `Ofertio.Dashboard` | **Removidos** — UI canônica em `Ofertio.WebUi` |
 | 4 arquivos `*RegistrationExtensions` | **Ainda separados** — consolidação pendente |
 | `Infrastructure.Services/Interfaces/*.cs` | **Fantasmas** — excluídos do compile, ainda no disco |
 
@@ -612,15 +615,15 @@ flowchart TB
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ TecFlow.API / TecFlow.Orquestrador (mesmo padrão de DI)           │
+│ Ofertio.API / Ofertio.Orquestrador (mesmo padrão de DI)           │
 └─────────────────────────────────────────────────────────────────┘
                               │
     ┌─────────────────────────────────────────────────────────────┐
     │ Program.cs                                                   │
-    │ ✓ AddTecFlowCoreServices()                                   │
-    │ ✓ AddTecFlowInfrastructureServices(config)                     │
-    │ ✓ AddTecFlowInfrastructureData(config)  → DbContext + repos  │
-    │ ✓ AddTecFlowApplicationServices()       → TecFlow.Business   │
+    │ ✓ AddOfertioCoreServices()                                   │
+    │ ✓ AddOfertioInfrastructureServices(config)                     │
+    │ ✓ AddOfertioInfrastructureData(config)  → DbContext + repos  │
+    │ ✓ AddOfertioApplicationServices()       → Ofertio.Business   │
     │ ✓ JWT (API) + Serilog + Controllers                        │
     │ ✓ UseMiddleware<ExceptionHandlingMiddleware>() → ProblemDetails   │
     └─────────────────────────────────────────────────────────────┘
@@ -643,22 +646,22 @@ flowchart TB
 │            EXTENSION METHODS (COMPARTILHADO)                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│ TecFlow.Infrastructure.Services/                                 │
+│ Ofertio.Infrastructure.Services/                                 │
 │   ServiceRegistrationExtensions.cs (ÚNICO)                      │
-│   └─ AddTecFlowInfrastructureServices(config) ✓✓                │
+│   └─ AddOfertioInfrastructureServices(config) ✓✓                │
 │      ├─ DbContext                                               │
 │      ├─ 6 Repositories                                          │
 │      ├─ 4 Business Services                                     │
 │      └─ 5 External API HttpClients                              │
 │                                                                  │
-│ TecFlow.Business/Service/Application/                             │
+│ Ofertio.Business/Service/Application/                             │
 │   ApplicationServiceCollectionExtensions.cs                     │
-│   └─ AddTecFlowApplicationServices() ✓ (já em uso na API/Orq)    │
+│   └─ AddOfertioApplicationServices() ✓ (já em uso na API/Orq)    │
 │      └─ 9 ApplicationServices                                   │
 │                                                                  │
-│ TecFlow.API/                                                      │
+│ Ofertio.API/                                                      │
 │   Authentication/ServiceRegistrationExtensions.cs               │
-│   └─ AddTecFlowAuthentication(config) ✓✓                         │
+│   └─ AddOfertioAuthentication(config) ✓✓                         │
 │      ├─ JWT                                                     │
 │      └─ IUserContextProvider                                    │
 │                                                                  │
@@ -670,16 +673,16 @@ flowchart TB
     ┌───────────┴────────┐      │   ┌────────┴──────────┐
     ▼                    ▼      ▼   ▼                   ▼
 ┌──────────────────┐  ┌──────────────────────────┐  ┌─────────────────┐
-│  TecFlow.API       │  │  TecFlow.ORQUESTRADOR      │  │ TecFlow.DASHBOARD │
+│  Ofertio.API       │  │  Ofertio.ORQUESTRADOR      │  │ Ofertio.DASHBOARD │
 │                  │  │                          │  │ (se precisar)   │
 │ Program.cs:      │  │ Program.cs: ✓✓           │  │                 │
-│ ✓ AddTecFlowInfra  │  │ await Configurator       │  │ Program.cs:     │
-│ ✓ AddTecFlowAppSvcs│  │   .ConfigureAndRunAsync()│  │ ✓ AddTecFlowInfra │
-│ ✓ AddTecFlowAuth   │  │                          │  │ ✓ AddTecFlowAppSvcs
-│                  │  │ Configurator.cs:         │  │ ✓ AddTecFlowAuth  │
-│ Controllers      │  │ ✓ AddTecFlowInfra          │  │                 │
-│ (Endpoints HTTP) │  │ ✓ AddTecFlowAppSvcs        │  │ Controllers/    │
-│                  │  │ ✓ AddTecFlowAuth           │  │ Views/Pages     │
+│ ✓ AddOfertioInfra  │  │ await Configurator       │  │ Program.cs:     │
+│ ✓ AddOfertioAppSvcs│  │   .ConfigureAndRunAsync()│  │ ✓ AddOfertioInfra │
+│ ✓ AddOfertioAuth   │  │                          │  │ ✓ AddOfertioAppSvcs
+│                  │  │ Configurator.cs:         │  │ ✓ AddOfertioAuth  │
+│ Controllers      │  │ ✓ AddOfertioInfra          │  │                 │
+│ (Endpoints HTTP) │  │ ✓ AddOfertioAppSvcs        │  │ Controllers/    │
+│                  │  │ ✓ AddOfertioAuth           │  │ Views/Pages     │
 │                  │  │                          │  │                 │
 └──────────────────┘  │ OrquestradorService ✓✓  │  └─────────────────┘
                       │ (Lógica pura)           │
@@ -699,7 +702,7 @@ flowchart TB
 
 ### Canônico (em uso)
 ```
-TecFlow.Business/Interfaces/
+Ofertio.Business/Interfaces/
 ├── Repositories/
 │   ├── IRepository.cs
 │   ├── IAffiliateRepository.cs
@@ -715,7 +718,7 @@ TecFlow.Business/Interfaces/
     ├── IShopeeApi, ITikTokShopApi, ITikTokAdsApiService
     └── AnaliseService.cs, ProdutoService.cs, UsuarioService.cs  # ⚠️ impl. com nome de serviço
 
-TecFlow.Infrastructure/Interfaces/
+Ofertio.Infrastructure/Interfaces/
 ├── IAppConfiguration.cs
 ├── IUserContextProvider.cs
 └── ILoggerService.cs
@@ -723,9 +726,9 @@ TecFlow.Infrastructure/Interfaces/
 
 ### Legado no disco (limpar)
 ```
-TecFlow.Infrastructure.Services/Interfaces/
+Ofertio.Infrastructure.Services/Interfaces/
 ├── IShopeeApi.cs, ITikTokShopApi.cs, ITikTokAdsApiService.cs  # Compile Remove
-└── ITikTokShopApiService.cs  # namespace TecFlow.Core.Interfaces.Services
+└── ITikTokShopApiService.cs  # namespace Ofertio.Core.Interfaces.Services
 ```
 
 ---
@@ -734,7 +737,7 @@ TecFlow.Infrastructure.Services/Interfaces/
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ CONTRATOS (TecFlow.Business.Interfaces.Repositories)          │
+│ CONTRATOS (Ofertio.Business.Interfaces.Repositories)          │
 ├──────────────────────────────────────────────────────────────┤
 │ IRepository ◄─── BaseEntity (Core)                           │
 │ IAffiliateRepository, ICampaignRepository, IContentRepository │
@@ -750,7 +753,7 @@ TecFlow.Infrastructure.Services/Interfaces/
 │ (Infra.Services/         │        │ (API/Prog ou Orq)     │
 │  Repositories)           │        │                       │
 ├──────────────────────────┤        ├──────────────────────┤
-│ AffiliateRepository      │────────│ AddTecFlowInfrastructureData │
+│ AffiliateRepository      │────────│ AddOfertioInfrastructureData │
 │ CampaignRepository       │────────│ (API + Orquestrador)         │
 │ ContentRepository        │────────│                              │
 │ MetricRepository         │────────│                              │
@@ -760,7 +763,7 @@ TecFlow.Infrastructure.Services/Interfaces/
 
 
 ┌──────────────────────────────────────────────────────────────┐
-│ SERVICES (TecFlow.Business.Interfaces.Services)               │
+│ SERVICES (Ofertio.Business.Interfaces.Services)               │
 ├──────────────────────────────────────────────────────────────┤
 │ Contratos ──► Implementações (Infrastructure.Services)       │
 │   IAIService ──► OpenAIService                               │
@@ -768,8 +771,8 @@ TecFlow.Infrastructure.Services/Interfaces/
 │   IShopeeApi / ITikTokShopApi / ITikTokAdsApiService         │
 │   IScoreService, IRankingService, …                          │
 │                                                              │
-│ Application (TecFlow.Business/Service/Application/)          │
-│   AddTecFlowApplicationServices() ✓ chamado na API e Orq     │
+│ Application (Ofertio.Business/Service/Application/)          │
+│   AddOfertioApplicationServices() ✓ chamado na API e Orq     │
 └──────────────────────────────────────────────────────────────┘
 
 
@@ -786,11 +789,11 @@ TecFlow.Infrastructure.Services/Interfaces/
 
 ## 🗺️ DIAGRAMA 7: ALVO DE DEPENDÊNCIAS (parcialmente implementado)
 
-> **Nota:** Bloco abaixo descreve o estado **desejado**. Contratos já estão em `TecFlow.Business`; consolidação de DI e remoção de `Infrastructure.Services/Interfaces/` ainda pendente.
+> **Nota:** Bloco abaixo descreve o estado **desejado**. Contratos já estão em `Ofertio.Business`; consolidação de DI e remoção de `Infrastructure.Services/Interfaces/` ainda pendente.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ INTERFACES (alvo: TecFlow.Business — hoje já é o canônico)   │
+│ INTERFACES (alvo: Ofertio.Business — hoje já é o canônico)   │
 ├──────────────────────────────────────────────────────────────┤
 │ Interfaces/Repositories/ (9)                                 │
 │ Interfaces/Services/Business/ (8)                            │
@@ -806,20 +809,20 @@ TecFlow.Infrastructure.Services/Interfaces/
 │ (Infra.Services,         │        │ (Extension Methods)  │
 │  Infra/Data,             │        │                      │
 │  Application)            │        ├──────────────────────┤
-├──────────────────────────┤        │ TecFlow.Infrastructure │
+├──────────────────────────┤        │ Ofertio.Infrastructure │
 │ AfiliadoRepository       │────┐   │ .Services            │
 │ CampanhaRepository       │────┤   │ ServiceRegExtensions │
-│ ... (6 repos total)      │    │   │ └─ AddTecFlowInfra  ✓✓ │
+│ ... (6 repos total)      │    │   │ └─ AddOfertioInfra  ✓✓ │
 │                          │    │   │                      │
-│ DataService              │    │   │ TecFlow.Business       │
+│ DataService              │    │   │ Ofertio.Business       │
 │ OpenAIService            │────┼───│ Service/Application  │
-│ GeminiService            │    │   │ └─ AddTecFlowAppSvcs ✓ │
+│ GeminiService            │    │   │ └─ AddOfertioAppSvcs ✓ │
 │ ShopeeApiService         │    │   │                      │
 │ TikTokAdsApiService      │    │   │                      │
-│ TikTokShopApiService     │    │   │ TecFlow.API            │
+│ TikTokShopApiService     │    │   │ Ofertio.API            │
 │ RankingService           │    │   │ Authentication       │
 │ ScoreService             │    │   │ ServiceRegExtensions │
-│ ... (11+ total)          │    │   │ └─ AddTecFlowAuth   ✓✓ │
+│ ... (11+ total)          │    │   │ └─ AddOfertioAuth   ✓✓ │
 │                          │    │   │                      │
 │ 11 ApplicationServices ──┼────┘   └──────────────────────┘
 │ (sem duplicatas)         │
@@ -830,10 +833,10 @@ TecFlow.Infrastructure.Services/Interfaces/
     ┌────┴────────────────────────┐
     │ USADOS EM TODOS OS PROJETOS │
     ├────────────────────────────┤
-    │ TecFlow.API                   │
-    │ TecFlow.Orquestrador          │
-    │ TecFlow.WebUi                 │
-    │ TecFlow.Worker (se usar)      │
+    │ Ofertio.API                   │
+    │ Ofertio.Orquestrador          │
+    │ Ofertio.WebUi                 │
+    │ Ofertio.Worker (se usar)      │
     └────────────────────────────┘
 
 ✓✓ ÚNICA FONTE DE VERDADE
@@ -912,7 +915,7 @@ TecFlow.Infrastructure.Services/Interfaces/
 ## 🔔 DIAGRAMA 4d: Push + Deep Links (Fase 4.3)
 
 ```
-Mobile App                          TecFlow.API
+Mobile App                          Ofertio.API
 ──────────                          ──────────
 FCM/APNs token ──POST──► /api/devices/register ──► UserDeviceTokens (DB)
                               ▲
@@ -920,12 +923,12 @@ Worker/Webhook event ──► NotificationHubService (Firebase Admin)
                               │
                               └──► FCM data: { route, title, body }
                                         │
-Mobile: TecFlowFirebaseMessagingService / iOS UNCenter
+Mobile: OfertioFirebaseMessagingService / iOS UNCenter
         └──► PushNotificationBridge ──► NavigationIntentService
                     └──► Blazor: /engajamento/fila | /conciliacao/detalhes/{id}
 
-Deep link: tecflow://engajamento/fila
-           tecflow://conciliacao/detalhes/42
+Deep link: ofertio://engajamento/fila
+           ofertio://conciliacao/detalhes/42
 ```
 
 ---
@@ -934,7 +937,7 @@ Deep link: tecflow://engajamento/fila
 
 ```
 ┌─────────────────────┐     ┌─────────────────────┐
-│   TecFlow.WebUi     │     │   TecFlow.Mobile    │
+│   Ofertio.WebUi     │     │   Ofertio.Mobile    │
 │ Blazor Server host  │     │ MAUI BlazorWebView  │
 │ OAuth + cookies     │     │ sessão em memória   │
 └──────────┬──────────┘     └──────────┬──────────┘
@@ -942,16 +945,16 @@ Deep link: tecflow://engajamento/fila
            └────────────┬───────────────┘
                         ▼
            ┌────────────────────────────┐
-           │     TecFlow.SharedUi       │
+           │     Ofertio.SharedUi       │
            │  Pages · Layout · Widgets  │
-           │  AddTecFlowClientServices  │
+           │  AddOfertioClientServices  │
            │  (SSL bypass dev/homolog)  │
            └────────────┬───────────────┘
                         │ HttpClient "Orquestrador"
                         │ Development/Homologacao: ignora cert. autoassinado
                         ▼
            ┌────────────────────────────┐
-           │ TecFlow.Orquestrador / API │
+           │ Ofertio.Orquestrador / API │
            └────────────────────────────┘
 ```
 
@@ -962,7 +965,7 @@ Deep link: tecflow://engajamento/fila
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ viewport < 768px                                                         │
-│  MainLayout: [☰] TecFlow ── SessionBadge                                 │
+│  MainLayout: [☰] Ofertio ── SessionBadge                                 │
 │  sidebar off-canvas (transform) + backdrop tap-to-close                  │
 │  CampaignsWidget / MetricsWidget: .data-cards-mobile (stack)           │
 │  breakpoint ≥ 768px: .data-table-desktop (tabela)                        │
@@ -982,7 +985,7 @@ Deep link: tecflow://engajamento/fila
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ TecFlow.WebUi (Blazor Server)                                            │
+│ Ofertio.WebUi (Blazor Server)                                            │
 │  CampaignFilterForm ──bind──► CampaignFilter                             │
 │  MetricFilterForm   ──bind──► MetricFilter                               │
 │  CampaignCreateForm ──bind──► CampaignDto                                  │
@@ -991,7 +994,7 @@ Deep link: tecflow://engajamento/fila
                                 │ HTTP + Bearer
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ TecFlow.Orquestrador / TecFlow.API                                       │
+│ Ofertio.Orquestrador / Ofertio.API                                       │
 │  GET  api/Campanhas?[CampaignFilter&Page&PageSize] → CampaignResponseDto │
 │       + PagingInfoDto (TotalCount, HasNextPage)                          │
 │  GET  api/Metricas?[MetricFilter&Page&PageSize]    → MetricResponseDto   │
@@ -1026,7 +1029,7 @@ sequenceDiagram
 
 ## 🚀 DIAGRAMA 5: Afiliados — Engajamento, Comissões e Links (Fase 5)
 
-Visão macro do fluxo de dados da plataforma de automação para afiliados de alta escala. Contratos em `TecFlow.Business/Interfaces/Orchestration/`; persistência de `AffiliateLink` e filas entram na Fase 6.
+Visão macro do fluxo de dados da plataforma de automação para afiliados de alta escala. Contratos em `Ofertio.Business/Interfaces/Orchestration/`; persistência de `AffiliateLink` e filas entram na Fase 6.
 
 ```mermaid
 flowchart TB
@@ -1037,14 +1040,14 @@ flowchart TB
   end
 
   subgraph Ingestao["Ingestão assíncrona"]
-    API[TecFlow.API]
-    WRK[TecFlow.Worker]
+    API[Ofertio.API]
+    WRK[Ofertio.Worker]
     WH --> API
     SM -->|comentários / DMs| WRK
     MP -->|pedidos · comissões| WH
   end
 
-  subgraph Orq["Orquestração — TecFlow.Orquestrador"]
+  subgraph Orq["Orquestração — Ofertio.Orquestrador"]
     ENG[IEngagementOrchestrator]
     CON[ICommissionConciliator]
     AL[AffiliateLink + Product]
@@ -1052,7 +1055,7 @@ flowchart TB
 
   subgraph Saida["Saída — Operador e afiliado"]
     PUSH[FCM/APNs + deep links]
-    WEB[TecFlow.WebUi / SharedUi / Mobile]
+    WEB[Ofertio.WebUi / SharedUi / Mobile]
     LINK[Disparo automático de link rastreável]
   end
 
@@ -1069,10 +1072,10 @@ flowchart TB
 
 | Camada | Artefatos principais |
 |--------|----------------------|
-| `TecFlow.Core/Enums` | `SocialMediaType`, `EngagementStatus`, `CommissionStatus`, `MarketplaceType` |
-| `TecFlow.Core/Entities` | `AffiliateLink`, `Product`, `MarketplaceOrder`, `Conversion` |
-| `TecFlow.Business/Domain` | `Engagement/*`, `Commission/*` |
-| `TecFlow.Business/Interfaces/Orchestration` | `IEngagementOrchestrator`, `ICommissionConciliator` |
+| `Ofertio.Core/Enums` | `SocialMediaType`, `EngagementStatus`, `CommissionStatus`, `MarketplaceType` |
+| `Ofertio.Core/Entities` | `AffiliateLink`, `Product`, `MarketplaceOrder`, `Conversion` |
+| `Ofertio.Business/Domain` | `Engagement/*`, `Commission/*` |
+| `Ofertio.Business/Interfaces/Orchestration` | `IEngagementOrchestrator`, `ICommissionConciliator` |
 
 ```
 Redes Sociais / Marketplaces
@@ -1097,12 +1100,12 @@ MarketplaceTokens / Orders   │
 ```mermaid
 flowchart TB
   subgraph Hosts
-    API[TecFlow.API]
-    WRK[TecFlow.Worker]
-    ORQ[TecFlow.Orquestrador]
+    API[Ofertio.API]
+    WRK[Ofertio.Worker]
+    ORQ[Ofertio.Orquestrador]
   end
 
-  subgraph OTel[TecFlow.Observability]
+  subgraph OTel[Ofertio.Observability]
     TR[Traces AspNetCore + HttpClient]
     MT[Metrics comentarios / links / conciliacao]
     LG[Logs OTLP + Console]
@@ -1132,7 +1135,7 @@ flowchart TB
 | IIS stdout | API / WebUi | `web.config` → `stdoutLogEnabled`, `.\logs\stdout` |
 | Serilog arquivo | API / WebUi | `Program.cs` → `logs/app-.txt` (rolagem diária) |
 | Circuitos Blazor | WebUi | `BlazorCircuitLoggingHandler` (SignalR open/close/reconnect) |
-| Permissões IIS | `C:\inetpub\tecflow\*\logs` | `Configurar-Logs-IIS.ps1` |
+| Permissões IIS | `C:\inetpub\ofertio\*\logs` | `Configurar-Logs-IIS.ps1` |
 
 | Métrica | Origem |
 |---------|--------|
@@ -1185,7 +1188,7 @@ AdvertisingProductService
 ```mermaid
 flowchart LR
   UI[SharedUi ConciliacaoFinanceira]
-  ORQ[TecFlow.Orquestrador]
+  ORQ[Ofertio.Orquestrador]
   SVC[AffiliateAnalyticsService]
   AUTH[MarketplaceAuthService]
   SHP[Shopee Affiliate Report API]
@@ -1215,9 +1218,9 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant Rede as Rede Social (webhook)
-  participant API as TecFlow.API
+  participant API as Ofertio.API
   participant Bus as RabbitMQ
-  participant WRK as TecFlow.Worker
+  participant WRK as Ofertio.Worker
   participant Tri as CommentKeywordTriage
   participant Del as AffiliateLinkDeliveryNotifier
 
@@ -1239,14 +1242,14 @@ sequenceDiagram
 | Fila principal | `social-media-comment-received` |
 | DLQ (erro após retries) | `social-media-comment-received-error` |
 | Retry | `RetryCount` × intervalo (`RetryIntervalSeconds`) |
-| Publicador | API, Orquestrador (`TecFlowMessagingRole.Publisher`) |
-| Consumidor | Worker (`TecFlowMessagingRole.Consumer`) |
+| Publicador | API, Orquestrador (`OfertioMessagingRole.Publisher`) |
+| Consumidor | Worker (`OfertioMessagingRole.Consumer`) |
 
 ```
 Instagram/TikTok/... webhook
         │
         ▼
-TecFlow.API ──publish──► RabbitMQ ──consume──► TecFlow.Worker
+Ofertio.API ──publish──► RabbitMQ ──consume──► Ofertio.Worker
                               │                      │
                               │                      ├── triagem Keywords (appsettings)
                               │                      └── link simulado por PostId
@@ -1259,7 +1262,7 @@ TecFlow.API ──publish──► RabbitMQ ──consume──► TecFlow.Worke
 
 ```mermaid
 sequenceDiagram
-  participant API as TecFlow.API
+  participant API as Ofertio.API
   participant SO as SalesOrderService
   participant INV as InventoryService
   participant DB as Inventories + Movements
@@ -1310,7 +1313,7 @@ stateDiagram-v2
 
 ```mermaid
 sequenceDiagram
-  participant API as TecFlow.API
+  participant API as Ofertio.API
   participant SVC as SalesOrderService
   participant SM as OrderStateMachine
   participant INV as InvoiceOrchestrator
@@ -1341,21 +1344,21 @@ sequenceDiagram
 flowchart TB
   subgraph JWT["Contexto HTTP / JWT"]
     Claims["Claims: tenant_id, shop_id (opcional)"]
-    Aud["aud = TecFlowClient / iss = TecFlowAPI"]
-    Header["Header: X-TecFlow-Shop-Id (painel)"]
+    Aud["aud = OfertioClient / iss = OfertioAPI"]
+    Header["Header: X-Ofertio-Shop-Id (painel)"]
   end
 
-  subgraph Infra["TecFlow.Infrastructure"]
+  subgraph Infra["Ofertio.Infrastructure"]
     CTS[CurrentTenantService]
   end
 
-  subgraph DB["TecFlow.Database"]
+  subgraph DB["Ofertio.Database"]
     CTX[AppDbContext]
     QF[HasQueryFilter TenantId + ShopId]
     SC[SaveChanges → TenantId automático]
   end
 
-  subgraph Core["TecFlow.Core"]
+  subgraph Core["Ofertio.Core"]
     T[Tenant]
     MA[MarketplaceAccount]
     ENT[Product, Orders, Tokens, Campaigns, ...]
@@ -1515,7 +1518,7 @@ flowchart TB
   end
   CL --> NSR[NavigationScrollReset<br/>ilha interativa]
   MML --> NSR
-  NSR -->|LocationChanged| JS[tecFlowAppInterop.resetScroll<br/>window + .main-content]
+  NSR -->|LocationChanged| JS[ofertioAppInterop.resetScroll<br/>window + .main-content]
   BW[blazor.web.js enhancedload] --> JS
   CL --> NAV[NavMenu]
   NAV -->|GET api/sistema/menu| MPS[MenuPermissionService]
@@ -1533,7 +1536,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant M as Master (MasterMenuPermissions.razor)
-  participant JS as tecFlowMenuDnd (app-interop.js)
+  participant JS as ofertioMenuDnd (app-interop.js)
   participant API as MasterMenuPermissionsController
   participant S as MenuPermissionService
   participant DB as MenuItems / PlanMenuPermissions
@@ -1676,7 +1679,7 @@ sequenceDiagram
     S-->>U: erro, nada salvo
   else valor novo
     S->>DB: SaveChanges (criptografia AES)
-    S->>CFG: ReloadTecFlowDatabaseSettings (limpa cache da API)
+    S->>CFG: ReloadOfertioDatabaseSettings (limpa cache da API)
   end
 ```
 
@@ -1686,8 +1689,8 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  HOST[API / Worker / Orquestrador] -->|AddTecFlowDataProtection| DP[DataProtection app TecFlow]
-  DP -->|chaves DPAPI| KEYS[(C:\ProgramData\TecFlow\DataProtectionKeys)]
+  HOST[API / Worker / Orquestrador] -->|AddOfertioDataProtection| DP[DataProtection app legado TecFlow]
+  DP -->|chaves DPAPI| KEYS[(C:\inetpub\ofertio\api\App_Data\OfertioDataProtectionKeys)]
   DP --> SEC[SecurityEncryptionService Singleton]
   AES[DataEncryptionService ENC1] -->|leitura legada| SEC
   SEC -->|CreateProtected ValueConverter| CTX[AppDbContext]

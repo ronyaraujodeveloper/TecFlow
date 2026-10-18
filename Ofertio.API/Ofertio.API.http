@@ -1,0 +1,6 @@
+@Ofertio.API_HostAddress = http://localhost:5274
+
+GET {{Ofertio.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

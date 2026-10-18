@@ -1,0 +1,85 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Ofertio.Core.Entities;
+using Ofertio.Core.Enums;
+
+namespace Ofertio.Database.Entity;
+
+/// <summary>Telemetria de geração e cliques em links de afiliado Ofertio.</summary>
+[Table("LinkClickLog")]
+public class LinkClickLog
+{
+    public const string EventKindGeneration = "Generation";
+    public const string EventKindClick = "Click";
+    public const string EventKindArbitrage = "Arbitrage";
+
+    [Key]
+    public int Id { get; set; }
+
+    /// <summary>UUID do link encurtado (ShortAffiliateLink.AffiliateLinkId).</summary>
+    public Guid AffiliateLinkId { get; set; }
+
+    public Guid TenantId { get; set; }
+
+    [Required]
+    [MaxLength(128)]
+    public string ShopId { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(2048)]
+    public string OriginalUrl { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(2048)]
+    public string ConvertedUrl { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(32)]
+    public string Platform { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime ClickedAt { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    [MaxLength(32)]
+    public string EventKind { get; set; } = EventKindClick;
+
+    [Required]
+    [MaxLength(64)]
+    public string IpAddress { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(512)]
+    public string UserAgent { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(32)]
+    public string DeviceType { get; set; } = string.Empty;
+
+    [MaxLength(2048)]
+    public string? ReferrerUrl { get; set; }
+
+    [MaxLength(16)]
+    public string? SourceChannel { get; set; }
+
+    [MaxLength(160)]
+    public string? SourceGroup { get; set; }
+
+    [MaxLength(64)]
+    public string? SubId { get; set; }
+
+    public ShortAffiliateLink? AffiliateLink { get; set; }
+
+    public static string PlatformName(MarketplaceType platformType) => platformType switch
+    {
+        MarketplaceType.Shopee => "Shopee",
+        MarketplaceType.TikTokShop => "TikTok Shop",
+        MarketplaceType.MercadoLivre => "Mercado Livre",
+        MarketplaceType.Amazon => "Amazon",
+        MarketplaceType.MagazineLuiza => "Magazine Luiza",
+        MarketplaceType.Kabum => "Kabum!",
+        MarketplaceType.CasasBahia => "Casas Bahia",
+        _ => platformType.ToString()
+    };
+}

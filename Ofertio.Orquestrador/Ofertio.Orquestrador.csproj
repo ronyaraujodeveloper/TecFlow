@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+	  <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Configurator.cs" />
+    <Compile Remove="Pipelines\FileName.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Graph" Version="6.1.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ofertio.Application\Ofertio.Application.csproj" />
+    <ProjectReference Include="..\Ofertio.Business\Ofertio.Business.csproj" />
+    <ProjectReference Include="..\Ofertio.Data\Ofertio.Data.csproj" />
+    <ProjectReference Include="..\Ofertio.Database\Ofertio.Database.csproj" />
+    <ProjectReference Include="..\Ofertio.Core\Ofertio.Core.csproj" />
+    <ProjectReference Include="..\Ofertio.Infrastructure.Services\Ofertio.Infrastructure.Services.csproj" />
+    <ProjectReference Include="..\Ofertio.Infrastructure\Ofertio.Infrastructure.csproj" />
+    <ProjectReference Include="..\Ofertio.Observability\Ofertio.Observability.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-$path = 'c:\Programacao\TecFlow.Automacao\TecFlow.Orquestrador\OrquestradorPrincipal.cs'
+﻿$path = 'c:\Programacao\Ofertio.Automacao\Ofertio.Orquestrador\OrquestradorPrincipal.cs'
 $text = Get-Content -Path $path -Raw
 $pattern = '        /// <summary>\r?\n        /// Executa o pipeline completo, abrangendo coleta, processamento, IA, e publicação\.\r?\n        /// </summary>\r?\n        public async Task ExecutarPipelineCompleto\(\)[\s\S]*$'
 $replacement = @'

@@ -1,0 +1,774 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Ofertio.Business.Dto;
+using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Groups;
+using Ofertio.Business.Service.LinkStrategies;
+using Ofertio.Business.Service.Telegram;
+using Ofertio.Business.Service.WhatsApp;
+using Ofertio.Core.Entities;
+using Ofertio.Core.Enums;
+using Ofertio.Database;
+using Ofertio.Infrastructure.Services.Telegram;
+
+namespace Ofertio.Infrastructure.Services.Groups;
+
+public sealed class MonitoredGroupService : IMonitoredGroupService
+{
+    private readonly AppDbContext _context;
+    private readonly IWhatsAppBroadcastService _whatsAppBroadcasts;
+    private readonly ITelegramBroadcastService _telegramBroadcasts;
+    private readonly TelegramUserMonitorHost _userBotHost;
+    private readonly IOfferValidationService _validation;
+    private readonly IAffiliateLinkConverterService _converter;
+    private readonly IGroupCapturedMessagesService _capturedMessages;
+    private readonly IPriceHistoryTracker _priceHistory;
+    private readonly ILiveCheckSearchService _liveCheck;
+    private readonly IAffiliateUrlBuilderService _affiliateUrls;
+    private readonly ILogger<MonitoredGroupService> _logger;
+
+    public MonitoredGroupService(
+        AppDbContext context,
+        IWhatsAppBroadcastService whatsAppBroadcasts,
+        ITelegramBroadcastService telegramBroadcasts,
+        TelegramUserMonitorHost userBotHost,
+        IOfferValidationService validation,
+        IAffiliateLinkConverterService converter,
+        IGroupCapturedMessagesService capturedMessages,
+        IPriceHistoryTracker priceHistory,
+        ILiveCheckSearchService liveCheck,
+        IAffiliateUrlBuilderService affiliateUrls,
+        ILogger<MonitoredGroupService> logger)
+    {
+        _context = context;
+        _whatsAppBroadcasts = whatsAppBroadcasts;
+        _telegramBroadcasts = telegramBroadcasts;
+        _userBotHost = userBotHost;
+        _validation = validation;
+        _converter = converter;
+        _capturedMessages = capturedMessages;
+        _priceHistory = priceHistory;
+        _liveCheck = liveCheck;
+        _affiliateUrls = affiliateUrls;
+        _logger = logger;
+    }
+
+    public async Task<MonitoredGroupsResponseDto> SyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var notes = new List<string>();
+            var normalized = GroupOfferCaptureRules.NormalizeChannel(channel);
+            var whatsOk = false;
+            var telegramOk = false;
+            if (normalized is null || normalized == GroupOfferCaptureRules.WhatsAppChannel)
+            {
+                whatsOk = await SyncWhatsAppIsolatedAsync(userId, notes, cancellationToken);
+            }
+
+            if (normalized is null || normalized == GroupOfferCaptureRules.TelegramChannel)
+            {
+                telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
+            }
+
+            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, search: null, cancellationToken: cancellationToken);
+            list.Status = whatsOk || telegramOk || notes.Count == 0;
+            list.Descricao = notes.Exists(item => item == MonitoredGroupSyncRules.BackgroundStartedMessage)
+                ? MonitoredGroupSyncRules.BackgroundStartedMessage
+                : notes.Count == 0
+                    ? "Grupos sincronizados."
+                    : string.Join(" ", notes);
+            return list;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados");
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Erro ao sincronizar grupos monitorados."
+                    : ex.Message
+            };
+        }
+    }
+
+    public async Task<MonitoredGroupsResponseDto> ListAsync(
+        int userId,
+        int lookbackHours,
+        string? groupKey,
+        string? channel,
+        int skip = 0,
+        int take = GroupOfferCaptureRules.OffersPageSize,
+        bool ignored = false,
+        LiveSearchFilterDto? search = null,
+        OfferType type = OfferType.Product,
+        string? couponPlatform = null,
+        CancellationToken cancellationToken = default)
+    {
+        var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
+        var since = DateTime.UtcNow.AddHours(-hours);
+        var normalized = GroupOfferCaptureRules.NormalizeChannel(channel);
+        var resolvedSkip = GroupOfferCaptureRules.ResolveOffersSkip(skip);
+        var resolvedTake = GroupOfferCaptureRules.ResolveOffersTake(take);
+
+        try
+        {
+            var groups = await BuildGroupsAsync(userId, normalized, cancellationToken);
+            var platforms = await _capturedMessages.ListActivePlatformsAsync(userId, cancellationToken);
+            var query = _context.GroupCapturedMessages
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.ReceivedAt >= since);
+            query = _capturedMessages.ApplyRelevanceFilter(query, platforms, ignored);
+            if (!ignored)
+            {
+                query = query.Where(item => item.Type == type);
+                if (type == OfferType.Coupon)
+                {
+                    query = ApplyCouponPlatformFilter(query, couponPlatform);
+                }
+            }
+
+            if (normalized is not null)
+            {
+                query = query.Where(item => item.Channel == normalized);
+            }
+
+            if (!string.IsNullOrWhiteSpace(groupKey))
+            {
+                query = query.Where(item => item.GroupKey == groupKey);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search?.Keyword))
+            {
+                var term = search.Keyword.Trim();
+                query = query.Where(item =>
+                    (item.ProductName != null && item.ProductName.Contains(term))
+                    || (item.CouponCode != null && item.CouponCode.Contains(term))
+                    || item.OriginalUrl.Contains(term)
+                    || (item.PlatformName != null && item.PlatformName.Contains(term)));
+            }
+
+            if (search?.MinPrice is > 0)
+            {
+                var min = search.MinPrice.Value;
+                query = query.Where(item => (item.ValidatedPrice ?? item.ExtractedPrice) >= min);
+            }
+
+            if (search?.MaxPrice is > 0)
+            {
+                var max = search.MaxPrice.Value;
+                query = query.Where(item => (item.ValidatedPrice ?? item.ExtractedPrice) <= max);
+            }
+
+            if (search?.HasCoupon == true)
+            {
+                query = query.Where(item => item.CouponCode != null && item.CouponCode != "");
+            }
+
+            if (!string.IsNullOrWhiteSpace(search?.Store))
+            {
+                var store = search.Store.Trim();
+                query = query.Where(item =>
+                    (item.PlatformName != null && item.PlatformName.Contains(store))
+                    || item.OriginalUrl.Contains(store));
+            }
+
+            if (search?.TagId is > 0 && type == OfferType.Product)
+            {
+                var selectedTagId = search.TagId.Value;
+                query = query.Where(item => item.Tags.Any(tag => tag.Id == selectedTagId));
+            }
+
+            if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
+            {
+                query = query.Where(item =>
+                    item.Type == OfferType.Coupon
+                    || (item.ProductName != null
+                        && item.ProductName != ""
+                        && item.ExtractedPrice != null
+                        && item.PlatformType != null
+                        && item.ProductImageUrl != null
+                        && item.ProductImageUrl != ""));
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+            var fetchTake = Math.Max(resolvedTake + 20, Math.Min(resolvedTake * 4, 200));
+            var offers = await query
+                .OrderByCapturedAtDescending()
+                .Skip(resolvedSkip)
+                .Take(fetchTake)
+                .ToListAsync(cancellationToken);
+            var uniqueOffers = GroupOfferCaptureRules
+                .DeduplicateOffers(offers.Select(MapOffer))
+                .Take(resolvedTake)
+                .ToList();
+            await EnrichForFeedAsync(userId, uniqueOffers, cancellationToken);
+            var tags = await _context.ProductTags
+                .AsNoTracking()
+                .Where(tag => tag.IsActive)
+                .OrderBy(tag => tag.Id)
+                .Select(tag => new ProductTagDto { Id = tag.Id, Name = tag.Name, Slug = tag.Slug })
+                .ToListAsync(cancellationToken);
+
+            return new MonitoredGroupsResponseDto
+            {
+                Status = true,
+                Groups = groups,
+                Offers = uniqueOffers,
+                Tags = tags,
+                TotalOffers = total,
+                Skip = resolvedSkip,
+                Take = resolvedTake,
+                Ignored = ignored
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao listar grupos monitorados");
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Erro ao listar grupos monitorados."
+                    : ex.Message
+            };
+        }
+    }
+
+    public async Task<MonitoredGroupsResponseDto> ValidateAsync(
+        int userId,
+        int offerId,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.GroupCapturedMessages
+            .FirstOrDefaultAsync(item => item.Id == offerId && item.UserId == userId, cancellationToken);
+        if (entity is null)
+        {
+            return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
+        }
+
+        var previousPrice = entity.ValidatedPrice ?? entity.ExtractedPrice;
+        await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
+
+        var removed = !OfferFeedVisibilityRules.IsVisibleInFeed(entity.Type, entity.IsAvailable, entity.OfferStatus);
+        var currentPrice = entity.ValidatedPrice ?? entity.ExtractedPrice;
+        var priceUpdated = !removed && OfferFeedVisibilityRules.HasDisplayedPriceChanged(previousPrice, currentPrice);
+        if (priceUpdated)
+        {
+            _logger.LogInformation(
+                "Preço atualizado após Verificar. OfferId={OfferId} Plataforma={Platform} Antes={Before} Depois={After}",
+                entity.Id,
+                entity.PlatformType,
+                previousPrice,
+                currentPrice);
+        }
+        if (removed)
+        {
+            _logger.LogInformation(
+                "Oferta removida do feed após Verificar. OfferId={OfferId} Status={Status}",
+                entity.Id,
+                entity.OfferStatus);
+        }
+
+        var offer = MapOffer(entity);
+        await EnrichForFeedAsync(userId, [offer], cancellationToken);
+        return new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = removed
+                ? OfferFeedVisibilityRules.RemovedFromFeedToast
+                : priceUpdated
+                    ? OfferFeedVisibilityRules.BuildPriceUpdatedToast(currentPrice!.Value)
+                    : $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.",
+            ValidatedOffer = offer,
+            OfferRemoved = removed,
+            PriceUpdated = priceUpdated
+        };
+    }
+
+    private async Task EnrichForFeedAsync(
+        int userId,
+        IList<GroupCapturedOfferDto> offers,
+        CancellationToken cancellationToken)
+    {
+        await _priceHistory.EnrichOffersAsync(offers, cancellationToken);
+        var mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
+        foreach (var offer in offers)
+        {
+            offer.AffiliateUrl = _affiliateUrls.BuildAffiliateUrl(
+                offer.OriginalUrl,
+                offer.PrimaryProductUrl,
+                offer.Type == OfferType.Coupon
+                    ? GroupOfferCaptureRules.DetectPlatform(offer.OriginalUrl)
+                    : offer.PlatformType,
+                mattTool);
+        }
+    }
+
+    public async Task<MonitoredGroupsResponseDto> CloneAsync(
+        int userId,
+        int offerId,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.GroupCapturedMessages
+            .FirstOrDefaultAsync(item => item.Id == offerId && item.UserId == userId, cancellationToken);
+        if (entity is null)
+        {
+            return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
+        }
+
+        await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
+
+        if (!entity.IsAvailable || GroupOfferStatuses.IsInactive(entity.OfferStatus))
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = entity.OfferStatus == GroupOfferStatuses.VitrineGenerica
+                    ? "O link aponta para uma vitrine genérica (perfil, loja ou lista), não para um produto. Clonagem bloqueada."
+                    : "O anúncio parece esgotado ou indisponível. Confira o link original antes de clonar."
+            };
+        }
+
+        if (entity.OfferStatus == GroupOfferStatuses.PrecoSuspeito)
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = "Preço suspeito para este tipo de produto (possível isca ou erro de captura). Confira o link original antes de clonar."
+            };
+        }
+
+        var isMercadoLivre = AffiliateUrlBuilderRules.IsMercadoLivre(entity.OriginalUrl, entity.PlatformType);
+        string? mattTool = null;
+        string? sanitizedUrl = null;
+        if (isMercadoLivre)
+        {
+            mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
+            sanitizedUrl = _affiliateUrls.BuildAffiliateUrl(
+                entity.OriginalUrl,
+                entity.PrimaryProductUrl,
+                MarketplaceType.MercadoLivre,
+                mattTool);
+        }
+
+        var converted = await _converter.ConvertAsync(
+            userId,
+            sanitizedUrl ?? entity.OriginalUrl,
+            entity.GroupName,
+            cancellationToken);
+        var convertedUrl = converted.Status ? converted.Data?.AffiliateUrl : null;
+        if (isMercadoLivre)
+        {
+            convertedUrl = string.IsNullOrWhiteSpace(convertedUrl) || AffiliateUrlBuilderRules.IsMercadoLivreShortLink(convertedUrl)
+                ? FirstNonEmpty(convertedUrl, sanitizedUrl)
+                : _affiliateUrls.BuildAffiliateUrl(convertedUrl, null, MarketplaceType.MercadoLivre, mattTool);
+        }
+
+        if (string.IsNullOrWhiteSpace(convertedUrl))
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(converted.Descricao)
+                    ? CloneOfferRules.MissingStoreMessage
+                    : converted.Descricao
+            };
+        }
+
+        var convertedData = converted.Status ? converted.Data : null;
+        var title = FirstNonEmpty(convertedData?.Title, entity.ProductName) ?? "Oferta clonada";
+        var price = convertedData?.Price ?? entity.ValidatedPrice ?? entity.ExtractedPrice;
+        var message = title;
+        if (price is > 0)
+        {
+            message += " por " + ProductMetadataHtmlParser.FormatBrl(price);
+        }
+
+        var image = FirstNonEmpty(convertedData?.ImageUrl, entity.ProductImageUrl);
+        var affiliateUrl = convertedUrl;
+        var targetChannel = GroupOfferCaptureRules.NormalizeChannel(channel)
+            ?? GroupOfferCaptureRules.NormalizeChannel(entity.Channel)
+            ?? GroupOfferCaptureRules.WhatsAppChannel;
+        var scheduler = targetChannel == GroupOfferCaptureRules.TelegramChannel
+            ? "/integracoes/telegram/agendador"
+            : "/integracoes/whatsapp/agendador";
+        var redirect =
+            scheduler
+            + "?cloneTitle=" + Uri.EscapeDataString(title)
+            + "&cloneMessage=" + Uri.EscapeDataString(message)
+            + "&cloneLink=" + Uri.EscapeDataString(affiliateUrl)
+            + (string.IsNullOrWhiteSpace(image) ? string.Empty : "&cloneImage=" + Uri.EscapeDataString(image));
+
+        return new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = CloneOfferRules.SuccessToast,
+            Clone = new CloneMonitoredOfferResultDto
+            {
+                Status = true,
+                AffiliateUrl = affiliateUrl,
+                ImageUrl = image,
+                Title = title,
+                Message = message,
+                OfferStatus = entity.OfferStatus,
+                RedirectUrl = redirect
+            }
+        };
+    }
+
+    public async Task<MonitoredGroupsResponseDto> SetIgnoredAsync(
+        int userId,
+        int offerId,
+        bool ignored,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        var updated = await _capturedMessages.SetIgnoredAsync(userId, offerId, ignored, cancellationToken);
+        if (!updated)
+        {
+            return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
+        }
+
+        return new MonitoredGroupsResponseDto
+        {
+            Status = true,
+            Descricao = ignored ? "Oferta marcada como sem interesse." : "Oferta restaurada no feed.",
+            Ignored = ignored
+        };
+    }
+
+    private async Task<List<MonitoredGroupDto>> BuildGroupsAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken)
+    {
+        var includeWhatsApp = channel is null || channel == GroupOfferCaptureRules.WhatsAppChannel;
+        var includeTelegram = channel is null || channel == GroupOfferCaptureRules.TelegramChannel;
+
+        var whats = includeWhatsApp
+            ? await _context.WhatsAppGroups
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.IsActive)
+                .OrderBy(item => item.Name)
+                .Select(item => new MonitoredGroupDto
+                {
+                    GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.WhatsAppChannel, item.Jid),
+                    Name = item.Name,
+                    Channel = GroupOfferCaptureRules.WhatsAppChannel
+                })
+                .ToListAsync(cancellationToken)
+            : [];
+
+        var telegram = includeTelegram
+            ? await _context.TelegramGroups
+                .AsNoTracking()
+                .Where(item => item.UserId == userId && item.IsActive)
+                .OrderBy(item => item.Name)
+                .Select(item => new MonitoredGroupDto
+                {
+                    GroupKey = GroupOfferCaptureRules.BuildGroupKey(GroupOfferCaptureRules.TelegramChannel, item.ChatId),
+                    Name = item.Name,
+                    Channel = GroupOfferCaptureRules.TelegramChannel
+                })
+                .ToListAsync(cancellationToken)
+            : [];
+
+        var capturedQuery = _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId);
+        if (channel is not null)
+        {
+            capturedQuery = capturedQuery.Where(item => item.Channel == channel);
+        }
+
+        var captured = await capturedQuery
+            .Select(item => new { item.GroupKey, item.GroupName, item.Channel })
+            .ToListAsync(cancellationToken);
+        var capturedGroups = captured
+            .GroupBy(item => item.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new MonitoredGroupDto
+            {
+                GroupKey = group.Key,
+                Name = group.First().GroupName,
+                Channel = group.First().Channel
+            })
+            .ToList();
+
+        return whats
+            .Concat(telegram)
+            .Concat(capturedGroups)
+            .GroupBy(item => item.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => item.Name)
+            .ToList();
+    }
+
+    private async Task<bool> SyncWhatsAppIsolatedAsync(
+        int userId,
+        ICollection<string> notes,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sync = await _whatsAppBroadcasts.SyncGroupsAsync(userId, cancellationToken);
+            if (sync.Status)
+            {
+                notes.Add("WhatsApp sincronizado.");
+                return true;
+            }
+
+            notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
+                ? "WhatsApp não sincronizou."
+                : $"WhatsApp: {sync.Descricao}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do WhatsApp (Evolution API)");
+            notes.Add($"WhatsApp: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task<bool> SyncTelegramIsolatedAsync(
+        int userId,
+        ICollection<string> notes,
+        CancellationToken cancellationToken)
+    {
+        var botOk = false;
+        try
+        {
+            var sync = await _telegramBroadcasts.SyncChannelsAsync(userId, cancellationToken);
+            if (sync.Status)
+            {
+                notes.Add("Telegram sincronizado.");
+                botOk = true;
+            }
+            else
+            {
+                notes.Add(string.IsNullOrWhiteSpace(sync.Descricao)
+                    ? "Telegram (Bot API) não sincronizou."
+                    : $"Telegram: {sync.Descricao}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao sincronizar grupos monitorados do Telegram (Bot API). UserBot não interrompe esta etapa.");
+            notes.Add($"Telegram: {ex.Message}");
+        }
+
+        try
+        {
+            if (_userBotHost.EnqueueCatchUp(userId))
+            {
+                notes.Add(MonitoredGroupSyncRules.BackgroundStartedMessage);
+                return true;
+            }
+
+            notes.Add("Não foi possível enfileirar a varredura do histórico UserBot.");
+            return botOk;
+        }
+        catch (Exception catchUpEx)
+        {
+            _logger.LogWarning(catchUpEx, "Falha ao enfileirar catch-up UserBot. UserId={UserId}", userId);
+            notes.Add("A varredura do histórico UserBot falhou ao iniciar. Confira a sessão MTProto e sincronize de novo.");
+            return botOk;
+        }
+    }
+
+
+    private static GroupCapturedOfferDto MapOffer(GroupCapturedMessage item) =>
+        new()
+        {
+            Id = item.Id,
+            Channel = item.Channel,
+            GroupKey = item.GroupKey,
+            GroupName = item.GroupName,
+            ProductName = item.ProductName,
+            CouponCode = item.CouponCode,
+            ExtractedPrice = item.ValidatedPrice ?? item.ExtractedPrice,
+            ValidatedPrice = item.ValidatedPrice,
+            ProductImageUrl = ProductImageStorageRules.EnsureLeadingSlash(ResolveOfferImageUrl(item)),
+            OriginalUrl = item.OriginalUrl,
+            PrimaryProductUrl = item.PrimaryProductUrl ?? item.OriginalUrl,
+            PlatformType = item.PlatformType,
+            PlatformName = item.PlatformName,
+            OfferStatus = item.OfferStatus,
+            OfferStatusLabel = GroupOfferStatuses.ToUiLabel(item.OfferStatus),
+            ReceivedAt = CapturedMessageTimeRules.NormalizeUtc(item.ReceivedAt),
+            HasDirectProductUrl = item.HasDirectProductUrl,
+            IsIgnored = item.IsIgnored,
+            IsAvailable = item.IsAvailable,
+            ExternalMessageId = item.ExternalMessageId,
+            IsMediaPending = item.Type == OfferType.Product
+                && item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && string.IsNullOrWhiteSpace(ResolveOfferImageUrl(item)),
+            Type = item.Type,
+            CouponDiscount = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractDiscount(item.RawText) : null,
+            CouponValidity = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractValidity(item.RawText) : null,
+            CouponRules = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractRules(item.RawText).ToList() : []
+        };
+
+    private static IQueryable<GroupCapturedMessage> ApplyCouponPlatformFilter(
+        IQueryable<GroupCapturedMessage> query,
+        string? couponPlatform)
+    {
+        if (string.IsNullOrWhiteSpace(couponPlatform)
+            || string.Equals(couponPlatform, CouponMessageRules.AllPlatformsFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return query;
+        }
+
+        if (string.Equals(couponPlatform, CouponMessageRules.OtherPlatformsFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            var highlighted = CouponMessageRules.HighlightedPlatforms;
+            return query.Where(item => item.PlatformType == null || !highlighted.Contains(item.PlatformType.Value));
+        }
+
+        return Enum.TryParse<MarketplaceType>(couponPlatform, ignoreCase: true, out var platform)
+            ? query.Where(item => item.PlatformType == platform)
+            : query;
+    }
+
+    private static string? ResolveOfferImageUrl(GroupCapturedMessage item)
+    {
+        if (ProductImageStorageRules.IsLocalProductImage(item.ProductImageUrl))
+        {
+            return ProductImageStorageRules.ToWebRelativePath(item.ProductImageUrl);
+        }
+
+        if (ProductImageStorageRules.IsLocalProductImage(item.MediaUrl))
+        {
+            return ProductImageStorageRules.ToWebRelativePath(item.MediaUrl);
+        }
+
+        return null;
+    }
+
+    public async Task<int> PrioritizeVisibleMediaAsync(
+        int userId,
+        IReadOnlyList<int> offerIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0 || offerIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var ids = offerIds.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        var pending = await _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId
+                && ids.Contains(item.Id)
+                && item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && (item.ProductImageUrl == null || item.ProductImageUrl == string.Empty)
+                && item.ExternalMessageId != null)
+            .Select(item => new { item.GroupKey, item.ExternalMessageId })
+            .ToListAsync(cancellationToken);
+
+        var queued = 0;
+        foreach (var item in pending)
+        {
+            var chatId = item.GroupKey.Contains(':')
+                ? item.GroupKey[(item.GroupKey.IndexOf(':') + 1)..]
+                : item.GroupKey;
+            if (_userBotHost.EnqueuePriorityPhoto(userId, chatId, item.ExternalMessageId!))
+            {
+                queued++;
+            }
+        }
+
+        return queued;
+    }
+
+    public Task<int> LinkExistingDownloadedImagesAsync(CancellationToken cancellationToken = default) =>
+        _capturedMessages.LinkExistingDownloadedImagesAsync(cancellationToken);
+
+    public async Task<MonitoredGroupsResponseDto> ResetAndResyncAsync(
+        int userId,
+        string? channel,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0)
+        {
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário inválido."
+            };
+        }
+
+        try
+        {
+            var deleted = await _capturedMessages.ResetAllCapturedMessagesAndMediaAsync(userId, cancellationToken);
+            return new MonitoredGroupsResponseDto
+            {
+                Status = true,
+                Descricao = deleted > 0
+                    ? $"{deleted} oferta(s) e imagens foram removidas. Use Sincronizar grupos para recarregar."
+                    : "Feed já estava vazio. Use Sincronizar grupos para recarregar."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao limpar grupos monitorados. UserId={UserId} Channel={Channel}", userId, channel);
+            return new MonitoredGroupsResponseDto
+            {
+                Status = false,
+                Descricao = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Não foi possível limpar o feed."
+                    : ex.Message
+            };
+        }
+    }
+
+    private static void ApplyValidation(GroupCapturedMessage entity, OfferValidationResultDto result)
+    {
+        entity.OfferStatus = result.Status;
+        entity.IsAvailable = result.IsAvailable;
+        entity.ValidatedPrice = result.Price;
+        entity.LastValidatedAt = DateTime.UtcNow;
+        if (!string.IsNullOrWhiteSpace(result.ImageUrl))
+        {
+            entity.ProductImageUrl = ProductImageStorageRules.ToWebRelativePath(result.ImageUrl);
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.ProductName))
+        {
+            entity.ProductName = result.ProductName;
+        }
+
+        if (result.Platform is { } platform)
+        {
+            entity.PlatformType = platform;
+            entity.PlatformName = platform.ToString();
+        }
+
+        entity.Touch();
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
+    }
+}

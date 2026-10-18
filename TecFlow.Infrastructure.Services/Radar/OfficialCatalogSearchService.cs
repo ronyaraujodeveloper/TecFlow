@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Radar;
 using TecFlow.Core.Enums;
 using TecFlow.Database;
@@ -173,7 +174,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             .Where(item => item.Type == OfferType.Product
                 && ((item.ProductName != null && item.ProductName.Contains(keyword))
                     || item.OriginalUrl.Contains(keyword)))
-            .OrderByDescending(item => item.CreatedAt)
+            .OrderByCapturedAtDescending()
             .Take(limit)
             .ToListAsync(cancellationToken);
 

@@ -4,6 +4,7 @@ using System.Text.Json;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Repositories;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.PublicPages;
 using TecFlow.Business.Service.Security;
@@ -90,7 +91,7 @@ public sealed class TelegramMessageProcessor : ITelegramMessageProcessor
                     GroupName = string.IsNullOrWhiteSpace(incoming.ChatTitle) ? incoming.ChatId : incoming.ChatTitle,
                     ExternalMessageId = incoming.MessageId,
                     RawText = incoming.Text,
-                    ReceivedAt = DateTime.UtcNow
+                    ReceivedAt = CapturedMessageTimeRules.ResolveReceivedAtUtc(incoming.SentAtUtc, DateTime.UtcNow)
                 },
                 cancellationToken);
         }

@@ -1301,7 +1301,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
             .Where(item => item.Channel == GroupOfferCaptureRules.TelegramChannel
                 && item.ExternalMessageId != null
                 && item.ExternalMessageId != "")
-            .OrderByDescending(item => item.CreatedAt)
+            .OrderByCapturedAtDescending()
             .Take(200)
             .Select(item => new
             {

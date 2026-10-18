@@ -110,3 +110,4 @@
 [2026-10-17 23:24:42] feat(ml): bypass de vitrines de divulgadores (affiliate-profile / Meli Social) e matt_tool=97303724 forçado nos links de saída
 [2026-10-17 23:56:57] feat(grupos): 100 ofertas por página por padrão no feed, filtros avançados e API
 [2026-10-18 09:44:42] feat(grupos): bypass Meli Social com /p/ITEM_ID, data da captura no card, botões enxutos e script de reset limpo
+[2026-10-18 10:13:36] fix(grupos): feed ordenado pela hora da mensagem capturada (ReceivedAt UTC) e horário de Brasília nos cards

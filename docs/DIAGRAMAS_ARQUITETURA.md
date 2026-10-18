@@ -193,6 +193,9 @@ flowchart LR
   RESOLVSOC[UrlResolverService HEAD/GET redirects] -->|vitrine /social/ ➔ /p/ITEM_ID antes do StripForeignTracking| SHOWCASE
   VAL -->|/social/ do ML segue o GET; VitrineGenerica só na URL final| RESOLVSOC
   RESETPS[ResetarOfertasLegadas.ps1] -->|DELETE GroupCapturedMessages + uploads/products| SQL
+  MONSVC -->|OrderByCapturedAtDescending ReceivedAt desc + Id desc| TIMERULE[CapturedMessageTimeRules]
+  PIPE -->|ReceivedAt UTC = horário de envio da mensagem| TIMERULE
+  GMUI -->|card dd/MM/yyyy HH:mm horário de Brasília| TIMERULE
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

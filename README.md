@@ -490,6 +490,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - "Abrir", "Verificar", "Clonar" e "Ocultar" (ícones originais, rótulos completos no tooltip) em uma única linha com padding reduzido.
 - [x] **Reset limpo do ambiente (`ResetarOfertasLegadas.ps1`):**
   - Zera `GroupCapturedMessages` e `uploads\products` (todos os usuários ou `-UserId`), preservando conexões, grupos e lojas; `-WhatIf` para simular, `-PararIis` para pausar os pools e `-IncluirHistoricoPrecos` para zerar `ProductPriceHistory`.
+
+## 🕒 Feed em Ordem Cronológica da Mensagem (`FeedChronologicalOrder`)
+
+- [x] **Ordenação decrescente pela hora da mensagem:**
+  - `OrderByCapturedAtDescending()` (`ReceivedAt` desc, desempate por `Id` desc) no Feed, nos Cupons, nos Ignorados, na busca local de catálogo e no backfill de mídia; antes o feed usava `CreatedAt` (hora da gravação), e a sincronização de histórico jogava mensagens antigas (ex.: 00:23) para o topo.
+- [x] **Fuso horário padronizado:**
+  - `ReceivedAt` é `datetime2` gravado sempre em UTC com o horário de envio da mensagem (UserBot `message.Date`, Bot API `message.date`, Evolution `messageTimestamp`); a interface converte para o horário de Brasília.
+- [x] **Verificação:**
+  - Teste com as ofertas reais do banco garante a ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23.
   
 ---
 

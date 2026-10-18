@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Security;
 using TecFlow.Business.Service.WhatsApp;
 
@@ -23,6 +24,9 @@ public sealed class TelegramIncomingMessage
     public string ChatTitle { get; set; } = string.Empty;
 
     public string? MessageId { get; set; }
+
+    /// <summary>Horário de envio (<c>message.date</c>, Unix) em UTC.</summary>
+    public DateTime? SentAtUtc { get; set; }
 }
 
 public static class TelegramBotRules
@@ -142,7 +146,8 @@ public static class TelegramBotRules
             IsPrivate = chatType is "private",
             IsGroup = chatType is "group" or "supergroup" or "channel",
             ChatTitle = ReadString(chat, "title") ?? string.Empty,
-            MessageId = ReadInt64(message, "message_id").ToString()
+            MessageId = ReadInt64(message, "message_id").ToString(),
+            SentAtUtc = CapturedMessageTimeRules.FromUnixSeconds(ReadInt64(message, "date"))
         };
     }
 

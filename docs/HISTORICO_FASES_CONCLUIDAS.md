@@ -913,6 +913,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Vitrines de terceiros e afiliado forçado (`ShowcaseBypass`):** links do Mercado Livre com `/social/` / `affiliate-profile` viram a página direta do produto focado (`item_id` ou `/p/MLB...`), os parâmetros `matt_tool_id` / `matt_tool` / `matt_d2id` / `matt_tracing_id` de terceiros são removidos e o `matt_tool=97303724` é sempre aplicado em "Abrir Link Original" e "Clonar Oferta".
 - [x] **100 ofertas por página (`OffersPageSize100`):** padrão de paginação do feed, do Modal de Filtros Avançados, da API e do cliente passou de 25 para 100 (pré-selecionado), e a pré-busca do serviço perdeu o teto de 80 linhas que cortava a página.
 - [x] **Vitrines Meli Social, card compacto e reset (`MeliSocialCardReset`):** links `/social/` do Mercado Livre seguem os redirects até o produto e, se ficarem no perfil, viram `/p/{ITEM_ID}?matt_tool=97303724`; o `OfferCard` mostra a data/hora da captura no cabeçalho e os botões "Abrir / Verificar / Clonar / Ocultar" em uma linha; `ResetarOfertasLegadas.ps1` zera ofertas e `uploads\products` para recapturar do zero.
+- [x] **Feed em ordem cronológica (`FeedChronologicalOrder`):** consultas de ofertas capturadas ordenam por `ReceivedAt` (hora da mensagem, UTC) em vez de `CreatedAt`; webhooks do WhatsApp/Telegram gravam o horário de envio e os cards exibem o horário de Brasília.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

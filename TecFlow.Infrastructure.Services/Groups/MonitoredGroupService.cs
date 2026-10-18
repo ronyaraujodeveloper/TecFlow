@@ -192,8 +192,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             var total = await query.CountAsync(cancellationToken);
             var fetchTake = Math.Max(resolvedTake + 20, Math.Min(resolvedTake * 4, 200));
             var offers = await query
-                .OrderByDescending(item => item.CreatedAt)
-                .ThenByDescending(item => item.ReceivedAt)
+                .OrderByCapturedAtDescending()
                 .Skip(resolvedSkip)
                 .Take(fetchTake)
                 .ToListAsync(cancellationToken);
@@ -560,7 +559,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             PlatformName = item.PlatformName,
             OfferStatus = item.OfferStatus,
             OfferStatusLabel = GroupOfferStatuses.ToUiLabel(item.OfferStatus),
-            ReceivedAt = item.ReceivedAt,
+            ReceivedAt = CapturedMessageTimeRules.NormalizeUtc(item.ReceivedAt),
             HasDirectProductUrl = item.HasDirectProductUrl,
             IsIgnored = item.IsIgnored,
             IsAvailable = item.IsAvailable,

@@ -1521,6 +1521,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **ResetarOfertasLegadas.ps1** (novo) - reset limpo de `GroupCapturedMessages` e `uploads\products` (todos ou `-UserId`), com `-WhatIf`, confirmação "RESETAR", `-PararIis` e `-IncluirHistoricoPrecos`.
 - [x] **TecFlow.Tests/Unit/LinkStrategies/UrlResolverServiceTests.cs** / **MercadoLivreShowcaseRulesTests.cs** / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - formato `/p/{ITEM_ID}`, redirect social ➔ produto e rejeição só na URL final.
 
+### FeedChronologicalOrder - Feed em ordem decrescente da mensagem capturada
+
+- [x] **TecFlow.Business/Service/Groups/CapturedMessageTimeRules.cs** (novo) - `OrderByCapturedAtDescending` (`ReceivedAt` desc + `Id` desc), `NormalizeUtc`, `FromUnixSeconds`, `ResolveReceivedAtUtc` e `ToBrasilia`.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - feed ordenado pela hora da mensagem (antes `CreatedAt`, hora da gravação) e `ReceivedAt` devolvido como UTC.
+- [x] **TecFlow.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** / **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - consultas de `GroupCapturedMessages` com a mesma ordenação.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - `ReceivedAt` normalizado em UTC com o horário de envio da mensagem.
+- [x] **TecFlow.Business/Service/WhatsApp/WhatsAppBotRules.cs** / **TecFlow.Business/Service/Telegram/TelegramBotRules.cs** - `SentAtUtc` lido de `messageTimestamp` (número, string ou Long protobuf) e `message.date`.
+- [x] **TecFlow.Infrastructure/Services/WhatsAppMessageProcessor.cs** / **TelegramMessageProcessor.cs** - capturam com o horário de envio em vez de `DateTime.UtcNow`.
+- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** / **CouponCard.razor** - data/hora exibida no horário de Brasília (`dd/MM/yyyy HH:mm`).
+- [x] **TecFlow.Tests/Unit/Groups/CapturedMessageTimeRulesTests.cs** (novo) - ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23 com dados reais, desempate, UTC/Brasília e timestamps dos webhooks.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

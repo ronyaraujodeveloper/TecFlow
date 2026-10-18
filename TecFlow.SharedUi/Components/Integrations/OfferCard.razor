@@ -134,7 +134,7 @@
 
     private string CloneTitle => IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha";
 
-    private DateTime CapturedAtLocal => Item.ReceivedAt.ToLocalTime();
+    private DateTime CapturedAtLocal => CapturedMessageTimeRules.ToBrasilia(Item.ReceivedAt);
 
     private string CapturedAtLabel => CapturedAtLocal.ToString("dd/MM/yyyy HH:mm");
 

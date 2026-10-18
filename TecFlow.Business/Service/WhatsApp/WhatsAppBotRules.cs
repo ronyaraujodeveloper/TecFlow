@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Telegram;
 
 namespace TecFlow.Business.Service.WhatsApp;
@@ -20,6 +21,9 @@ public sealed class WhatsAppIncomingMessage
     public string? MessageId { get; set; }
 
     public string? GroupName { get; set; }
+
+    /// <summary>Horário de envio (<c>messageTimestamp</c>, Unix) em UTC.</summary>
+    public DateTime? SentAtUtc { get; set; }
 }
 
 /// <summary>Regras do bot WhatsApp: MESSAGES_UPSERT, fromMe, URLs e escopo privado/grupo.</summary>
@@ -80,8 +84,33 @@ public static class WhatsAppBotRules
             ImageUrl = ReadString(ReadElement(message, "imageMessage"), "url")
                 ?? ReadString(data, "mediaUrl"),
             MessageId = ReadString(key, "id"),
-            GroupName = ReadString(data, "pushName", "notifyName")
+            GroupName = ReadString(data, "pushName", "notifyName"),
+            SentAtUtc = CapturedMessageTimeRules.FromUnixSeconds(ReadUnixSeconds(ReadElement(data, "messageTimestamp")))
         };
+    }
+
+    /// <summary>Baileys envia o timestamp como número, string ou Long protobuf (<c>{ low, high }</c>).</summary>
+    private static long ReadUnixSeconds(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Number when element.TryGetInt64(out var number):
+                return number;
+            case JsonValueKind.String when long.TryParse(element.GetString(), out var parsed):
+                return parsed;
+            case JsonValueKind.Object:
+                var low = ReadElement(element, "low");
+                var high = ReadElement(element, "high");
+                if (low.ValueKind == JsonValueKind.Number && low.TryGetInt64(out var lowValue))
+                {
+                    var highValue = high.ValueKind == JsonValueKind.Number && high.TryGetInt64(out var h) ? h : 0;
+                    return (highValue << 32) | (uint)lowValue;
+                }
+
+                return 0;
+            default:
+                return 0;
+        }
     }
 
     public static bool ShouldIgnore(WhatsAppIncomingMessage message) =>

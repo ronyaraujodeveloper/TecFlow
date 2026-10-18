@@ -213,7 +213,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     PlatformType = platform,
                     PlatformName = FirstNonEmpty(extracted.Platform, platform?.GetDisplayName()),
                     OfferStatus = status,
-                    ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
+                    ReceivedAt = CapturedMessageTimeRules.ResolveReceivedAtUtc(request.ReceivedAt, DateTime.UtcNow),
                     LastValidatedAt = DateTime.UtcNow,
                     HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
                     IsAvailable = validation.IsAvailable,
@@ -281,7 +281,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
             PlatformType = platform,
             PlatformName = platform?.GetDisplayName(),
             OfferStatus = GroupOfferStatuses.Ativo,
-            ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
+            ReceivedAt = CapturedMessageTimeRules.ResolveReceivedAtUtc(request.ReceivedAt, DateTime.UtcNow),
             HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
             IsAvailable = true,
             Type = OfferType.Coupon

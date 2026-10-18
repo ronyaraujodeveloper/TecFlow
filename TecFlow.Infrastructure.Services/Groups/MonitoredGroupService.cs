@@ -303,12 +303,33 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             };
         }
 
+        var isMercadoLivre = AffiliateUrlBuilderRules.IsMercadoLivre(entity.OriginalUrl, entity.PlatformType);
+        string? mattTool = null;
+        string? sanitizedUrl = null;
+        if (isMercadoLivre)
+        {
+            mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
+            sanitizedUrl = _affiliateUrls.BuildAffiliateUrl(
+                entity.OriginalUrl,
+                entity.PrimaryProductUrl,
+                MarketplaceType.MercadoLivre,
+                mattTool);
+        }
+
         var converted = await _converter.ConvertAsync(
             userId,
-            entity.OriginalUrl,
+            sanitizedUrl ?? entity.OriginalUrl,
             entity.GroupName,
             cancellationToken);
-        if (!converted.Status || converted.Data is null || string.IsNullOrWhiteSpace(converted.Data.AffiliateUrl))
+        var convertedUrl = converted.Status ? converted.Data?.AffiliateUrl : null;
+        if (isMercadoLivre)
+        {
+            convertedUrl = string.IsNullOrWhiteSpace(convertedUrl) || AffiliateUrlBuilderRules.IsMercadoLivreShortLink(convertedUrl)
+                ? FirstNonEmpty(convertedUrl, sanitizedUrl)
+                : _affiliateUrls.BuildAffiliateUrl(convertedUrl, null, MarketplaceType.MercadoLivre, mattTool);
+        }
+
+        if (string.IsNullOrWhiteSpace(convertedUrl))
         {
             return new MonitoredGroupsResponseDto
             {
@@ -319,16 +340,17 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             };
         }
 
-        var title = FirstNonEmpty(converted.Data.Title, entity.ProductName) ?? "Oferta clonada";
-        var price = converted.Data.Price ?? entity.ValidatedPrice ?? entity.ExtractedPrice;
+        var convertedData = converted.Status ? converted.Data : null;
+        var title = FirstNonEmpty(convertedData?.Title, entity.ProductName) ?? "Oferta clonada";
+        var price = convertedData?.Price ?? entity.ValidatedPrice ?? entity.ExtractedPrice;
         var message = title;
         if (price is > 0)
         {
             message += " por " + ProductMetadataHtmlParser.FormatBrl(price);
         }
 
-        var image = FirstNonEmpty(converted.Data.ImageUrl, entity.ProductImageUrl);
-        var affiliateUrl = converted.Data.AffiliateUrl;
+        var image = FirstNonEmpty(convertedData?.ImageUrl, entity.ProductImageUrl);
+        var affiliateUrl = convertedUrl;
         var targetChannel = GroupOfferCaptureRules.NormalizeChannel(channel)
             ?? GroupOfferCaptureRules.NormalizeChannel(entity.Channel)
             ?? GroupOfferCaptureRules.WhatsAppChannel;

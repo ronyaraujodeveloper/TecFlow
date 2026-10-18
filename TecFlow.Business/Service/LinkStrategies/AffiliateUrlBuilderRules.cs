@@ -17,15 +17,42 @@ public static class AffiliateUrlBuilderRules
             return original;
         }
 
-        var target = IsMercadoLivreShortLink(original) && IsDirectMercadoLivreProductUrl(primaryProductUrl)
-            ? primaryProductUrl!.Trim()
-            : original;
-        if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(mercadoLivreMattTool))
+        var target = ResolveMercadoLivreTarget(original, primaryProductUrl);
+        if (string.IsNullOrWhiteSpace(target))
         {
             return target;
         }
 
-        return MercadoLivreCommissionUrlBuilder.InjectMattTool(target, mercadoLivreMattTool);
+        var mattTool = string.IsNullOrWhiteSpace(mercadoLivreMattTool)
+            ? MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId
+            : mercadoLivreMattTool.Trim();
+        return MercadoLivreCommissionUrlBuilder.InjectMattTool(
+            MercadoLivreShowcaseRules.RemoveThirdPartyTracking(target),
+            mattTool);
+    }
+
+    /// <summary>
+    /// Destino do link de saída: vitrines de divulgadores viram a página direta do produto focado e
+    /// links curtos usam a página do produto já resolvida, quando disponível.
+    /// </summary>
+    public static string ResolveMercadoLivreTarget(string original, string? primaryProductUrl)
+    {
+        if (MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(original, out var focused))
+        {
+            return focused;
+        }
+
+        var primary = primaryProductUrl?.Trim();
+        var needsResolvedProduct = IsMercadoLivreShortLink(original)
+            || MercadoLivreShowcaseRules.IsAffiliateShowcaseUrl(original);
+        if (!needsResolvedProduct || !IsDirectMercadoLivreProductUrl(primary))
+        {
+            return original;
+        }
+
+        return MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(primary, out var focusedPrimary)
+            ? focusedPrimary
+            : primary!;
     }
 
     public static bool IsMercadoLivre(string? url, MarketplaceType? platform) =>
@@ -44,7 +71,10 @@ public static class AffiliateUrlBuilderRules
     }
 
     private static bool IsDirectMercadoLivreProductUrl(string? url) =>
-        IsMercadoLivreHost(url) && !IsMercadoLivreShortLink(url);
+        IsMercadoLivreHost(url)
+        && !IsMercadoLivreShortLink(url)
+        && (!MercadoLivreShowcaseRules.IsAffiliateShowcaseUrl(url)
+            || MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(url, out _));
 
     private static bool IsMercadoLivreHost(string? url)
     {

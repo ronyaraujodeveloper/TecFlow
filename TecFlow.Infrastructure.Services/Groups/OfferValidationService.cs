@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
@@ -136,7 +137,7 @@ public sealed class OfferValidationService : IOfferValidationService
             };
         }
 
-        var workingUrl = originalUrl.Trim();
+        var workingUrl = BypassAffiliateShowcase(originalUrl, originalUrl.Trim());
         if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
         {
             return GenericStorefront(originalUrl, workingUrl);
@@ -155,6 +156,7 @@ public sealed class OfferValidationService : IOfferValidationService
             _logger.LogDebug(ex, "Follow redirects falhou na integridade da oferta. Url={Url}", originalUrl);
         }
 
+        workingUrl = BypassAffiliateShowcase(originalUrl, workingUrl);
         if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
         {
             return GenericStorefront(originalUrl, workingUrl);
@@ -162,8 +164,8 @@ public sealed class OfferValidationService : IOfferValidationService
 
         try
         {
-            using var response = await _httpClient.GetAsync(workingUrl, cancellationToken);
-            var finalUrl = response.RequestMessage?.RequestUri?.ToString();
+            var (pageResponse, finalUrl) = await GetProductPageAsync(originalUrl, workingUrl, cancellationToken);
+            using var response = pageResponse;
             if (!string.IsNullOrWhiteSpace(finalUrl))
             {
                 workingUrl = finalUrl;
@@ -233,6 +235,38 @@ public sealed class OfferValidationService : IOfferValidationService
                 FinalUrl = workingUrl
             };
         }
+    }
+
+    private string BypassAffiliateShowcase(string originalUrl, string url)
+    {
+        if (!MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(url, out var productUrl))
+        {
+            return url;
+        }
+
+        _logger.LogInformation(
+            "Vitrine de divulgador convertida no produto focado. Url={Url} Produto={ProductUrl}",
+            originalUrl,
+            productUrl);
+        return productUrl;
+    }
+
+    private async Task<(HttpResponseMessage Response, string FinalUrl)> GetProductPageAsync(
+        string originalUrl,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.GetAsync(url, cancellationToken);
+        var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? url;
+        var productUrl = BypassAffiliateShowcase(originalUrl, finalUrl);
+        if (string.Equals(productUrl, finalUrl, StringComparison.Ordinal))
+        {
+            return (response, finalUrl);
+        }
+
+        response.Dispose();
+        var productResponse = await _httpClient.GetAsync(productUrl, cancellationToken);
+        return (productResponse, productResponse.RequestMessage?.RequestUri?.ToString() ?? productUrl);
     }
 
     private OfferPageStatusDto GenericStorefront(string originalUrl, string finalUrl)

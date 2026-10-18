@@ -184,6 +184,11 @@ flowchart LR
   GMUI -->|Abrir Link Original AffiliateUrl target _blank| AFFURL[AffiliateUrlBuilderService]
   AFFURL -->|TrackingId conta ML do tenant ou DefaultAffiliateTrackingId| SQL
   AFFURL -->|AffiliateUrlBuilderRules matt_tool=97303724| MLSITE[mercadolivre.com.br]
+  AFFURL -->|vitrine /social/ affiliate-profile ➔ produto focado + remove matt_* de terceiros| SHOWCASE[MercadoLivreShowcaseRules]
+  VAL -->|vitrine com item_id / product_id ➔ GET da página direta do produto| SHOWCASE
+  PIPE -->|PrimaryProductUrl = página direta resolvida pelo redirect| SHOWCASE
+  GMUI -->|Verificar anuncio ResolvedProductUrl atualiza PrimaryProductUrl| SHOWCASE
+  GMUI -->|Clonar Oferta ML usa a URL higienizada do AffiliateUrlBuilderService| AFFURL
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

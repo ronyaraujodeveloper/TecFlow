@@ -29,7 +29,10 @@ public sealed class AffiliateUrlBuilderService : IAffiliateUrlBuilderService
 
     public async Task<string?> ResolveMercadoLivreMattToolAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var fallback = _mercadoLivreOptions.CurrentValue.DefaultAffiliateTrackingId?.Trim();
+        var configured = _mercadoLivreOptions.CurrentValue.DefaultAffiliateTrackingId?.Trim();
+        var fallback = string.IsNullOrWhiteSpace(configured)
+            ? MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId
+            : configured;
         try
         {
             var tenantId = await _context.UserAccounts

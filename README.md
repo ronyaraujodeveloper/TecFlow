@@ -458,6 +458,16 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Header compacto (`HeaderRestore`):**
   - Grupo [Painel Master] [Visão Cliente] e badge de papel do usuário (`MasterProfileSwitcher`) restaurados no formato original, seguidos do menu de perfil, com `d-flex align-items-center gap-2`.
   - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`: o `backdrop-filter` do cabeçalho criava um contexto de empilhamento e o dropdown ficava sob o conteúdo da página.
+
+## 🔗 Vitrines de Terceiros e Afiliado Forçado no Mercado Livre (`ShowcaseBypass`)
+
+- [x] **Bypass de vitrine (`MercadoLivreShowcaseRules`):**
+  - URLs com `/social/`, `affiliate-profile` ou `reco_client=home_affiliate-profile` viram a página direta do produto focado (`item_id` ➔ `produto.mercadolivre.com.br/MLB-…`, `product_id` / `/p/MLB…` ➔ `www.mercadolivre.com.br/p/MLB…`); vitrine sem produto focado continua `VitrineGenerica`.
+  - Aplicado na validação (link inicial, canônico e redirect final), na ingestão e no "Verificar anúncio", que grava a página direta em `PrimaryProductUrl` (inclusive de itens antigos com `meli.la`).
+- [x] **Sanitização do afiliado (`AffiliateUrlBuilderRules`):**
+  - Remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros e aplica sempre o `matt_tool` do tenant ou o oficial `97303724` (`MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId`).
+- [x] **Botões do `OfferCard`:**
+  - "Abrir Link Original" usa o `AffiliateUrl` higienizado; "Clonar Oferta" do Mercado Livre usa a mesma URL (via conversor da loja ML ou direto, quando não houver loja ML conectada).
   
 ---
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Radar;
@@ -46,6 +47,11 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             entity.PlatformType,
             entity.ValidatedPrice ?? entity.ExtractedPrice,
             cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(snapshot.ResolvedProductUrl) && snapshot.ResolvedProductUrl.Length <= 1000)
+        {
+            entity.PrimaryProductUrl = snapshot.ResolvedProductUrl;
+        }
 
         entity.OfferStatus = snapshot.Status;
         entity.IsAvailable = snapshot.IsAvailable;
@@ -120,6 +126,9 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         CancellationToken cancellationToken = default)
     {
         var page = await _htmlValidation.ValidateProductPageStatusAsync(url ?? string.Empty, cancellationToken);
+        var resolvedProductUrl = MercadoLivreShowcaseRules.TryResolveDirectProductUrl(page.FinalUrl, out var resolved)
+            ? resolved
+            : null;
         if (!page.IsAvailable)
         {
             return new OfficialOfferSnapshotDto
@@ -128,12 +137,13 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
                 Status = page.Status,
                 Price = capturedPrice,
                 Source = "Html",
-                Platform = GroupOfferCaptureRules.DetectPlatform(page.FinalUrl ?? url) ?? platform
+                Platform = GroupOfferCaptureRules.DetectPlatform(page.FinalUrl ?? url) ?? platform,
+                ResolvedProductUrl = resolvedProductUrl
             };
         }
 
         OfficialOfferSnapshotDto? api = null;
-        if (ProductSkuRules.TryExtract(url, platform, out var platformKey, out var sku))
+        if (ProductSkuRules.TryExtract(resolvedProductUrl ?? url, platform, out var platformKey, out var sku))
         {
             if (platformKey == nameof(MarketplaceType.MercadoLivre))
             {
@@ -160,6 +170,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
                 api.Status = GroupOfferStatuses.PrecoAlterado;
             }
 
+            api.ResolvedProductUrl ??= resolvedProductUrl;
             return api;
         }
 
@@ -172,7 +183,8 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             ProductName = html.ProductName,
             ImageUrl = html.ImageUrl,
             Source = "Html",
-            Platform = html.Platform ?? platform
+            Platform = html.Platform ?? platform,
+            ResolvedProductUrl = resolvedProductUrl
         };
     }
 }

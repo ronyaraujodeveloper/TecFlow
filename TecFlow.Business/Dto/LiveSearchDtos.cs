@@ -43,4 +43,7 @@ public class OfficialOfferSnapshotDto
     public string Source { get; set; } = "Html";
 
     public MarketplaceType? Platform { get; set; }
+
+    /// <summary>Página direta e limpa do produto após seguir redirects e vitrines de divulgadores.</summary>
+    public string? ResolvedProductUrl { get; set; }
 }

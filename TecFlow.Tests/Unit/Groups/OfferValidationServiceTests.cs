@@ -42,6 +42,47 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldValidateFocusedProduct_WhenShortLinkLandsOnAffiliateShowcase()
+    {
+        var handler = new StubHandler { Html = "<html>Produto</html>" };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://www.mercadolivre.com.br/social/achados?item_id=MLB4012345678&matt_tool=55555555&reco_client=home_affiliate-profile"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
+
+        Assert.True(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", page.FinalUrl);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", handler.LastRequestUri);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldRefetchFocusedProduct_WhenRedirectEndsInAffiliateShowcase()
+    {
+        var handler = new StubHandler
+        {
+            Html = "<html>Produto</html>",
+            FinalUrlByRequest = request => request.Contains("meli.la", StringComparison.Ordinal)
+                ? "https://www.mercadolivre.com.br/social/achados?product_id=MLB19700000&matt_d2id=x"
+                : request
+        };
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver("https://meli.la/abc123"),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance);
+
+        var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
+
+        Assert.True(page.IsAvailable);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB19700000", page.FinalUrl);
+        Assert.Equal(2, handler.Calls);
+    }
+
+    [Fact]
     public async Task ValidateProductPageStatusAsync_ShouldRejectGenericStorefront_WhenRedirectEndsInStorefront()
     {
         var service = CreateService(
@@ -166,15 +207,22 @@ public class OfferValidationServiceTests
 
         public string? FinalUrl { get; set; }
 
+        public Func<string, string>? FinalUrlByRequest { get; set; }
+
         public int Calls { get; private set; }
+
+        public string? LastRequestUri { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
+            var requested = request.RequestUri?.ToString() ?? string.Empty;
+            LastRequestUri = requested;
+            var final = FinalUrlByRequest?.Invoke(requested) ?? FinalUrl ?? requested;
             var response = new HttpResponseMessage(Status)
             {
                 Content = new StringContent(Html),
-                RequestMessage = new HttpRequestMessage(HttpMethod.Get, FinalUrl ?? request.RequestUri?.ToString())
+                RequestMessage = new HttpRequestMessage(HttpMethod.Get, final)
             };
             return Task.FromResult(response);
         }

@@ -64,6 +64,96 @@ public class AffiliateUrlBuilderServiceTests
     }
 
     [Fact]
+    public void Build_ShouldConvertAffiliateShowcaseIntoFocusedProductPage()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://www.mercadolivre.com.br/social/achadosdojoao?matt_tool=55555555&matt_d2id=abc-123&item_id=MLB4012345678&reco_client=home_affiliate-profile",
+            null,
+            MarketplaceType.MercadoLivre,
+            "97303724");
+
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678?matt_tool=97303724&matt_word=97303724", url);
+    }
+
+    [Fact]
+    public void Build_ShouldStripThirdPartyTrackingFromCatalogPageReachedThroughShowcase()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://www.mercadolivre.com.br/p/MLB19700000?matt_tool_id=1&matt_tracing_id=xyz#reco_client=home_affiliate-profile&reco_item_pos=0",
+            null,
+            null,
+            "97303724");
+
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB19700000?matt_tool=97303724&matt_word=97303724", url);
+    }
+
+    [Fact]
+    public void Build_ShouldUseResolvedProduct_WhenShortLinkLandsOnShowcase()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://meli.la/1aBcDeF",
+            "https://www.mercadolivre.com.br/social/fulano?product_id=MLB22334455&matt_tool=55555555",
+            MarketplaceType.MercadoLivre,
+            "97303724");
+
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB22334455?matt_tool=97303724&matt_word=97303724", url);
+    }
+
+    [Fact]
+    public void Build_ShouldRemoveAllThirdPartyMattParameters_AndKeepOthers()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://produto.mercadolivre.com.br/MLB-123456789-fone-_JM?matt_tool_id=1&matt_tool=2&matt_d2id=3&matt_tracing_id=4&variation=77",
+            null,
+            MarketplaceType.MercadoLivre,
+            "97303724");
+
+        var query = new Uri(url).Query;
+        Assert.DoesNotContain("matt_tool_id", query, StringComparison.Ordinal);
+        Assert.DoesNotContain("matt_d2id", query, StringComparison.Ordinal);
+        Assert.DoesNotContain("matt_tracing_id", query, StringComparison.Ordinal);
+        Assert.Contains("matt_tool=97303724", query, StringComparison.Ordinal);
+        Assert.Contains("variation=77", query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_ShouldForceOfficialMattTool_WhenNoneIsConfigured()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://produto.mercadolivre.com.br/MLB-123456789-fone-_JM?matt_tool=55555555",
+            null,
+            MarketplaceType.MercadoLivre,
+            null);
+
+        Assert.Contains("matt_tool=" + MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId, url, StringComparison.Ordinal);
+        Assert.DoesNotContain("55555555", url, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_ShouldKeepShowcaseWithoutFocusedProduct()
+    {
+        var url = AffiliateUrlBuilderRules.Build(
+            "https://www.mercadolivre.com.br/social/loja-oficial",
+            null,
+            MarketplaceType.MercadoLivre,
+            "97303724");
+
+        Assert.StartsWith("https://www.mercadolivre.com.br/social/loja-oficial?", url, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveMercadoLivreMattToolAsync_ShouldFallbackToOfficialId_WhenConfigIsEmpty()
+    {
+        await using var context = CreateDbContext();
+
+        var service = CreateService(context, fallback: string.Empty);
+
+        Assert.Equal(
+            MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId,
+            await service.ResolveMercadoLivreMattToolAsync(42));
+    }
+
+    [Fact]
     public async Task ResolveMercadoLivreMattToolAsync_ShouldUseTenantAccountTrackingId()
     {
         await using var context = CreateDbContext();

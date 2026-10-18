@@ -910,6 +910,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Cupons fora do feed de produtos (`CouponFeedCleanup`):** classificador reconhece anúncios de cupom (título "NOVO CUPOM..." ou 2+ códigos, "Limite de R$" não é preço), `CouponReclassificationWorker` migra o legado no startup (~607 itens) e os motores de radar filtram `Type == Product`.
 - [x] **Cabeçalho com menu de perfil (`UserProfileMenu`):** removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; pílula com o nome do usuário abre dropdown nativo (Minha Conta, Super Admin, Modo de Visão, Sair) no `MainLayout` e no `MasterMainLayout`.
 - [x] **Cabeçalho restaurado (`HeaderRestore`):** grupo [Painel Master] [Visão Cliente] e badge de papel de volta ao topo, menu de perfil só com Minha Conta / Super Admin / Sair e cabeçalho com `z-index: 1050` para o dropdown não ficar sob a página.
+- [x] **Vitrines de terceiros e afiliado forçado (`ShowcaseBypass`):** links do Mercado Livre com `/social/` / `affiliate-profile` viram a página direta do produto focado (`item_id` ou `/p/MLB...`), os parâmetros `matt_tool_id` / `matt_tool` / `matt_d2id` / `matt_tracing_id` de terceiros são removidos e o `matt_tool=97303724` é sempre aplicado em "Abrir Link Original" e "Clonar Oferta".
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
@@ -78,8 +79,11 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         var groupName = ResolveGroupName(request);
         var saved = 0;
 
-        foreach (var url in urls)
+        foreach (var capturedUrl in urls)
         {
+            var url = MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(capturedUrl, out var focusedProductUrl)
+                ? focusedProductUrl
+                : capturedUrl;
             try
             {
                 var platform = GroupOfferCaptureRules.DetectPlatform(url)
@@ -199,8 +203,8 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     RawText = request.RawText,
                     MediaUrl = Truncate(image, 500),
                     ProductImageUrl = Truncate(image, 500),
-                    OriginalUrl = Truncate(url, 1000) ?? url,
-                    PrimaryProductUrl = Truncate(extracted.PrimaryProductUrl, 1000) ?? Truncate(url, 1000),
+                    OriginalUrl = Truncate(capturedUrl, 1000) ?? capturedUrl,
+                    PrimaryProductUrl = Truncate(ResolvePrimaryProductUrl(url, validation.FinalUrl, extracted.PrimaryProductUrl), 1000),
                     ProductName = name,
                     CouponCode = Truncate(extracted.CouponCode, 64),
                     ExtractedPrice = price,
@@ -322,6 +326,18 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         }
 
         return localPhotoUrl;
+    }
+
+    private static string? ResolvePrimaryProductUrl(string url, string? finalUrl, string? extractedPrimaryUrl)
+    {
+        if (MercadoLivreShowcaseRules.TryResolveDirectProductUrl(finalUrl, out var resolved))
+        {
+            return resolved;
+        }
+
+        return MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(extractedPrimaryUrl, out var focused)
+            ? focused
+            : FirstNonEmpty(extractedPrimaryUrl, url);
     }
 
     private static string ResolveGroupName(GroupOfferCaptureRequest request)

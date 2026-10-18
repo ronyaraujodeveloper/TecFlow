@@ -1491,6 +1491,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** - dropdown reduzido a Minha Conta, Super Admin e Sair.
 - [x] **TecFlow.SharedUi/wwwroot/app.css** - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`; removido `.tecflow-profile-hint`.
 
+### ShowcaseBypass - Vitrines de divulgadores e matt_tool forçado (Mercado Livre)
+
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** (novo) - detecta vitrines `/social/` / `affiliate-profile` / `reco_client=home_affiliate-profile`, extrai o produto focado (`item_id`, `product_id`, `/p/MLB...`, `MLB-...`) como página direta e remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros.
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - constante `OfficialAffiliateTrackingId = "97303724"`, padrão de `DefaultAffiliateTrackingId`.
+- [x] **TecFlow.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** - `ResolveMercadoLivreTarget` (bypass de vitrine no link original e no resolvido) + limpeza dos matt_* alheios + `matt_tool` sempre aplicado (oficial quando nenhum for informado).
+- [x] **TecFlow.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** - fallback do `matt_tool` cai na constante oficial quando a configuração estiver vazia.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - "Clonar Oferta" do Mercado Livre envia a URL higienizada ao conversor e a usa como link quando não houver loja ML conectada.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - vitrine com produto focado é convertida antes da rejeição `VitrineGenerica` (link inicial, canônico e redirect final com novo GET do produto).
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - ingestão valida o produto focado e grava em `PrimaryProductUrl` a página direta resolvida pelo redirect.
+- [x] **TecFlow.Business/Dto/LiveSearchDtos.cs** / **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - `ResolvedProductUrl` no snapshot; "Verificar anúncio" atualiza `PrimaryProductUrl` dos itens antigos (meli.la).
+- [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreShowcaseRulesTests.cs** (novo) / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - cobertura do bypass, da limpeza dos matt_* e do `matt_tool=97303724` forçado.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

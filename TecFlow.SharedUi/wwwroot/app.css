@@ -87,7 +87,10 @@ html, body {
     text-transform: uppercase;
 }
 
+/* backdrop-filter cria contexto de empilhamento: sem z-index próprio o dropdown de perfil fica sob a página. */
 .portal-header {
+    position: relative;
+    z-index: 1050;
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--tf-client-border);
@@ -1685,13 +1688,6 @@ html, body {
     gap: 0.5rem;
     font-size: 0.9rem;
 }
-
-.tecflow-profile-hint {
-    flex-basis: 100%;
-    padding-left: 1.5rem;
-    font-size: 0.75rem;
-}
-
 /* --- Gerador de Links de Comissão (Fase 11.1) --- */
 
 .link-generator-page {
@@ -2529,6 +2525,8 @@ html, body {
 }
 
 .master-header {
+    position: relative;
+    z-index: 1050;
     background: #020617;
     color: #fff;
     border-bottom: 3px solid var(--tf-master-accent);

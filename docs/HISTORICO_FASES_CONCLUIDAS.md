@@ -909,6 +909,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Notificações Toast globais (`GlobalToasts`):** `IToastService`/`ToastService` (Success/Error/Warning/Info, ID único, 10s padrão) e `ToastContainer` fixo no canto superior direito do `MainLayout`; Grupos Monitorados e `CouponCard` passaram a usar o serviço no lugar dos alertas fixos e do toast local.
 - [x] **Cupons fora do feed de produtos (`CouponFeedCleanup`):** classificador reconhece anúncios de cupom (título "NOVO CUPOM..." ou 2+ códigos, "Limite de R$" não é preço), `CouponReclassificationWorker` migra o legado no startup (~607 itens) e os motores de radar filtram `Type == Product`.
 - [x] **Cabeçalho com menu de perfil (`UserProfileMenu`):** removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; pílula com o nome do usuário abre dropdown nativo (Minha Conta, Super Admin, Modo de Visão, Sair) no `MainLayout` e no `MasterMainLayout`.
+- [x] **Cabeçalho restaurado (`HeaderRestore`):** grupo [Painel Master] [Visão Cliente] e badge de papel de volta ao topo, menu de perfil só com Minha Conta / Super Admin / Sair e cabeçalho com `z-index: 1050` para o dropdown não ficar sob a página.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

@@ -454,9 +454,10 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Elementos obsoletos removidos:**
   - Dropdown "Todas as lojas" (`ActiveStoreScopeSelector`), botão azul "Painel" e badge "Sessão ativa (plataforma)" (`SessionStatusBadge`).
 - [x] **Menu de perfil:**
-  - Pílula com ícone + nome do usuário; dropdown com Minha Conta (`/minha-conta`), Super Admin (só master), Modo de Visão (Painel Master ⇄ Visão Cliente via `/master/visao/{modo}`) e Sair (`/auth/logout`). Usa `<details>` nativo porque o layout é SSR estático (sem bootstrap.js); fecha ao clicar fora ou com Esc.
-- [x] **Header compacto:**
-  - Topo alinhado à direita com `d-flex align-items-center gap-2`; o mesmo menu substitui o seletor de visão no Master Console.
+  - Pílula com ícone + nome do usuário; dropdown `dropdown-menu-end` só com Minha Conta (`/minha-conta`), Super Admin (só master) e Sair (`/auth/logout`). Usa `<details>` nativo porque o layout é SSR estático (sem bootstrap.js); fecha ao clicar fora ou com Esc.
+- [x] **Header compacto (`HeaderRestore`):**
+  - Grupo [Painel Master] [Visão Cliente] e badge de papel do usuário (`MasterProfileSwitcher`) restaurados no formato original, seguidos do menu de perfil, com `d-flex align-items-center gap-2`.
+  - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`: o `backdrop-filter` do cabeçalho criava um contexto de empilhamento e o dropdown ficava sob o conteúdo da página.
   
 ---
 

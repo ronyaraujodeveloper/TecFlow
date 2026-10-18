@@ -1200,7 +1200,7 @@ API / Orquestrador / Worker / WebUi
 **SharedUi / WebUi**
 - [x] **Services/Auth/JwtPayloadReader.cs** / **MasterAccess.cs** — leitura de papel e emulação no cookie.
 - [x] **Services/Master/MasterApiService.cs** / **SystemCommunicationApiService.cs**.
-- [x] **Components/Master/** — `MasterPageBase`, `MasterAlerts`, `ImpersonationBanner`, `GlobalAnnouncements` (`MasterProfileSwitcher` substituído por `Layout/UserProfileMenu` em `UserProfileMenu`).
+- [x] **Components/Master/** — `MasterPageBase`, `MasterAlerts`, `MasterProfileSwitcher`, `ImpersonationBanner`, `GlobalAnnouncements`.
 - [x] **Pages/Master/** — `MasterDashboard`, `MasterTenants`, `MasterOperators`, `MasterAudit`, `MasterSettings`, `MasterPlans`, `MasterCommunication`.
 - [x] **Pages/Novidades.razor** — changelog para clientes.
 - [x] **MainLayout.razor** / **NavMenu.razor** — banner de emulação, alternância de perfil, avisos e grupo "Painel Master".
@@ -1479,11 +1479,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** (novo) - pílula com o nome do usuário e dropdown `<details>` (Minha Conta, Super Admin, Modo de Visão, Sair), funcional no layout SSR estático.
 - [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** - removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; cabeçalho só com `UserProfileMenu`.
 - [x] **TecFlow.SharedUi/Components/Layout/MasterMainLayout.razor** - `MasterProfileSwitcher` + `SessionStatusBadge` trocados por `UserProfileMenu`.
-- [x] **TecFlow.SharedUi/Components/Master/MasterProfileSwitcher.razor** (removido) - virou "Super Admin" / "Modo de Visão" no menu de perfil.
 - [x] **TecFlow.SharedUi/Components/Shared/SessionStatusBadge.razor** (removido) - badge "Sessão ativa (plataforma)".
 - [x] **TecFlow.SharedUi/Components/Shared/ActiveStoreScopeSelector.razor** (removido) - dropdown "Todas as lojas"; as páginas seguem usando `IActiveStoreScopeService` com a loja salva no navegador.
 - [x] **TecFlow.SharedUi/wwwroot/app.css** - estilos `.active-store-scope*` trocados por `.tecflow-profile-*`.
 - [x] **TecFlow.SharedUi/wwwroot/app-interop.js** - fecha o menu de perfil ao clicar fora, em um item ou com Esc.
+
+### HeaderRestore - Botões de visão de volta ao cabeçalho
+
+- [x] **TecFlow.SharedUi/Components/Master/MasterProfileSwitcher.razor** (restaurado) - grupo [Painel Master] [Visão Cliente] + badge de papel, no formato original.
+- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `MasterProfileSwitcher` antes do `UserProfileMenu`.
+- [x] **TecFlow.SharedUi/Components/Layout/UserProfileMenu.razor** - dropdown reduzido a Minha Conta, Super Admin e Sair.
+- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`; removido `.tecflow-profile-hint`.
 
 ---
 

@@ -1408,9 +1408,10 @@ flowchart LR
   subgraph WebUi
     NAV[NavMenu: Painel Master] --> PAGES[Pages/Master/*]
     LAYOUT[MainLayout] --> BANNER[ImpersonationBanner]
-    LAYOUT --> SWITCH[UserProfileMenu: Minha Conta / Super Admin / Modo de Visão / Sair]
+    LAYOUT --> SWITCH[MasterProfileSwitcher: Painel Master / Visão Cliente]
     SWITCH -->|/master/visao/master ou cliente| EP
-    SWITCH -->|/auth/logout| COOKIE
+    LAYOUT --> PROFILE[UserProfileMenu: Minha Conta / Super Admin / Sair]
+    PROFILE -->|/auth/logout| COOKIE
     LAYOUT --> ANN[GlobalAnnouncements]
     EP[MasterEndpointExtensions /master/emular, /master/visao] --> COOKIE[AuthCookieService]
   end

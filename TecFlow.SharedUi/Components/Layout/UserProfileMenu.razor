@@ -22,10 +22,6 @@
                     {
                         <div class="small text-truncate">@email</div>
                     }
-                    @if (isAdmin)
-                    {
-                        <span class="badge text-bg-warning mt-1">@MasterRoles.Label(MasterAccess.Role(user))</span>
-                    }
                 </div>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item" href="/minha-conta" role="menuitem">
@@ -38,15 +34,6 @@
                        data-enhance-nav="false"
                        role="menuitem">
                         <i class="bi bi-shield-lock" aria-hidden="true"></i> Super Admin
-                    </a>
-                    <a class="dropdown-item"
-                       href="/master/visao/@(masterView ? MasterAccess.ViewClient : MasterAccess.ViewMaster)"
-                       data-enhance-nav="false"
-                       role="menuitem">
-                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Modo de Visão
-                        <span class="d-block small text-muted tecflow-profile-hint">
-                            @(masterView ? "Painel Master → Visão Cliente" : "Visão Cliente → Painel Master")
-                        </span>
                     </a>
                 }
                 <div class="dropdown-divider"></div>

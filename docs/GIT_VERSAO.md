@@ -106,3 +106,4 @@
 [2026-10-17 20:43:18] feat(offers): filtros de vitrine genérica, preço suspeito, verificação em tempo real e revalidação periódica de ofertas
 [2026-10-17 22:05:40] feat(ofertas): aba de cupons por marketplace, layout compacto e notificacoes toast globais
 [2026-10-17 22:48:48] feat(ui): menu de perfil no cabecalho e reclassificacao de cupons fora do feed de produtos
+[2026-10-17 22:59:07] fix(ui): restaura botoes Painel Master/Visao Cliente e corrige z-index do menu de perfil

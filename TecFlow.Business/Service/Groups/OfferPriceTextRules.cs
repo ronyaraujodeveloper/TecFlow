@@ -32,6 +32,15 @@ public static class OfferPriceTextRules
         @"<[^>]*>",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    /// <summary>"R$ 16,60 / unidade", "(R$ 16,60 por frasco)"; o preço repetido cobre o span aria-hidden da Amazon.</summary>
+    private static readonly Regex UnitPriceSuffixRegex = new(
+        @"^\s*(?:R\$\s*[\d.,]+\s*)?\)?\s*(?:/|\bpor\b|\bcada\b)\s*(?:unidade|unid\.?|un\b|frasco|lata|garrafa|litro|kg|quilo|100\s*(?:g|ml)\b|ml\b|c[aá]psula|sach[eê]|rolo|metro|dose|lavagem|fralda|pe[cç]a|item)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex UnitPricePrefixRegex = new(
+        @"(?:\bunidade|\bunit[aá]rio|\bpor\s+(?:unidade|frasco|lata|litro|kg)|\bcada)\s*:?\s*\(?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static decimal? TryExtractCashPrice(string? text)
     {
         var candidates = ReadCandidates(text);
@@ -40,7 +49,7 @@ public static class OfferPriceTextRules
             return null;
         }
 
-        var cash = candidates.Where(item => !item.IsInstallment).ToList();
+        var cash = candidates.Where(item => !item.IsInstallment && !item.IsUnitPrice).ToList();
         for (var i = 0; i < cash.Count; i++)
         {
             var current = cash[i];
@@ -70,6 +79,27 @@ public static class OfferPriceTextRules
         var suffix = TagRegex.Replace(text[(matchIndex + matchLength)..end], " ");
         return InstallmentSuffixRegex.IsMatch(suffix);
     }
+
+    /// <summary>Preço por unidade/frasco/litro: nunca é o valor total a pagar.</summary>
+    public static bool IsUnitPriceContext(string text, int matchIndex, int matchLength)
+    {
+        if (UnitPricePrefixRegex.IsMatch(DecodeSpaces(ReadPrefix(text, matchIndex))))
+        {
+            return true;
+        }
+
+        var end = Math.Min(text.Length, matchIndex + matchLength + 160);
+        var suffix = DecodeSpaces(TagRegex.Replace(text[(matchIndex + matchLength)..end], " "));
+        return UnitPriceSuffixRegex.IsMatch(suffix);
+    }
+
+    public static bool IsNonCashContext(string text, int matchIndex, int matchLength) =>
+        IsInstallmentContext(text, matchIndex, matchLength) || IsUnitPriceContext(text, matchIndex, matchLength);
+
+    private static string DecodeSpaces(string value) =>
+        value.Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase)
+            .Replace("&#160;", " ", StringComparison.Ordinal)
+            .Replace('\u00A0', ' ');
 
     public static bool IsPlausiblePrice(decimal? price) =>
         price is > 0 and < MaxPlausiblePrice;
@@ -106,6 +136,7 @@ public static class OfferPriceTextRules
             result.Add(new PriceCandidate(
                 value!.Value,
                 IsInstallmentContext(text, match.Index, match.Length),
+                IsUnitPriceContext(text, match.Index, match.Length),
                 OldPricePrefixRegex.IsMatch(prefix),
                 NewPricePrefixRegex.IsMatch(prefix)));
         }
@@ -136,5 +167,5 @@ public static class OfferPriceTextRules
             : null;
     }
 
-    private sealed record PriceCandidate(decimal Value, bool IsInstallment, bool IsOldPrice, bool IsNewPrice);
+    private sealed record PriceCandidate(decimal Value, bool IsInstallment, bool IsUnitPrice, bool IsOldPrice, bool IsNewPrice);
 }

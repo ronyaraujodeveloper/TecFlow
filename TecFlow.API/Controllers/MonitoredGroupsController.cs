@@ -51,6 +51,7 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? store = null,
         [FromQuery] OfferType type = OfferType.Product,
         [FromQuery] string? couponPlatform = null,
+        [FromQuery] int? tagId = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -62,7 +63,8 @@ public sealed class MonitoredGroupsController : ControllerBase
                 MinPrice = minPrice,
                 MaxPrice = maxPrice,
                 HasCoupon = coupon,
-                Store = store
+                Store = store,
+                TagId = tagId
             };
             return Ok(await _service.ListAsync(
                 userId,

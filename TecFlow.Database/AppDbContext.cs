@@ -63,6 +63,7 @@ public class AppDbContext : DbContext
     public DbSet<TelegramBroadcastCampaign> TelegramBroadcastCampaigns { get; set; } = null!;
     public DbSet<TelegramGroup> TelegramGroups { get; set; } = null!;
     public DbSet<GroupCapturedMessage> GroupCapturedMessages { get; set; } = null!;
+    public DbSet<ProductTag> ProductTags { get; set; } = null!;
     public DbSet<AffiliateMiningProfile> AffiliateMiningProfiles { get; set; } = null!;
     public DbSet<ProductPriceSnapshot> ProductPriceSnapshots { get; set; } = null!;
     public DbSet<OfferRadarItem> OfferRadarItems { get; set; } = null!;
@@ -455,6 +456,30 @@ public class AppDbContext : DbContext
             entity.HasIndex(item => new { item.UserId, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.GroupKey, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.Channel, item.ExternalMessageId, item.OriginalUrl });
+            entity.HasMany(item => item.Tags)
+                .WithMany(tag => tag.Offers)
+                .UsingEntity<Dictionary<string, object>>(
+                    "OfferTags",
+                    right => right.HasOne<ProductTag>().WithMany().HasForeignKey("ProductTagId").OnDelete(DeleteBehavior.Cascade),
+                    left => left.HasOne<GroupCapturedMessage>().WithMany().HasForeignKey("OfferId").OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("OfferTags");
+                        join.HasKey("OfferId", "ProductTagId");
+                        join.HasIndex("ProductTagId");
+                    });
+        });
+
+        modelBuilder.Entity<ProductTag>(entity =>
+        {
+            entity.ToTable("ProductTags");
+            entity.Property(tag => tag.Name).HasMaxLength(64).IsRequired();
+            entity.Property(tag => tag.Slug).HasMaxLength(64).IsRequired();
+            entity.Property(tag => tag.IsActive).HasDefaultValue(true);
+            entity.HasIndex(tag => tag.Slug).IsUnique();
+            entity.HasData(ProductTagCatalog.Seed
+                .Select(seed => (object)new { seed.Id, seed.Name, seed.Slug, IsActive = true })
+                .ToArray());
         });
 
         modelBuilder.Entity<AffiliateMiningProfile>(entity =>

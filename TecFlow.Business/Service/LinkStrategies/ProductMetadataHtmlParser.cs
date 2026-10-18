@@ -515,7 +515,7 @@ public static class ProductMetadataHtmlParser
     {
         foreach (Match match in MonetaryPriceRegex.Matches(html))
         {
-            if (!TecFlow.Business.Service.Groups.OfferPriceTextRules.IsInstallmentContext(html, match.Index, match.Length))
+            if (!TecFlow.Business.Service.Groups.OfferPriceTextRules.IsNonCashContext(html, match.Index, match.Length))
             {
                 return match.Groups["num"].Value;
             }

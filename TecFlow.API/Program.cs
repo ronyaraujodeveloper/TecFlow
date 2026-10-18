@@ -100,6 +100,7 @@ builder.Services.AddHostedService<TecFlow.API.Workers.GlobalTrendingDealsWorker>
 builder.Services.AddHostedService<TecFlow.API.Workers.ProductImageCleanupWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.OfferRevalidationWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.CouponReclassificationWorker>();
+builder.Services.AddHostedService<TecFlow.API.Workers.ProductTagBackfillWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.DataPurgeWorker>();
 builder.Services.AddHostedService<TecFlow.API.Workers.TenantBillingWorker>();
 

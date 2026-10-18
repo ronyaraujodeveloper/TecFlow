@@ -200,6 +200,13 @@ flowchart LR
   MONSVC -->|ApplyRelevanceFilter IsAvailable + FeedVisibleStatuses| FEEDVIS[OfferFeedVisibilityRules]
   GMUI -->|Verificar ValidatedOffer / OfferRemoved ➔ remove card + toast Produto esgotado| FEEDVIS
   REVALW[OfferRevalidationService Worker de lote] -->|CheckAndPersistAsync IsAvailable=false some do feed| FEEDVIS
+  PIPE -->|SaveValidatedOfferAsync vincula tags por palavra-chave| TAGRULE[ProductTagClassifierRules]
+  TAGRULE -->|OfferTags N:N GroupCapturedMessages x ProductTags| SQL
+  TAGBACK[ProductTagBackfillWorker] -->|classifica ofertas legadas sem tags| TAGRULE
+  GMUI -->|combo Características tagId| MONSVC
+  MONSVC -->|Tags.Any t.Id == selectedTagId + lista ProductTags ativas| SQL
+  VAL -->|buy box apexPriceToPay/priceToPay/corePrice ignora / unidade + fallback og:price| AMZRULE[AmazonProductPageRules]
+  GMUI -->|Verificar PriceUpdated + toast Preço atualizado para R$ X| MONSVC
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

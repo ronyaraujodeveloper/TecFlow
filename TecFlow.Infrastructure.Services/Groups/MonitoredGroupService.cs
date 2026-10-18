@@ -177,6 +177,12 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                     || item.OriginalUrl.Contains(store));
             }
 
+            if (search?.TagId is > 0 && type == OfferType.Product)
+            {
+                var selectedTagId = search.TagId.Value;
+                query = query.Where(item => item.Tags.Any(tag => tag.Id == selectedTagId));
+            }
+
             if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
             {
                 query = query.Where(item =>
@@ -201,12 +207,19 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .Take(resolvedTake)
                 .ToList();
             await EnrichForFeedAsync(userId, uniqueOffers, cancellationToken);
+            var tags = await _context.ProductTags
+                .AsNoTracking()
+                .Where(tag => tag.IsActive)
+                .OrderBy(tag => tag.Id)
+                .Select(tag => new ProductTagDto { Id = tag.Id, Name = tag.Name, Slug = tag.Slug })
+                .ToListAsync(cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {
                 Status = true,
                 Groups = groups,
                 Offers = uniqueOffers,
+                Tags = tags,
                 TotalOffers = total,
                 Skip = resolvedSkip,
                 Take = resolvedTake,
@@ -239,9 +252,21 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             return new MonitoredGroupsResponseDto { Status = false, Descricao = "Oferta não encontrada." };
         }
 
+        var previousPrice = entity.ValidatedPrice ?? entity.ExtractedPrice;
         await _liveCheck.CheckAndPersistAsync(entity, userId, cancellationToken);
 
         var removed = !OfferFeedVisibilityRules.IsVisibleInFeed(entity.Type, entity.IsAvailable, entity.OfferStatus);
+        var currentPrice = entity.ValidatedPrice ?? entity.ExtractedPrice;
+        var priceUpdated = !removed && OfferFeedVisibilityRules.HasDisplayedPriceChanged(previousPrice, currentPrice);
+        if (priceUpdated)
+        {
+            _logger.LogInformation(
+                "Preço atualizado após Verificar. OfferId={OfferId} Plataforma={Platform} Antes={Before} Depois={After}",
+                entity.Id,
+                entity.PlatformType,
+                previousPrice,
+                currentPrice);
+        }
         if (removed)
         {
             _logger.LogInformation(
@@ -257,9 +282,12 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             Status = true,
             Descricao = removed
                 ? OfferFeedVisibilityRules.RemovedFromFeedToast
-                : $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.",
+                : priceUpdated
+                    ? OfferFeedVisibilityRules.BuildPriceUpdatedToast(currentPrice!.Value)
+                    : $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.",
             ValidatedOffer = offer,
-            OfferRemoved = removed
+            OfferRemoved = removed,
+            PriceUpdated = priceUpdated
         };
     }
 

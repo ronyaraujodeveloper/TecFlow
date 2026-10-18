@@ -72,6 +72,12 @@ public interface ICouponReclassificationService
     Task<int> ReclassifyLegacyCouponsAsync(CancellationToken cancellationToken = default);
 }
 
+public interface IProductTagBackfillService
+{
+    /// <summary>Classifica produtos capturados antes das características existirem; devolve quantos ganharam tags.</summary>
+    Task<int> BackfillUntaggedOffersAsync(CancellationToken cancellationToken = default);
+}
+
 public interface IMonitoredGroupService
 {
     Task<MonitoredGroupsResponseDto> SyncAsync(

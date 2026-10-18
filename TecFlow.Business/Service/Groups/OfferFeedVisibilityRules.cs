@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Core.Entities;
 using TecFlow.Core.Enums;
 
@@ -11,6 +12,13 @@ namespace TecFlow.Business.Service.Groups;
 public static class OfferFeedVisibilityRules
 {
     public const string RemovedFromFeedToast = "Produto esgotado. Oferta removida do feed.";
+
+    public static string BuildPriceUpdatedToast(decimal price) =>
+        $"Preço atualizado para {ProductMetadataHtmlParser.FormatBrl(price)}";
+
+    /// <summary>Preço exibido no card (<c>ValidatedPrice ?? ExtractedPrice</c>) mudou pelo menos um centavo.</summary>
+    public static bool HasDisplayedPriceChanged(decimal? before, decimal? after) =>
+        after is > 0 && (before is not > 0 || Math.Abs(after.Value - before.Value) >= 0.01m);
 
     public static bool IsVisibleInFeed(OfferType type, bool isAvailable, string? status) =>
         type == OfferType.Coupon

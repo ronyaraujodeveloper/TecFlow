@@ -30,6 +30,23 @@ public class OfferFeedVisibilityRulesTests
     }
 
     [Fact]
+    public void BuildPriceUpdatedToast_ShouldFormatBrazilianCurrency()
+    {
+        Assert.Equal("Preço atualizado para R$ 55,00", OfferFeedVisibilityRules.BuildPriceUpdatedToast(55m));
+        Assert.Equal("Preço atualizado para R$ 1.299,90", OfferFeedVisibilityRules.BuildPriceUpdatedToast(1299.90m));
+    }
+
+    [Theory]
+    [InlineData(16.60, 55.00, true)]
+    [InlineData(null, 55.00, true)]
+    [InlineData(55.00, 55.00, false)]
+    [InlineData(55.00, null, false)]
+    public void HasDisplayedPriceChanged_ShouldCompareCents(double? before, double? after, bool expected)
+    {
+        Assert.Equal(expected, OfferFeedVisibilityRules.HasDisplayedPriceChanged((decimal?)before, (decimal?)after));
+    }
+
+    [Fact]
     public void RemoveFromFeed_ShouldDropOnlyTheVerifiedOffer()
     {
         var offers = new List<GroupCapturedOfferDto> { new() { Id = 1 }, new() { Id = 2 }, new() { Id = 3 } };

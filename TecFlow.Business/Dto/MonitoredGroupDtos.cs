@@ -11,6 +11,15 @@ public class MonitoredGroupDto
     public string Channel { get; set; } = string.Empty;
 }
 
+public class ProductTagDto
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Slug { get; set; } = string.Empty;
+}
+
 public class GroupCapturedOfferDto
 {
     public int Id { get; set; }
@@ -121,6 +130,9 @@ public class MonitoredGroupsResponseDto
 
     public List<GroupCapturedOfferDto> Offers { get; set; } = [];
 
+    /// <summary>Características ativas (<c>ProductTags</c>) para o combo de filtro do feed.</summary>
+    public List<ProductTagDto> Tags { get; set; } = [];
+
     public int TotalOffers { get; set; }
 
     public int Skip { get; set; }
@@ -136,6 +148,9 @@ public class MonitoredGroupsResponseDto
 
     /// <summary>True quando a revalidação tirou a oferta do feed (esgotada, pausada ou vitrine genérica).</summary>
     public bool OfferRemoved { get; set; }
+
+    /// <summary>True quando o Verificar trocou o preço exibido pelo preço à vista da página (Descricao traz o novo valor).</summary>
+    public bool PriceUpdated { get; set; }
 }
 
 public class PrioritizeMonitoredMediaRequest

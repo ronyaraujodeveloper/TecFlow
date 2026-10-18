@@ -434,9 +434,27 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
             return 0;
         }
 
+        await AttachProductTagsAsync(entity, cancellationToken);
         _context.GroupCapturedMessages.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
         return 1;
+    }
+
+    private async Task AttachProductTagsAsync(GroupCapturedMessage entity, CancellationToken cancellationToken)
+    {
+        var slugs = ProductTagClassifierRules.Classify(entity.ProductName, entity.RawText);
+        if (slugs.Count == 0)
+        {
+            return;
+        }
+
+        var tags = await _context.ProductTags
+            .Where(tag => tag.IsActive && slugs.Contains(tag.Slug))
+            .ToListAsync(cancellationToken);
+        foreach (var tag in tags)
+        {
+            entity.Tags.Add(tag);
+        }
     }
 
     /// <summary>

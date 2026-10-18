@@ -211,6 +211,25 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ShouldUseAmazonBuyBoxTotal_InsteadOfUnitPrice()
+    {
+        const string html = """
+            <html><head><meta property="og:title" content="Sabão Líquido Omo 3L - Kit com 3" /></head><body>
+            <div id="corePriceDisplay_desktop_feature_div">
+              <span class="a-price aok-align-center priceToPay"><span class="a-offscreen">R$ 55,00</span></span>
+              <span class="a-size-mini pricePerUnit">(<span class="a-price a-text-price" data-a-size="mini"><span class="a-offscreen">R$ 16,60</span></span> / unidade)</span>
+            </div></body></html>
+            """;
+        var service = CreateService(html, HttpStatusCode.OK, "https://www.amazon.com.br/dp/B0TESTE123");
+
+        var result = await service.ValidateAsync("https://www.amazon.com.br/dp/B0TESTE123", 16.60m);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(55.00m, result.Price);
+        Assert.Equal(GroupOfferStatuses.PrecoAlterado, result.Status);
+    }
+
+    [Fact]
     public async Task ValidateAsync_ShouldMarkShopeeSoldOutAsEsgotado()
     {
         var service = CreateService(

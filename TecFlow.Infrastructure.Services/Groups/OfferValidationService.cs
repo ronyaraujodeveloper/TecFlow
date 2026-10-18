@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Amazon;
 using TecFlow.Business.Integrations.MercadoLivre;
 using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
@@ -79,6 +80,12 @@ public sealed class OfferValidationService : IOfferValidationService
                 && ShopeeProductPageRules.TryExtractActivePrice(page.Html) is { } shopeePrice)
             {
                 metadata.ProductPrice = shopeePrice;
+            }
+
+            if (AmazonProductPageRules.IsAmazonUrl(page.FinalUrl ?? originalUrl)
+                && AmazonProductPageRules.TryExtractBuyBoxPrice(page.Html) is { } amazonPrice)
+            {
+                metadata.ProductPrice = amazonPrice;
             }
 
             if (OfferPriceTextRules.IsSignificantDivergence(capturedPrice, metadata.ProductPrice))

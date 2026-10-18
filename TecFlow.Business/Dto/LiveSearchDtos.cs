@@ -14,12 +14,16 @@ public class LiveSearchFilterDto
 
     public string? Store { get; set; }
 
+    /// <summary>Característica (<c>ProductTag.Id</c>) do combo do feed; null = Todas as Características.</summary>
+    public int? TagId { get; set; }
+
     public bool HasAny =>
         !string.IsNullOrWhiteSpace(Keyword)
         || MinPrice is > 0
         || MaxPrice is > 0
         || HasCoupon == true
-        || !string.IsNullOrWhiteSpace(Store);
+        || !string.IsNullOrWhiteSpace(Store)
+        || TagId is > 0;
 }
 
 public class OfficialOfferSnapshotDto

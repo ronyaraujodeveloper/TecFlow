@@ -1547,6 +1547,34 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar remove o card esgotado da lista em memória, ajusta o total, chama `StateHasChanged()` e mostra o toast de aviso.
 - [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreAvailabilityRulesTests.cs** (novo) / **TecFlow.Tests/Unit/Groups/OfferFeedVisibilityRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** / **GroupCapturedMessagesServiceTests.cs** / **TecFlow.Tests/Unit/Radar/MercadoLivreItemParserTests.cs** - cobertura da detecção, do filtro estrito e da remoção em memória.
 
+### ProductTagsFilter - Filtro por características de produtos
+
+- [x] **TecFlow.Core/Entities/ProductTag.cs** (novo) - entidade `ProductTag` e `ProductTagCatalog` (slugs, Ids fixos do seed e rótulo "Todas as Características").
+- [x] **TecFlow.Core/Entities/GroupCapturedMessage.cs** - navegação `Tags` (N:N).
+- [x] **TecFlow.Database/AppDbContext.cs** - `DbSet<ProductTag>`, tabela de junção `OfferTags` (cascata) e `HasData` do catálogo.
+- [x] **TecFlow.Data/Migrations/20261018140443_AddProductTags.cs** (novo) / **.Designer.cs** / **AppDbContextModelSnapshot.cs** - tabelas `ProductTags` e `OfferTags` com seed.
+- [x] **TecFlow.Business/Service/Groups/ProductTagClassifierRules.cs** (novo) - palavras-chave por característica, sem acento e por palavra inteira.
+- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** / **LiveSearchDtos.cs** - `ProductTagDto`, `MonitoredGroupsResponseDto.Tags` e `LiveSearchFilterDto.TagId`.
+- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** - `IProductTagBackfillService`.
+- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - vincula as tags na gravação de cada oferta nova (Telegram e WhatsApp).
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - filtro `Tags.Any(t => t.Id == selectedTagId)` e lista de características ativas na resposta.
+- [x] **TecFlow.Infrastructure.Services/Groups/ProductTagBackfillService.cs** (novo) - classifica em lotes as ofertas capturadas sem tags (`ProductTagBackfillHost`).
+- [x] **TecFlow.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** / **TecFlow.API/Program.cs** / **TecFlow.API/Workers/ProductTagBackfillWorker.cs** (novo) - registro do backfill na subida da API.
+- [x] **TecFlow.API/Controllers/MonitoredGroupsController.cs** / **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - parâmetro `tagId` na listagem.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** / **TecFlow.SharedUi/wwwroot/app.css** - combo de características à direita de "Ocultos / Descartados" (`.monitored-tag-select`).
+- [x] **TecFlow.Tests/Unit/Groups/ProductTagClassifierRulesTests.cs** (novo) / **ProductTagPersistenceTests.cs** (novo) - classificação, seed, vínculo na gravação, filtro por tag e backfill idempotente.
+
+### AmazonUnitPriceFix - Preço total da Amazon sem valor por unidade
+
+- [x] **TecFlow.Business/Service/Groups/OfferPriceTextRules.cs** - `IsUnitPriceContext` / `IsNonCashContext`; `TryExtractCashPrice` ignora "/ unidade", "por frasco", "unidade R$ X".
+- [x] **TecFlow.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - leitura de valores monetários do HTML pula contextos de parcela e de preço unitário.
+- [x] **TecFlow.Business/Integrations/Amazon/AmazonProductPageRules.cs** (novo) - total da buy box (`apexPriceToPay`, `priceToPay`, `corePrice_feature_div`) sem preço riscado/unitário, com fallback `og:price:amount`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - páginas da Amazon usam o preço da buy box.
+- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** / **TecFlow.Business/Service/Groups/OfferFeedVisibilityRules.cs** - `PriceUpdated`, `HasDisplayedPriceChanged` e toast "Preço atualizado para R$ X".
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `ValidateAsync` compara o preço exibido antes/depois e sinaliza `PriceUpdated`.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - Verificar substitui o card, chama `StateHasChanged()` e mostra o toast de aviso com o novo preço.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/AmazonProductPageRulesTests.cs** (novo) / **OfferPriceTextRulesTests.cs** / **OfferValidationServiceTests.cs** / **OfferFeedVisibilityRulesTests.cs** - buy box, preço unitário, fallback og e toast.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

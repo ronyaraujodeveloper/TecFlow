@@ -74,4 +74,6 @@ public class GroupCapturedMessage : BaseEntity
     public bool IsAvailable { get; set; } = true;
 
     public OfferType Type { get; set; } = OfferType.Product;
+
+    public ICollection<ProductTag> Tags { get; set; } = new List<ProductTag>();
 }

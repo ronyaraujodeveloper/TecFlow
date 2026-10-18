@@ -87,13 +87,28 @@
                                OnClose="() => _showAdvancedFilters = false" />
 
     <div class="mb-2">
-        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtro do feed">
-            <button type="button" class="btn @FeedChipClass(FeedTab.Offers)" @onclick="() => SetFeedTabAsync(FeedTab.Offers)">Feed de Ofertas</button>
-            <button type="button" class="btn @FeedChipClass(FeedTab.Coupons)" @onclick="() => SetFeedTabAsync(FeedTab.Coupons)">
-                <i class="bi bi-ticket-perforated" aria-hidden="true"></i>
-                Cupons &amp; Promoções
-            </button>
-            <button type="button" class="btn @FeedChipClass(FeedTab.Ignored)" @onclick="() => SetFeedTabAsync(FeedTab.Ignored)">Ocultos / Descartados</button>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtro do feed">
+                <button type="button" class="btn @FeedChipClass(FeedTab.Offers)" @onclick="() => SetFeedTabAsync(FeedTab.Offers)">Feed de Ofertas</button>
+                <button type="button" class="btn @FeedChipClass(FeedTab.Coupons)" @onclick="() => SetFeedTabAsync(FeedTab.Coupons)">
+                    <i class="bi bi-ticket-perforated" aria-hidden="true"></i>
+                    Cupons &amp; Promoções
+                </button>
+                <button type="button" class="btn @FeedChipClass(FeedTab.Ignored)" @onclick="() => SetFeedTabAsync(FeedTab.Ignored)">Ocultos / Descartados</button>
+            </div>
+            <select id="monitored-tag"
+                    class="form-select form-select-sm monitored-tag-select @(_tagId > 0 ? "is-filtered" : string.Empty)"
+                    aria-label="Característica do produto"
+                    title="@(_feedTab == FeedTab.Coupons ? "Características filtram apenas produtos" : "Filtrar por característica do produto")"
+                    disabled="@(_isBusy || _feedTab == FeedTab.Coupons)"
+                    value="@_tagId"
+                    @onchange="OnTagChanged">
+                <option value="0">@ProductTagCatalog.AllTagsLabel</option>
+                @foreach (var tag in _tags)
+                {
+                    <option value="@tag.Id">@tag.Name</option>
+                }
+            </select>
         </div>
         @if (_feedTab == FeedTab.Coupons)
         {
@@ -171,6 +186,8 @@
     private const string OffersContainerId = "ofertas-container";
     private readonly List<MonitoredGroupDto> _groups = [];
     private readonly List<GroupCapturedOfferDto> _offers = [];
+    private readonly List<ProductTagDto> _tags = [];
+    private int _tagId;
     private int _hours = 24;
     private int _totalOffers;
     private int _page = 1;
@@ -313,7 +330,8 @@
             Keyword = _searchKeyword,
             MinPrice = _minPrice,
             MaxPrice = _maxPrice,
-            Store = _store
+            Store = _store,
+            TagId = _feedTab != FeedTab.Coupons && _tagId > 0 ? _tagId : null
         };
         return filter.HasAny ? filter : null;
     }
@@ -321,6 +339,13 @@
     private Task OnGroupChanged(ChangeEventArgs e)
     {
         _groupKey = e.Value?.ToString() ?? string.Empty;
+        _page = 1;
+        return LoadAsync();
+    }
+
+    private Task OnTagChanged(ChangeEventArgs e)
+    {
+        _tagId = int.TryParse(e.Value?.ToString(), out var tagId) && tagId > 0 ? tagId : 0;
         _page = 1;
         return LoadAsync();
     }
@@ -609,6 +634,12 @@
             }
 
             StateHasChanged();
+            if (data.PriceUpdated)
+            {
+                ToastService.ShowWarning(data.Descricao);
+                return;
+            }
+
             ToastService.ShowSuccess(data.Descricao);
         }
         catch (Exception ex)
@@ -735,6 +766,12 @@
 
         _groups.Clear();
         _groups.AddRange(data.Groups);
+        if (data.Tags.Count > 0)
+        {
+            _tags.Clear();
+            _tags.AddRange(data.Tags);
+        }
+
         _totalOffers = data.TotalOffers;
         var maxPage = GroupOfferCaptureRules.ResolveTotalPages(_totalOffers, _pageSize);
         if (_page > maxPage)

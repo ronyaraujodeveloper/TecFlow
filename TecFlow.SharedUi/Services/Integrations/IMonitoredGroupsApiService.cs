@@ -98,7 +98,8 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
                 coupon = search?.HasCoupon,
                 store = search?.Store,
                 type = type.ToString(),
-                couponPlatform
+                couponPlatform,
+                tagId = search?.TagId
             },
             cancellationToken);
 

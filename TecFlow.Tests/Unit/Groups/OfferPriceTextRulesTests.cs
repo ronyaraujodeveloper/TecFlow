@@ -17,6 +17,22 @@ public class OfferPriceTextRulesTests
         Assert.Equal(6678.28m, OfferPriceTextRules.TryExtractCashPrice(text));
     }
 
+    [Theory]
+    [InlineData("Sabão Líquido Omo 3L\nR$ 16,60 / unidade\nR$ 55,00 à vista")]
+    [InlineData("Sabão Líquido Omo 3L\n💰 R$ 55,00 (R$ 16,60 por frasco)")]
+    [InlineData("Sabão Líquido Omo 3L\nunidade R$ 16,60\nTotal R$ 55,00")]
+    [InlineData("Sabão Líquido Omo 3L R$ 16,60/un - leve o kit por R$ 55,00")]
+    public void TryExtractCashPrice_ShouldIgnoreUnitPrice(string text)
+    {
+        Assert.Equal(55.00m, OfferPriceTextRules.TryExtractCashPrice(text));
+    }
+
+    [Fact]
+    public void TryExtractCashPrice_ShouldKeepTotalForMultiUnitPack()
+    {
+        Assert.Equal(159.90m, OfferPriceTextRules.TryExtractCashPrice("Kit Cerveja R$ 159,90 por 3 unidades"));
+    }
+
     [Fact]
     public void TryExtractCashPrice_ShouldReturnNull_WhenOnlyInstallmentIsInformed()
     {

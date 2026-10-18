@@ -511,6 +511,27 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Filtro estrito no feed de Ofertas:**
   - Produtos só aparecem com `IsAvailable` e status na lista branca `Ativo` / `PrecoAlterado` / `PrecoSuspeito` / `Verificando` (`GroupOfferStatuses.FeedVisibleStatuses`); cupons seguem filtrados só por `IsAvailable`. O Worker de lote (`OfferRevalidationService`) usa a mesma regra, então o que ele desativa some do feed na próxima carga.
 
+## 🏷️ Filtro por Características de Produtos (`ProductTagsFilter`)
+
+- [x] **Estrutura no banco:**
+  - Entidade `ProductTag` (`Id`, `Name`, `Slug`, `IsActive`) e N:N com `GroupCapturedMessage` pela tabela `OfferTags` (cascata nos dois lados); migração `AddProductTags` com seed Gamer, Eletrônicos, Informática, Casa & Cozinha, Smartphones e Moda/Beleza.
+  - "Todas as Características" é a opção sem filtro do combo, não uma linha do banco.
+- [x] **Combo na interface:**
+  - `form-select-sm` à direita de "Ocultos / Descartados", carregado de `ProductTags` ativas pela resposta do feed; destacado quando há filtro e desabilitado na aba de Cupons.
+- [x] **Filtro LINQ:**
+  - `MonitoredGroupService.ListAsync` aplica `.Where(o => o.Tags.Any(t => t.Id == selectedTagId))` nos produtos quando `tagId` > 0.
+- [x] **Classificador automático:**
+  - `ProductTagClassifierRules` (palavras-chave sem acento, por palavra inteira, ignorando URLs) vincula as tags na gravação de cada oferta nova do Telegram/WhatsApp; `ProductTagBackfillWorker` classifica uma vez as ofertas já capturadas na subida da API.
+
+## 💰 Preço Total da Amazon sem Valor por Unidade (`AmazonUnitPriceFix`)
+
+- [x] **Parser ignora preço unitário:**
+  - `OfferPriceTextRules.IsUnitPriceContext` descarta valores como "R$ 16,60 / unidade", "por frasco" e "unidade R$ X" tanto no texto da mensagem quanto no HTML genérico (`ProductMetadataHtmlParser`); kits com "R$ 159,90 por 3 unidades" mantêm o total.
+- [x] **Caixa de compra da Amazon:**
+  - `AmazonProductPageRules` lê estritamente o total da buy box (`.apexPriceToPay` / `.priceToPay` / `#corePrice_feature_div` com `a-offscreen` ou `a-price-whole` + `a-price-fraction`), pulando preço riscado e unitário; sem buy box usa `og:price:amount`. `OfferValidationService` aplica essa leitura nas páginas da Amazon.
+- [x] **Verificar atualiza o preço na tela:**
+  - Quando o preço real difere do salvo, `MonitoredGroupService.ValidateAsync` devolve `PriceUpdated`; o card é substituído em memória, `StateHasChanged()` redesenha e aparece o toast "Preço atualizado para R$ 55,00".
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

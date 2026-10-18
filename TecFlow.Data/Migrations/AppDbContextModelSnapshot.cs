@@ -22,6 +22,21 @@ namespace TecFlow.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("OfferTags", b =>
+                {
+                    b.Property<int>("OfferId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductTagId")
+                        .HasColumnType("int");
+
+                    b.HasKey("OfferId", "ProductTagId");
+
+                    b.HasIndex("ProductTagId");
+
+                    b.ToTable("OfferTags", (string)null);
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.Affiliate", b =>
                 {
                     b.Property<int>("Id")
@@ -1736,6 +1751,81 @@ namespace TecFlow.Data.Migrations
                     b.ToTable("ProductPriceSnapshots", (string)null);
                 });
 
+            modelBuilder.Entity("TecFlow.Core.Entities.ProductTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("ProductTags", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            IsActive = true,
+                            Name = "Gamer",
+                            Slug = "gamer"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            IsActive = true,
+                            Name = "Eletrônicos",
+                            Slug = "eletronicos"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            IsActive = true,
+                            Name = "Informática",
+                            Slug = "informatica"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            IsActive = true,
+                            Name = "Casa & Cozinha",
+                            Slug = "casa-cozinha"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            IsActive = true,
+                            Name = "Smartphones",
+                            Slug = "smartphones"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            IsActive = true,
+                            Name = "Moda/Beleza",
+                            Slug = "moda-beleza"
+                        });
+                });
+
             modelBuilder.Entity("TecFlow.Core.Entities.PublicConverterPage", b =>
                 {
                     b.Property<int>("Id")
@@ -3156,6 +3246,21 @@ namespace TecFlow.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("OfferTags", b =>
+                {
+                    b.HasOne("TecFlow.Core.Entities.GroupCapturedMessage", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TecFlow.Core.Entities.ProductTag", null)
+                        .WithMany()
+                        .HasForeignKey("ProductTagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TecFlow.Core.Entities.Affiliate", b =>

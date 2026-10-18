@@ -112,3 +112,4 @@
 [2026-10-18 09:44:42] feat(grupos): bypass Meli Social com /p/ITEM_ID, data da captura no card, botões enxutos e script de reset limpo
 [2026-10-18 10:13:36] fix(grupos): feed ordenado pela hora da mensagem capturada (ReceivedAt UTC) e horário de Brasília nos cards
 [2026-10-18 10:43:50] feat(feed): remoção imediata de produtos esgotados no Verificar e no Worker de lote (SoldOutFeedRemoval)
+[2026-10-18 11:26:46] feat(offers): filtro por caracteristicas (ProductTags) e preco total da Amazon sem valor por unidade com toast de preco atualizado

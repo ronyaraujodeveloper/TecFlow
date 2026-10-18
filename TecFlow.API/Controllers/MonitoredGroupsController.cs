@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Enums;
 using TecFlow.Infrastructure.Interfaces;
 
@@ -41,7 +42,7 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] string? groupKey = null,
         [FromQuery] string? channel = null,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 25,
+        [FromQuery] int take = GroupOfferCaptureRules.OffersPageSize,
         [FromQuery] bool ignored = false,
         [FromQuery] string? q = null,
         [FromQuery] decimal? minPrice = null,

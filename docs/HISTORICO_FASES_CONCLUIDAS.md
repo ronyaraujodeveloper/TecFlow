@@ -911,6 +911,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Cabeçalho com menu de perfil (`UserProfileMenu`):** removidos "Todas as lojas", botão "Painel" e "Sessão ativa"; pílula com o nome do usuário abre dropdown nativo (Minha Conta, Super Admin, Modo de Visão, Sair) no `MainLayout` e no `MasterMainLayout`.
 - [x] **Cabeçalho restaurado (`HeaderRestore`):** grupo [Painel Master] [Visão Cliente] e badge de papel de volta ao topo, menu de perfil só com Minha Conta / Super Admin / Sair e cabeçalho com `z-index: 1050` para o dropdown não ficar sob a página.
 - [x] **Vitrines de terceiros e afiliado forçado (`ShowcaseBypass`):** links do Mercado Livre com `/social/` / `affiliate-profile` viram a página direta do produto focado (`item_id` ou `/p/MLB...`), os parâmetros `matt_tool_id` / `matt_tool` / `matt_d2id` / `matt_tracing_id` de terceiros são removidos e o `matt_tool=97303724` é sempre aplicado em "Abrir Link Original" e "Clonar Oferta".
+- [x] **100 ofertas por página (`OffersPageSize100`):** padrão de paginação do feed, do Modal de Filtros Avançados, da API e do cliente passou de 25 para 100 (pré-selecionado), e a pré-busca do serviço perdeu o teto de 80 linhas que cortava a página.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

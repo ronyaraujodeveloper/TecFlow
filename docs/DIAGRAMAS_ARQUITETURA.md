@@ -189,6 +189,7 @@ flowchart LR
   PIPE -->|PrimaryProductUrl = página direta resolvida pelo redirect| SHOWCASE
   GMUI -->|Verificar anuncio ResolvedProductUrl atualiza PrimaryProductUrl| SHOWCASE
   GMUI -->|Clonar Oferta ML usa a URL higienizada do AffiliateUrlBuilderService| AFFURL
+  GMUI -->|take padrão OffersPageSize=100 pré-busca take+20 até 200| MONSVC
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

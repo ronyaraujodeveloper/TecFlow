@@ -102,7 +102,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 25,
+        int take = GroupOfferCaptureRules.OffersPageSize,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
         OfferType type = OfferType.Product,
@@ -190,7 +190,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             }
 
             var total = await query.CountAsync(cancellationToken);
-            var fetchTake = Math.Min(Math.Max(resolvedTake * 4, resolvedTake), 80);
+            var fetchTake = Math.Max(resolvedTake + 20, Math.Min(resolvedTake * 4, 200));
             var offers = await query
                 .OrderByDescending(item => item.CreatedAt)
                 .ThenByDescending(item => item.ReceivedAt)

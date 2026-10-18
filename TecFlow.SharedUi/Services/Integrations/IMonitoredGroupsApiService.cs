@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Dto;
+using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Enums;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Models;
@@ -14,7 +15,7 @@ public interface IMonitoredGroupsApiService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 25,
+        int take = GroupOfferCaptureRules.OffersPageSize,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
         OfferType type = OfferType.Product,
@@ -75,7 +76,7 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         string? groupKey,
         string? channel,
         int skip = 0,
-        int take = 25,
+        int take = GroupOfferCaptureRules.OffersPageSize,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
         OfferType type = OfferType.Product,

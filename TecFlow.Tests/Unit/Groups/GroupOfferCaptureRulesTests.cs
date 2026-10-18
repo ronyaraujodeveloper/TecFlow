@@ -66,15 +66,19 @@ public class GroupOfferCaptureRulesTests
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveLookbackHours(input));
 
     [Theory]
-    [InlineData(0, 25)]
+    [InlineData(0, 100)]
     [InlineData(10, 10)]
     [InlineData(25, 25)]
     [InlineData(50, 50)]
     [InlineData(100, 100)]
-    [InlineData(101, 25)]
-    [InlineData(-8, 25)]
+    [InlineData(101, 100)]
+    [InlineData(-8, 100)]
     public void ResolveOffersTake_ShouldAllowOnlyTenTwentyFiveFiftyOrHundred(int input, int expected) =>
         Assert.Equal(expected, GroupOfferCaptureRules.ResolveOffersTake(input));
+
+    [Fact]
+    public void OffersPageSize_ShouldDefaultToOneHundred() =>
+        Assert.Equal(100, GroupOfferCaptureRules.OffersPageSize);
 
     [Fact]
     public void DeduplicateOffers_ShouldSkipSameUrlAndTelegramMessage()

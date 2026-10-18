@@ -468,6 +468,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros e aplica sempre o `matt_tool` do tenant ou o oficial `97303724` (`MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId`).
 - [x] **Botões do `OfferCard`:**
   - "Abrir Link Original" usa o `AffiliateUrl` higienizado; "Clonar Oferta" do Mercado Livre usa a mesma URL (via conversor da loja ML ou direto, quando não houver loja ML conectada).
+
+## 📄 100 Ofertas por Página (`OffersPageSize100`)
+
+- [x] **Padrão de paginação:**
+  - `GroupOfferCaptureRules.OffersPageSize = 100` alimenta a tela de Grupos Monitorados, o Modal de Filtros Avançados, a API (`take`) e o cliente HTTP; opções 10 / 25 / 50 / 100 mantidas.
+- [x] **Seleção pré-marcada:**
+  - "Ofertas por página" abre com `100` selecionado; valor fora da lista volta para 100.
+- [x] **Consulta sem teto oculto:**
+  - A pré-busca para deduplicação deixou de parar em 80 linhas (agora `take + 20`, até 200), então a página de 100 vem completa.
   
 ---
 

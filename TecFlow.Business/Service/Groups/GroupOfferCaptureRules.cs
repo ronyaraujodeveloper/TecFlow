@@ -81,7 +81,7 @@ public static class GroupOfferCaptureRules
 
     public static readonly bool TemporaryLimitTenOffers = false;
 
-    public const int OffersPageSize = 25;
+    public const int OffersPageSize = 100;
 
     public static readonly int[] AllowedPageSizes = [10, 25, 50, 100];
 

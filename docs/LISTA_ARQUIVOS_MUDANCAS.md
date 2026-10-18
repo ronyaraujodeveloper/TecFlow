@@ -1503,6 +1503,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.Business/Dto/LiveSearchDtos.cs** / **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - `ResolvedProductUrl` no snapshot; "Verificar anúncio" atualiza `PrimaryProductUrl` dos itens antigos (meli.la).
 - [x] **TecFlow.Tests/Unit/LinkStrategies/MercadoLivreShowcaseRulesTests.cs** (novo) / **AffiliateUrlBuilderServiceTests.cs** / **TecFlow.Tests/Unit/Groups/OfferValidationServiceTests.cs** - cobertura do bypass, da limpeza dos matt_* e do `matt_tool=97303724` forçado.
 
+### OffersPageSize100 - 100 ofertas por página por padrão
+
+- [x] **TecFlow.Business/Service/Groups/GroupOfferCaptureRules.cs** - `OffersPageSize = 100` (antes 25); valor inválido de `take` cai em 100.
+- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** / **TecFlow.API/Controllers/MonitoredGroupsController.cs** / **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - default de `take` passa a usar `GroupOfferCaptureRules.OffersPageSize`.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - default de `take` pela constante e busca prévia para deduplicação sem o teto de 80 linhas (`take + 20` até 200), permitindo páginas de 100.
+- [x] **TecFlow.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** - `selected` explícito na opção atual e fallback para o padrão (100) quando o valor não está na lista.
+- [x] **TecFlow.Tests/Unit/Groups/GroupOfferCaptureRulesTests.cs** - default 100 e fallback de `take` inválido.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

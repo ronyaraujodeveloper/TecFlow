@@ -51,7 +51,7 @@
                             <select id="advanced-filter-page-size" class="form-select form-select-sm" @bind="_pageSize">
                                 @foreach (var size in PageSizeOptions)
                                 {
-                                    <option value="@size">@size</option>
+                                    <option value="@size" selected="@(size == _pageSize)">@size</option>
                                 }
                             </select>
                         </div>
@@ -111,7 +111,7 @@
             _minPrice = Value.MinPrice;
             _maxPrice = Value.MaxPrice;
             _store = Value.Store;
-            _pageSize = Value.PageSize;
+            _pageSize = PageSizeOptions.Contains(Value.PageSize) ? Value.PageSize : DefaultPageSize;
         }
 
         _wasOpen = IsOpen;

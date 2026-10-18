@@ -29,6 +29,25 @@ public class GroupCapturedMessagesServiceTests
     }
 
     [Fact]
+    public void ApplyRelevanceFilter_ShouldKeepCouponsWithoutProductUrlOrConnectedStore()
+    {
+        var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);
+        var items = new List<GroupCapturedMessage>
+        {
+            new() { Id = 1, Type = OfferType.Coupon, HasDirectProductUrl = false, IsAvailable = true, PlatformType = null },
+            new() { Id = 2, Type = OfferType.Coupon, HasDirectProductUrl = true, IsAvailable = true, PlatformType = MarketplaceType.Amazon },
+            new() { Id = 3, Type = OfferType.Coupon, HasDirectProductUrl = false, IsIgnored = true, IsAvailable = true },
+            new() { Id = 4, Type = OfferType.Product, HasDirectProductUrl = true, IsAvailable = true, PlatformType = MarketplaceType.Amazon }
+        }.AsQueryable();
+
+        var feed = service.ApplyRelevanceFilter(items, [MarketplaceType.Shopee], ignored: false).Select(item => item.Id).ToList();
+        var withoutStores = service.ApplyRelevanceFilter(items, [], ignored: false).Select(item => item.Id).ToList();
+
+        Assert.Equal([1, 2], feed);
+        Assert.Equal([1, 2], withoutStores);
+    }
+
+    [Fact]
     public void ApplyStructuredParse_ShouldFillCouponAndSanitizeImagePath()
     {
         var service = new GroupCapturedMessagesService(null!, new StructuredOfferParserService(), null!, null!, NullLogger<GroupCapturedMessagesService>.Instance);

@@ -49,7 +49,9 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         IReadOnlyCollection<MarketplaceType> activePlatforms,
         bool ignored)
     {
-        query = query.Where(item => item.IsIgnored == ignored && item.HasDirectProductUrl);
+        query = query.Where(item =>
+            item.IsIgnored == ignored
+            && (item.Type == OfferType.Coupon || item.HasDirectProductUrl));
         if (!ignored)
         {
             query = query.Where(item => item.IsAvailable);
@@ -57,11 +59,12 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
 
         if (activePlatforms.Count == 0)
         {
-            return query.Where(_ => false);
+            return query.Where(item => item.Type == OfferType.Coupon);
         }
 
         return query.Where(item =>
-            item.PlatformType != null && activePlatforms.Contains(item.PlatformType.Value));
+            item.Type == OfferType.Coupon
+            || (item.PlatformType != null && activePlatforms.Contains(item.PlatformType.Value)));
     }
 
     public async Task<bool> SetIgnoredAsync(
@@ -395,7 +398,17 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
         GroupCapturedMessage entity,
         CancellationToken cancellationToken = default)
     {
-        if (entity.UserId <= 0 || string.IsNullOrWhiteSpace(entity.OriginalUrl))
+        if (entity.UserId <= 0)
+        {
+            return 0;
+        }
+
+        if (entity.Type == OfferType.Coupon)
+        {
+            return await SaveCouponAsync(entity, cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(entity.OriginalUrl))
         {
             return 0;
         }
@@ -412,6 +425,34 @@ public sealed class GroupCapturedMessagesService : IGroupCapturedMessagesService
                     || (primaryUrl != null && primaryUrl != "" && item.PrimaryProductUrl == primaryUrl)
                     || (primaryUrl != null && primaryUrl != "" && item.OriginalUrl == primaryUrl)
                     || item.PrimaryProductUrl == originalUrl),
+            cancellationToken);
+        if (exists)
+        {
+            return 0;
+        }
+
+        _context.GroupCapturedMessages.Add(entity);
+        await _context.SaveChangesAsync(cancellationToken);
+        return 1;
+    }
+
+    /// <summary>
+    /// Cupons costumam repetir o mesmo link de loja; a deduplicação usa mensagem + grupo
+    /// ou código + plataforma numa janela de 24h, nunca a URL.
+    /// </summary>
+    private async Task<int> SaveCouponAsync(GroupCapturedMessage entity, CancellationToken cancellationToken)
+    {
+        var messageId = entity.ExternalMessageId;
+        var groupKey = entity.GroupKey;
+        var code = string.IsNullOrWhiteSpace(entity.CouponCode) ? null : entity.CouponCode;
+        var platform = entity.PlatformType;
+        var since = (entity.ReceivedAt == default ? DateTime.UtcNow : entity.ReceivedAt).AddHours(-24);
+        var exists = await _context.GroupCapturedMessages.AnyAsync(
+            item => item.UserId == entity.UserId
+                && item.Type == OfferType.Coupon
+                && (
+                    (messageId != null && messageId != "" && item.ExternalMessageId == messageId && item.GroupKey == groupKey)
+                    || (code != null && item.CouponCode == code && item.PlatformType == platform && item.ReceivedAt >= since)),
             cancellationToken);
         if (exists)
         {

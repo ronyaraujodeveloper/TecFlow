@@ -104,3 +104,4 @@
 [2026-10-17 19:54:43] fix(telegram): fotos gravadas no banco só após confirmação em disco, UPDATE por UserId/GroupKey e uploads preservados no deploy
 [2026-10-17 20:17:49] feat(uploads): mídias gravadas e servidas a partir de C:\inetpub\tecflow\uploads (UploadStorage:RootPath)
 [2026-10-17 20:43:18] feat(offers): filtros de vitrine genérica, preço suspeito, verificação em tempo real e revalidação periódica de ofertas
+[2026-10-17 22:05:40] feat(ofertas): aba de cupons por marketplace, layout compacto e notificacoes toast globais

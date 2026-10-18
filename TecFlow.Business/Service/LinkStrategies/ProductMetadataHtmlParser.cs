@@ -92,14 +92,14 @@ public static class ProductMetadataHtmlParser
 
         var name = FirstNonEmpty(slugName, htmlName, fallback.ProductName);
 
-        var priceRaw = FirstNonEmpty(
+        var price = FirstPlausiblePrice(
             ReadRegexGroup(html, PriceMinRegex, "num"),
             ReadMeta(html, "product:price:amount"),
             ReadMeta(html, "og:price:amount"),
             ReadItemPropPrice(html),
             ReadJsonLdPrice(html),
             ReadEmbeddedPrice(html),
-            ReadRegexGroup(html, MonetaryPriceRegex, "num"),
+            ReadCashMonetaryPrice(html),
             TryExtractPriceRawFromUrl(pageUrl));
 
         var image = FirstNonEmpty(
@@ -114,7 +114,7 @@ public static class ProductMetadataHtmlParser
             ProductName = NormalizePersistedProductName(Truncate(
                 !string.IsNullOrWhiteSpace(slugName) ? slugName : (CleanProductName(name) ?? fallback.ProductName),
                 255)),
-            ProductPrice = NormalizeDisplayPrice(ParsePrice(priceRaw)),
+            ProductPrice = price,
             ProductImageUrl = NormalizePersistedProductImageUrl(image)
         };
     }
@@ -497,8 +497,32 @@ public static class ProductMetadataHtmlParser
         return match.Success ? match.Groups["num"].Value : null;
     }
 
-    private static decimal? NormalizeDisplayPrice(decimal? price) =>
-        price is > 0 ? price : null;
+    private static decimal? FirstPlausiblePrice(params string?[] rawValues)
+    {
+        foreach (var raw in rawValues)
+        {
+            var parsed = ParsePrice(raw);
+            if (TecFlow.Business.Service.Groups.OfferPriceTextRules.IsPlausiblePrice(parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadCashMonetaryPrice(string html)
+    {
+        foreach (Match match in MonetaryPriceRegex.Matches(html))
+        {
+            if (!TecFlow.Business.Service.Groups.OfferPriceTextRules.IsInstallmentContext(html, match.Index, match.Length))
+            {
+                return match.Groups["num"].Value;
+            }
+        }
+
+        return null;
+    }
 
     private static string? ReadRegexGroup(string html, Regex regex, string groupName)
     {

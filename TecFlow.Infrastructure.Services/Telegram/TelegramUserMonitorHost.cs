@@ -604,7 +604,7 @@ public sealed class TelegramUserMonitorHost : IAsyncDisposable
                 || Uri.TryCreate(url, UriKind.Absolute, out var uri)
                     && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             .ToList();
-        if (offerUrls.Count == 0)
+        if (offerUrls.Count == 0 && !CouponMessageRules.HasCouponSignal(text))
         {
             return null;
         }

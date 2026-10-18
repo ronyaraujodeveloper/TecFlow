@@ -63,7 +63,8 @@ public sealed class StructuredOfferParserService : IStructuredOfferParserService
             Price = price,
             CouponCode = coupon ?? string.Empty,
             PrimaryProductUrl = primary ?? string.Empty,
-            Platform = platform ?? string.Empty
+            Platform = platform ?? string.Empty,
+            Type = CouponMessageRules.Classify(text, GroupOfferCaptureRules.HasDirectProductUrl(primary))
         };
     }
 
@@ -141,6 +142,11 @@ public sealed class StructuredOfferParserService : IStructuredOfferParserService
 
     internal static decimal? ExtractPrice(string text)
     {
+        if (OfferPriceTextRules.HasCurrencyPrice(text))
+        {
+            return OfferPriceTextRules.TryExtractCashPrice(text);
+        }
+
         foreach (var regex in new[] { UserPriceRegex, ResilientPriceRegex })
         {
             var match = regex.Match(text);
@@ -171,6 +177,12 @@ public sealed class StructuredOfferParserService : IStructuredOfferParserService
 
     internal static string? ExtractCoupon(string text)
     {
+        var strict = CouponMessageRules.ExtractCouponCode(text);
+        if (strict is not null)
+        {
+            return strict;
+        }
+
         var match = CouponRegex.Match(text);
         if (!match.Success)
         {
@@ -181,7 +193,7 @@ public sealed class StructuredOfferParserService : IStructuredOfferParserService
         return code.Length is >= 3 and <= 64 ? code : null;
     }
 
-    internal static bool IsShowcaseUrl(string url)
+    public static bool IsShowcaseUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
         {

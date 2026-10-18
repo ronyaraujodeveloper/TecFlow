@@ -1,4 +1,5 @@
-﻿using TecFlow.Business.Dto;
+﻿using Microsoft.Extensions.Logging;
+using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.Radar;
@@ -15,19 +16,22 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
     private readonly IAmazonPaApiService _amazon;
     private readonly IOfferValidationService _htmlValidation;
     private readonly AppDbContext _context;
+    private readonly ILogger<LiveCheckSearchService> _logger;
 
     public LiveCheckSearchService(
         IMercadoLivreApiService mercadoLivre,
         IShopeeAffiliateOfferService shopee,
         IAmazonPaApiService amazon,
         IOfferValidationService htmlValidation,
-        AppDbContext context)
+        AppDbContext context,
+        ILogger<LiveCheckSearchService> logger)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
         _amazon = amazon;
         _htmlValidation = htmlValidation;
         _context = context;
+        _logger = logger;
     }
 
     public async Task<OfficialOfferSnapshotDto> CheckAndPersistAsync(
@@ -55,7 +59,19 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             }
 
             entity.ValidatedPrice = snapshot.Price;
-            if (LiveSearchRules.IsCheaper(entity.ExtractedPrice, snapshot.Price))
+            if (OfferPriceTextRules.IsSignificantDivergence(entity.ExtractedPrice, snapshot.Price))
+            {
+                _logger.LogWarning(
+                    "Divergência de preço corrigida. OfferId={OfferId} Plataforma={Platform} Fonte={Source} Salvo={Saved} Pagina={PagePrice}",
+                    entity.Id,
+                    snapshot.Platform ?? entity.PlatformType,
+                    snapshot.Source,
+                    entity.ExtractedPrice,
+                    snapshot.Price);
+                entity.ExtractedPrice = snapshot.Price;
+                entity.OfferStatus = GroupOfferStatuses.PrecoAlterado;
+            }
+            else if (LiveSearchRules.IsCheaper(entity.ExtractedPrice, snapshot.Price))
             {
                 entity.ExtractedPrice = snapshot.Price;
             }

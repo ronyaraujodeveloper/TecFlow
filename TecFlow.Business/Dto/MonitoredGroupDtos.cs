@@ -53,6 +53,8 @@ public class GroupCapturedOfferDto
 
     public string? PrimaryProductUrl { get; set; }
 
+    public string? AffiliateUrl { get; set; }
+
     public MarketplaceType? PlatformType { get; set; }
 
     public string? PlatformName { get; set; }
@@ -80,6 +82,14 @@ public class GroupCapturedOfferDto
     public decimal? AveragePrice30Days { get; set; }
 
     public decimal? SavingsVersusAverage { get; set; }
+
+    public OfferType Type { get; set; } = OfferType.Product;
+
+    public string? CouponDiscount { get; set; }
+
+    public string? CouponValidity { get; set; }
+
+    public List<string> CouponRules { get; set; } = [];
 }
 
 public class CloneMonitoredOfferResultDto

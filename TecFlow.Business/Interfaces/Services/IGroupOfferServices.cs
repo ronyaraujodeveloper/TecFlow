@@ -82,6 +82,8 @@ public interface IMonitoredGroupService
         int take = 25,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
+        OfferType type = OfferType.Product,
+        string? couponPlatform = null,
         CancellationToken cancellationToken = default);
 
     Task<MonitoredGroupsResponseDto> SetIgnoredAsync(

@@ -200,6 +200,16 @@ public static class GroupOfferCaptureRules
             return true;
         }
 
+        if (existing.Type != incoming.Type)
+        {
+            return false;
+        }
+
+        if (existing.Type == OfferType.Coupon)
+        {
+            return IsSameCoupon(existing, incoming);
+        }
+
         if (!string.IsNullOrWhiteSpace(existing.ExternalMessageId)
             && string.Equals(existing.ExternalMessageId, incoming.ExternalMessageId, StringComparison.OrdinalIgnoreCase))
         {
@@ -213,6 +223,20 @@ public static class GroupOfferCaptureRules
         return existingUrl.Length > 0
             && incomingUrl.Length > 0
             && string.Equals(existingUrl, incomingUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameCoupon(GroupCapturedOfferDto existing, GroupCapturedOfferDto incoming)
+    {
+        if (!string.IsNullOrWhiteSpace(existing.ExternalMessageId)
+            && string.Equals(existing.ExternalMessageId, incoming.ExternalMessageId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(existing.GroupKey, incoming.GroupKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(existing.CouponCode)
+            && string.Equals(existing.CouponCode, incoming.CouponCode, StringComparison.OrdinalIgnoreCase)
+            && existing.PlatformType == incoming.PlatformType;
     }
 
     public static List<GroupCapturedOfferDto> DeduplicateOffers(IEnumerable<GroupCapturedOfferDto> offers)
@@ -252,6 +276,11 @@ public static class GroupOfferCaptureRules
             return null;
         }
 
+        if (OfferPriceTextRules.HasCurrencyPrice(text))
+        {
+            return OfferPriceTextRules.TryExtractCashPrice(text);
+        }
+
         foreach (Match match in TelegramPriceRegex.Matches(text))
         {
             if (!match.Success)
@@ -263,6 +292,18 @@ public static class GroupOfferCaptureRules
             while (end < text.Length && char.IsDigit(text[end]))
             {
                 end++;
+            }
+
+            var after = end;
+            while (after < text.Length && char.IsWhiteSpace(text[after]))
+            {
+                after++;
+            }
+
+            if ((after < text.Length && text[after] is 'x' or 'X' or '×')
+                || OfferPriceTextRules.IsInstallmentContext(text, match.Index, end - match.Index))
+            {
+                continue;
             }
 
             var raw = text[match.Index..end];

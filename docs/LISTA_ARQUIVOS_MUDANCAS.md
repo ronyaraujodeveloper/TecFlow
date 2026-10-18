@@ -1400,6 +1400,70 @@ API / Orquestrador / Worker / WebUi
 - [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - selos de `Inativo`, `Vitrine Genérica` e `Preço Suspeito`.
 - [x] **TecFlow.Tests/Unit/Groups/OfferIntegrityRulesTests.cs** (novo) / **OfferRevalidationServiceTests.cs** (novo) / **OfferValidationServiceTests.cs** - detecção de vitrine, preço suspeito, anúncio encerrado e seleção do lote de revalidação.
 
+### AffiliateOpenLink - "Abrir Link Original" com matt_tool
+
+- [x] **TecFlow.Business/Service/LinkStrategies/AffiliateUrlBuilderRules.cs** (novo) - detecta Mercado Livre, troca link curto pela URL direta e injeta `matt_tool`/`matt_word` via `MercadoLivreCommissionUrlBuilder.InjectMattTool`.
+- [x] **TecFlow.Business/Interfaces/Services/IAffiliateUrlBuilderService.cs** (novo) - `ResolveMercadoLivreMattToolAsync` e `BuildAffiliateUrl`.
+- [x] **TecFlow.Infrastructure.Services/LinkStrategies/AffiliateUrlBuilderService.cs** (novo) - `TrackingId` da conta ML ativa do tenant com fallback para `DefaultAffiliateTrackingId`; registrado (Scoped) em `WhatsAppEvolutionRegistrationExtensions`.
+- [x] **TecFlow.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** / **TecFlow.API/appsettings.json** - `DefaultAffiliateTrackingId = 97303724`.
+- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.AffiliateUrl`.
+- [x] **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** - preenche `AffiliateUrl` na listagem.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - "Abrir Link Original" usa `ResolveOpenUrl` (`AffiliateUrl`) em nova aba.
+- [x] **TecFlow.Tests/Unit/LinkStrategies/AffiliateUrlBuilderServiceTests.cs** (novo) - anexar/substituir `matt_tool`, link curto, outros marketplaces, conta do tenant e fallback.
+
+### ShopeePriceIntegrity - Parcelamento, divergência de preço e esgotado
+
+- [x] **TecFlow.Business/Service/Groups/OfferPriceTextRules.cs** (novo) - preço à vista ignorando parcelas e "De/Por", `IsInstallmentContext`, `IsPlausiblePrice` (< R$ 1.000.000) e `IsSignificantDivergence` (≥ 30%).
+- [x] **TecFlow.Business/Integrations/Shopee/ShopeeProductPageRules.cs** (novo) - `IsSoldOut` (frases, JSON e classe) e `TryExtractActivePrice` (meta / JSON-LD).
+- [x] **TecFlow.Business/Service/Groups/StructuredOfferParserService.cs** / **GroupOfferCaptureRules.cs** - extração de preço do Telegram via `OfferPriceTextRules`; fallback numérico pula multiplicador `12x`.
+- [x] **TecFlow.Business/Service/LinkStrategies/ProductMetadataHtmlParser.cs** - primeiro preço plausível entre as fontes e `R$` do HTML sem parcelas.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferValidationService.cs** - Shopee esgotada vira `Esgotado`; preço ativo da Shopee prevalece e divergência é logada.
+- [x] **TecFlow.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - corrige `ExtractedPrice` em divergência significativa com log (`ILogger` injetado).
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - preço da página substitui o da mensagem em divergência significativa.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - botão "Clonar" desabilitado para esgotado, inativo ou preço suspeito (`CanClone`).
+- [x] **TecFlow.Tests/Unit/Groups/OfferPriceTextRulesTests.cs** (novo) / **OfferValidationServiceTests.cs** - parcelamento, De/Por, divergência, HTML com `price_min` bruto, esgotado e preço ativo da Shopee.
+
+### CouponsTab - Aba de Cupons & Promoções por marketplace
+
+- [x] **TecFlow.Core/Enums/OfferType.cs** (novo) - `Product = 0`, `Coupon = 1`.
+- [x] **TecFlow.Core/Entities/GroupCapturedMessage.cs** - coluna `Type` (`OfferType`, padrão `Product`).
+- [x] **TecFlow.Database/AppDbContext.cs** - índice `UserId, Type, IsIgnored, ReceivedAt` em `GroupCapturedMessages`.
+- [x] **TecFlow.Data/Migrations/20261018001558_AddGroupCapturedMessageOfferType.cs** (novo, + Designer e snapshot) - coluna `Type int NOT NULL DEFAULT 0` e índice.
+- [x] **TecFlow.Business/Service/Groups/CouponMessageRules.cs** (novo) - `Classify`, `ExtractCouponCode`, `ExtractDiscount`, `ExtractMinimumPurchase`, `ExtractValidity`, `ExtractRules`, `DetectPlatformFromText`, `ExtractHeadline` e filtros `Todos`/`Outros`.
+- [x] **TecFlow.Business/Dto/OfferDataExtraction.cs** / **StructuredOfferParserService.cs** - `Type` classificado no parse; código de cupom pelo extrator estrito (CUPOM / CÓDIGO / USAR CUPOM) com fallback na regex antiga; `IsShowcaseUrl` público.
+- [x] **TecFlow.Business/Dto/MonitoredGroupDtos.cs** - `GroupCapturedOfferDto.Type`, `CouponDiscount`, `CouponValidity`, `CouponRules`.
+- [x] **TecFlow.Business/Service/Groups/GroupOfferCaptureRules.cs** - deduplicação de cupons por mensagem + grupo ou código + plataforma (nunca pela URL da loja).
+- [x] **TecFlow.Business/Interfaces/Services/IGroupOfferServices.cs** / **TecFlow.Infrastructure.Services/Groups/MonitoredGroupService.cs** / **TecFlow.API/Controllers/MonitoredGroupsController.cs** - `ListAsync` com `type` e `couponPlatform`; feed de produtos só `Type = Product`; campos do cupom lidos do `RawText`.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferPipelineProcessor.cs** - desvio de cupons (`SaveCouponAsync`) sem validação de página nem pacote atômico; foto extraída para `ResolveLocalPhotoAsync`.
+- [x] **TecFlow.Infrastructure.Services/Groups/GroupCapturedMessagesService.cs** - `ApplyRelevanceFilter` mantém cupons sem link de produto ou loja conectada; `SaveCouponAsync` com deduplicação de 24h.
+- [x] **TecFlow.Infrastructure.Services/Groups/OfferRevalidationService.cs** - revalidação periódica ignora cupons.
+- [x] **TecFlow.Infrastructure.Services/Telegram/TelegramUserMonitorHost.cs** - mensagens de cupom sem link também entram no pipeline.
+- [x] **TecFlow.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - query `type` e `couponPlatform`.
+- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** (novo) - código em destaque com copiar, desconto, validade, regras e "Ir para a loja" (`AffiliateUrl`, nova aba).
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - aba `Cupons & Promoções` com pills Todos / Mercado Livre / Shopee / Amazon / Outros.
+- [x] **TecFlow.Tests/Unit/Groups/CouponMessageRulesTests.cs** (novo) / **GroupCapturedMessagesServiceTests.cs** - classificação, extração, deduplicação e filtro de relevância de cupons.
+
+### CompactOffersUi - Layout compacto de Grupos Monitorados
+
+- [x] **TecFlow.SharedUi/Components/Integrations/OfferCard.razor** (novo) - card de oferta extraído da página: imagem 64px, título 2 linhas, badges `badge-sm` sutis e ações em grade 2x2 compacta (Abrir Link Original, Verificar anúncio, Clonar Oferta / Restaurar, Sem interesse).
+- [x] **TecFlow.SharedUi/Components/Integrations/AdvancedOfferFiltersModal.razor** (novo) - modal "Filtros Avançados ⚙️" com Período, Preço mín./máx., Loja e Ofertas por página.
+- [x] **TecFlow.SharedUi/Models/MonitoredOfferFilters.cs** (novo) - record dos filtros avançados com `ActiveCount`.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - cabeçalho compacto sem texto explicativo, busca + grupo + botão de filtros, toast de 5s no lugar do alerta de status, sem "Só com cupom", `#ofertas-container` com scroll suave ao paginar.
+- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** - mesmo padrão compacto (badge-sm, ações em grade).
+- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.badge-sm`, botões compactos do card, `.monitored-search`, `.monitored-toast`, `.monitored-subpills`, `scroll-margin-top` da lista.
+
+### GlobalToasts - Notificações Toast globais
+
+- [x] **TecFlow.SharedUi/Services/UI/IToastService.cs** (novo) - `ToastType`, `ToastMessage` (Id, Message, Type, Duration 10s, CreatedAt) e contrato `ShowSuccess/ShowError/ShowWarning/ShowInfo/Dismiss/Clear`.
+- [x] **TecFlow.SharedUi/Services/UI/ToastService.cs** (novo) - fila thread-safe (máx. 5, sem duplicatas), auto-dismiss por `Task.Delay` e evento `OnChange`.
+- [x] **TecFlow.SharedUi/Components/Shared/ToastContainer.razor** (novo) - container flutuante `InteractiveServer` com ícone, mensagem, botão fechar e barra de progresso.
+- [x] **TecFlow.SharedUi/Extensions/ServiceCollectionExtensions.cs** - `AddScoped<IToastService, ToastService>()`.
+- [x] **TecFlow.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - `<ToastContainer />`.
+- [x] **TecFlow.SharedUi/wwwroot/app.css** - `.monitored-toast` substituído por `.tecflow-toast-container` / `.tecflow-toast--success|error|warning|info`.
+- [x] **TecFlow.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - alertas fixos e toast local trocados por `IToastService`.
+- [x] **TecFlow.SharedUi/Components/Integrations/CouponCard.razor** - `OnCopied` removido; cópia do código notificada via `IToastService`.
+- [x] **TecFlow.Tests/Unit/SharedUi/ToastServiceTests.cs** (novo) - duração padrão, tipos, mensagens vazias, duplicatas, limite, dismiss e auto-dismiss.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

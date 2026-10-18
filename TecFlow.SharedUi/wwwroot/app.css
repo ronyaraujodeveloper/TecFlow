@@ -660,8 +660,8 @@ html, body {
 }
 
 .monitored-offer-card .product-image-preview-box--sm {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
 }
 
 .monitored-offer-title {
@@ -669,6 +669,148 @@ html, body {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    font-size: 0.88rem;
+    line-height: 1.25;
+}
+
+.monitored-offer-price {
+    font-size: 0.9rem;
+}
+
+.monitored-offer-meta {
+    font-size: 0.72rem;
+    max-width: 55%;
+}
+
+.badge.badge-sm,
+.marketplace-platform-badge.badge-sm {
+    padding: 0.18rem 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+
+.monitored-search {
+    flex: 1 1 18rem;
+    max-width: 32rem;
+}
+
+.monitored-group-select {
+    flex: 0 1 14rem;
+    width: auto;
+    min-width: 10rem;
+}
+
+.monitored-subpills .nav-link {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.75rem;
+}
+
+.monitored-sync-spinner {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-width: 0.12em;
+}
+
+.monitored-offers-container {
+    scroll-margin-top: 1rem;
+}
+
+.tecflow-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(24rem, calc(100vw - 40px));
+    pointer-events: none;
+}
+
+.tecflow-toast {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.75rem 0.85rem 0.9rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.18);
+    color: #fff;
+    font-size: 0.875rem;
+    line-height: 1.35;
+    overflow: hidden;
+    pointer-events: auto;
+    animation: tecflow-toast-in 0.18s ease-out;
+}
+
+.tecflow-toast--success {
+    background: #198754;
+}
+
+.tecflow-toast--error {
+    background: #dc3545;
+}
+
+.tecflow-toast--warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.tecflow-toast--info {
+    background: #0d6efd;
+}
+
+.tecflow-toast-icon {
+    font-size: 1.05rem;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+.tecflow-toast-message {
+    flex-grow: 1;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.tecflow-toast-close {
+    flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: 0.8;
+    padding: 0 0.15rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.tecflow-toast-close:hover,
+.tecflow-toast-close:focus-visible {
+    opacity: 1;
+}
+
+.tecflow-toast-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: currentColor;
+    opacity: 0.35;
+    transform-origin: left;
+    animation: tecflow-toast-progress var(--tecflow-toast-duration, 10000ms) linear forwards;
+}
+
+@keyframes tecflow-toast-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tecflow-toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
 }
 
 .media-skeleton {
@@ -685,7 +827,25 @@ html, body {
 .monitored-offer-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    gap: 0.35rem;
+}
+
+.monitored-offer-actions .btn,
+.coupon-card .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 4px 8px;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.monitored-offer-actions .btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .conexoes-qr-modal {

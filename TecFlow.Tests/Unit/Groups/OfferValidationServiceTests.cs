@@ -70,6 +70,38 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ShouldMarkShopeeSoldOutAsEsgotado()
+    {
+        var service = CreateService(
+            "<html><body><div>Produto esgotado</div></body></html>",
+            HttpStatusCode.OK,
+            "https://shopee.com.br/notebook-i.1.2");
+
+        var result = await service.ValidateAsync("https://shopee.com.br/notebook-i.1.2", 6678.28m);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Esgotado, result.Status);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ShouldUseShopeeActivePriceAndFlagChange()
+    {
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="Notebook Gamer Acer Nitro" />
+            <meta property="product:price:amount" content="6678.28" />
+            </head><body>{"price_min":667828000000}</body></html>
+            """;
+        var service = CreateService(html, HttpStatusCode.OK, "https://shopee.com.br/notebook-i.1.2");
+
+        var result = await service.ValidateAsync("https://shopee.com.br/notebook-i.1.2", 667m);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(6678.28m, result.Price);
+        Assert.Equal(GroupOfferStatuses.PrecoAlterado, result.Status);
+    }
+
+    [Fact]
     public async Task ValidateAsync_ShouldFallbackToOpenGraphTitleAndPrice()
     {
         const string html = """

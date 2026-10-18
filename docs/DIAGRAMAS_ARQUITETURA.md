@@ -181,6 +181,22 @@ flowchart LR
   GMUI -->|Verificar anuncio LiveCheck GET pagina antes das APIs| VAL
   REVAL[OfferRevalidationWorker a cada IntervalHours] -->|OfferRevalidationHost scope| REVSVC[OfferRevalidationService lote Ativo vencidas]
   REVSVC -->|CheckAndPersistAsync Inativo / VitrineGenerica / PrecoSuspeito| SQL
+  GMUI -->|Abrir Link Original AffiliateUrl target _blank| AFFURL[AffiliateUrlBuilderService]
+  AFFURL -->|TrackingId conta ML do tenant ou DefaultAffiliateTrackingId| SQL
+  AFFURL -->|AffiliateUrlBuilderRules matt_tool=97303724| MLSITE[mercadolivre.com.br]
+  PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
+  VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
+  PIPE -->|divergência ≥30% preço da página| SQL
+  GMUI -->|Verificar anuncio LiveCheck divergência ≥30% corrige ExtractedPrice + log| SQL
+  PIPE -->|CouponMessageRules CUPOM / CÓDIGO / R$ OFF sem preço à vista = Type Coupon| COUPRULE[CouponMessageRules]
+  PIPE -->|cupom sem validação de página nem pacote atômico Type=Coupon| SQL
+  GMUI -->|aba Cupons & Promoções GET type=Coupon couponPlatform Todos/ML/Shopee/Amazon/Outros| MGAPI
+  GMUI -->|CouponCard copiar código + Ir para a loja AffiliateUrl _blank| AFFURL
+  GMUI -->|OfferCard ações 2x2 compactas Verificar / Clonar / Sem interesse| MGAPI
+  GMUI -->|AdvancedOfferFiltersModal período preço loja pageSize| MGAPI
+  GMUI -->|paginar scrollIntoViewById ofertas-container| APPJS[app-interop.js]
+  GMUI -->|ToastService.ShowSuccess / ShowError / ShowInfo| TOAST[ToastService Scoped por circuito]
+  TOAST -->|OnChange| TOASTUI[ToastContainer MainLayout InteractiveServer]
   USERBOT -->|session user-{id}.session| SESS[ProgramData/TecFlow/telegram-sessions]
   GMUI -->|GET skip take pageSize 10-100| MGAPI[MonitoredGroupsController]
   GMUI -->|POST midia/priorizar IDs visiveis| USERBOT

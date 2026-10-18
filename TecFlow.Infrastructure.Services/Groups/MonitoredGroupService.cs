@@ -7,6 +7,7 @@ using TecFlow.Business.Service.LinkStrategies;
 using TecFlow.Business.Service.Telegram;
 using TecFlow.Business.Service.WhatsApp;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 using TecFlow.Infrastructure.Services.Telegram;
 
@@ -23,6 +24,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
     private readonly IGroupCapturedMessagesService _capturedMessages;
     private readonly IPriceHistoryTracker _priceHistory;
     private readonly ILiveCheckSearchService _liveCheck;
+    private readonly IAffiliateUrlBuilderService _affiliateUrls;
     private readonly ILogger<MonitoredGroupService> _logger;
 
     public MonitoredGroupService(
@@ -35,6 +37,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         IGroupCapturedMessagesService capturedMessages,
         IPriceHistoryTracker priceHistory,
         ILiveCheckSearchService liveCheck,
+        IAffiliateUrlBuilderService affiliateUrls,
         ILogger<MonitoredGroupService> logger)
     {
         _context = context;
@@ -46,6 +49,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         _capturedMessages = capturedMessages;
         _priceHistory = priceHistory;
         _liveCheck = liveCheck;
+        _affiliateUrls = affiliateUrls;
         _logger = logger;
     }
 
@@ -70,7 +74,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 telegramOk = await SyncTelegramIsolatedAsync(userId, notes, cancellationToken);
             }
 
-            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, search: null, cancellationToken);
+            var list = await ListAsync(userId, 24, null, normalized, skip: 0, take: GroupOfferCaptureRules.OffersPageSize, ignored: false, search: null, cancellationToken: cancellationToken);
             list.Status = whatsOk || telegramOk || notes.Count == 0;
             list.Descricao = notes.Exists(item => item == MonitoredGroupSyncRules.BackgroundStartedMessage)
                 ? MonitoredGroupSyncRules.BackgroundStartedMessage
@@ -101,6 +105,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
         int take = 25,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
+        OfferType type = OfferType.Product,
+        string? couponPlatform = null,
         CancellationToken cancellationToken = default)
     {
         var hours = GroupOfferCaptureRules.ResolveLookbackHours(lookbackHours);
@@ -117,6 +123,15 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .AsNoTracking()
                 .Where(item => item.UserId == userId && item.ReceivedAt >= since);
             query = _capturedMessages.ApplyRelevanceFilter(query, platforms, ignored);
+            if (!ignored)
+            {
+                query = query.Where(item => item.Type == type);
+                if (type == OfferType.Coupon)
+                {
+                    query = ApplyCouponPlatformFilter(query, couponPlatform);
+                }
+            }
+
             if (normalized is not null)
             {
                 query = query.Where(item => item.Channel == normalized);
@@ -165,12 +180,13 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
             {
                 query = query.Where(item =>
-                    item.ProductName != null
-                    && item.ProductName != ""
-                    && item.ExtractedPrice != null
-                    && item.PlatformType != null
-                    && item.ProductImageUrl != null
-                    && item.ProductImageUrl != "");
+                    item.Type == OfferType.Coupon
+                    || (item.ProductName != null
+                        && item.ProductName != ""
+                        && item.ExtractedPrice != null
+                        && item.PlatformType != null
+                        && item.ProductImageUrl != null
+                        && item.ProductImageUrl != ""));
             }
 
             var total = await query.CountAsync(cancellationToken);
@@ -186,6 +202,17 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .Take(resolvedTake)
                 .ToList();
             await _priceHistory.EnrichOffersAsync(uniqueOffers, cancellationToken);
+            var mattTool = await _affiliateUrls.ResolveMercadoLivreMattToolAsync(userId, cancellationToken);
+            foreach (var offer in uniqueOffers)
+            {
+                offer.AffiliateUrl = _affiliateUrls.BuildAffiliateUrl(
+                    offer.OriginalUrl,
+                    offer.PrimaryProductUrl,
+                    offer.Type == OfferType.Coupon
+                        ? GroupOfferCaptureRules.DetectPlatform(offer.OriginalUrl)
+                        : offer.PlatformType,
+                    mattTool);
+            }
 
             return new MonitoredGroupsResponseDto
             {
@@ -235,7 +262,8 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             take: GroupOfferCaptureRules.OffersPageSize,
             ignored: false,
             search: null,
-            cancellationToken);
+            type: entity.Type,
+            cancellationToken: cancellationToken);
         list.Descricao = $"Status atualizado: {GroupOfferStatuses.ToUiLabel(entity.OfferStatus)}.";
         return list;
     }
@@ -515,9 +543,35 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             IsIgnored = item.IsIgnored,
             IsAvailable = item.IsAvailable,
             ExternalMessageId = item.ExternalMessageId,
-            IsMediaPending = item.Channel == GroupOfferCaptureRules.TelegramChannel
-                && string.IsNullOrWhiteSpace(ResolveOfferImageUrl(item))
+            IsMediaPending = item.Type == OfferType.Product
+                && item.Channel == GroupOfferCaptureRules.TelegramChannel
+                && string.IsNullOrWhiteSpace(ResolveOfferImageUrl(item)),
+            Type = item.Type,
+            CouponDiscount = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractDiscount(item.RawText) : null,
+            CouponValidity = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractValidity(item.RawText) : null,
+            CouponRules = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractRules(item.RawText).ToList() : []
         };
+
+    private static IQueryable<GroupCapturedMessage> ApplyCouponPlatformFilter(
+        IQueryable<GroupCapturedMessage> query,
+        string? couponPlatform)
+    {
+        if (string.IsNullOrWhiteSpace(couponPlatform)
+            || string.Equals(couponPlatform, CouponMessageRules.AllPlatformsFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return query;
+        }
+
+        if (string.Equals(couponPlatform, CouponMessageRules.OtherPlatformsFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            var highlighted = CouponMessageRules.HighlightedPlatforms;
+            return query.Where(item => item.PlatformType == null || !highlighted.Contains(item.PlatformType.Value));
+        }
+
+        return Enum.TryParse<MarketplaceType>(couponPlatform, ignoreCase: true, out var platform)
+            ? query.Where(item => item.PlatformType == platform)
+            : query;
+    }
 
     private static string? ResolveOfferImageUrl(GroupCapturedMessage item)
     {

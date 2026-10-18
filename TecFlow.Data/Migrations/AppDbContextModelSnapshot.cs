@@ -668,6 +668,9 @@ namespace TecFlow.Data.Migrations
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -688,6 +691,8 @@ namespace TecFlow.Data.Migrations
                     b.HasIndex("UserId", "IsIgnored", "ReceivedAt");
 
                     b.HasIndex("UserId", "Channel", "ExternalMessageId", "OriginalUrl");
+
+                    b.HasIndex("UserId", "Type", "IsIgnored", "ReceivedAt");
 
                     b.ToTable("GroupCapturedMessages", (string)null);
                 });

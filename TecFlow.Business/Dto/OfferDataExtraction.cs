@@ -1,4 +1,6 @@
-﻿namespace TecFlow.Business.Dto;
+﻿using TecFlow.Core.Enums;
+
+namespace TecFlow.Business.Dto;
 
 public class OfferDataExtraction
 {
@@ -11,4 +13,6 @@ public class OfferDataExtraction
     public string PrimaryProductUrl { get; set; } = string.Empty;
 
     public string Platform { get; set; } = string.Empty;
+
+    public OfferType Type { get; set; } = OfferType.Product;
 }

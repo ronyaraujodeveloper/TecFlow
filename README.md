@@ -388,6 +388,56 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `LiveCheckSearchService.CheckUrlAsync` faz primeiro o GET da página (seguindo redirecionamentos); vitrine genérica ou marcas de anúncio encerrado/pausado (`Publicação finalizada`, `Anúncio pausado`...) gravam na hora `VitrineGenerica` / `Inativo` com `IsAvailable = false`, e a oferta sai do feed.
 - [x] **Revalidação periódica (`OfferRevalidationWorker`):**
   - A cada `OfferRevalidation:IntervalHours` (padrão 2h, `appsettings.json` da API) revalida em lote (`BatchSize`, pausa `DelayBetweenChecksMs`) as ofertas `Ativo` / `PrecoAlterado` / `Verificando` dos últimos 7 dias ainda não verificadas no intervalo; encerradas, pausadas ou redirecionadas para vitrine viram inativas no banco, com resumo no log.
+
+## 🔗 "Abrir Link Original" com Credencial de Afiliado (`AffiliateOpenLink`)
+
+- [x] **`AffiliateUrl` calculado no servidor:**
+  - `MonitoredGroupService.ListAsync` resolve uma vez por página o `matt_tool` via `IAffiliateUrlBuilderService` e preenche `GroupCapturedOfferDto.AffiliateUrl` em cada card.
+- [x] **`matt_tool` do Mercado Livre:**
+  - Vem do `TrackingId` / `AffiliateTrackingId` da conta Mercado Livre ativa do tenant (ex.: `97303724` da `AchadinhoCerto`); sem conta, usa `Integrations:MercadoLivre:DefaultAffiliateTrackingId` (`97303724`). `AffiliateUrlBuilderRules` anexa ou substitui `matt_tool`/`matt_word` mantendo os demais parâmetros, e troca link curto (`meli.la`, `/sec/`) pela URL direta do produto quando ela existe; outros marketplaces abrem a URL original.
+- [x] **Nova aba:**
+  - O botão continua um `<a target="_blank" rel="noopener noreferrer">` apontando para o link formatado, então o navegador não bloqueia como pop-up.
+
+## 💲 Preço à Vista, Divergência e Esgotado na Shopee (`ShopeePriceIntegrity`)
+
+- [x] **Preço do Telegram sem parcelamento:**
+  - `OfferPriceTextRules.TryExtractCashPrice` ignora valores precedidos de multiplicador (`12x R$ 604,92`, `12 x de`, `parcelas de`) ou seguidos de `/mês`, descarta o "De R$ X" quando há "por R$ Y" e devolve o valor à vista (`R$ 6.678,28`); usado por `StructuredOfferParserService`, `GroupOfferCaptureRules.TryExtractTelegramPrice` (que também pula o `12` de `12x`) e pelo fallback `R$` do `ProductMetadataHtmlParser`, que agora descarta preços implausíveis (ex.: `price_min` bruto da Shopee sem escala).
+- [x] **Preço real da página e correção no banco:**
+  - `ShopeeProductPageRules.TryExtractActivePrice` lê `product:price:amount` / JSON-LD da página da Shopee no `OfferValidationService`; diferença de 30% ou mais para o preço salvo (`IsSignificantDivergence`, ex.: R$ 667,00 × R$ 6.678,28) atualiza `ExtractedPrice` no `LiveCheckSearchService` (botão e worker) e no `OfferPipelineProcessor` (entrada), com log `Divergência de preço corrigida`.
+- [x] **Esgotado na Shopee:**
+  - `ShopeeProductPageRules.IsSoldOut` detecta "Produto esgotado" e afins, `is_sold_out: true`, `item_status: sold_out` e classes `sold-out`; a oferta vira `Esgotado` com `IsAvailable = false`, a clonagem é recusada no servidor e o botão "Clonar" fica desabilitado no card.
+
+## 🎟️ Aba de Cupons & Promoções (`CouponsTab`)
+
+- [x] **Classificação `OfferType`:**
+  - `GroupCapturedMessage.Type` (`Product`/`Coupon`, migration `AddGroupCapturedMessageOfferType`). `CouponMessageRules.Classify` marca `Coupon` quando a mensagem tem `CUPOM`, `CÓDIGO`, `USAR CUPOM`, `R$ N OFF` ou `N% OFF` e não traz link de produto, ou quando nenhum preço à vista sobra após remover os valores do próprio cupom; oferta de produto com cupom continua `Product`.
+  - O `OfferPipelineProcessor` grava cupons sem validação de página nem pacote atômico (nome, preço, foto), com plataforma pela URL ou pelo texto; o Feed de Ofertas lista só `Product` e a revalidação periódica ignora cupons.
+- [x] **Abas da tela:**
+  - `GruposMonitorados.razor` ganhou `[Cupons & Promoções]` ao lado de `[Feed de Ofertas]` e `[Ocultos / Descartados]`, com pills `Todos`, `Mercado Livre`, `Shopee`, `Amazon` e `Outros` (`couponPlatform` na API).
+- [x] **`CouponCard.razor`:**
+  - Código em destaque com botão copiar (`tecFlowClipboard`), desconto, validade e regras extraídas do texto (`CouponMessageRules`), e "Ir para a loja" em nova aba com o `AffiliateUrl` (`matt_tool` no Mercado Livre).
+
+## 🧩 Layout Compacto de Grupos Monitorados (`CompactOffersUi`)
+
+- [x] **Densidade visual:**
+  - Cabeçalho com título `h5`, botões `btn-sm` e sem o texto explicativo; o selo "Sincronizando" virou um pill ao lado do título.
+- [x] **Toast de status:**
+  - Mensagens como "Status atualizado: Ativo." viram toast flutuante com fechar e auto-dismiss em 5 segundos (`ShowToastAsync` versionado, sem um toast antigo apagar o novo); erros continuam em alerta compacto.
+- [x] **Busca compacta + Filtros Avançados ⚙️:**
+  - Na tela ficam só a busca rápida e o seletor de grupo; Período, Preço mín./máx., Loja e Ofertas por página foram para `AdvancedOfferFiltersModal` (contador de filtros ativos no botão, "Limpar filtros"); o checkbox "Só com cupom" saiu.
+- [x] **Auto-scroll ao paginar:**
+  - `SetPageAsync` chama `tecFlowAppInterop.scrollIntoViewById("ofertas-container", "start")` com rolagem suave.
+- [x] **`OfferCard.razor`:**
+  - Card extraído da página, com botões em grade 2x2 de linha única (`padding: 4px 8px; font-size: 0.82rem`, ícones, sem quebra de texto) e badges de marketplace/status em pill sutil (`badge-sm`, cores `*-subtle`); `CouponCard` segue o mesmo padrão.
+
+## 🔔 Notificações Toast Globais (`GlobalToasts`)
+
+- [x] **`IToastService` / `ToastService`:**
+  - `ShowSuccess`, `ShowError`, `ShowWarning`, `ShowInfo`; cada `ToastMessage` tem ID único (`Guid`), mensagem, tipo e duração (padrão 10 segundos); no máximo 5 visíveis, mensagem repetida do mesmo tipo substitui a anterior. Registrado como Scoped (um por circuito Blazor).
+- [x] **`ToastContainer.razor`:**
+  - No `MainLayout` e no `MasterMainLayout`, fixo no canto superior direito (`top: 20px; right: 20px; z-index: 9999`), cores #198754 / #dc3545 / #ffc107 / #0d6efd, botão fechar "X", barra de progresso e fechamento automático. Usa `InteractiveServer` próprio porque o layout é SSR estático.
+- [x] **Grupos Monitorados migrado:**
+  - O banner/toast local de status ("Status atualizado: Ativo.") e os alertas fixos de erro da página viraram `ToastService.ShowSuccess` / `ShowError` / `ShowInfo`; o `CouponCard` avisa a cópia do código pelo serviço global.
   
 ---
 

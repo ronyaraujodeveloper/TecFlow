@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using TecFlow.Business.Dto;
+using TecFlow.Business.Integrations.Shopee;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Business.Service.LinkStrategies;
@@ -71,6 +72,21 @@ public sealed class OfferValidationService : IOfferValidationService
             else
             {
                 metadata = await _metadata.ExtractAsync(page.FinalUrl ?? originalUrl, cancellationToken);
+            }
+
+            if (ShopeeProductPageRules.IsShopeeUrl(page.FinalUrl ?? originalUrl)
+                && ShopeeProductPageRules.TryExtractActivePrice(page.Html) is { } shopeePrice)
+            {
+                metadata.ProductPrice = shopeePrice;
+            }
+
+            if (OfferPriceTextRules.IsSignificantDivergence(capturedPrice, metadata.ProductPrice))
+            {
+                _logger.LogWarning(
+                    "Divergência de preço detectada na página. Url={Url} Capturado={Captured} Pagina={PagePrice}",
+                    originalUrl,
+                    capturedPrice,
+                    metadata.ProductPrice);
             }
 
             var price = metadata.ProductPrice ?? capturedPrice;
@@ -183,6 +199,15 @@ public sealed class OfferValidationService : IOfferValidationService
                     Html = html,
                     FinalUrl = workingUrl
                 };
+            }
+
+            if (ShopeeProductPageRules.IsShopeeUrl(workingUrl) && ShopeeProductPageRules.IsSoldOut(html))
+            {
+                _logger.LogInformation(
+                    "Produto Shopee esgotado detectado. Url={Url} FinalUrl={FinalUrl}",
+                    originalUrl,
+                    workingUrl);
+                return Unavailable(workingUrl, html);
             }
 
             if (GroupOfferCaptureRules.ContainsUnavailableProductPhrase(html))

@@ -26,6 +26,11 @@ public sealed class MercadoLivreIntegrationOptions
     /// </summary>
     public bool UseOfficialSearchApi { get; set; }
 
+    /// <summary>
+    /// matt_tool usado no "Abrir Link Original" quando o tenant não tem conta Mercado Livre com TrackingId.
+    /// </summary>
+    public string DefaultAffiliateTrackingId { get; set; } = string.Empty;
+
     public bool HasAppCredentials =>
         !string.IsNullOrWhiteSpace(AppId) && !string.IsNullOrWhiteSpace(SecretKey);
 

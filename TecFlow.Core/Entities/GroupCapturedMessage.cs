@@ -72,4 +72,6 @@ public class GroupCapturedMessage : BaseEntity
     public DateTime? IgnoredAt { get; set; }
 
     public bool IsAvailable { get; set; } = true;
+
+    public OfferType Type { get; set; } = OfferType.Product;
 }

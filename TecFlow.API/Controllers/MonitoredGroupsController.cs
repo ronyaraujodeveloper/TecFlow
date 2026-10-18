@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
+using TecFlow.Core.Enums;
 using TecFlow.Infrastructure.Interfaces;
 
 namespace TecFlow.API.Controllers;
@@ -47,6 +48,8 @@ public sealed class MonitoredGroupsController : ControllerBase
         [FromQuery] decimal? maxPrice = null,
         [FromQuery] bool? coupon = null,
         [FromQuery] string? store = null,
+        [FromQuery] OfferType type = OfferType.Product,
+        [FromQuery] string? couponPlatform = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -69,6 +72,8 @@ public sealed class MonitoredGroupsController : ControllerBase
                 take,
                 ignored,
                 search.HasAny ? search : null,
+                type,
+                couponPlatform,
                 cancellationToken));
         }
         catch (Exception ex)

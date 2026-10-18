@@ -1,4 +1,5 @@
 ﻿using TecFlow.Business.Dto;
+using TecFlow.Core.Enums;
 using TecFlow.SharedUi.Extensions;
 using TecFlow.SharedUi.Models;
 using TecFlow.SharedUi.Services.Http;
@@ -16,6 +17,8 @@ public interface IMonitoredGroupsApiService
         int take = 25,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
+        OfferType type = OfferType.Product,
+        string? couponPlatform = null,
         CancellationToken cancellationToken = default);
 
     Task<ApiResult<MonitoredGroupsResponseDto>> SyncAsync(string? channel, CancellationToken cancellationToken = default);
@@ -75,6 +78,8 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
         int take = 25,
         bool ignored = false,
         LiveSearchFilterDto? search = null,
+        OfferType type = OfferType.Product,
+        string? couponPlatform = null,
         CancellationToken cancellationToken = default) =>
         _httpService.GetAsync<MonitoredGroupsResponseDto>(
             Path,
@@ -90,7 +95,9 @@ public sealed class MonitoredGroupsApiService : IMonitoredGroupsApiService
                 minPrice = search?.MinPrice,
                 maxPrice = search?.MaxPrice,
                 coupon = search?.HasCoupon,
-                store = search?.Store
+                store = search?.Store,
+                type = type.ToString(),
+                couponPlatform
             },
             cancellationToken);
 

@@ -6,6 +6,7 @@ using TecFlow.Business.Dto;
 using TecFlow.Business.Interfaces.Services;
 using TecFlow.Business.Service.Groups;
 using TecFlow.Core.Entities;
+using TecFlow.Core.Enums;
 using TecFlow.Database;
 
 namespace TecFlow.Infrastructure.Services.Groups;
@@ -37,6 +38,7 @@ public sealed class OfferRevalidationService : IOfferRevalidationService
         var recentCutoff = now.Subtract(ProductImageStorageRules.Retention);
         var offers = await _context.GroupCapturedMessages
             .Where(item => item.IsAvailable
+                && item.Type == OfferType.Product
                 && !item.IsIgnored
                 && item.CreatedAt >= recentCutoff
                 && (item.OfferStatus == GroupOfferStatuses.Ativo

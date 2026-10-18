@@ -43,6 +43,15 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         var urls = StructuredOfferParserService.FilterPersistableUrls(
             WhatsAppBotRules.ExtractUrls(request.RawText),
             extracted);
+        var offerType = CouponMessageRules.Classify(
+            request.RawText,
+            urls.Any(GroupOfferCaptureRules.HasDirectProductUrl));
+        if (offerType == OfferType.Coupon)
+        {
+            var couponPhoto = await ResolveLocalPhotoAsync(request, cancellationToken);
+            return await SaveCouponAsync(request, extracted, urls, couponPhoto, cancellationToken);
+        }
+
         if (urls.Count == 0)
         {
             return 0;
@@ -54,26 +63,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
             return 0;
         }
 
-        string? localPhotoUrl = ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl)
-            && _mediaStore.ExistsOnDisk(request.ProductImageUrl)
-                ? ProductImageStorageRules.ToWebRelativePath(request.ProductImageUrl)
-                : null;
-        if (localPhotoUrl is null && ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl))
-        {
-            _logger.LogWarning(
-                "Foto local da oferta ausente no disco; URL ignorada. UserId={UserId} MessageId={MessageId} Url={Url}",
-                request.UserId,
-                request.ExternalMessageId,
-                request.ProductImageUrl);
-        }
-        if (request.PhotoBytes is { Length: > 0 })
-        {
-            localPhotoUrl = await _mediaStore.SaveProductPhotoAsync(
-                request.UserId,
-                request.ExternalMessageId,
-                request.PhotoBytes,
-                cancellationToken) ?? localPhotoUrl;
-        }
+        var localPhotoUrl = await ResolveLocalPhotoAsync(request, cancellationToken);
 
         if (requireLocalPhoto && !ProductImageStorageRules.IsLocalProductImage(localPhotoUrl))
         {
@@ -85,7 +75,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         }
 
         var groupKey = GroupOfferCaptureRules.BuildGroupKey(request.Channel, request.GroupId);
-        var groupName = string.IsNullOrWhiteSpace(request.GroupName) ? request.GroupId : request.GroupName.Trim();
+        var groupName = ResolveGroupName(request);
         var saved = 0;
 
         foreach (var url in urls)
@@ -147,6 +137,17 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                 {
                     price = validation.Price;
                 }
+                else if (OfferPriceTextRules.IsSignificantDivergence(price, validation.Price))
+                {
+                    _logger.LogWarning(
+                        "Divergência de preço corrigida na ingestão. UserId={UserId} MessageId={MessageId} Url={Url} Mensagem={Captured} Pagina={PagePrice}",
+                        request.UserId,
+                        request.ExternalMessageId,
+                        url,
+                        price,
+                        validation.Price);
+                    price = validation.Price;
+                }
 
                 if (validation.Platform is { } validatedPlatform)
                 {
@@ -193,7 +194,7 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     UserId = request.UserId,
                     Channel = request.Channel,
                     GroupKey = groupKey,
-                    GroupName = groupName.Length <= 256 ? groupName : groupName[..256],
+                    GroupName = groupName,
                     ExternalMessageId = request.ExternalMessageId,
                     RawText = request.RawText,
                     MediaUrl = Truncate(image, 500),
@@ -210,7 +211,8 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
                     ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
                     LastValidatedAt = DateTime.UtcNow,
                     HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
-                    IsAvailable = validation.IsAvailable
+                    IsAvailable = validation.IsAvailable,
+                    Type = OfferType.Product
                 };
                 _capturedMessages.ApplyStructuredParse(entity, request.RawText);
                 saved += await _capturedMessages.SaveValidatedOfferAsync(entity, cancellationToken);
@@ -232,6 +234,100 @@ public sealed class OfferPipelineProcessor : IOfferPipelineProcessor
         }
 
         return saved;
+    }
+
+    private async Task<int> SaveCouponAsync(
+        GroupOfferCaptureRequest request,
+        OfferDataExtraction extracted,
+        IReadOnlyList<string> urls,
+        string? localPhotoUrl,
+        CancellationToken cancellationToken)
+    {
+        var url = urls.FirstOrDefault(GroupOfferCaptureRules.HasDirectProductUrl)
+            ?? urls.FirstOrDefault(item => !StructuredOfferParserService.IsShowcaseUrl(item))
+            ?? urls.FirstOrDefault();
+        var code = CouponMessageRules.ExtractCouponCode(request.RawText)
+            ?? (string.IsNullOrWhiteSpace(extracted.CouponCode) ? null : extracted.CouponCode.Trim());
+        if (string.IsNullOrWhiteSpace(url) && code is null)
+        {
+            return 0;
+        }
+
+        var platform = GroupOfferCaptureRules.DetectPlatform(url)
+            ?? GroupOfferCaptureRules.DetectPlatform(extracted.PrimaryProductUrl)
+            ?? CouponMessageRules.DetectPlatformFromText(request.RawText);
+        var image = ProductImageStorageRules.IsLocalProductImage(localPhotoUrl)
+            ? ProductImageStorageRules.ToWebRelativePath(localPhotoUrl)
+            : null;
+        var entity = new GroupCapturedMessage
+        {
+            UserId = request.UserId,
+            Channel = request.Channel,
+            GroupKey = GroupOfferCaptureRules.BuildGroupKey(request.Channel, request.GroupId),
+            GroupName = ResolveGroupName(request),
+            ExternalMessageId = request.ExternalMessageId,
+            RawText = request.RawText,
+            MediaUrl = Truncate(image, 500),
+            ProductImageUrl = Truncate(image, 500),
+            OriginalUrl = Truncate(url, 1000) ?? string.Empty,
+            PrimaryProductUrl = Truncate(url, 1000),
+            ProductName = Truncate(CouponMessageRules.ExtractHeadline(request.RawText), 255),
+            CouponCode = Truncate(code, 64),
+            PlatformType = platform,
+            PlatformName = platform?.GetDisplayName(),
+            OfferStatus = GroupOfferStatuses.Ativo,
+            ReceivedAt = request.ReceivedAt == default ? DateTime.UtcNow : request.ReceivedAt,
+            HasDirectProductUrl = GroupOfferCaptureRules.HasDirectProductUrl(url),
+            IsAvailable = true,
+            Type = OfferType.Coupon
+        };
+
+        var saved = await _capturedMessages.SaveValidatedOfferAsync(entity, cancellationToken);
+        if (saved > 0)
+        {
+            _logger.LogInformation(
+                "Cupom capturado. UserId={UserId} MessageId={MessageId} Plataforma={Platform} Codigo={Code}",
+                request.UserId,
+                request.ExternalMessageId,
+                platform,
+                entity.CouponCode);
+        }
+
+        return saved;
+    }
+
+    private async Task<string?> ResolveLocalPhotoAsync(
+        GroupOfferCaptureRequest request,
+        CancellationToken cancellationToken)
+    {
+        string? localPhotoUrl = ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl)
+            && _mediaStore.ExistsOnDisk(request.ProductImageUrl)
+                ? ProductImageStorageRules.ToWebRelativePath(request.ProductImageUrl)
+                : null;
+        if (localPhotoUrl is null && ProductImageStorageRules.IsLocalProductImage(request.ProductImageUrl))
+        {
+            _logger.LogWarning(
+                "Foto local da oferta ausente no disco; URL ignorada. UserId={UserId} MessageId={MessageId} Url={Url}",
+                request.UserId,
+                request.ExternalMessageId,
+                request.ProductImageUrl);
+        }
+        if (request.PhotoBytes is { Length: > 0 })
+        {
+            localPhotoUrl = await _mediaStore.SaveProductPhotoAsync(
+                request.UserId,
+                request.ExternalMessageId,
+                request.PhotoBytes,
+                cancellationToken) ?? localPhotoUrl;
+        }
+
+        return localPhotoUrl;
+    }
+
+    private static string ResolveGroupName(GroupOfferCaptureRequest request)
+    {
+        var groupName = string.IsNullOrWhiteSpace(request.GroupName) ? request.GroupId : request.GroupName.Trim();
+        return groupName.Length <= 256 ? groupName : groupName[..256];
     }
 
     private static string? FirstNonEmpty(params string?[] values)

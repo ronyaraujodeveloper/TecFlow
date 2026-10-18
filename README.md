@@ -548,6 +548,18 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Identificadores legados mantidos:**
   - Nome de aplicação/purpose do Data Protection, ID da migração `InitialTecFlow`, prefixo `tecflow-u` das instâncias do WhatsApp, `demo@TecFlow.local` e IDs de rastreio/afiliado (`tecflow_kabum`, `tecflow_cb`, `tecflow_sandbox_subid`, `tecflow_test`, `utm_source=tecflow`), além das credenciais sandbox; credenciais do Mercado Livre (`matt_tool=97303724`, conta `ronyfaria`) intactas.
 
+## 🎨 Identidade Visual Ofertio (`OfertioVisualIdentity`)
+
+- [x] **Ativos de imagem:**
+  - Logotipo recortado e redimensionado (490x160, fundo azul-marinho original) em `wwwroot/images/logo-ofertio.png` do WebUi e do Mobile.
+  - Ícone das setas laranja com fundo transparente em `wwwroot/favicon.png` (192x192) e `wwwroot/favicon.ico` (16/32/48).
+- [x] **Layouts Blazor:**
+  - Cabeçalho do portal (`MainLayout`) e do Master Console (`MasterMainLayout`) exibem o logotipo (`height: 40px; width: auto; object-fit: contain;`) com alt "Ofertio — Inteligência em Ofertas"; a tela de login (`Home`) usa o logotipo em 72px no lugar do selo de texto.
+  - O `NavMenu` não tem marca (só itens de menu), por isso não mudou.
+- [x] **Tags do `<head>`:**
+  - `App.razor` (WebUi), `AppShell.razor` e `index.html` (Mobile) apontam o favicon para `favicon.png`/`favicon.ico`.
+  - Título padrão "Ofertio - Inteligência em Ofertas" via `<PageTitle>` nos layouts e na tela de login (um `<title>` fixo no `App.razor` sobrescreveria os títulos de cada página) e via `<title>` no `index.html` do Mobile.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

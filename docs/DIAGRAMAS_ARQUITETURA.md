@@ -210,6 +210,7 @@ flowchart LR
   IISAPI[IIS Ofertio.API OfertioApiPool] -->|App_Data/OfertioDataProtectionKeys DP1 app legado TecFlow| SQL
   IISAPI -->|C:\inetpub\ofertio\uploads| MEDIA
   SQL -->|banco Ofertio ex-AutomacaoSociais + SystemSettings Ofertio:ShortLinks| IISAPI
+  IISWEB[IIS Ofertio.WebUi wwwroot] -->|images/logo-ofertio.png + favicon.png/.ico| BRANDUI[MainLayout / MasterMainLayout / Home login]
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

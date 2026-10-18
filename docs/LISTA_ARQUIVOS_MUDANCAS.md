@@ -1588,6 +1588,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **docs/EXECUCAO_HOMOLOGACAO.md** / **Publicar-Homologacao.ps1** / **AjustarPermissoesIIS.ps1** / **LiberarPermissoesWebUi.ps1** / **Configurar-Logs-IIS.ps1** / **Liberar-Logs-WebUi.ps1** / **ResetarOfertasLegadas.ps1** - pools, sites e pastas `Ofertio`; limpeza do deploy preserva `api\App_Data`.
 - [x] **Ofertio.Tests/Unit/Security/DataProtectionKeysPathTests.cs** (novo) - caminho relativo/absoluto/padrão das chaves e nome legado do Data Protection.
 
+### OfertioVisualIdentity - Logotipo, favicon e título do portal
+
+- [x] **Ofertio.WebUi/wwwroot/images/logo-ofertio.png** (novo) / **Ofertio.Mobile/wwwroot/images/logo-ofertio.png** (novo) - logotipo Ofertio recortado (490x160).
+- [x] **Ofertio.WebUi/wwwroot/favicon.png** / **favicon.ico** (novos) / **Ofertio.Mobile/wwwroot/favicon.png** / **favicon.ico** (novos) - ícone das setas laranja com fundo transparente.
+- [x] **Ofertio.SharedUi/Components/Layout/MainLayout.razor** / **MasterMainLayout.razor** - logotipo no cabeçalho com alt "Ofertio — Inteligência em Ofertas"; título padrão "Ofertio - Inteligência em Ofertas".
+- [x] **Ofertio.SharedUi/Components/Pages/Home.razor** - logotipo na tela de login no lugar do selo de texto; título padrão atualizado.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - classes `.brand-logo`, `.brand-logo-link` e `.brand-logo-login`.
+- [x] **Ofertio.WebUi/Components/App.razor** / **Ofertio.SharedUi/Components/AppShell.razor** / **Ofertio.Mobile/wwwroot/index.html** - links de favicon (`favicon.png`/`favicon.ico`); título do Mobile "Ofertio - Inteligência em Ofertas".
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

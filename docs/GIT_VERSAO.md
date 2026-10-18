@@ -114,3 +114,4 @@
 [2026-10-18 10:43:50] feat(feed): remoção imediata de produtos esgotados no Verificar e no Worker de lote (SoldOutFeedRemoval)
 [2026-10-18 11:26:46] feat(offers): filtro por caracteristicas (ProductTags) e preco total da Amazon sem valor por unidade com toast de preco atualizado
 [2026-10-18 19:18:50] refactor!: migra marca, solucao, namespaces, banco, IIS e documentacao de TecFlow para Ofertio
+[2026-10-18 20:49:05] feat(ui): identidade visual Ofertio - logotipo no cabecalho/login, favicon das setas e titulo "Ofertio - Inteligencia em Ofertas"

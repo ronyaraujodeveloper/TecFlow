@@ -193,6 +193,27 @@ html, body {
     }
 }
 
+.brand-logo {
+    display: block;
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+
+.brand-logo-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+}
+
+.brand-logo-login {
+    height: 72px;
+    margin: 0 auto;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.18);
+}
+
 .brand-badge {
     display: inline-block;
     padding: 0.35rem 0.85rem;

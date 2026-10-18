@@ -1,14 +1,14 @@
 ﻿@inherits LayoutComponentBase
 
-<PageTitle>Ofertio — Inteligência em Ofertas</PageTitle>
+<PageTitle>Ofertio - Inteligência em Ofertas</PageTitle>
 
 @* Layout executivo do backoffice: identidade visual própria e navegação restrita às rotas /master/*. *@
 <div class="master-shell min-vh-100 d-flex flex-column" data-bs-theme="dark">
     <header class="master-header py-2">
         <div class="container-fluid d-flex align-items-center gap-3 flex-wrap">
-            <a href="@MasterRoutes.Dashboard" class="master-brand text-decoration-none">
-                <i class="bi bi-shield-shaded" aria-hidden="true"></i>
-                Ofertio <span>Master Console</span>
+            <a href="@MasterRoutes.Dashboard" class="master-brand text-decoration-none d-inline-flex align-items-center gap-2">
+                <img src="images/logo-ofertio.png" alt="Ofertio — Inteligência em Ofertas" class="brand-logo" />
+                <span>Master Console</span>
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
                 <MasterProfileSwitcher />

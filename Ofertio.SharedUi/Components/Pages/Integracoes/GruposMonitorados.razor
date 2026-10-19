@@ -30,7 +30,7 @@
                 <i class="bi @(IsTelegram ? "bi-telegram" : "bi-whatsapp")" aria-hidden="true"></i>
                 <span>@ChannelLabel</span>
             </span>
-            @if (_isSyncing)
+            @if (_isBackgroundSyncing)
             {
                 <span class="badge badge-sm rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle d-inline-flex align-items-center gap-1">
                     <span class="spinner-border spinner-border-sm monitored-sync-spinner" role="status" aria-hidden="true"></span>
@@ -39,20 +39,44 @@
             }
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_isBusy" @onclick="RefreshFeedAsync">
-                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-                Atualizar
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_isBusy || _isRefreshing || _isClearing)" @onclick="RefreshFeedAsync">
+                @if (_isRefreshing)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Atualizando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    <span>Atualizar</span>
+                }
             </button>
             @if (IsTelegram)
             {
-                <button type="button" class="btn btn-sm btn-outline-danger" disabled="@(_isProcessing || _isBusy || _isSyncing)" @onclick="HandleResetAllAsync">
-                    <i class="bi bi-trash" aria-hidden="true"></i>
-                    Limpar
+                <button type="button" class="btn btn-sm btn-outline-danger" disabled="@(_isClearing || _isBusy || _isRefreshing || IsSyncLocked)" @onclick="HandleResetAllAsync">
+                    @if (_isClearing)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Limpando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                        <span>Limpar</span>
+                    }
                 </button>
             }
-            <button type="button" class="btn btn-sm btn-primary" disabled="@_isSyncing" title="Sincronizar grupos do @ChannelLabel" @onclick="SyncAsync">
-                <i class="bi bi-cloud-arrow-down" aria-hidden="true"></i>
-                @(_isSyncing ? "Sincronizando..." : "Sincronizar grupos")
+            <button type="button" class="btn btn-sm btn-primary" disabled="@(IsSyncLocked || _isClearing)" title="Sincronizar grupos do @ChannelLabel" @onclick="SyncAsync">
+                @if (IsSyncLocked)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Sincronizando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-cloud-arrow-down" aria-hidden="true"></i>
+                    <span>Sincronizar grupos</span>
+                }
             </button>
         </div>
     </div>
@@ -155,6 +179,7 @@
                         {
                             <CouponCard Item="item"
                                         IsBusy="_isBusy"
+                                        PendingAction="PendingActionFor(item.Id)"
                                         ShowRestore="ShowIgnored"
                                         OnIgnore="MarkAsUninterested"
                                         OnRestore="RestoreAsync" />
@@ -163,6 +188,7 @@
                         {
                             <OfferCard Item="item"
                                        IsBusy="_isBusy"
+                                       PendingAction="PendingActionFor(item.Id)"
                                        ShowIgnored="ShowIgnored"
                                        IsTelegram="IsTelegram"
                                        ScheduleUrl="@(IsTelegram && !ShowIgnored && _clonedOfferId == item.Id ? _scheduleUrl : null)"
@@ -198,8 +224,14 @@
     private string? _store;
     private string _groupKey = string.Empty;
     private bool _isBusy;
+    private bool _isRefreshing;
+    private bool _isClearing;
     private bool _isSyncing;
-    private bool _isProcessing;
+    private bool _isBackgroundSyncing;
+    private DateTime _syncStartedAtUtc;
+    private int _syncGroupsBefore;
+    private int _syncOffersBefore;
+    private readonly Dictionary<int, OfferCardAction> _pendingCardActions = new();
     private bool _showAdvancedFilters;
     private string? _scheduleUrl;
     private int? _clonedOfferId;
@@ -224,6 +256,11 @@
     ];
 
     private bool ShowIgnored => _feedTab == FeedTab.Ignored;
+
+    private bool IsSyncLocked => _isSyncing || _isBackgroundSyncing;
+
+    private OfferCardAction? PendingActionFor(int offerId) =>
+        _pendingCardActions.TryGetValue(offerId, out var action) ? action : null;
 
     private OfferType FeedOfferType => _feedTab == FeedTab.Coupons ? OfferType.Coupon : OfferType.Product;
 
@@ -387,13 +424,44 @@
 
     private async Task RefreshFeedAsync()
     {
-        await LoadAsync();
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        _isRefreshing = true;
         StateHasChanged();
+        try
+        {
+            await LoadAsync();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetFilters()
+    {
+        var defaults = MonitoredOfferFilters.Default(GroupOfferCaptureRules.OffersPageSize);
+        _searchKeyword = string.Empty;
+        _groupKey = string.Empty;
+        _tagId = 0;
+        _hours = defaults.Hours;
+        _minPrice = defaults.MinPrice;
+        _maxPrice = defaults.MaxPrice;
+        _store = defaults.Store;
+        _pageSize = defaults.PageSize;
+        _feedTab = FeedTab.Offers;
+        _couponPlatform = CouponMessageRules.AllPlatformsFilter;
+        _showAdvancedFilters = false;
+        _page = 1;
     }
 
     private async Task HandleResetAllAsync()
     {
-        if (!IsTelegram || _isProcessing)
+        if (!IsTelegram || _isClearing)
         {
             return;
         }
@@ -411,29 +479,31 @@
             return;
         }
 
+        _isClearing = true;
+        StateHasChanged();
         try
         {
-            _isProcessing = true;
-            StateHasChanged();
-
             var result = await Api.ResetAndResyncAsync(Channel);
+            var cleared = result.Success || result.Data is { Status: true };
 
+            ResetFilters();
             _offers.Clear();
             _totalOffers = 0;
-            _page = 1;
             StateHasChanged();
+            await LoadAsync();
 
-            if (result.Success || result.Data is { Status: true })
+            if (cleared)
             {
                 var message = string.IsNullOrWhiteSpace(result.Data?.Descricao)
                     ? "Banco de dados e imagens zerados. Use Sincronizar grupos para recarregar."
                     : result.Data.Descricao;
-                ToastService.ShowSuccess(message);
+                ToastService.ShowSuccess($"{MonitoredGroupSyncRules.FiltersResetMessage} {message}");
                 return;
             }
 
             var fail = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível limpar o feed.";
             ToastService.ShowError($"Falha ao limpar: {fail}");
+            ToastService.ShowSuccess(MonitoredGroupSyncRules.FiltersResetMessage);
         }
         catch (Exception ex)
         {
@@ -442,47 +512,70 @@
         }
         finally
         {
-            _isProcessing = false;
+            _isClearing = false;
             StateHasChanged();
         }
     }
 
     private async Task SyncAsync()
     {
+        if (IsSyncLocked)
+        {
+            return;
+        }
+
+        _isSyncing = true;
+        _syncStartedAtUtc = DateTime.UtcNow;
+        _syncGroupsBefore = _groups.Count;
+        _syncOffersBefore = _totalOffers;
+        StateHasChanged();
         try
         {
             var result = await Api.SyncAsync(Channel);
-            if (result.Success || result.Data is { Status: true })
+            if (!(result.Success || result.Data is { Status: true }))
             {
-                _isSyncing = true;
-                ToastService.ShowInfo(string.IsNullOrWhiteSpace(result.Data?.Descricao)
-                    ? MonitoredGroupSyncRules.BackgroundStartedMessage
-                    : result.Data.Descricao);
-                if (result.Data is not null)
-                {
-                    Apply(result.Data, null, append: false, silent: true);
-                }
-
-                StartOfferRefresh();
-                _ = StopSyncingBadgeAsync();
+                ToastService.ShowError(result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível sincronizar os grupos.");
                 return;
             }
 
-            ToastService.ShowError(result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível sincronizar os grupos.");
+            await LoadAsync(silent: true);
+            if (result.Data?.Descricao == MonitoredGroupSyncRules.BackgroundStartedMessage)
+            {
+                _isBackgroundSyncing = true;
+                ToastService.ShowInfo(MonitoredGroupSyncRules.BackgroundStartedMessage);
+                StartOfferRefresh();
+                _ = StopSyncingBadgeAsync(_syncStartedAtUtc);
+                return;
+            }
+
+            ToastService.ShowSuccess(BuildSyncCompletionMessage());
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Falha ao sincronizar grupos monitorados.");
             ToastService.ShowError("Não foi possível sincronizar os grupos.");
         }
+        finally
+        {
+            _isSyncing = false;
+            StateHasChanged();
+        }
     }
 
-    private async Task StopSyncingBadgeAsync()
+    private string BuildSyncCompletionMessage() =>
+        MonitoredGroupSyncRules.BuildCompletionMessage(_syncGroupsBefore, _groups.Count, _syncOffersBefore, _totalOffers);
+
+    private async Task StopSyncingBadgeAsync(DateTime startedAtUtc)
     {
         try
         {
             await Task.Delay(MonitoredGroupSyncRules.ClientTimeout);
-            _isSyncing = false;
+            if (_syncStartedAtUtc != startedAtUtc)
+            {
+                return;
+            }
+
+            _isBackgroundSyncing = false;
             await InvokeAsync(StateHasChanged);
         }
         catch (ObjectDisposedException)
@@ -544,7 +637,7 @@
 
     private async Task RefreshOffersLoopAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(_isSyncing ? TimeSpan.FromSeconds(8) : TimeSpan.FromSeconds(20));
+        using var timer = new PeriodicTimer(_isBackgroundSyncing ? TimeSpan.FromSeconds(8) : TimeSpan.FromSeconds(20));
         try
         {
             await PollSyncStatusAsync();
@@ -562,7 +655,7 @@
 
     private async Task PollSyncStatusAsync()
     {
-        if (!IsTelegram)
+        if (!IsTelegram || !_isBackgroundSyncing)
         {
             return;
         }
@@ -571,22 +664,23 @@
         {
             var result = await Api.GetSyncStatusAsync();
             var status = result.Data;
-            if (status is null)
+            if (status is null || !MonitoredGroupSyncRules.IsStatusFromCurrentRun(status.UpdatedAt, _syncStartedAtUtc))
             {
                 return;
             }
 
             if (status.IsFailed)
             {
-                _isSyncing = false;
+                _isBackgroundSyncing = false;
                 ToastService.ShowError(status.Message);
                 return;
             }
 
-            if (status.IsCompleted && _isSyncing)
+            if (status.IsCompleted)
             {
-                _isSyncing = false;
-                ToastService.ShowSuccess(status.Message);
+                _isBackgroundSyncing = false;
+                await LoadAsync(silent: true);
+                ToastService.ShowSuccess(BuildSyncCompletionMessage());
             }
         }
         catch (Exception ex)
@@ -604,9 +698,30 @@
         }
     }
 
+    private bool TryBeginCardAction(int offerId, OfferCardAction action)
+    {
+        if (!_pendingCardActions.TryAdd(offerId, action))
+        {
+            return false;
+        }
+
+        StateHasChanged();
+        return true;
+    }
+
+    private void EndCardAction(int offerId)
+    {
+        _pendingCardActions.Remove(offerId);
+        StateHasChanged();
+    }
+
     private async Task ValidateAsync(int offerId)
     {
-        _isBusy = true;
+        if (!TryBeginCardAction(offerId, OfferCardAction.Validate))
+        {
+            return;
+        }
+
         try
         {
             var result = await Api.ValidateAsync(offerId, Channel);
@@ -649,13 +764,17 @@
         }
         finally
         {
-            _isBusy = false;
+            EndCardAction(offerId);
         }
     }
 
     private async Task MarkAsUninterested(int offerId)
     {
-        _isBusy = true;
+        if (!TryBeginCardAction(offerId, OfferCardAction.Ignore))
+        {
+            return;
+        }
+
         try
         {
             var result = await Api.IgnoreAsync(offerId, Channel);
@@ -675,13 +794,17 @@
         }
         finally
         {
-            _isBusy = false;
+            EndCardAction(offerId);
         }
     }
 
     private async Task RestoreAsync(int offerId)
     {
-        _isBusy = true;
+        if (!TryBeginCardAction(offerId, OfferCardAction.Restore))
+        {
+            return;
+        }
+
         try
         {
             var result = await Api.RestoreAsync(offerId, Channel);
@@ -701,13 +824,17 @@
         }
         finally
         {
-            _isBusy = false;
+            EndCardAction(offerId);
         }
     }
 
     private async Task CloneAsync(int offerId)
     {
-        _isBusy = true;
+        if (!TryBeginCardAction(offerId, OfferCardAction.Clone))
+        {
+            return;
+        }
+
         try
         {
             var result = await Api.CloneAsync(offerId, Channel);
@@ -735,7 +862,7 @@
         }
         finally
         {
-            _isBusy = false;
+            EndCardAction(offerId);
         }
     }
 

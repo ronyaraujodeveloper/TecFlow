@@ -115,3 +115,4 @@
 [2026-10-18 11:26:46] feat(offers): filtro por caracteristicas (ProductTags) e preco total da Amazon sem valor por unidade com toast de preco atualizado
 [2026-10-18 19:18:50] refactor!: migra marca, solucao, namespaces, banco, IIS e documentacao de TecFlow para Ofertio
 [2026-10-18 20:49:05] feat(ui): identidade visual Ofertio - logotipo no cabecalho/login, favicon das setas e titulo "Ofertio - Inteligencia em Ofertas"
+[2026-10-18 21:47:57] fix(grupos-monitorados): Limpar volta a abrir confirmacao e redefine filtros; spinners em Atualizar/Limpar/Sincronizar, toasts de conclusao e mini-spinner por card

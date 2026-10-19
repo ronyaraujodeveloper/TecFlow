@@ -2,8 +2,9 @@
 @using Ofertio.Business.Service.Groups
 @using Ofertio.Business.Service.LinkStrategies
 @using Ofertio.Core.Entities
+@using Ofertio.SharedUi.Models
 
-<article class="card border-0 shadow-sm h-100 monitored-offer-card">
+<article class="card border-0 shadow-sm h-100 monitored-offer-card" aria-busy="@(PendingAction is not null ? "true" : "false")">
     <div class="card-body p-3 d-flex flex-column gap-2">
         <div class="d-flex align-items-center justify-content-between gap-2 monitored-offer-header">
             <span class="monitored-offer-captured" title="Capturada em @CapturedAtLabel">
@@ -62,30 +63,30 @@
                 <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                 <span>Abrir</span>
             </a>
-            <button type="button" class="btn btn-outline-primary" disabled="@IsBusy" title="Verificar anúncio" @onclick="() => OnValidate.InvokeAsync(Item.Id)">
-                <i class="bi bi-shield-check" aria-hidden="true"></i>
-                <span>Verificar</span>
+            <button type="button" class="btn btn-outline-primary" disabled="@IsLocked" title="Verificar anúncio" @onclick="() => OnValidate.InvokeAsync(Item.Id)">
+                @ActionIcon(OfferCardAction.Validate, "bi-shield-check")
+                <span>@(IsPending(OfferCardAction.Validate) ? "Verificando..." : "Verificar")</span>
             </button>
             @if (ShowIgnored)
             {
-                <button type="button" class="btn btn-outline-success" disabled="@IsBusy" title="Restaurar no feed" @onclick="() => OnRestore.InvokeAsync(Item.Id)">
-                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-                    <span>Restaurar</span>
+                <button type="button" class="btn btn-outline-success" disabled="@IsLocked" title="Restaurar no feed" @onclick="() => OnRestore.InvokeAsync(Item.Id)">
+                    @ActionIcon(OfferCardAction.Restore, "bi-arrow-counterclockwise")
+                    <span>@(IsPending(OfferCardAction.Restore) ? "Restaurando..." : "Restaurar")</span>
                 </button>
             }
             else
             {
                 <button type="button"
                         class="btn btn-primary"
-                        disabled="@(IsBusy || !CanClone)"
+                        disabled="@(IsLocked || !CanClone)"
                         title="@(CanClone ? CloneTitle : "Clonagem indisponível para anúncio esgotado, inativo ou com preço suspeito")"
                         @onclick="() => OnClone.InvokeAsync(Item.Id)">
-                    <i class="bi bi-copy" aria-hidden="true"></i>
-                    <span>Clonar</span>
+                    @ActionIcon(OfferCardAction.Clone, "bi-copy")
+                    <span>@(IsPending(OfferCardAction.Clone) ? "Clonando..." : "Clonar")</span>
                 </button>
-                <button type="button" class="btn btn-outline-danger" disabled="@IsBusy" title="Ocultar (sem interesse)" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
-                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
-                    <span>Ocultar</span>
+                <button type="button" class="btn btn-outline-danger" disabled="@IsLocked" title="Ocultar (sem interesse)" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
+                    @ActionIcon(OfferCardAction.Ignore, "bi-eye-slash")
+                    <span>@(IsPending(OfferCardAction.Ignore) ? "Ocultando..." : "Ocultar")</span>
                 </button>
             }
         </div>
@@ -107,6 +108,9 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
+    public OfferCardAction? PendingAction { get; set; }
+
+    [Parameter]
     public bool ShowIgnored { get; set; }
 
     [Parameter]
@@ -126,6 +130,14 @@
 
     [Parameter]
     public EventCallback<int> OnRestore { get; set; }
+
+    private bool IsLocked => IsBusy || PendingAction is not null;
+
+    private bool IsPending(OfferCardAction action) => PendingAction == action;
+
+    private RenderFragment ActionIcon(OfferCardAction action, string icon) => IsPending(action)
+        ? @<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        : @<i class="bi @icon" aria-hidden="true"></i>;
 
     private bool IsInactive => !Item.IsAvailable || GroupOfferStatuses.IsInactive(Item.OfferStatus);
 

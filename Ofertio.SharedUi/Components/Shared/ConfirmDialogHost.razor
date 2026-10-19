@@ -1,4 +1,5 @@
-﻿@implements IDisposable
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@implements IDisposable
 @inject IModalService ModalService
 
 @if (ModalService.Current is { } dialog)

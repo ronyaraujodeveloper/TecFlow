@@ -211,6 +211,8 @@ flowchart LR
   IISAPI -->|C:\inetpub\ofertio\uploads| MEDIA
   SQL -->|banco Ofertio ex-AutomacaoSociais + SystemSettings Ofertio:ShortLinks| IISAPI
   IISWEB[IIS Ofertio.WebUi wwwroot] -->|images/logo-ofertio.png + favicon.png/.ico| BRANDUI[MainLayout / MasterMainLayout / Home login]
+  GMUI -->|Limpar ➔ ConfirmDialogHost InteractiveServer ➔ POST resetar + ResetFilters + ListAsync padrão| MONSVC
+  GMUI -->|Sincronizar ➔ status da execução atual ➔ toast X novos grupos/mensagens| SYNCRULE[MonitoredGroupSyncRules]
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

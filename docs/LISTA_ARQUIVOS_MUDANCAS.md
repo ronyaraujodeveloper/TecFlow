@@ -1597,6 +1597,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - classes `.brand-logo`, `.brand-logo-link` e `.brand-logo-login`.
 - [x] **Ofertio.WebUi/Components/App.razor** / **Ofertio.SharedUi/Components/AppShell.razor** / **Ofertio.Mobile/wwwroot/index.html** - links de favicon (`favicon.png`/`favicon.ico`); título do Mobile "Ofertio - Inteligência em Ofertas".
 
+### GruposMonitoradosButtonsFix - Limpar, spinners e toasts em Grupos Monitorados
+
+- [x] **Ofertio.SharedUi/Components/Shared/ConfirmDialogHost.razor** - `@rendermode InteractiveServer`; o modal de confirmação passa a abrir nas páginas interativas (o "Limpar" ficava travado).
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - "Limpar" redefine todos os filtros e recarrega a lista padrão; `_isRefreshing` / `_isClearing` / `_isSyncing` / `_isBackgroundSyncing` com spinners; toasts de conclusão; ações de card por oferta.
+- [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor** / **CouponCard.razor** - parâmetro `PendingAction` com mini-spinner no botão em processamento.
+- [x] **Ofertio.SharedUi/Models/OfferCardAction.cs** (novo) - ações de card (Validate, Clone, Ignore, Restore).
+- [x] **Ofertio.SharedUi/Models/MonitoredOfferFilters.cs** - `Default(pageSize)` com os filtros padrão.
+- [x] **Ofertio.Business/Service/Groups/MonitoredGroupSyncRules.cs** - `FiltersResetMessage`, `BuildCompletionMessage` e `IsStatusFromCurrentRun`.
+- [x] **Ofertio.Tests/Unit/Groups/MonitoredGroupSyncRulesTests.cs** - mensagens de conclusão, status da execução atual e filtros padrão.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

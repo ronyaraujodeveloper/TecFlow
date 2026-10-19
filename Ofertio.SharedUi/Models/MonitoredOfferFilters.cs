@@ -9,6 +9,8 @@ public sealed record MonitoredOfferFilters(
 {
     public const int DefaultHours = 24;
 
+    public static MonitoredOfferFilters Default(int pageSize) => new(DefaultHours, null, null, null, pageSize);
+
     public int ActiveCount(int defaultPageSize) =>
         (Hours != DefaultHours ? 1 : 0)
         + (MinPrice is > 0 ? 1 : 0)

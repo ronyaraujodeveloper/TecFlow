@@ -560,6 +560,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `App.razor` (WebUi), `AppShell.razor` e `index.html` (Mobile) apontam o favicon para `favicon.png`/`favicon.ico`.
   - Título padrão "Ofertio - Inteligência em Ofertas" via `<PageTitle>` nos layouts e na tela de login (um `<title>` fixo no `App.razor` sobrescreveria os títulos de cada página) e via `<title>` no `index.html` do Mobile.
 
+## 🔘 Botões de Grupos Monitorados (`GruposMonitoradosButtonsFix`)
+
+- [x] **Botão "Limpar" (Telegram):**
+  - Corrigido: o modal de confirmação nunca abria porque o `ConfirmDialogHost` era renderizado de forma estática no `MainLayout`; agora usa `InteractiveServer` (como o `ToastContainer`), e o clique deixa de ficar travado esperando.
+  - Após confirmar, apaga ofertas capturadas e imagens (como antes), redefine todos os filtros (busca, grupo "Todos os grupos", característica "Todas", aba Feed de Ofertas, plataforma de cupom, filtros avançados e página 1) e recarrega a lista padrão, com o toast "Filtros redefinidos com sucesso.".
+- [x] **Estados de carregamento:**
+  - `_isRefreshing`, `_isClearing` e `_isSyncing` com spinner Bootstrap e botão desabilitado ("Atualizando...", "Limpando...", "Sincronizando..."), sempre redefinidos no `finally`.
+  - Sincronização em segundo plano do Telegram mantém o badge e o botão travados até o status da execução atual concluir (status antigo é ignorado; falha não repete o toast a cada 20s).
+- [x] **Toasts de conclusão:** "Sincronização concluída! X novos grupos e Y novas mensagens atualizadas." (`MonitoredGroupSyncRules.BuildCompletionMessage`).
+- [x] **Cards (Verificar, Clonar, Ocultar, Restaurar, Sem interesse):** só o card clicado mostra o mini-spinner no próprio botão (`OfferCardAction` por oferta); os demais cards seguem utilizáveis.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

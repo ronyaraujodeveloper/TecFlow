@@ -1,6 +1,7 @@
 ﻿@using Ofertio.Business.Dto
 @using Ofertio.Business.Service.Groups
 @using Ofertio.Core.Enums
+@using Ofertio.SharedUi.Models
 @inject IJSRuntime Js
 @inject IToastService ToastService
 
@@ -82,16 +83,32 @@
 
             @if (ShowRestore)
             {
-                <button type="button" class="btn btn-outline-success" disabled="@IsBusy" @onclick="() => OnRestore.InvokeAsync(Item.Id)">
-                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-                    <span>Restaurar</span>
+                <button type="button" class="btn btn-outline-success" disabled="@IsLocked" @onclick="() => OnRestore.InvokeAsync(Item.Id)">
+                    @if (PendingAction == OfferCardAction.Restore)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Restaurando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                        <span>Restaurar</span>
+                    }
                 </button>
             }
             else
             {
-                <button type="button" class="btn btn-outline-danger" disabled="@IsBusy" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
-                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
-                    <span>Sem interesse</span>
+                <button type="button" class="btn btn-outline-danger" disabled="@IsLocked" @onclick="() => OnIgnore.InvokeAsync(Item.Id)">
+                    @if (PendingAction == OfferCardAction.Ignore)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Ocultando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                        <span>Sem interesse</span>
+                    }
                 </button>
             }
         </div>
@@ -106,6 +123,9 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
+    public OfferCardAction? PendingAction { get; set; }
+
+    [Parameter]
     public bool ShowRestore { get; set; }
 
     [Parameter]
@@ -115,6 +135,8 @@
     public EventCallback<int> OnRestore { get; set; }
 
     private bool _copied;
+
+    private bool IsLocked => IsBusy || PendingAction is not null;
 
     private string StoreUrl => string.IsNullOrWhiteSpace(Item.AffiliateUrl) ? Item.OriginalUrl : Item.AffiliateUrl;
 

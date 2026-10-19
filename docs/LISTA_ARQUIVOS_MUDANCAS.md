@@ -1618,6 +1618,20 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - `.monitored-platform-select`.
 - [x] **Ofertio.Tests/Unit/Groups/OfferPlatformFilterRulesTests.cs** (novo) - normalização, opções e filtro (inclusive "Outros").
 
+### MonitoredPlatformFilterDynamic - Plataformas do select vindas das contas conectadas
+
+- [x] **Ofertio.Business/Service/Groups/OfferPlatformFilterRules.cs** - `BuildOptions` (conectadas ➔ detectadas ➔ Mercado Livre/Shopee), rótulos via `GetDisplayName`, normalização por `TryCanonicalKey`; opções fixas e "Outros" removidos.
+- [x] **Ofertio.Business/Dto/MonitoredGroupDtos.cs** - `PlatformFilterOptionDto` e `MonitoredGroupsResponseDto.Platforms`.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `BuildPlatformOptionsAsync` a partir de `ListActivePlatformsAsync` e, sem conta ativa, do `Distinct` de `PlatformType` das ofertas do período.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - `@foreach` sobre `_platforms` vindo da API; mantém a plataforma selecionada visível se sair da lista.
+- [x] **Ofertio.Tests/Unit/Groups/OfferPlatformFilterRulesTests.cs** - lista dinâmica, fallbacks e ordenação.
+
+### UnifiedPlatformFilter - Filtro de plataforma único para todas as abas
+
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - removidas as pílulas de marketplace dos cupons (`CouponPlatformTabs`, `_couponPlatform`, `SetCouponPlatformAsync`); "Todas as Plataformas" habilitado em todas as abas e preservado ao trocar de aba.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - `OfferPlatformFilterRules` também filtra cupons (o parâmetro legado `couponPlatform` da API continua aceito).
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - removido `.monitored-subpills`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

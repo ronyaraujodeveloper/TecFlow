@@ -574,10 +574,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 ## 🏬 Filtro por Plataforma em Grupos Monitorados (`MonitoredPlatformFilter`)
 
 - [x] **Select "Todas as Plataformas":**
-  - Ao lado direito do select de características, com Mercado Livre, Shopee, Amazon, Magazine Luiza, AliExpress, Casas Bahia / Ponto e Outros (Kabum, TikTok Shop e ofertas sem plataforma identificada).
-  - Ao trocar a plataforma, volta para a página 1 e recarrega o feed; desabilitado na aba de cupons, que já tem as abas de marketplace.
+  - Ao lado direito do select de características; ao trocar a plataforma, volta para a página 1 e recarrega o feed.
+  - Filtro único para as três abas (Feed de Ofertas, Cupons & Promoções e Ocultos / Descartados); a plataforma escolhida é mantida ao trocar de aba. As pílulas de marketplace da aba de cupons foram removidas.
+- [x] **Lista dinâmica de plataformas (`MonitoredGroupsResponseDto.Platforms`):**
+  - Mostra só as plataformas com conta de marketplace ativa do usuário (`MarketplaceAccounts`, as mesmas que liberam produtos no feed).
+  - Sem conta conectada, usa as plataformas detectadas nas ofertas capturadas no período; sem nenhuma, exibe Mercado Livre e Shopee.
+  - Se a plataforma selecionada sair da lista (conta desativada), ela continua visível no select até o usuário trocar ou clicar em "Limpar".
 - [x] **Filtro no backend:**
-  - `GET api/integracoes/grupos/monitorados?platform=` ➔ `LiveSearchFilterDto.Platform` ➔ `OfferPlatformFilterRules.Apply` (`PlatformType` no SQL), no feed de ofertas e nos ocultos; aceita `Magalu` e `Ponto` como apelidos.
+  - `GET api/integracoes/grupos/monitorados?platform=` ➔ `LiveSearchFilterDto.Platform` ➔ `OfferPlatformFilterRules.Apply` (`PlatformType` no SQL), no feed de ofertas e nos ocultos; aceita apelidos como `Magalu` e `Ponto`.
 - [x] **Botão "Limpar":** também volta a plataforma para "Todas as Plataformas".
 
 ---

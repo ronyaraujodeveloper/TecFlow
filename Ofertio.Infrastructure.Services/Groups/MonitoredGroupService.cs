@@ -183,7 +183,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 query = query.Where(item => item.Tags.Any(tag => tag.Id == selectedTagId));
             }
 
-            if (!string.IsNullOrWhiteSpace(search?.Platform) && (ignored || type == OfferType.Product))
+            if (!string.IsNullOrWhiteSpace(search?.Platform))
             {
                 query = OfferPlatformFilterRules.Apply(query, search.Platform);
             }
@@ -218,6 +218,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 .OrderBy(tag => tag.Id)
                 .Select(tag => new ProductTagDto { Id = tag.Id, Name = tag.Name, Slug = tag.Slug })
                 .ToListAsync(cancellationToken);
+            var platformOptions = await BuildPlatformOptionsAsync(userId, platforms, since, cancellationToken);
 
             return new MonitoredGroupsResponseDto
             {
@@ -225,6 +226,7 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 Groups = groups,
                 Offers = uniqueOffers,
                 Tags = tags,
+                Platforms = platformOptions,
                 TotalOffers = total,
                 Skip = resolvedSkip,
                 Take = resolvedTake,
@@ -620,6 +622,30 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
             CouponValidity = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractValidity(item.RawText) : null,
             CouponRules = item.Type == OfferType.Coupon ? CouponMessageRules.ExtractRules(item.RawText).ToList() : []
         };
+
+    private async Task<List<PlatformFilterOptionDto>> BuildPlatformOptionsAsync(
+        int userId,
+        IReadOnlyList<MarketplaceType> connected,
+        DateTime since,
+        CancellationToken cancellationToken)
+    {
+        if (connected.Count > 0)
+        {
+            return OfferPlatformFilterRules.BuildOptions(connected);
+        }
+
+        var detected = await _context.GroupCapturedMessages
+            .AsNoTracking()
+            .Where(item => item.UserId == userId
+                && item.ReceivedAt >= since
+                && item.Type == OfferType.Product
+                && !item.IsIgnored
+                && item.PlatformType != null)
+            .Select(item => item.PlatformType!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return OfferPlatformFilterRules.BuildOptions(connected, detected);
+    }
 
     private static IQueryable<GroupCapturedMessage> ApplyCouponPlatformFilter(
         IQueryable<GroupCapturedMessage> query,

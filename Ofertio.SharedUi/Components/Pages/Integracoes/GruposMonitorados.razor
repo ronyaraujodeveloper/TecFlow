@@ -136,35 +136,17 @@
             <select id="monitored-platform"
                     class="form-select form-select-sm monitored-platform-select @(string.IsNullOrEmpty(_selectedPlatform) ? string.Empty : "is-filtered")"
                     aria-label="Plataforma / marketplace"
-                    title="@(_feedTab == FeedTab.Coupons ? "Use as abas de marketplace abaixo para filtrar cupons" : "Filtrar por plataforma / marketplace")"
-                    disabled="@(_isBusy || _feedTab == FeedTab.Coupons)"
+                    title="Filtrar por plataforma / marketplace"
+                    disabled="@_isBusy"
                     value="@_selectedPlatform"
                     @onchange="OnPlatformChanged">
                 <option value="">@OfferPlatformFilterRules.AllPlatformsLabel</option>
-                @foreach (var (value, label) in OfferPlatformFilterRules.Options)
+                @foreach (var platform in PlatformOptions)
                 {
-                    <option value="@value">@label</option>
+                    <option value="@platform.Value">@platform.Label</option>
                 }
             </select>
         </div>
-        @if (_feedTab == FeedTab.Coupons)
-        {
-            <ul class="nav nav-pills monitored-subpills flex-wrap gap-1 mt-2" role="tablist" aria-label="Cupons por marketplace">
-                @foreach (var (value, label) in CouponPlatformTabs)
-                {
-                    <li class="nav-item" role="presentation">
-                        <button type="button"
-                                role="tab"
-                                aria-selected="@(_couponPlatform == value)"
-                                class="nav-link py-1 px-3 @(_couponPlatform == value ? "active" : string.Empty)"
-                                disabled="@_isBusy"
-                                @onclick="() => SetCouponPlatformAsync(value)">
-                            @label
-                        </button>
-                    </li>
-                }
-            </ul>
-        }
     </div>
 
     <div id="ofertas-container" class="monitored-offers-container">
@@ -226,6 +208,7 @@
     private readonly List<MonitoredGroupDto> _groups = [];
     private readonly List<GroupCapturedOfferDto> _offers = [];
     private readonly List<ProductTagDto> _tags = [];
+    private readonly List<PlatformFilterOptionDto> _platforms = [];
     private int _tagId;
     private string _selectedPlatform = string.Empty;
     private int _hours = 24;
@@ -250,7 +233,6 @@
     private string? _scheduleUrl;
     private int? _clonedOfferId;
     private FeedTab _feedTab = FeedTab.Offers;
-    private string _couponPlatform = CouponMessageRules.AllPlatformsFilter;
     private CancellationTokenSource? _refreshCts;
 
     private enum FeedTab
@@ -260,18 +242,27 @@
         Ignored
     }
 
-    private static readonly (string Value, string Label)[] CouponPlatformTabs =
-    [
-        (CouponMessageRules.AllPlatformsFilter, "Todos"),
-        (nameof(MarketplaceType.MercadoLivre), "Mercado Livre"),
-        (nameof(MarketplaceType.Shopee), "Shopee"),
-        (nameof(MarketplaceType.Amazon), "Amazon"),
-        (CouponMessageRules.OtherPlatformsFilter, "Outros")
-    ];
-
     private bool ShowIgnored => _feedTab == FeedTab.Ignored;
 
     private bool IsSyncLocked => _isSyncing || _isBackgroundSyncing;
+
+    private IEnumerable<PlatformFilterOptionDto> PlatformOptions
+    {
+        get
+        {
+            foreach (var platform in _platforms)
+            {
+                yield return platform;
+            }
+
+            if (!string.IsNullOrEmpty(_selectedPlatform)
+                && !_platforms.Exists(platform => platform.Value == _selectedPlatform)
+                && Enum.TryParse<MarketplaceType>(_selectedPlatform, out var selected))
+            {
+                yield return OfferPlatformFilterRules.ToOption(selected);
+            }
+        }
+    }
 
     private OfferCardAction? PendingActionFor(int offerId) =>
         _pendingCardActions.TryGetValue(offerId, out var action) ? action : null;
@@ -342,13 +333,6 @@
         return LoadAsync();
     }
 
-    private Task SetCouponPlatformAsync(string platform)
-    {
-        _couponPlatform = platform;
-        _page = 1;
-        return LoadAsync();
-    }
-
     private MonitoredOfferFilters CurrentFilters => new(_hours, _minPrice, _maxPrice, _store, _pageSize);
 
     private int AdvancedFilterCount => CurrentFilters.ActiveCount(GroupOfferCaptureRules.OffersPageSize);
@@ -383,7 +367,7 @@
             MaxPrice = _maxPrice,
             Store = _store,
             TagId = _feedTab != FeedTab.Coupons && _tagId > 0 ? _tagId : null,
-            Platform = _feedTab != FeedTab.Coupons ? OfferPlatformFilterRules.Normalize(_selectedPlatform) : null
+            Platform = OfferPlatformFilterRules.Normalize(_selectedPlatform)
         };
         return filter.HasAny ? filter : null;
     }
@@ -478,7 +462,6 @@
         _store = defaults.Store;
         _pageSize = defaults.PageSize;
         _feedTab = FeedTab.Offers;
-        _couponPlatform = CouponMessageRules.AllPlatformsFilter;
         _showAdvancedFilters = false;
         _page = 1;
     }
@@ -624,8 +607,7 @@
                 _pageSize,
                 ShowIgnored,
                 BuildSearch(),
-                FeedOfferType,
-                _feedTab == FeedTab.Coupons ? _couponPlatform : null);
+                FeedOfferType);
             if (result.Data is not null)
             {
                 Apply(result.Data, silent ? null : result.ErrorMessage, append, silent);
@@ -921,6 +903,12 @@
         {
             _tags.Clear();
             _tags.AddRange(data.Tags);
+        }
+
+        if (data.Platforms.Count > 0)
+        {
+            _platforms.Clear();
+            _platforms.AddRange(data.Platforms);
         }
 
         _totalOffers = data.TotalOffers;

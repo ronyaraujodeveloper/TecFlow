@@ -770,11 +770,6 @@ html, body {
     font-weight: 600;
 }
 
-.monitored-subpills .nav-link {
-    font-size: 0.8rem;
-    padding: 0.2rem 0.75rem;
-}
-
 .monitored-sync-spinner {
     width: 0.7rem;
     height: 0.7rem;

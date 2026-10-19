@@ -120,6 +120,14 @@ public class CloneMonitoredOfferResultDto
     public string? RedirectUrl { get; set; }
 }
 
+public class PlatformFilterOptionDto
+{
+    /// <summary>Nome de <c>MarketplaceType</c> enviado no parâmetro <c>platform</c>.</summary>
+    public string Value { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+}
+
 public class MonitoredGroupsResponseDto
 {
     public bool Status { get; set; } = true;
@@ -132,6 +140,9 @@ public class MonitoredGroupsResponseDto
 
     /// <summary>Características ativas (<c>ProductTags</c>) para o combo de filtro do feed.</summary>
     public List<ProductTagDto> Tags { get; set; } = [];
+
+    /// <summary>Plataformas conectadas/detectadas para o combo "Todas as Plataformas" do feed.</summary>
+    public List<PlatformFilterOptionDto> Platforms { get; set; } = [];
 
     public int TotalOffers { get; set; }
 

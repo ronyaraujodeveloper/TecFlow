@@ -921,6 +921,8 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Identidade visual Ofertio (`OfertioVisualIdentity`):** logotipo em `wwwroot/images/logo-ofertio.png` no cabeçalho do portal, no Master Console e na tela de login; favicon das setas laranja (`favicon.png`/`favicon.ico`) no WebUi e no Mobile; título padrão "Ofertio - Inteligência em Ofertas".
 - [x] **Botões de Grupos Monitorados (`GruposMonitoradosButtonsFix`):** o "Limpar" volta a funcionar (o `ConfirmDialogHost` estático nunca abria o modal), apaga ofertas/imagens e redefine todos os filtros; Atualizar, Limpar e Sincronizar ganham spinner e bloqueio individuais; toasts "Filtros redefinidos com sucesso." e "Sincronização concluída! X novos grupos e Y novas mensagens atualizadas."; mini-spinner só no card clicado.
 - [x] **Filtro por plataforma (`MonitoredPlatformFilter`):** select "Todas as Plataformas" ao lado das características em Grupos Monitorados (Mercado Livre, Shopee, Amazon, Magazine Luiza, AliExpress, Casas Bahia / Ponto, Outros), filtrado no SQL por `PlatformType`, volta à página 1 ao trocar e é redefinido pelo "Limpar".
+- [x] **Plataformas dinâmicas no filtro (`MonitoredPlatformFilterDynamic`):** o select lista só as plataformas com conta de marketplace ativa do usuário; sem conta, as detectadas nas ofertas capturadas; sem nenhuma, Mercado Livre e Shopee.
+- [x] **Filtro de plataforma único (`UnifiedPlatformFilter`):** as pílulas de marketplace da aba de cupons saíram; "Todas as Plataformas" filtra Feed de Ofertas, Cupons & Promoções e Ocultos / Descartados e é mantido ao trocar de aba.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

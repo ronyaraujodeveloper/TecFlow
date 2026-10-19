@@ -1,4 +1,5 @@
-﻿using Ofertio.Core.Entities;
+﻿using Ofertio.Business.Dto;
+using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
 
 namespace Ofertio.Business.Service.Groups;
@@ -7,57 +8,85 @@ public static class OfferPlatformFilterRules
 {
     public const string AllPlatformsLabel = "Todas as Plataformas";
 
-    public const string OthersFilter = "Outros";
+    public static readonly MarketplaceType[] DefaultPlatforms =
+    [
+        MarketplaceType.MercadoLivre,
+        MarketplaceType.Shopee
+    ];
 
-    public static readonly MarketplaceType[] ListedPlatforms =
+    private static readonly MarketplaceType[] DisplayOrder =
     [
         MarketplaceType.MercadoLivre,
         MarketplaceType.Shopee,
         MarketplaceType.Amazon,
         MarketplaceType.MagazineLuiza,
         MarketplaceType.AliExpress,
-        MarketplaceType.CasasBahia
+        MarketplaceType.CasasBahia,
+        MarketplaceType.Kabum,
+        MarketplaceType.TikTokShop
     ];
 
-    public static readonly IReadOnlyList<(string Value, string Label)> Options =
-    [
-        (nameof(MarketplaceType.MercadoLivre), "Mercado Livre"),
-        (nameof(MarketplaceType.Shopee), "Shopee"),
-        (nameof(MarketplaceType.Amazon), "Amazon"),
-        (nameof(MarketplaceType.MagazineLuiza), "Magazine Luiza"),
-        (nameof(MarketplaceType.AliExpress), "AliExpress"),
-        (nameof(MarketplaceType.CasasBahia), "Casas Bahia / Ponto"),
-        (OthersFilter, "Outros")
-    ];
+    /// <summary>
+    /// Plataformas conectadas (contas ativas) têm prioridade; sem conta conectada usa as plataformas detectadas
+    /// nas ofertas capturadas e, sem nenhuma, as plataformas padrão.
+    /// </summary>
+    public static List<PlatformFilterOptionDto> BuildOptions(
+        IEnumerable<MarketplaceType>? connected,
+        IEnumerable<MarketplaceType>? detected = null)
+    {
+        var source = Defined(connected);
+        if (source.Count == 0)
+        {
+            source = Defined(detected);
+        }
+
+        if (source.Count == 0)
+        {
+            source = DefaultPlatforms.ToHashSet();
+        }
+
+        return source
+            .OrderBy(platform => Array.IndexOf(DisplayOrder, platform) is var index and >= 0 ? index : int.MaxValue)
+            .ThenBy(platform => platform.ToString(), StringComparer.Ordinal)
+            .Select(ToOption)
+            .ToList();
+    }
+
+    public static PlatformFilterOptionDto ToOption(MarketplaceType platform) => new()
+    {
+        Value = platform.ToString(),
+        Label = Label(platform)
+    };
+
+    public static string Label(MarketplaceType platform) =>
+        platform == MarketplaceType.CasasBahia ? "Casas Bahia / Ponto" : platform.GetDisplayName();
 
     public static string? Normalize(string? platform)
     {
-        if (string.IsNullOrWhiteSpace(platform))
+        if (string.IsNullOrWhiteSpace(platform) || int.TryParse(platform.Trim(), out _))
         {
             return null;
         }
 
-        var value = platform.Trim();
-        if (string.Equals(value, OthersFilter, StringComparison.OrdinalIgnoreCase))
-        {
-            return OthersFilter;
-        }
-
-        if (string.Equals(value, "Magalu", StringComparison.OrdinalIgnoreCase))
-        {
-            return nameof(MarketplaceType.MagazineLuiza);
-        }
-
-        if (string.Equals(value, "Ponto", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(platform.Trim(), "Ponto", StringComparison.OrdinalIgnoreCase))
         {
             return nameof(MarketplaceType.CasasBahia);
         }
 
-        return !int.TryParse(value, out _)
-            && Enum.TryParse<MarketplaceType>(value, ignoreCase: true, out var parsed)
-            && ListedPlatforms.Contains(parsed)
-                ? parsed.ToString()
-                : null;
+        if (!MarketplaceTypeExtensions.TryCanonicalKey(platform, out var key))
+        {
+            return null;
+        }
+
+        foreach (var candidate in Enum.GetValues<MarketplaceType>())
+        {
+            if (candidate.CanonicalKey() == key)
+            {
+                return candidate.ToString();
+            }
+        }
+
+        return null;
     }
 
     public static IQueryable<GroupCapturedMessage> Apply(IQueryable<GroupCapturedMessage> query, string? platform)
@@ -68,13 +97,12 @@ public static class OfferPlatformFilterRules
             return query;
         }
 
-        if (normalized == OthersFilter)
-        {
-            var listed = ListedPlatforms;
-            return query.Where(item => item.PlatformType == null || !listed.Contains(item.PlatformType.Value));
-        }
-
         var selected = Enum.Parse<MarketplaceType>(normalized);
         return query.Where(item => item.PlatformType == selected);
     }
+
+    private static HashSet<MarketplaceType> Defined(IEnumerable<MarketplaceType>? platforms) =>
+        platforms is null
+            ? []
+            : platforms.Where(Enum.IsDefined).ToHashSet();
 }

@@ -213,8 +213,9 @@ flowchart LR
   IISWEB[IIS Ofertio.WebUi wwwroot] -->|images/logo-ofertio.png + favicon.png/.ico| BRANDUI[MainLayout / MasterMainLayout / Home login]
   GMUI -->|Limpar ➔ ConfirmDialogHost InteractiveServer ➔ POST resetar + ResetFilters + ListAsync padrão| MONSVC
   GMUI -->|Sincronizar ➔ status da execução atual ➔ toast X novos grupos/mensagens| SYNCRULE[MonitoredGroupSyncRules]
-  GMUI -->|combo Plataforma platform=MercadoLivre/Shopee/.../Outros| MONSVC
+  GMUI -->|combo Plataforma único platform=MercadoLivre/Shopee/... em Ofertas, Cupons e Ocultos| MONSVC
   MONSVC -->|OfferPlatformFilterRules PlatformType == plataforma ou fora da lista| SQL
+  SQL -->|MarketplaceAccounts ativas ou Distinct PlatformType ➔ Platforms do combo| MONSVC
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

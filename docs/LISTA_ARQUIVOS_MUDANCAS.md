@@ -1607,6 +1607,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Service/Groups/MonitoredGroupSyncRules.cs** - `FiltersResetMessage`, `BuildCompletionMessage` e `IsStatusFromCurrentRun`.
 - [x] **Ofertio.Tests/Unit/Groups/MonitoredGroupSyncRulesTests.cs** - mensagens de conclusão, status da execução atual e filtros padrão.
 
+### MonitoredPlatformFilter - Filtro por plataforma em Grupos Monitorados
+
+- [x] **Ofertio.Business/Service/Groups/OfferPlatformFilterRules.cs** (novo) - opções do select, normalização (`Magalu`, `Ponto`, `Outros`) e filtro por `PlatformType`.
+- [x] **Ofertio.Business/Dto/LiveSearchDtos.cs** - `LiveSearchFilterDto.Platform` (entra em `HasAny`).
+- [x] **Ofertio.API/Controllers/MonitoredGroupsController.cs** - parâmetro `platform` na listagem.
+- [x] **Ofertio.Infrastructure.Services/Groups/MonitoredGroupService.cs** - aplica `OfferPlatformFilterRules` no feed de produtos e nos ocultos.
+- [x] **Ofertio.SharedUi/Services/Integrations/IMonitoredGroupsApiService.cs** - envia `platform` na query string.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/GruposMonitorados.razor** - select "Todas as Plataformas", `_selectedPlatform`, `OnPlatformChanged` (página 1) e reset no "Limpar".
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.monitored-platform-select`.
+- [x] **Ofertio.Tests/Unit/Groups/OfferPlatformFilterRulesTests.cs** (novo) - normalização, opções e filtro (inclusive "Outros").
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -571,6 +571,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Toasts de conclusão:** "Sincronização concluída! X novos grupos e Y novas mensagens atualizadas." (`MonitoredGroupSyncRules.BuildCompletionMessage`).
 - [x] **Cards (Verificar, Clonar, Ocultar, Restaurar, Sem interesse):** só o card clicado mostra o mini-spinner no próprio botão (`OfferCardAction` por oferta); os demais cards seguem utilizáveis.
 
+## 🏬 Filtro por Plataforma em Grupos Monitorados (`MonitoredPlatformFilter`)
+
+- [x] **Select "Todas as Plataformas":**
+  - Ao lado direito do select de características, com Mercado Livre, Shopee, Amazon, Magazine Luiza, AliExpress, Casas Bahia / Ponto e Outros (Kabum, TikTok Shop e ofertas sem plataforma identificada).
+  - Ao trocar a plataforma, volta para a página 1 e recarrega o feed; desabilitado na aba de cupons, que já tem as abas de marketplace.
+- [x] **Filtro no backend:**
+  - `GET api/integracoes/grupos/monitorados?platform=` ➔ `LiveSearchFilterDto.Platform` ➔ `OfferPlatformFilterRules.Apply` (`PlatformType` no SQL), no feed de ofertas e nos ocultos; aceita `Magalu` e `Ponto` como apelidos.
+- [x] **Botão "Limpar":** também volta a plataforma para "Todas as Plataformas".
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

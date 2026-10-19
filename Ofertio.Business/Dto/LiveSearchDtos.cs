@@ -17,13 +17,17 @@ public class LiveSearchFilterDto
     /// <summary>Característica (<c>ProductTag.Id</c>) do combo do feed; null = Todas as Características.</summary>
     public int? TagId { get; set; }
 
+    /// <summary>Plataforma do combo do feed (nome de <c>MarketplaceType</c> ou "Outros"); null = Todas as Plataformas.</summary>
+    public string? Platform { get; set; }
+
     public bool HasAny =>
         !string.IsNullOrWhiteSpace(Keyword)
         || MinPrice is > 0
         || MaxPrice is > 0
         || HasCoupon == true
         || !string.IsNullOrWhiteSpace(Store)
-        || TagId is > 0;
+        || TagId is > 0
+        || !string.IsNullOrWhiteSpace(Platform);
 }
 
 public class OfficialOfferSnapshotDto

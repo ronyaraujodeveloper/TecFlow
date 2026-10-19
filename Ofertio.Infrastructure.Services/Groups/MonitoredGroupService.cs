@@ -183,6 +183,11 @@ public sealed class MonitoredGroupService : IMonitoredGroupService
                 query = query.Where(item => item.Tags.Any(tag => tag.Id == selectedTagId));
             }
 
+            if (!string.IsNullOrWhiteSpace(search?.Platform) && (ignored || type == OfferType.Product))
+            {
+                query = OfferPlatformFilterRules.Apply(query, search.Platform);
+            }
+
             if (GroupOfferCaptureRules.IsTelegramChannel(normalized))
             {
                 query = query.Where(item =>

@@ -133,6 +133,19 @@
                     <option value="@tag.Id">@tag.Name</option>
                 }
             </select>
+            <select id="monitored-platform"
+                    class="form-select form-select-sm monitored-platform-select @(string.IsNullOrEmpty(_selectedPlatform) ? string.Empty : "is-filtered")"
+                    aria-label="Plataforma / marketplace"
+                    title="@(_feedTab == FeedTab.Coupons ? "Use as abas de marketplace abaixo para filtrar cupons" : "Filtrar por plataforma / marketplace")"
+                    disabled="@(_isBusy || _feedTab == FeedTab.Coupons)"
+                    value="@_selectedPlatform"
+                    @onchange="OnPlatformChanged">
+                <option value="">@OfferPlatformFilterRules.AllPlatformsLabel</option>
+                @foreach (var (value, label) in OfferPlatformFilterRules.Options)
+                {
+                    <option value="@value">@label</option>
+                }
+            </select>
         </div>
         @if (_feedTab == FeedTab.Coupons)
         {
@@ -214,6 +227,7 @@
     private readonly List<GroupCapturedOfferDto> _offers = [];
     private readonly List<ProductTagDto> _tags = [];
     private int _tagId;
+    private string _selectedPlatform = string.Empty;
     private int _hours = 24;
     private int _totalOffers;
     private int _page = 1;
@@ -368,7 +382,8 @@
             MinPrice = _minPrice,
             MaxPrice = _maxPrice,
             Store = _store,
-            TagId = _feedTab != FeedTab.Coupons && _tagId > 0 ? _tagId : null
+            TagId = _feedTab != FeedTab.Coupons && _tagId > 0 ? _tagId : null,
+            Platform = _feedTab != FeedTab.Coupons ? OfferPlatformFilterRules.Normalize(_selectedPlatform) : null
         };
         return filter.HasAny ? filter : null;
     }
@@ -385,6 +400,14 @@
         _tagId = int.TryParse(e.Value?.ToString(), out var tagId) && tagId > 0 ? tagId : 0;
         _page = 1;
         return LoadAsync();
+    }
+
+    private async Task OnPlatformChanged(ChangeEventArgs e)
+    {
+        _selectedPlatform = OfferPlatformFilterRules.Normalize(e.Value?.ToString()) ?? string.Empty;
+        _page = 1;
+        await LoadAsync();
+        StateHasChanged();
     }
 
     private async Task SetPageAsync(int page)
@@ -448,6 +471,7 @@
         _searchKeyword = string.Empty;
         _groupKey = string.Empty;
         _tagId = 0;
+        _selectedPlatform = string.Empty;
         _hours = defaults.Hours;
         _minPrice = defaults.MinPrice;
         _maxPrice = defaults.MaxPrice;

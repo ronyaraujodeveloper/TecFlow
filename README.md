@@ -592,6 +592,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Vale só para `dotnet run`/F5: no IIS o WebUi roda `inprocess` e o HTTPS da porta 7002 é o binding do site `Ofertio.WebUi`. Com o IIS ativo na 7002, pare o site antes de subir o Kestrel nessa porta.
   - `.gitignore` ignora `*.pfx`.
 
+## 🛒 Rotas do app Mercado Livre (`MercadoLivreEndpoints`)
+
+- [x] **`MercadoLivreController` (`api/mercadolivre`, anônimo):**
+  - `GET api/mercadolivre/callback?code=&state=`: Redirect URI do OAuth 2.0. Abre o `state` selado, bloqueia reuso, grava os tokens em `MarketplaceAccounts` e redireciona para `/marketplace-accounts?status=success|error` da origem onde o OAuth começou (sem origem válida, responde JSON).
+  - `POST api/mercadolivre/notifications`: lê o JSON (`topic`, `resource`, `user_id`, `application_id`, `attempts`) e responde `200 OK` imediatamente, inclusive com payload vazio ou inválido, para o ML não reenviar nem desativar o tópico.
+- [x] **Fluxo compartilhado:** `MercadoLivreOAuthCallbackFlow` atende tanto o novo `GET` quanto o `POST api/marketplace-auth/mercadolivre/callback` usado pela WebUi.
+- [x] **`Program.cs` da API:** `builder.Services.AddControllers()` e `app.MapControllers()` já presentes.
+- [ ] **Cadastro no app do ML:** para usar o novo callback, a Redirect URI do app e `Integrations:MercadoLivre:RedirectUri` precisam apontar para `https://<host público da API>/api/mercadolivre/callback`, e a URL de notificações para `https://<host público da API>/api/mercadolivre/notifications`.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Ofertio.API.Security;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Integrations.Auth;
 using Ofertio.Business.Integrations.Shopee;
@@ -109,67 +110,20 @@ public class MarketplaceAuthController : ControllerBase
         [FromBody] MarketplaceOAuthCallbackRequestDto request,
         CancellationToken cancellationToken)
     {
-        if (_stateProtector is null
-            || !_stateProtector.TryUnprotect(request?.State, out var state)
-            || state is null
-            || state.Platform != MarketplaceType.MercadoLivre)
+        var outcome = await MercadoLivreOAuthCallbackFlow.CompleteAsync(
+            HttpContext,
+            request,
+            _stateProtector,
+            _memoryCache,
+            _integracaoLojaService,
+            _logger,
+            cancellationToken);
+        return outcome.StatusCode switch
         {
-            _logger.LogWarning("Callback ML com state inválido, adulterado ou expirado.");
-            return BadRequest(CallbackFail(null, MarketplaceOAuthStateRules.InvalidStateMessage));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request!.Error))
-        {
-            return BadRequest(CallbackFail(state.CallbackUri, $"Autorização recusada: {request.Error.Trim()}"));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Code))
-        {
-            return BadRequest(CallbackFail(state.CallbackUri, "Callback OAuth incompleto (code)."));
-        }
-
-        if (!TryConsumeStateNonce(state))
-        {
-            return BadRequest(CallbackFail(state.CallbackUri, MarketplaceOAuthStateRules.ReplayedStateMessage));
-        }
-
-        HttpContext.User = BuildStatePrincipal(state);
-        try
-        {
-            var result = await _integracaoLojaService.LinkAsync(
-                state.UserId,
-                new IntegracaoLojaDto
-                {
-                    PlatformType = MarketplaceType.MercadoLivre,
-                    AuthorizationCode = request.Code.Trim(),
-                    FriendlyName = state.FriendlyName,
-                    RedirectUri = state.CallbackUri
-                },
-                cancellationToken);
-            if (!result.Status)
-            {
-                return BadRequest(CallbackFail(state.CallbackUri, result.Descricao));
-            }
-
-            _logger.LogInformation(
-                "Tokens ML gravados via callback anônimo. UserId={UserId} TenantId={TenantId}",
-                state.UserId,
-                state.TenantId);
-            return Ok(new MarketplaceOAuthCallbackResultDto
-            {
-                Success = true,
-                Message = result.Descricao,
-                ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(state.CallbackUri, success: true)
-            });
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Erro ao salvar tokens do Mercado Livre no SQL Server");
-            _logger.LogError(ex, "Erro ao salvar tokens do Mercado Livre no SQL Server");
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                CallbackFail(state.CallbackUri, MarketplaceAuthService.FormatSqlError(ex)));
-        }
+            StatusCodes.Status200OK => Ok(outcome.Result),
+            StatusCodes.Status400BadRequest => BadRequest(outcome.Result),
+            _ => StatusCode(outcome.StatusCode, outcome.Result)
+        };
     }
 
     private async Task<string?> SealMercadoLivreStateAsync(
@@ -209,48 +163,6 @@ public class MarketplaceAuthController : ControllerBase
             type,
             friendlyName,
             redirectUri));
-    }
-
-    private bool TryConsumeStateNonce(MarketplaceOAuthState state)
-    {
-        if (_memoryCache is null)
-        {
-            return true;
-        }
-
-        var key = "oauth-state-nonce:" + state.Nonce;
-        if (_memoryCache.TryGetValue(key, out _))
-        {
-            return false;
-        }
-
-        _memoryCache.Set(key, true, state.ExpiresAt);
-        return true;
-    }
-
-    private static ClaimsPrincipal BuildStatePrincipal(MarketplaceOAuthState state)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, state.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture))
-        };
-        if (state.TenantId is { } tenantId)
-        {
-            claims.Add(new Claim(OfertioClaimTypes.TenantId, tenantId.ToString()));
-        }
-
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "OAuthState"));
-    }
-
-    private static MarketplaceOAuthCallbackResultDto CallbackFail(string? callbackUri, string? message)
-    {
-        var text = string.IsNullOrWhiteSpace(message) ? "Não foi possível vincular a loja." : message.Trim();
-        return new MarketplaceOAuthCallbackResultDto
-        {
-            Success = false,
-            Message = text,
-            ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(callbackUri, success: false, text)
-        };
     }
 
     private ActionResult<MarketplaceAuthorizeUrlResponseDto> GenerateAuthorizeResult(

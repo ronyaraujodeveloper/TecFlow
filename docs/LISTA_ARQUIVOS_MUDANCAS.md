@@ -1638,6 +1638,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.WebUi/Ofertio.WebUi.csproj** - `UserSecretsId` para guardar a senha do certificado fora do repositório.
 - [x] **.gitignore** - ignora `*.pfx`.
 
+### MercadoLivreEndpoints - Rotas públicas do app Mercado Livre (OAuth e notificações)
+
+- [x] **Ofertio.API/Controllers/MercadoLivreController.cs** - `[AllowAnonymous]` em `api/mercadolivre`: `GET callback` (code + state selado ➔ grava tokens ➔ redirect para `/marketplace-accounts` da origem) e `POST notifications` (lê o JSON e responde `Ok()` sempre).
+- [x] **Ofertio.API/Security/MercadoLivreOAuthCallbackFlow.cs** - fluxo compartilhado do state selado (validação, nonce anti-replay, principal do state, `LinkAsync`) extraído do `MarketplaceAuthController`.
+- [x] **Ofertio.API/Controllers/MarketplaceAuthController.cs** - `POST api/marketplace-auth/mercadolivre/callback` delega ao `MercadoLivreOAuthCallbackFlow` (mesmo contrato).
+- [x] **Ofertio.Business/Dto/MercadoLivreNotificationDto.cs** - payload `_id`, `resource`, `user_id`, `topic`, `application_id`, `attempts`, `sent`, `received`.
+- [x] **Ofertio.Tests/Unit/Controllers/MercadoLivreControllerTests.cs** - callback com redirect, state forjado (400 JSON), autorização negada e notificações sempre 200.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

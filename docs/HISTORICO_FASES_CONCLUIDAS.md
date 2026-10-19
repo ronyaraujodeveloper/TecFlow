@@ -924,6 +924,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Plataformas dinâmicas no filtro (`MonitoredPlatformFilterDynamic`):** o select lista só as plataformas com conta de marketplace ativa do usuário; sem conta, as detectadas nas ofertas capturadas; sem nenhuma, Mercado Livre e Shopee.
 - [x] **Filtro de plataforma único (`UnifiedPlatformFilter`):** as pílulas de marketplace da aba de cupons saíram; "Todas as Plataformas" filtra Feed de Ofertas, Cupons & Promoções e Ocultos / Descartados e é mantido ao trocar de aba.
 - [x] **Certificado no Kestrel (`KestrelDevCertificate`):** o WebUi em Development sobe `https://localhost:7002` com o `.pfx` do win-acme (`dev.ofertio.com.br`); senha em User Secrets e `*.pfx` fora do Git; endpoint com `Protocols: Http1AndHttp2`.
+- [x] **Rotas do app Mercado Livre (`MercadoLivreEndpoints`):** `MercadoLivreController` em `api/mercadolivre` com `GET callback` (OAuth 2.0 com state selado, grava tokens e volta para `/marketplace-accounts`) e `POST notifications` (responde 200 assim que lê o payload); fluxo do state selado compartilhado com `api/marketplace-auth/mercadolivre/callback`.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

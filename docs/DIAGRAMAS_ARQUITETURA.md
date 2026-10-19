@@ -217,6 +217,10 @@ flowchart LR
   MONSVC -->|OfferPlatformFilterRules PlatformType == plataforma ou fora da lista| SQL
   SQL -->|MarketplaceAccounts ativas ou Distinct PlatformType ➔ Platforms do combo| MONSVC
   DEVPFX[dev.ofertio.com.br.pfx + senha User Secrets] -->|Kestrel https://localhost:7002 Http1AndHttp2 só em Development| GMUI
+  MLAPP[App Mercado Livre] -->|GET api/mercadolivre/callback code + state selado| MLCTRL[MercadoLivreController]
+  MLCTRL -->|MercadoLivreOAuthCallbackFlow nonce + LinkAsync ➔ redirect /marketplace-accounts| SQL
+  MLAPP -->|POST api/mercadolivre/notifications topic/resource| MLCTRL
+  MLCTRL -->|Ok 200 imediato + log Topic/Resource/UserId| MLAPP
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

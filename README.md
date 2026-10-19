@@ -587,7 +587,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 ## 🔐 Certificado HTTPS no Kestrel (`KestrelDevCertificate`)
 
 - [x] **Endpoint `https://localhost:7002` do WebUi em Development:**
-  - `Ofertio.WebUi/appsettings.Development.json` carrega `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (gerado no win-acme) em `Kestrel:Endpoints:Https`.
+  - `Ofertio.WebUi/appsettings.Development.json` carrega `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (gerado no win-acme) em `Kestrel:Endpoints:Https`, com `"Protocols": "Http1AndHttp2"` (HTTP/2 via ALPN e fallback HTTP/1.1; equivale a `listenOptions.Protocols` sem duplicar o bind da porta no `Program.cs`).
   - A senha do `.pfx` fica fora do repositório, em User Secrets do WebUi: `dotnet user-secrets set "Kestrel:Endpoints:Https:Certificate:Password" "<senha>" --project .\Ofertio.WebUi\Ofertio.WebUi.csproj` (ou variável de ambiente `Kestrel__Endpoints__Https__Certificate__Password`).
   - Vale só para `dotnet run`/F5: no IIS o WebUi roda `inprocess` e o HTTPS da porta 7002 é o binding do site `Ofertio.WebUi`. Com o IIS ativo na 7002, pare o site antes de subir o Kestrel nessa porta.
   - `.gitignore` ignora `*.pfx`.

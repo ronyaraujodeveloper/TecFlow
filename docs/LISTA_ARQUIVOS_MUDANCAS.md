@@ -1634,7 +1634,7 @@ API / Orquestrador / Worker / WebUi
 
 ### KestrelDevCertificate - Certificado .pfx no Kestrel (porta 7002)
 
-- [x] **Ofertio.WebUi/appsettings.Development.json** - `Kestrel:Endpoints:Https` em `https://localhost:7002` com `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (senha em User Secrets).
+- [x] **Ofertio.WebUi/appsettings.Development.json** - `Kestrel:Endpoints:Https` em `https://localhost:7002` com `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (senha em User Secrets) e `Protocols: Http1AndHttp2`.
 - [x] **Ofertio.WebUi/Ofertio.WebUi.csproj** - `UserSecretsId` para guardar a senha do certificado fora do repositório.
 - [x] **.gitignore** - ignora `*.pfx`.
 

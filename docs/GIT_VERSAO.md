@@ -119,3 +119,4 @@
 [2026-10-18 21:59:47] feat(grupos-monitorados): filtro por plataforma/marketplace ao lado das caracteristicas, filtrado no SQL e redefinido pelo Limpar
 [2026-10-18 22:32:28] feat(grupos-monitorados): plataformas do filtro vindas das contas conectadas e filtro unico em Ofertas, Cupons e Ocultos
 [2026-10-19 18:35:49] chore(webui): Kestrel https://localhost:7002 com certificado dev.ofertio.com.br.pfx em Development (senha em User Secrets)
+[2026-10-19 19:37:32] chore(webui): Kestrel Http1AndHttp2 no endpoint HTTPS 7002

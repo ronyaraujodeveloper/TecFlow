@@ -216,7 +216,7 @@ flowchart LR
   GMUI -->|combo Plataforma único platform=MercadoLivre/Shopee/... em Ofertas, Cupons e Ocultos| MONSVC
   MONSVC -->|OfferPlatformFilterRules PlatformType == plataforma ou fora da lista| SQL
   SQL -->|MarketplaceAccounts ativas ou Distinct PlatformType ➔ Platforms do combo| MONSVC
-  DEVPFX[dev.ofertio.com.br.pfx + senha User Secrets] -->|Kestrel https://localhost:7002 só em Development| GMUI
+  DEVPFX[dev.ofertio.com.br.pfx + senha User Secrets] -->|Kestrel https://localhost:7002 Http1AndHttp2 só em Development| GMUI
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

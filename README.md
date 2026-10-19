@@ -584,6 +584,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `GET api/integracoes/grupos/monitorados?platform=` ➔ `LiveSearchFilterDto.Platform` ➔ `OfferPlatformFilterRules.Apply` (`PlatformType` no SQL), no feed de ofertas e nos ocultos; aceita apelidos como `Magalu` e `Ponto`.
 - [x] **Botão "Limpar":** também volta a plataforma para "Todas as Plataformas".
 
+## 🔐 Certificado HTTPS no Kestrel (`KestrelDevCertificate`)
+
+- [x] **Endpoint `https://localhost:7002` do WebUi em Development:**
+  - `Ofertio.WebUi/appsettings.Development.json` carrega `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (gerado no win-acme) em `Kestrel:Endpoints:Https`.
+  - A senha do `.pfx` fica fora do repositório, em User Secrets do WebUi: `dotnet user-secrets set "Kestrel:Endpoints:Https:Certificate:Password" "<senha>" --project .\Ofertio.WebUi\Ofertio.WebUi.csproj` (ou variável de ambiente `Kestrel__Endpoints__Https__Certificate__Password`).
+  - Vale só para `dotnet run`/F5: no IIS o WebUi roda `inprocess` e o HTTPS da porta 7002 é o binding do site `Ofertio.WebUi`. Com o IIS ativo na 7002, pare o site antes de subir o Kestrel nessa porta.
+  - `.gitignore` ignora `*.pfx`.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

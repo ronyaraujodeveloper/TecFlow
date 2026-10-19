@@ -923,6 +923,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Filtro por plataforma (`MonitoredPlatformFilter`):** select "Todas as Plataformas" ao lado das características em Grupos Monitorados (Mercado Livre, Shopee, Amazon, Magazine Luiza, AliExpress, Casas Bahia / Ponto, Outros), filtrado no SQL por `PlatformType`, volta à página 1 ao trocar e é redefinido pelo "Limpar".
 - [x] **Plataformas dinâmicas no filtro (`MonitoredPlatformFilterDynamic`):** o select lista só as plataformas com conta de marketplace ativa do usuário; sem conta, as detectadas nas ofertas capturadas; sem nenhuma, Mercado Livre e Shopee.
 - [x] **Filtro de plataforma único (`UnifiedPlatformFilter`):** as pílulas de marketplace da aba de cupons saíram; "Todas as Plataformas" filtra Feed de Ofertas, Cupons & Promoções e Ocultos / Descartados e é mantido ao trocar de aba.
+- [x] **Certificado no Kestrel (`KestrelDevCertificate`):** o WebUi em Development sobe `https://localhost:7002` com o `.pfx` do win-acme (`dev.ofertio.com.br`); senha em User Secrets e `*.pfx` fora do Git.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

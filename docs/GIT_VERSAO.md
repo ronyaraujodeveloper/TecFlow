@@ -118,3 +118,4 @@
 [2026-10-18 21:47:57] fix(grupos-monitorados): Limpar volta a abrir confirmacao e redefine filtros; spinners em Atualizar/Limpar/Sincronizar, toasts de conclusao e mini-spinner por card
 [2026-10-18 21:59:47] feat(grupos-monitorados): filtro por plataforma/marketplace ao lado das caracteristicas, filtrado no SQL e redefinido pelo Limpar
 [2026-10-18 22:32:28] feat(grupos-monitorados): plataformas do filtro vindas das contas conectadas e filtro unico em Ofertas, Cupons e Ocultos
+[2026-10-19 18:35:49] chore(webui): Kestrel https://localhost:7002 com certificado dev.ofertio.com.br.pfx em Development (senha em User Secrets)

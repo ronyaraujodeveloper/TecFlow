@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Ofertio.WebUi</RootNamespace>
+    <UserSecretsId>a449c101-a4c2-41b8-b732-e01e782bb3ec</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -7,3 +7,4 @@ artifacts/
 App_Data/telegram-sessions/
 App_Data/OfertioDataProtectionKeys/
 App_Data/OfertioDevKeys/
+*.pfx

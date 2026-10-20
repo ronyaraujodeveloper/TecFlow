@@ -24,11 +24,11 @@ public sealed class OfficialCatalogSearchApiService : IOfficialCatalogSearchApiS
         _loading = loading;
     }
 
-    public Task<ApiResult<OfficialCatalogSearchResponseDto>> SearchAsync(
+    public async Task<ApiResult<OfficialCatalogSearchResponseDto>> SearchAsync(
         OfficialCatalogSearchFilter filter,
         CancellationToken cancellationToken = default)
     {
         using var _ = _loading.BeginScope("Buscando nas lojas oficiais...");
-        return _http.GetAsync<OfficialCatalogSearchResponseDto>("api/busca", filter, cancellationToken);
+        return await _http.GetAsync<OfficialCatalogSearchResponseDto>("api/busca", filter, cancellationToken);
     }
 }

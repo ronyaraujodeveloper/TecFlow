@@ -650,7 +650,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Nova busca:** `GET /products/search?status=active&site_id=MLB&q={termo}&limit={n}` (buscador de produtos de catálogo, documentado) com `Authorization: Bearer` da conta ➔ `GET /products/{id}` para cada resultado (até 4 em paralelo) ➔ preço, preço original e frete do `buy_box_winner`, link da página do produto (`/p/MLB...`) com `matt_tool`.
 - [x] **Sem oferta ativa:** produto de catálogo sem `buy_box_winner` (ou recusado) é ignorado e registrado no log `[ML Busca]`.
 - [x] **Limpeza:** removidos `MercadoLivreSearchDtos.cs` e `MercadoLivreItemParser.ParseSearch` (formato da busca descontinuada).
-- [ ] **Limite conhecido:** só aparecem produtos de catálogo com anúncio ganhador; anúncios fora do catálogo não são listados pela API oficial.
+- [ ] **Limite conhecido:** só aparecem produtos de catálogo com oferta e preço; anúncios fora do catálogo não são listados pela API oficial.
+
+## 🧭 Ofertas sem buy box + modal de carregamento (`MercadoLivreCatalogOfferFallback`)
+
+- [x] **Causa da busca vazia:** "dell i7" trouxe 20 produtos de catálogo, nenhum com `buy_box_winner` (produtos "pai" sem configuração definida ou sem disputa de anúncios).
+- [x] **Cadeia de preço (só API oficial):** `buy_box_winner` ➔ `buy_box_winner_price_range.min` ➔ menor preço em `/products/{id}/items` ➔ primeiro produto filho (`children_ids`); o log `[ML Busca]` registra por que cada produto ficou sem oferta.
+- [x] **Modal de carregamento:** a Buscar Ofertas abre "Buscando ofertas..." com spinner ao clicar em Buscar e fecha quando o retorno chega (o `LoadingOverlay` do layout é estático e não aparecia nas páginas interativas).
+- [ ] **Validar com a conta real:** se os cards seguirem vazios, o log `[ML Busca] Produto de catálogo ... sem oferta` mostra a resposta de `/products/{id}/items`.
 
 ---
 

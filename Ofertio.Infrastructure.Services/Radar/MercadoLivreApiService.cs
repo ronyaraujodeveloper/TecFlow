@@ -213,15 +213,21 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         CancellationToken cancellationToken) =>
         SendApiAsync("items", itemId, accessToken, cancellationToken);
 
-    private async Task<(HttpStatusCode StatusCode, string Body)> SendApiAsync(
+    private Task<(HttpStatusCode StatusCode, string Body)> SendApiAsync(
         string resource,
         string id,
+        string accessToken,
+        CancellationToken cancellationToken) =>
+        SendApiPathAsync($"{resource}/{Uri.EscapeDataString(id)}", accessToken, cancellationToken);
+
+    private async Task<(HttpStatusCode StatusCode, string Body)> SendApiPathAsync(
+        string relativePath,
         string accessToken,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://api.mercadolibre.com/{resource}/{Uri.EscapeDataString(id)}");
+            $"https://api.mercadolibre.com/{relativePath}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
         ApplyBrowserHeaders(request);
         using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -396,20 +402,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             Enumerable.Range(0, productIds.Count),
             new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
             async (index, token) =>
-            {
-                var (productStatus, productBody) = await SendApiAsync("products", productIds[index], accessToken, token);
-                if (productStatus != HttpStatusCode.OK)
-                {
-                    _logger.LogWarning(
-                        "[ML Busca] Produto de catálogo {ProductId} ignorado [{StatusCode}]: {Body}",
-                        productIds[index],
-                        (int)productStatus,
-                        productBody.Length > 300 ? productBody[..300] : productBody);
-                    return;
-                }
-
-                offers[index] = MercadoLivreItemParser.ParseCatalogOffer(productBody);
-            });
+                offers[index] = await ResolveCatalogOfferAsync(productIds[index], accessToken, followChildren: true, token));
 
         var items = offers
             .OfType<OfficialCatalogProductDto>()
@@ -421,14 +414,75 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
             .ToList();
         _logger.LogInformation(
-            "[ML Busca] products/search '{Query}': {ProductCount} produtos de catálogo, {OfferCount} com anúncio ganhador (buy box).",
+            "[ML Busca] products/search '{Query}': {ProductCount} produtos de catálogo, {OfferCount} com oferta e preço.",
             query,
             productIds.Count,
             items.Count);
         return items;
     }
 
-    private const int CatalogLookupParallelism = 4;
+    private const int CatalogLookupParallelism = 6;
+
+    /// <summary>
+    /// Oferta de um produto de catálogo, só pela API oficial: <c>buy_box_winner</c> ➔ faixa de preço da buy box ➔
+    /// menor preço em <c>/products/{id}/items</c> ➔ primeiro produto filho (produtos "pai" não são compráveis).
+    /// </summary>
+    private async Task<OfficialCatalogProductDto?> ResolveCatalogOfferAsync(
+        string productId,
+        string accessToken,
+        bool followChildren,
+        CancellationToken cancellationToken)
+    {
+        var (productStatus, productBody) = await SendApiAsync("products", productId, accessToken, cancellationToken);
+        if (productStatus != HttpStatusCode.OK)
+        {
+            _logger.LogInformation(
+                "[ML Busca] Produto de catálogo {ProductId} ignorado: /products [{StatusCode}] {Body}",
+                productId,
+                (int)productStatus,
+                Truncate(productBody));
+            return null;
+        }
+
+        var offer = MercadoLivreItemParser.ParseCatalogOffer(productBody);
+        if (offer is not null)
+        {
+            return offer;
+        }
+
+        var (itemsStatus, itemsBody) = await SendApiPathAsync(
+            $"products/{Uri.EscapeDataString(productId)}/items",
+            accessToken,
+            cancellationToken);
+        if (itemsStatus == HttpStatusCode.OK)
+        {
+            offer = MercadoLivreItemParser.ParseCatalogItemsOffer(productBody, itemsBody);
+            if (offer is not null)
+            {
+                return offer;
+            }
+        }
+
+        var children = MercadoLivreItemParser.ParseCatalogChildrenIds(productBody);
+        if (followChildren && children.Count > 0)
+        {
+            offer = await ResolveCatalogOfferAsync(children[0], accessToken, followChildren: false, cancellationToken);
+            if (offer is not null)
+            {
+                return offer;
+            }
+        }
+
+        _logger.LogInformation(
+            "[ML Busca] Produto de catálogo {ProductId} sem oferta: sem buy_box_winner/faixa de preço, /items [{ItemsStatus}] {ItemsBody}, filhos={ChildCount}.",
+            productId,
+            (int)itemsStatus,
+            Truncate(itemsBody),
+            children.Count);
+        return null;
+    }
+
+    private static string Truncate(string body) => body.Length > 300 ? body[..300] : body;
 
     private async Task<(HttpStatusCode StatusCode, string Body)> SendSearchAsync(
         string searchUri,

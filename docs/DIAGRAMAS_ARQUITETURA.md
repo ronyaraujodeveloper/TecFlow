@@ -1640,9 +1640,16 @@ flowchart TB
   MLS --> TOKEN{access_token?}
   TOKEN -->|conta OAuth do tenant ➔ AccessToken fixo ➔ token do app| OAUTH[GET api.mercadolibre.com/products/search?status=active&site_id=MLB&q=<br/>Authorization: Bearer, token fora da URL<br/>sites/MLB/search descontinuado pelo ML: 403 para qualquer token]
   TOKEN -->|nenhum| CRED[Badge: Requer OAuth do Mercado Livre]
-  OAUTH -->|200 ids de catálogo| PROD[GET /products/ID em paralelo, até 4<br/>buy_box_winner price/original_price/free_shipping + permalink /p/MLB]
-  PROD -->|sem buy_box_winner ou recusado| SKIP[produto ignorado + log]
+  BG -->|clique em Buscar| MODAL[Modal Buscando ofertas... spinner até o retorno]
+  OAUTH -->|200 ids de catálogo| PROD[GET /products/ID em paralelo, até 6<br/>buy_box_winner price/original_price/free_shipping + permalink /p/MLB]
+  PROD -->|sem buy_box_winner| RANGE[buy_box_winner_price_range.min]
+  RANGE -->|sem faixa| PITEMS[GET /products/ID/items menor preço]
+  PITEMS -->|sem anúncios e produto pai| CHILD[primeiro children_ids ➔ /products/FILHO]
+  CHILD -->|sem oferta| SKIP[produto ignorado + log do motivo]
   PROD -->|com oferta ganhadora| MATT[InjectMattTool matt_tool do tenant]
+  RANGE -->|preço| MATT
+  PITEMS -->|preço| MATT
+  CHILD -->|oferta do filho| MATT
   MATT --> OK[Badge 🟢 N produtos, sem alerta]
   OAUTH -->|401/403 com token da conta| REFRESH[refresh_token ➔ nova tentativa]
   REFRESH -->|recusado de novo| DENY[Badge ❌ API oficial recusou a busca, reconectar a conta]

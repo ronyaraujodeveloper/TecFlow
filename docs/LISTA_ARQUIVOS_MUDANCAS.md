@@ -1715,6 +1715,14 @@ API / Orquestrador / Worker / WebUi
 - [x] ~~**Ofertio.Business/Dto/MercadoLivreSearchDtos.cs**~~ *(removido)* - formato de `sites/MLB/search`, sem uso.
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** e **MercadoLivreItemParserTests.cs** - URL do `products/search`, consulta por produto, produtos sem buy box ignorados, stub HTTP seguro para chamadas paralelas.
 
+### MercadoLivreCatalogOfferFallback - Ofertas para produtos sem buy box + modal de carregamento na Buscar Ofertas
+
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `ResolveCatalogOfferAsync`: `buy_box_winner` ➔ `buy_box_winner_price_range.min` ➔ menor preço em `/products/{id}/items` ➔ primeiro produto filho (`children_ids`); log `[ML Busca]` do motivo quando o produto fica sem oferta; `SendApiPathAsync`; paralelismo 6.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogOffer` aceita a faixa de preço; novos `ParseCatalogItemsOffer` e `ParseCatalogChildrenIds`.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - modal "Buscando ofertas..." com spinner e lojas consultadas enquanto a busca roda; botão Buscar com spinner e sem clique duplo.
+- [x] **Ofertio.SharedUi/Services/Radar/IOfficialCatalogSearchApiService.cs** - `SearchAsync` assíncrono: o escopo de loading não fecha antes da resposta.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** e **MercadoLivreItemParserTests.cs** - faixa de preço, `/items` mais barato, produto pai ➔ filho.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

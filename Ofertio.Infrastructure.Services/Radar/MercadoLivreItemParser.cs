@@ -129,58 +129,137 @@ public static class MercadoLivreItemParser
     }
 
     /// <summary>
-    /// <c>/products/{id}</c> como card da Buscar Ofertas: preço e frete do anúncio ganhador da buy box.
-    /// Sem <c>buy_box_winner</c> não há oferta ativa para divulgar.
+    /// <c>/products/{id}</c> como card da Buscar Ofertas: preço e frete do anúncio ganhador da buy box ou, sem
+    /// disputa, o menor preço da faixa (<c>buy_box_winner_price_range.min</c>). Sem nenhum dos dois retorna nulo.
     /// </summary>
     public static OfficialCatalogProductDto? ParseCatalogOffer(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
         try
         {
-            using var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
             var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object
-                || root.TryGetProperty("error", out _)
-                || !root.TryGetProperty("buy_box_winner", out var winner)
-                || winner.ValueKind != JsonValueKind.Object)
+            if (!IsProduct(root))
             {
                 return null;
             }
 
-            var price = ReadDecimal(winner, "price");
-            var id = ReadString(root, "id");
-            if (price is null or <= 0 || id is null)
+            if (root.TryGetProperty("buy_box_winner", out var winner) && winner.ValueKind == JsonValueKind.Object)
             {
-                return null;
+                var offer = BuildCatalogOffer(root, winner);
+                if (offer is not null)
+                {
+                    return offer;
+                }
             }
 
-            var (_, name, image) = ParseCatalogProduct(json);
-            var free = winner.TryGetProperty("shipping", out var shipping)
-                && shipping.ValueKind == JsonValueKind.Object
-                && shipping.TryGetProperty("free_shipping", out var freeEl)
-                && freeEl.ValueKind == JsonValueKind.True;
-            return new OfficialCatalogProductDto
-            {
-                Platform = nameof(MarketplaceType.MercadoLivre),
-                PlatformType = MarketplaceType.MercadoLivre,
-                ProductId = id,
-                ProductName = string.IsNullOrWhiteSpace(name) ? null : name,
-                Price = price,
-                OriginalPrice = ReadDecimal(winner, "original_price"),
-                ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
-                SourceUrl = ReadString(root, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
-                Shipping = free ? "Frete grátis" : null,
-                Source = "Api"
-            };
+            return root.TryGetProperty("buy_box_winner_price_range", out var range)
+                && range.ValueKind == JsonValueKind.Object
+                && range.TryGetProperty("min", out var min)
+                    ? BuildCatalogOffer(root, min)
+                    : null;
         }
         catch (JsonException)
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Produto sem buy box: o menor preço entre os anúncios de <c>/products/{id}/items</c>, com nome, foto e página
+    /// vindos do próprio produto de catálogo.
+    /// </summary>
+    public static OfficialCatalogProductDto? ParseCatalogItemsOffer(string productJson, string itemsJson)
+    {
+        try
+        {
+            using var product = JsonDocument.Parse(string.IsNullOrWhiteSpace(productJson) ? "null" : productJson);
+            using var items = JsonDocument.Parse(string.IsNullOrWhiteSpace(itemsJson) ? "null" : itemsJson);
+            if (!IsProduct(product.RootElement)
+                || items.RootElement.ValueKind != JsonValueKind.Object
+                || !items.RootElement.TryGetProperty("results", out var results)
+                || results.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            JsonElement? cheapest = null;
+            decimal? cheapestPrice = null;
+            foreach (var item in results.EnumerateArray())
+            {
+                var price = item.ValueKind == JsonValueKind.Object ? ReadDecimal(item, "price") : null;
+                if (price is > 0 && (cheapestPrice is null || price < cheapestPrice))
+                {
+                    cheapest = item;
+                    cheapestPrice = price;
+                }
+            }
+
+            return cheapest is null ? null : BuildCatalogOffer(product.RootElement, cheapest.Value);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Produto "pai" (família sem configuração definida) não é comprável; as ofertas ficam nos filhos.</summary>
+    public static IReadOnlyList<string> ParseCatalogChildrenIds(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            if (!IsProduct(doc.RootElement)
+                || !doc.RootElement.TryGetProperty("children_ids", out var children)
+                || children.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return children.EnumerateArray()
+                .Where(child => child.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(child.GetString()))
+                .Select(child => child.GetString()!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsProduct(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Object
+        && !root.TryGetProperty("error", out _)
+        && ReadString(root, "id") is not null;
+
+    private static OfficialCatalogProductDto? BuildCatalogOffer(JsonElement product, JsonElement offer)
+    {
+        var price = ReadDecimal(offer, "price");
+        if (price is null or <= 0)
+        {
+            return null;
+        }
+
+        var id = ReadString(product, "id")!;
+        var (_, name, image) = ParseCatalogProduct(product.GetRawText());
+        var free = offer.TryGetProperty("shipping", out var shipping)
+            && shipping.ValueKind == JsonValueKind.Object
+            && shipping.TryGetProperty("free_shipping", out var freeEl)
+            && freeEl.ValueKind == JsonValueKind.True;
+        var original = ReadDecimal(offer, "original_price");
+        return new OfficialCatalogProductDto
+        {
+            Platform = nameof(MarketplaceType.MercadoLivre),
+            PlatformType = MarketplaceType.MercadoLivre,
+            ProductId = id,
+            ProductName = string.IsNullOrWhiteSpace(name) ? null : name,
+            Price = price,
+            OriginalPrice = original > price ? original : null,
+            ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
+            SourceUrl = ReadString(product, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
+            Shipping = free ? "Frete grátis" : null,
+            Source = "Api"
+        };
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -193,7 +272,9 @@ public static class MercadoLivreItemParser
 
     private static decimal? ReadDecimal(JsonElement root, string name)
     {
-        if (!root.TryGetProperty(name, out var el) || el.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty(name, out var el)
+            || el.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
             return null;
         }

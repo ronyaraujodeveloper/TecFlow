@@ -44,6 +44,39 @@ public class MercadoLivreItemParserTests
         Assert.Null(MercadoLivreItemParser.ParseCatalogOffer(json));
     }
 
+    [Fact]
+    public void ParseCatalogOffer_WithoutWinner_ShouldUseMinimumOfPriceRange()
+    {
+        var item = MercadoLivreItemParser.ParseCatalogOffer(
+            """{"id":"MLB7","name":"Notebook","buy_box_winner":null,"buy_box_winner_price_range":{"min":{"price":3500,"currency_id":"BRL"},"max":{"price":4200}}}""");
+
+        Assert.Equal(3500m, item!.Price);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB7", item.SourceUrl);
+    }
+
+    [Fact]
+    public void ParseCatalogItemsOffer_ShouldPickCheapestPricedItem()
+    {
+        var item = MercadoLivreItemParser.ParseCatalogItemsOffer(
+            """{"id":"MLB7","name":"Notebook","pictures":[{"url":"https://http2.mlstatic.com/n.jpg"}]}""",
+            """{"results":[{"item_id":"MLB71","price":4999},{"item_id":"MLB72"},{"item_id":"MLB73","price":4599.9,"original_price":5200,"shipping":{"free_shipping":true}}]}""");
+
+        Assert.Equal(4599.9m, item!.Price);
+        Assert.Equal(5200m, item.OriginalPrice);
+        Assert.Equal("Notebook", item.ProductName);
+        Assert.Equal("Frete grátis", item.Shipping);
+        Assert.Null(MercadoLivreItemParser.ParseCatalogItemsOffer("""{"id":"MLB7"}""", """{"results":[]}"""));
+    }
+
+    [Fact]
+    public void ParseCatalogChildrenIds_ShouldReturnChildrenOfParentProduct()
+    {
+        Assert.Equal(
+            ["MLB31", "MLB32"],
+            MercadoLivreItemParser.ParseCatalogChildrenIds("""{"id":"MLB30","children_ids":["MLB31","MLB32","MLB31"]}"""));
+        Assert.Empty(MercadoLivreItemParser.ParseCatalogChildrenIds("""{"id":"MLB31","children_ids":[]}"""));
+    }
+
     [Theory]
     [InlineData("""{"id":"MLB1","status":"active","available_quantity":0,"price":10}""", false, GroupOfferStatuses.Esgotado)]
     [InlineData("""{"id":"MLB1","status":"paused","available_quantity":4,"price":10}""", false, GroupOfferStatuses.Inativo)]

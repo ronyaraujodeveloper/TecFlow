@@ -361,7 +361,38 @@ public class MercadoLivreApiServiceTests
 
         Assert.Null(result.ErrorMessage);
         Assert.Equal("MLB1", Assert.Single(result.Items).ProductId);
-        Assert.Equal(4, handler.Requests.Count);
+        Assert.Equal(5, handler.Requests.Count);
+        Assert.Contains(handler.Requests, request => request.Path == "/products/MLB2/items");
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WithoutBuyBox_ShouldUsePriceRangeItemsAndChildProducts()
+    {
+        var handler = new RoutingHandler
+        {
+            SearchBody = """{"results":[{"id":"MLB10"},{"id":"MLB20"},{"id":"MLB30"}]}"""
+        };
+        handler.PathResponses["/products/MLB10"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB10","name":"Faixa","buy_box_winner":null,"buy_box_winner_price_range":{"min":{"price":3500},"max":{"price":4200}}}""");
+        handler.PathResponses["/products/MLB20"] = (HttpStatusCode.OK, """{"id":"MLB20","name":"Sem disputa","buy_box_winner":null}""");
+        handler.PathResponses["/products/MLB20/items"] = (
+            HttpStatusCode.OK,
+            """{"results":[{"item_id":"MLB201","price":4999},{"item_id":"MLB202","price":4599.9,"shipping":{"free_shipping":true}}]}""");
+        handler.PathResponses["/products/MLB30"] = (HttpStatusCode.OK, """{"id":"MLB30","name":"Dell Inspiron (pai)","buy_box_winner":null,"children_ids":["MLB31","MLB32"]}""");
+        handler.PathResponses["/products/MLB30/items"] = (HttpStatusCode.NotFound, """{"message":"not found"}""");
+        handler.PathResponses["/products/MLB31"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB31","name":"Dell Inspiron i7 16GB","permalink":"https://www.mercadolivre.com.br/dell/p/MLB31","buy_box_winner":{"item_id":"MLB311","price":5299}}""");
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Equal(["MLB10", "MLB20", "MLB31"], result.Items.Select(item => item.ProductId));
+        Assert.Equal([3500m, 4599.9m, 5299m], result.Items.Select(item => item.Price!.Value));
+        Assert.Equal("Frete grátis", result.Items[1].Shipping);
+        Assert.DoesNotContain(handler.Requests, request => request.Path == "/products/MLB32");
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-static", request.Authorization));
     }
 
     [Fact]

@@ -27,7 +27,13 @@
     <form class="col-12 col-lg-8 mx-auto mb-4 px-0" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
         <div class="input-group input-group-lg">
             <input class="form-control" placeholder="Ex: notebook 16GB, fone bluetooth..." @bind="_keyword" />
-            <button type="submit" class="btn btn-primary" disabled="@_busy">Buscar</button>
+            <button type="submit" class="btn btn-primary" disabled="@_busy">
+                @if (_searching)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                Buscar
+            </button>
         </div>
         <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
             <div class="form-check">
@@ -148,6 +154,24 @@
     }
 </div>
 
+@if (_searching)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="busca-loading-title" aria-busy="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status" aria-hidden="true"></div>
+                    <h2 id="busca-loading-title" class="h6 fw-bold mb-1">Buscando ofertas...</h2>
+                    <p class="small text-muted mb-0">
+                        Consultando @SelectedStoresLabel() nas APIs oficiais. Isso pode levar alguns segundos.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private string _keyword = string.Empty;
     private bool _ml = true;
@@ -157,6 +181,7 @@
     private decimal? _minPrice;
     private decimal? _maxPrice;
     private bool _busy;
+    private bool _searching;
     private bool _searched;
     private string? _error;
     private string? _info;
@@ -226,9 +251,41 @@
     private void GoToMercadoLivreConnect() =>
         Navigation.NavigateTo("/minhas-lojas?conectar=mercadolivre");
 
+    private string SelectedStoresLabel()
+    {
+        var stores = new List<string>();
+        if (_ml)
+        {
+            stores.Add("Mercado Livre");
+        }
+
+        if (_shopee)
+        {
+            stores.Add("Shopee");
+        }
+
+        if (_amazon)
+        {
+            stores.Add("Amazon");
+        }
+
+        return stores.Count switch
+        {
+            0 => "as lojas",
+            1 => stores[0],
+            _ => string.Join(", ", stores.Take(stores.Count - 1)) + " e " + stores[^1]
+        };
+    }
+
     private async Task SearchAsync()
     {
+        if (_searching)
+        {
+            return;
+        }
+
         _busy = true;
+        _searching = true;
         _error = null;
         _info = null;
         _channels = [];
@@ -285,6 +342,7 @@
         finally
         {
             _busy = false;
+            _searching = false;
             await InvokeAsync(StateHasChanged);
         }
     }

@@ -1774,6 +1774,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - estilos `offer-gallery-*` (miniatura clicável, palco, navegação e miniaturas).
 - [x] **Ofertio.Tests/Unit/Radar/** - tabela por categoria, prioridade da comissão, `ResetEstimatedCommission`, `ParseCategory`, fotos do produto, galeria da Amazon e categoria raiz no enriquecimento.
 
+### OfferScoreTooltips - Tooltips (?) nos selos Oportunidade, Vantagem e Segurança
+
+- [x] **Ofertio.WebUi/Components/App.razor** e **Ofertio.Mobile/wwwroot/index.html** - `bootstrap.bundle.min.js` 5.3.3 (com Popper) via CDN com SRI.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - `window.ofertioTooltips` (`init`, `disposeAll`): cria os `bootstrap.Tooltip` de `[data-bs-toggle="tooltip"]`, hover/foco no desktop, toque/clique abre e toque fora fecha, descarta tooltips de elementos removidos pelo Blazor.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.ofertio-tooltip` (texto em várias linhas) e `.score-help-badge`.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - ícone `bi-question-circle` e `data-bs-title` nos três selos, `OnAfterRenderAsync` chama `ofertioTooltips.init`, `DisposeAsync` limpa os tooltips; cor de Oportunidade alinhada às faixas 0–39 / 40–69 / 70–100.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

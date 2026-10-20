@@ -2835,6 +2835,21 @@ html, body {
     background: rgba(2, 6, 23, 0.65);
 }
 
+.ofertio-tooltip .tooltip-inner {
+    max-width: 300px;
+    white-space: pre-line;
+    text-align: left;
+}
+
+.score-help-badge {
+    cursor: help;
+}
+
+.score-help-badge:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
 .offer-gallery-trigger {
     position: relative;
     display: flex;

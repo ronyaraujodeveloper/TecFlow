@@ -132,6 +132,69 @@
 
 window.scrollToTop = window.ofertioAppInterop.scrollToTop;
 
+/* Tooltips do Bootstrap em elementos renderizados pelo Blazor (data-bs-toggle="tooltip" + data-bs-title).
+   Hover/foco no desktop; toque/clique abre e um toque fora fecha. */
+window.ofertioTooltips = (function () {
+    const instances = new Set();
+
+    const hideAll = function (except) {
+        instances.forEach(function (tooltip) {
+            if (tooltip !== except) {
+                tooltip.hide();
+            }
+        });
+    };
+
+    const prune = function () {
+        instances.forEach(function (tooltip) {
+            if (!tooltip._element || !tooltip._element.isConnected) {
+                tooltip.dispose();
+                instances.delete(tooltip);
+            }
+        });
+    };
+
+    document.addEventListener("click", function (event) {
+        const trigger = event.target.closest ? event.target.closest('[data-bs-toggle="tooltip"]') : null;
+        const current = trigger && window.bootstrap ? window.bootstrap.Tooltip.getInstance(trigger) : null;
+        hideAll(current);
+        if (current) {
+            current.show();
+        }
+    });
+
+    return {
+        init: function () {
+            if (!window.bootstrap || !window.bootstrap.Tooltip) {
+                return 0;
+            }
+
+            prune();
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                if (window.bootstrap.Tooltip.getInstance(element)) {
+                    return;
+                }
+
+                instances.add(new window.bootstrap.Tooltip(element, {
+                    trigger: "hover focus",
+                    placement: element.dataset.bsPlacement || "top",
+                    customClass: "ofertio-tooltip",
+                    container: "body"
+                }));
+            });
+            return instances.size;
+        },
+
+        disposeAll: function () {
+            instances.forEach(function (tooltip) {
+                tooltip.dispose();
+            });
+            instances.clear();
+            return true;
+        }
+    };
+})();
+
 /* Drag & drop da matriz de menus (/master/menu-permissions): linhas com data-menu-row.
    Faixa superior = antes, inferior = depois, centro = dentro (pasta) ou nova pasta (item). */
 window.ofertioMenuDnd = (function () {

@@ -939,6 +939,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Teto da varredura e filtros na tela (`MercadoLivreScanBudgetAndScreenFilters`):** "dell inspiron" + Notebooks parava em 40 produtos com 1 oferta; a varredura passou a ir até 100 quando já há oferta, produtos "pai" trazem até 4 variações, filtros alterados após a busca filtram só a tela e a página ganhou modal com as regras e as lojas do usuário.
 - [x] **Métricas de afiliado (`AffiliateOfferMetrics`):** a Buscar Ofertas passou a servir para análise: comissão estimada (Shopee pela API; ML/Amazon pela taxa do perfil), vendidos, avaliações, ranking de mais vendidos, reputação do vendedor, notas de vantagem/segurança/oportunidade, painel de métricas e filtros de loja oficial, vendedor confiável e mais vendidos.
 - [x] **Comissão do ML por categoria (`MercadoLivreCategoryCommission`):** o card dizia "informe sua taxa nas regras"; a comissão do ML passou a ser estimada pela categoria raiz do anúncio (`/categories/{id}`) com a tabela do afiliado generalista (`AffiliateCommissionRules`), a foto abre um modal com todas as imagens do produto e o card ganhou o botão "Abrir" ao lado de "Converter & Gerar Link".
+- [x] **Tooltips nos selos (`OfferScoreTooltips`):** Oportunidade, Vantagem e Segurança ganharam o ícone (?) com tooltip do Bootstrap (hover e toque), inicializado no `OnAfterRenderAsync` via `ofertioTooltips.init`; o Bootstrap JS passou a ser carregado no WebUi e no Mobile.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

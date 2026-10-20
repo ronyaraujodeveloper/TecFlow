@@ -1729,6 +1729,18 @@ flowchart TB
   CARD -->|Converter & Gerar Link| LINK[IAffiliateLinkApiService]
 ```
 
+### Tooltips dos selos da oferta (`OfferScoreTooltips`)
+
+```mermaid
+flowchart LR
+  APP[App.razor / Mobile index.html] -->|bootstrap.bundle.min.js 5.3.3 + SRI| BS[window.bootstrap.Tooltip]
+  BG[BuscaGlobal.razor<br/>selos com data-bs-toggle=tooltip + data-bs-title] -->|OnAfterRenderAsync| INIT[ofertioTooltips.init<br/>app-interop.js]
+  INIT --> BS
+  INIT -->|elementos removidos pelo Blazor| PRUNE[dispose]
+  BG -->|DisposeAsync| DISP[ofertioTooltips.disposeAll]
+  USER[Hover / foco / toque no ?] --> BS
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

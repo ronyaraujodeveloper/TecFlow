@@ -15,7 +15,9 @@
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject IOfferRadarApiService RadarApi
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject ILogger<BuscaGlobal> Logger
+@implements IAsyncDisposable
 
 <PageTitle>Buscar Ofertas — Ofertio</PageTitle>
 
@@ -255,9 +257,27 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-1 mb-2">
-                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore)" title="Média de vantagem e segurança">Oportunidade @item.OpportunityScore</span>
-                                <span class="badge text-bg-light border" title="Desconto, frete, comissão, avaliação e vendas">Vantagem @item.AdvantageScore</span>
-                                <span class="badge text-bg-light border" title="Loja oficial, reputação, MercadoLíder, Full, garantia e condição">Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)</span>
+                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore) score-help-badge"
+                                      tabindex="0"
+                                      role="button"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-title="@OpportunityHelp">
+                                    Oportunidade @item.OpportunityScore<i class="bi bi-question-circle ms-1 opacity-75" aria-hidden="true"></i>
+                                </span>
+                                <span class="badge text-bg-light border score-help-badge"
+                                      tabindex="0"
+                                      role="button"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-title="@AdvantageHelp">
+                                    Vantagem @item.AdvantageScore<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                </span>
+                                <span class="badge text-bg-light border score-help-badge"
+                                      tabindex="0"
+                                      role="button"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-title="@SafetyHelp">
+                                    Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                </span>
                             </div>
                             <h2 class="h6">@(item.ProductName ?? "Produto")</h2>
                             <p class="fw-semibold mb-1">
@@ -476,7 +496,8 @@
                         <li><strong>Vendidos, avaliações e mais vendidos:</strong> vêm das APIs oficiais (ML: anúncio, avaliações e ranking de mais vendidos da categoria; Shopee: vendas e nota). Quando a loja não informa, o card mostra "não informado".</li>
                         <li><strong>Vantagem (0–100):</strong> desconto (até 35), frete grátis (10), comissão (até 20), avaliação (até 15), ranking de mais vendidos (até 20) e unidades vendidas (até 10).</li>
                         <li><strong>Segurança:</strong> parte de 30 e soma loja oficial (+30), reputação verde do vendedor (+25), MercadoLíder (até +15), envio Full (+10), garantia (+5) e alta aprovação (+5); reputação ruim, produto usado e muitas avaliações negativas descontam. Alta a partir de @OfficialCatalogSearchRules.TrustedSafetyScore.</li>
-                        <li><strong>Oportunidade:</strong> média de vantagem e segurança; é a ordenação padrão "Melhor vantagem + segurança".</li>
+                        <li><strong>Oportunidade:</strong> média de vantagem e segurança (0–39 baixa, 40–69 boa, 70–100 super oferta); é a ordenação padrão "Melhor vantagem + segurança".</li>
+                        <li>Passe o mouse ou toque no <i class="bi bi-question-circle" aria-hidden="true"></i> dos selos do card para ver a explicação de cada nota.</li>
                         <li>O painel "Métricas" resume as ofertas na tela: faixa e mediana de preço, % de vendedores confiáveis, nota média, maior comissão, melhor oportunidade e mais vendido.</li>
                     </ul>
 
@@ -738,7 +759,47 @@
         string.IsNullOrWhiteSpace(text) ? "Produto" : text.Length <= max ? text : text[..max].TrimEnd() + "…";
 
     private static string OpportunityBadgeClass(int score) =>
-        score >= 70 ? "text-bg-success" : score >= 45 ? "text-bg-warning" : "text-bg-secondary";
+        score >= 70 ? "text-bg-success" : score >= 40 ? "text-bg-warning" : "text-bg-secondary";
+
+    private const string OpportunityHelp =
+        "Score de atratividade da oferta (0 a 100): média entre Vantagem e Segurança.\n• 0-39: Baixa\n• 40-69: Boa Oportunidade (Recomendado)\n• 70-100: Super Oferta!";
+
+    private const string AdvantageHelp =
+        "Score de vantagem da oferta (0 a 100).\n• Desconto real sobre o preço original: até 35\n• Frete grátis: 10 · Comissão: até 20\n• Avaliação: até 15 · Mais vendidos: até 20 · Unidades vendidas: até 10\nVantagem 0 indica preço normal de tabela, sem outros diferenciais.";
+
+    private const string SafetyHelp =
+        "Nível de confiabilidade do vendedor.\n• Alta: Lojas Oficiais e MercadoLíder com reputação verde\n• Média/Baixa: Vendedores sem reputação consolidada.\nEnvio Full, garantia e produto novo também contam.";
+
+    private bool _tooltipsActive;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_items.Count == 0 && !_tooltipsActive)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeAsync<int>("ofertioTooltips.init");
+            _tooltipsActive = _items.Count > 0;
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Tooltips do Bootstrap indisponíveis na Buscar Ofertas.");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("ofertioTooltips.disposeAll");
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
+        {
+        }
+    }
 
     private async Task LoadMercadoLivreTrackingIdAsync()
     {

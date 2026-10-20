@@ -135,3 +135,4 @@
 [2026-10-20 13:42:37] fix(busca): varredura ML ate 100 produtos quando ha oferta, variacoes de produto pai, filtros aplicados na tela apos a busca e modal de regras
 [2026-10-20 18:31:53] feat(busca): metricas de afiliado na Buscar Ofertas com comissao, vendidos, avaliacoes, mais vendidos e notas de vantagem e seguranca
 [2026-10-20 19:30:44] feat(busca): comissao do ML estimada por categoria (tabela de afiliado), galeria de imagens em modal e botao Abrir ao lado de Converter
+[2026-10-20 19:38:56] feat(busca): tooltips (?) nos selos Oportunidade, Vantagem e Seguranca com Bootstrap Tooltip inicializado no OnAfterRenderAsync

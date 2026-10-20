@@ -725,6 +725,12 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Botões:** "Converter & Gerar Link" e "Abrir" lado a lado, com ícones no padrão dos Grupos monitorados.
 - [ ] **Conferir as taxas:** comparar a tabela com o painel de afiliado do ML (o ML pode mudar as taxas; a venda indireta paga a metade).
 
+## ❔ Tooltips nos selos da oferta (`OfferScoreTooltips`)
+
+- [x] **Ícone (?):** `bi-question-circle` à direita de Oportunidade, Vantagem e Segurança nos cards da Buscar Ofertas.
+- [x] **Bootstrap Tooltip:** `bootstrap.bundle.min.js` carregado no WebUi e no Mobile; `ofertioTooltips.init` no `OnAfterRenderAsync` (hover/foco e toque/clique).
+- [x] **Conteúdo:** faixas da Oportunidade (0–39 baixa, 40–69 boa, 70–100 super oferta), composição da Vantagem (desconto real, frete, comissão, avaliação, ranking, vendas) e níveis de Segurança.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

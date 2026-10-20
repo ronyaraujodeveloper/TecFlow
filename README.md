@@ -630,6 +630,11 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Removidos a busca anônima, a raspagem de `lista.mercadolivre.com.br`, o `MercadoLivreHtmlParser` e a opção `UseOfficialSearchApi`.
   - Recusa da API mostra "A API oficial do Mercado Livre recusou a busca (HTTP 403)..." pedindo para reconectar a conta, no lugar do aviso de verificação anti-robô.
 
+## 🔁 Callback público do OAuth do Mercado Livre (`MercadoLivreOAuthPublicCallback`)
+
+- [x] **`redirect_uri` fixo no domínio público:** `Integrations:MercadoLivre:RedirectUri` = `https://dev.ofertio.com.br/api/mercadolivre/callback` em `appsettings.json` e `appsettings.Homologacao.json` da API; o botão "Autorizar Mercado Livre (OAuth)" e a troca do `code` usam exatamente esse valor (prevalece sobre o host da requisição; o cofre do Master não tem a chave gravada).
+- [ ] **App do ML:** a Redirect URI cadastrada em developers.mercadolivre.com.br precisa ser idêntica (`https://dev.ofertio.com.br/api/mercadolivre/callback`).
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

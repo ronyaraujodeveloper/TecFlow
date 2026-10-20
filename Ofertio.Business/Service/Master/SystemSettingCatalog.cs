@@ -27,7 +27,7 @@ public static class SystemSettingCatalog
     [
         new("Integrations:MercadoLivre:AppId", CategoryMarketplaces, "Mercado Livre — App ID", false, "1234567890123456"),
         new("Integrations:MercadoLivre:SecretKey", CategoryMarketplaces, "Mercado Livre — Client Secret", true),
-        new("Integrations:MercadoLivre:RedirectUri", CategoryMarketplaces, "Mercado Livre — Redirect URI", false, "https://seu-dominio/integracoes/oauth/callback"),
+        new("Integrations:MercadoLivre:RedirectUri", CategoryMarketplaces, "Mercado Livre — Redirect URI", false, "https://dev.ofertio.com.br/api/mercadolivre/callback"),
         new("Integrations:Shopee:PartnerId", CategoryMarketplaces, "Shopee — Partner ID", false),
         new("Integrations:Shopee:PartnerKey", CategoryMarketplaces, "Shopee — Partner Key", true),
         new("Integrations:Shopee:AppKey", CategoryMarketplaces, "Shopee Afiliados — AppKey", false),

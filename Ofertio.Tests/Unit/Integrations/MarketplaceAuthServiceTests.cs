@@ -336,6 +336,40 @@ public class MarketplaceAuthServiceTests
         Assert.Contains("state=ticket-ml", url);
     }
 
+    [Fact]
+    public async Task MercadoLivreOAuth_ShouldUsePublicApiCallback_InAuthorizeUrlAndTokenExchange()
+    {
+        const string publicCallback = "https://dev.ofertio.com.br/api/mercadolivre/callback";
+        string? body = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"access_token":"APP_USR-1","expires_in":21600,"refresh_token":"TG-r"}""")
+            };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("Ofertio.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions
+        {
+            AppId = "123456",
+            SecretKey = "secret",
+            RedirectUri = publicCallback
+        });
+
+        var url = service.GenerateAuthorizationUrl(
+            MarketplaceType.MercadoLivre,
+            "https://localhost:7002/integracoes/oauth/callback",
+            "ticket-ml");
+        await service.ExchangeMercadoLivreCodeAsync("TG-code", "https://localhost:7002/integracoes/oauth/callback");
+
+        var expected = "redirect_uri=" + Uri.EscapeDataString(publicCallback);
+        Assert.Contains(expected + "&", url);
+        Assert.Contains(expected, body);
+    }
+
     [Theory]
     [InlineData("https://camcorder-bonding-sloppily.ngrok-free.dev:7002/integracoes/oauth/callback")]
     [InlineData("http://camcorder-bonding-sloppily.ngrok-free.dev:5000/integracoes/oauth/callback")]

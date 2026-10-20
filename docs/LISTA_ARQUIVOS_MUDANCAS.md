@@ -1686,6 +1686,12 @@ API / Orquestrador / Worker / WebUi
 - [x] ~~**Ofertio.Tests/Unit/Radar/MercadoLivreHtmlParserTests.cs**~~ - excluído junto com o parser.
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - Bearer só no cabeçalho, recusa vira mensagem sem raspar a vitrine, sem token não faz requisição.
 
+### MercadoLivreOAuthPublicCallback - redirect_uri do OAuth no domínio público
+
+- [x] **Ofertio.API/appsettings.json** e **Ofertio.API/appsettings.Homologacao.json** - `Integrations:MercadoLivre:RedirectUri` = `https://dev.ofertio.com.br/api/mercadolivre/callback` (substitui o túnel ngrok `/integracoes/oauth/callback`).
+- [x] **Ofertio.Business/Service/Master/SystemSettingCatalog.cs** - exemplo da chave no cofre do Master aponta para o callback público.
+- [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs** - URL de autorização e troca do `code` usam exatamente o callback público, mesmo com a requisição vinda de `localhost`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

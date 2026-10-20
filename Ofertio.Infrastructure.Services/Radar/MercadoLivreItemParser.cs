@@ -50,6 +50,49 @@ public static class MercadoLivreItemParser
         };
     }
 
+    /// <summary>Produto de catálogo (<c>/products/{id}</c>, links <c>/p/MLB...</c>): anúncio ganhador da buy box, nome e foto.</summary>
+    public static (string? WinnerItemId, string? Name, string? ImageUrl) ParseCatalogProduct(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return (null, null, null);
+        }
+
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object || root.TryGetProperty("error", out _))
+        {
+            return (null, null, null);
+        }
+
+        var winnerId = root.TryGetProperty("buy_box_winner", out var winner)
+            && winner.ValueKind == JsonValueKind.Object
+            && winner.TryGetProperty("item_id", out var winnerIdEl)
+            && winnerIdEl.ValueKind == JsonValueKind.String
+                ? winnerIdEl.GetString()
+                : null;
+        var name = root.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
+            ? nameEl.GetString()
+            : null;
+        string? image = null;
+        if (root.TryGetProperty("pictures", out var pictures) && pictures.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var picture in pictures.EnumerateArray())
+            {
+                if (picture.ValueKind == JsonValueKind.Object
+                    && picture.TryGetProperty("url", out var urlEl)
+                    && urlEl.ValueKind == JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(urlEl.GetString()))
+                {
+                    image = urlEl.GetString();
+                    break;
+                }
+            }
+        }
+
+        return (string.IsNullOrWhiteSpace(winnerId) ? null : winnerId.Trim(), name, image);
+    }
+
     public static IReadOnlyList<OfficialCatalogProductDto> ParseSearch(string json)
     {
         var list = new List<OfficialCatalogProductDto>();

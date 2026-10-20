@@ -615,6 +615,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - Ao receber o desafio (`account-verification`, `bot_challenge`...) na página do anúncio ou na vitrine `lista.mercadolivre.com.br`, o HTML é descartado e os GETs nas páginas públicas do ML ficam suspensos por 15 min.
   - Nesse período a oferta fica "Verificando" com o preço capturado (`Source = AntiBot`) e a busca não raspa a vitrine.
 
+## 🚫 Resolvedor de links do Mercado Livre sem scraping (`MercadoLivreNoScraping`)
+
+- [x] **Página pública do ML nunca é baixada** na validação de ofertas (captura dos grupos, pré-validação, saúde das ofertas, Verificar anúncio), nos metadados do Gerador de Links nem na expansão de encurtadores.
+- [x] **Código do item:** extraído da URL (`produto.mercadolivre.com.br/MLB-12345678...` ➔ `MLB12345678`); encurtadores e vitrines seguem redirects só pelos cabeçalhos até achar o MLB.
+- [x] **Dados pela API oficial:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` com `Authorization: Bearer` (refresh automático do token da conta); links de catálogo `/p/MLB...` usam `/products/{id}` ➔ anúncio ganhador.
+  - Gerador de Links usa o token OAuth da conta do usuário logado; rotinas em segundo plano (sem usuário) usam `Integrations:MercadoLivre:AccessToken` ou o token do aplicativo, nunca a conta de outro tenant.
+  - Sem MLB ou sem resposta da API: oferta "Verificando" e nome pelo slug da URL.
+- [ ] **Busca por palavra-chave (Radar):** a vitrine `lista.mercadolivre.com.br` ainda é o último recurso quando `sites/MLB/search` recusa o token (já protegida pela trava anti-robô).
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

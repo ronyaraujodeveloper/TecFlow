@@ -1665,6 +1665,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - Bearer da conta, refresh do token expirado, retry após 403, sem credencial não chama `/items`, vitrine com trava.
 - [x] **Ofertio.Tests/Unit/Radar/LiveCheckSearchServiceTests.cs** - API antes da página, desafio aciona a trava, trava evita GET, expiração e detecção do desafio.
 
+### MercadoLivreNoScraping - Resolvedor de links e metadados do ML sem scraping público
+
+- [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - links do ML não baixam a página: extrai o MLB (redirects só pelos cabeçalhos quando é encurtador/vitrine), consulta `IMercadoLivreApiService.GetItemAsync` e devolve Ativo/Esgotado/Inativo; sem MLB ou sem resposta da API fica "Verificando"; busca no lugar do produto continua Esgotado.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/ProductMetadataService.cs** - metadados do ML (título, preço, imagem) pela API oficial com o usuário do `IAffiliateLinkGenerationContext`; sem MLB ou sem resposta usa o slug da URL, nunca o HTML.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/UrlExpansionService.cs** - para ao chegar numa URL de produto do ML com MLB e não lê o corpo de páginas do ML.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem usuário (rotinas em segundo plano) não usa a conta de nenhum tenant; código de catálogo (`/p/MLB...`) com 404 em `/items` segue `/products/{id}` ➔ anúncio ganhador da buy box.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogProduct` (buy_box_winner, nome, foto).
+- [x] **Ofertio.Tests/Unit/Groups/OfferValidationServiceTests.cs** - status do ML pela API sem nenhum GET na página (encerrado, sem estoque, ativo, API indisponível, vitrine focada).
+- [x] **Ofertio.Tests/Unit/LinkStrategies/ProductMetadataServiceTests.cs** - metadados do ML pela API com o usuário da geração e sem requisição HTTP.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/AffiliateLinkInfrastructureTests.cs** - expansão para no produto do ML sem baixar a página.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - catálogo via `/products` e token sem usuário não usa conta de tenant.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

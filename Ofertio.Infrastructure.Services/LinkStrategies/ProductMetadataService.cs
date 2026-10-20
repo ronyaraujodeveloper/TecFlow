@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Integrations.Common;
+using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.LinkStrategies;
 
@@ -32,16 +33,22 @@ public sealed class ProductMetadataService : IProductMetadataService
     private readonly UniversalLinkResolverEngine _universalResolver;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ProductMetadataService> _logger;
+    private readonly IMercadoLivreApiService? _mercadoLivreApi;
+    private readonly IAffiliateLinkGenerationContext? _generationContext;
 
     public ProductMetadataService(
         IUrlExpansionService urlExpansionService,
         IHttpClientFactory httpClientFactory,
         ILogger<ProductMetadataService> logger,
-        UniversalLinkResolverEngine? universalResolver = null)
+        UniversalLinkResolverEngine? universalResolver = null,
+        IMercadoLivreApiService? mercadoLivreApi = null,
+        IAffiliateLinkGenerationContext? generationContext = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _universalResolver = universalResolver ?? new UniversalLinkResolverEngine(urlExpansionService);
+        _mercadoLivreApi = mercadoLivreApi;
+        _generationContext = generationContext;
     }
 
     public string? LastResolvedPlatform { get; private set; }
@@ -289,10 +296,39 @@ public sealed class ProductMetadataService : IProductMetadataService
         CancellationToken cancellationToken) =>
         ExtractGenericMetadata(expandedUrl, cancellationToken);
 
-    private Task<ProductMetadataDto> ExtractMercadoLivreMetadata(
+    /// <summary>
+    /// Mercado Livre só pela API oficial (<c>GET /items/{MLB}</c> com Bearer da conta conectada): a página pública
+    /// não é baixada para não acionar a verificação anti-robô. Sem código MLB ou sem resposta, usa o slug da URL.
+    /// </summary>
+    private async Task<ProductMetadataDto> ExtractMercadoLivreMetadata(
         string expandedUrl,
-        CancellationToken cancellationToken) =>
-        ExtractGenericMetadata(expandedUrl, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        if (!MercadoLivreProductUrlParser.TryParse(expandedUrl, out var itemId))
+        {
+            _logger.LogInformation(
+                "[ML Item] Link Mercado Livre sem código MLB; metadados pelo slug da URL (página pública não é consultada). Url={Url}",
+                expandedUrl);
+            return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(expandedUrl), expandedUrl);
+        }
+
+        var item = _mercadoLivreApi is null
+            ? null
+            : await _mercadoLivreApi.GetItemAsync(_generationContext?.UserId ?? 0, itemId, cancellationToken);
+        if (item is null)
+        {
+            return SanitizeMetadata(ProductMetadataHtmlParser.FromUrlFallback(expandedUrl), expandedUrl);
+        }
+
+        return SanitizeMetadata(
+            new ProductMetadataDto
+            {
+                ProductName = NormalizePersistedProductName(item.ProductName),
+                ProductPrice = item.Price,
+                ProductImageUrl = item.ImageUrl
+            },
+            expandedUrl);
+    }
 
     private Task<ProductMetadataDto> ExtractTikTokMetadata(
         string expandedUrl,

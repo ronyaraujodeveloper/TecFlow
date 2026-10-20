@@ -14,6 +14,36 @@ namespace Ofertio.Tests.Unit.LinkStrategies;
 public class UrlExpansionServiceTests
 {
     [Fact]
+    public async Task ExpandUrlAsync_ShouldStopAtMercadoLivreProductUrl_WithoutDownloadingPublicPage()
+    {
+        var requested = new List<string>();
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri!.ToString());
+            if (request.RequestUri!.Host.Contains("meli.la"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM") }
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("<html>account-verification</html>")
+            };
+        });
+        var service = new UrlExpansionService(
+            new StubHttpClientFactory(handler),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UrlExpansionService>.Instance);
+
+        var expanded = await service.ExpandUrlAsync("https://meli.la/abc123");
+
+        Assert.StartsWith("https://produto.mercadolivre.com.br/MLB-4012345678", expanded, StringComparison.Ordinal);
+        Assert.DoesNotContain(requested, url => url.Contains("produto.mercadolivre.com.br", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExpandUrlAsync_ShouldFollowLocationHeaderUntilFinalUrl()
     {
         var handler = new StubHttpMessageHandler(request =>

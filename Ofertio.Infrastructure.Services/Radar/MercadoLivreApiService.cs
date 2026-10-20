@@ -61,6 +61,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     /// <summary>
     /// <c>GET https://api.mercadolibre.com/items/{id}</c> com <c>Authorization: Bearer</c>: token OAuth da conta
     /// conectada no painel (renovado via refresh_token quando expira ou é recusado) ➔ token fixo ➔ token do app.
+    /// Sem usuário (<paramref name="userId"/> ≤ 0, rotinas em segundo plano) não usa conta de nenhum inquilino.
     /// </summary>
     public async Task<OfficialOfferSnapshotDto?> GetItemAsync(
         int userId,
@@ -75,9 +76,12 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         itemId = itemId.Trim();
         try
         {
-            var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
+            var account = userId > 0 ? await LoadMercadoLivreAccountAsync(userId, cancellationToken) : null;
             var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
-            LogItemAccountState(userId, itemId, account, accountToken);
+            if (userId > 0)
+            {
+                LogItemAccountState(userId, itemId, account, accountToken);
+            }
 
             var accessToken = accountToken
                 ?? ResolveStaticAccessToken()
@@ -102,8 +106,14 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 var renewedToken = await RefreshAccountTokenAsync(account, cancellationToken);
                 if (renewedToken is not null)
                 {
-                    (statusCode, body) = await SendItemAsync(itemId, renewedToken, cancellationToken);
+                    accessToken = renewedToken;
+                    (statusCode, body) = await SendItemAsync(itemId, accessToken, cancellationToken);
                 }
+            }
+
+            if (statusCode == HttpStatusCode.NotFound)
+            {
+                return await GetCatalogBuyBoxItemAsync(itemId, accessToken, body, cancellationToken);
             }
 
             if (statusCode != HttpStatusCode.OK)
@@ -148,14 +158,73 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
     }
 
-    private async Task<(HttpStatusCode StatusCode, string Body)> SendItemAsync(
+    /// <summary>
+    /// Links <c>/p/MLB...</c> trazem o código do produto de catálogo, que <c>/items</c> não conhece (404):
+    /// consulta <c>/products/{id}</c> e segue para o anúncio ganhador da buy box.
+    /// </summary>
+    private async Task<OfficialOfferSnapshotDto?> GetCatalogBuyBoxItemAsync(
+        string catalogId,
+        string accessToken,
+        string itemNotFoundBody,
+        CancellationToken cancellationToken)
+    {
+        var (productStatus, productBody) = await SendApiAsync("products", catalogId, accessToken, cancellationToken);
+        if (productStatus != HttpStatusCode.OK)
+        {
+            _logger.LogError(
+                "[ML Item] Erro API ML [{StatusCode}] no item {ItemId} (nem anúncio nem produto de catálogo): {Body}",
+                HttpStatusCode.NotFound,
+                catalogId,
+                itemNotFoundBody);
+            return null;
+        }
+
+        var (winnerItemId, productName, productImage) = MercadoLivreItemParser.ParseCatalogProduct(productBody);
+        if (winnerItemId is null)
+        {
+            _logger.LogInformation(
+                "[ML Item] Produto de catálogo {CatalogId} sem anúncio ganhador (buy_box_winner) na API oficial.",
+                catalogId);
+            return null;
+        }
+
+        var (itemStatus, itemBody) = await SendItemAsync(winnerItemId, accessToken, cancellationToken);
+        if (itemStatus != HttpStatusCode.OK)
+        {
+            _logger.LogError(
+                "[ML Item] Erro API ML [{StatusCode}] no anúncio {ItemId} do catálogo {CatalogId}: {Body}",
+                itemStatus,
+                winnerItemId,
+                catalogId,
+                itemBody);
+            return null;
+        }
+
+        var snapshot = MercadoLivreItemParser.Parse(itemBody);
+        if (snapshot is not null)
+        {
+            snapshot.ProductName ??= productName;
+            snapshot.ImageUrl ??= productImage;
+        }
+
+        return snapshot;
+    }
+
+    private Task<(HttpStatusCode StatusCode, string Body)> SendItemAsync(
         string itemId,
+        string accessToken,
+        CancellationToken cancellationToken) =>
+        SendApiAsync("items", itemId, accessToken, cancellationToken);
+
+    private async Task<(HttpStatusCode StatusCode, string Body)> SendApiAsync(
+        string resource,
+        string id,
         string accessToken,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://api.mercadolibre.com/items/{Uri.EscapeDataString(itemId)}");
+            $"https://api.mercadolibre.com/{resource}/{Uri.EscapeDataString(id)}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
         ApplyBrowserHeaders(request);
         using var response = await _httpClient.SendAsync(request, cancellationToken);

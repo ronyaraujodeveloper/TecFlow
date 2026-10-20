@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Ofertio.Business.Integrations;
+using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.LinkStrategies;
 
@@ -51,6 +52,11 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         for (var hop = 0; hop < maxHops; hop++)
         {
+            if (IsMercadoLivreProductUrl(currentUrl))
+            {
+                break;
+            }
+
             using var response = await SendWithoutAutoRedirectAsync(client, currentUrl, cancellationToken);
             var requestUri = SanitizeExpandedUrl(response.RequestMessage?.RequestUri?.ToString(), currentUrl);
             if (!string.Equals(requestUri, currentUrl, StringComparison.OrdinalIgnoreCase))
@@ -63,7 +69,7 @@ public sealed class UrlExpansionService : IUrlExpansionService
             {
                 nextUrl = SanitizeExpandedUrl(ResolveRedirectLocation(currentUrl, response), currentUrl);
             }
-            else
+            else if (!MercadoLivreAvailabilityRules.IsMercadoLivreUrl(currentUrl))
             {
                 var html = await TryReadHtmlAsync(response, cancellationToken);
                 nextUrl = UrlUnshortenerService.TryExtractRedirectFromHtml(html, currentUrl);
@@ -92,6 +98,14 @@ public sealed class UrlExpansionService : IUrlExpansionService
 
         return FinalizeExpandedUrl(currentUrl, originalUrl);
     }
+
+    /// <summary>Página de produto do Mercado Livre já identificada pelo MLB: o HTML público nunca é baixado.</summary>
+    private static bool IsMercadoLivreProductUrl(string url) =>
+        MercadoLivreAvailabilityRules.IsMercadoLivreUrl(url)
+        && !MercadoLivreProductUrlParser.IsSecShortUrl(url)
+        && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && !uri.Host.StartsWith("click", StringComparison.OrdinalIgnoreCase)
+        && MercadoLivreProductUrlParser.TryParse(uri.GetLeftPart(UriPartial.Path), out _);
 
     private static string FinalizeExpandedUrl(string currentUrl, string originalUrl)
     {

@@ -18,17 +18,20 @@ public sealed class OfferValidationService : IOfferValidationService
     private readonly IUrlResolverService _urlResolver;
     private readonly HttpClient _httpClient;
     private readonly ILogger<OfferValidationService> _logger;
+    private readonly IMercadoLivreApiService? _mercadoLivreApi;
 
     public OfferValidationService(
         IProductMetadataService metadata,
         IUrlResolverService urlResolver,
         HttpClient httpClient,
-        ILogger<OfferValidationService> logger)
+        ILogger<OfferValidationService> logger,
+        IMercadoLivreApiService? mercadoLivreApi = null)
     {
         _metadata = metadata;
         _urlResolver = urlResolver;
         _httpClient = httpClient;
         _logger = logger;
+        _mercadoLivreApi = mercadoLivreApi;
     }
 
     public async Task<OfferValidationResultDto> ValidateAsync(
@@ -172,11 +175,21 @@ public sealed class OfferValidationService : IOfferValidationService
         try
         {
             var requestedUrl = workingUrl;
+            if (MercadoLivreAvailabilityRules.IsMercadoLivreUrl(workingUrl))
+            {
+                return await ValidateMercadoLivreAsync(originalUrl, requestedUrl, workingUrl, followRedirects: true, cancellationToken);
+            }
+
             var (pageResponse, finalUrl) = await GetProductPageAsync(originalUrl, workingUrl, cancellationToken);
             using var response = pageResponse;
             if (!string.IsNullOrWhiteSpace(finalUrl))
             {
                 workingUrl = finalUrl;
+            }
+
+            if (MercadoLivreAvailabilityRules.IsMercadoLivreUrl(workingUrl))
+            {
+                return await ValidateMercadoLivreAsync(originalUrl, requestedUrl, workingUrl, followRedirects: false, cancellationToken);
             }
 
             if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
@@ -206,23 +219,6 @@ public sealed class OfferValidationService : IOfferValidationService
                 {
                     IsAvailable = false,
                     Status = GroupOfferStatuses.Inativo,
-                    Html = html,
-                    FinalUrl = workingUrl
-                };
-            }
-
-            if (MercadoLivreAvailabilityRules.IsMercadoLivreUrl(workingUrl)
-                && MercadoLivreAvailabilityRules.DetectUnavailableStatus(html, requestedUrl, workingUrl) is { } mercadoLivreStatus)
-            {
-                _logger.LogInformation(
-                    "Anúncio Mercado Livre sem compra direta. Status={Status} Url={Url} FinalUrl={FinalUrl}",
-                    mercadoLivreStatus,
-                    originalUrl,
-                    workingUrl);
-                return new OfferPageStatusDto
-                {
-                    IsAvailable = false,
-                    Status = mercadoLivreStatus,
                     Html = html,
                     FinalUrl = workingUrl
                 };
@@ -284,23 +280,104 @@ public sealed class OfferValidationService : IOfferValidationService
         return productUrl;
     }
 
+    /// <summary>
+    /// Mercado Livre pela API oficial (<c>GET /items/{MLB}</c>): a página pública nunca é baixada. Links sem MLB
+    /// (encurtadores, vitrines) seguem os redirects só pelos cabeçalhos até achar o código do anúncio.
+    /// </summary>
+    private async Task<OfferPageStatusDto> ValidateMercadoLivreAsync(
+        string originalUrl,
+        string requestedUrl,
+        string url,
+        bool followRedirects,
+        CancellationToken cancellationToken)
+    {
+        var workingUrl = url;
+        if (followRedirects && !MercadoLivreProductUrlParser.TryParse(workingUrl, out _))
+        {
+            workingUrl = BypassAffiliateShowcase(originalUrl, await FollowRedirectHeadersAsync(workingUrl, cancellationToken));
+        }
+
+        if (OfferIntegrityRules.IsGenericStorefrontUrl(workingUrl))
+        {
+            return GenericStorefront(originalUrl, workingUrl);
+        }
+
+        if (MercadoLivreAvailabilityRules.IsRedirectedToSearch(requestedUrl, workingUrl))
+        {
+            _logger.LogInformation(
+                "Anúncio Mercado Livre redirecionado para a busca. Url={Url} FinalUrl={FinalUrl}",
+                originalUrl,
+                workingUrl);
+            return Unavailable(workingUrl);
+        }
+
+        if (!MercadoLivreProductUrlParser.TryParse(workingUrl, out var itemId))
+        {
+            _logger.LogInformation(
+                "[ML Item] Link Mercado Livre sem código MLB; a página pública não é consultada. Url={Url} FinalUrl={FinalUrl}",
+                originalUrl,
+                workingUrl);
+            return Pending(workingUrl);
+        }
+
+        var item = _mercadoLivreApi is null
+            ? null
+            : await _mercadoLivreApi.GetItemAsync(0, itemId, cancellationToken);
+        if (item is null)
+        {
+            return Pending(workingUrl);
+        }
+
+        if (!item.IsAvailable)
+        {
+            _logger.LogInformation(
+                "Anúncio Mercado Livre sem compra direta (API oficial). Status={Status} Item={ItemId} Url={Url}",
+                item.Status,
+                itemId,
+                originalUrl);
+        }
+
+        return new OfferPageStatusDto
+        {
+            IsAvailable = item.IsAvailable,
+            Status = item.IsAvailable ? GroupOfferStatuses.Ativo : item.Status,
+            FinalUrl = workingUrl
+        };
+    }
+
+    private async Task<string> FollowRedirectHeadersAsync(string url, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        return response.RequestMessage?.RequestUri?.ToString() ?? url;
+    }
+
     private async Task<(HttpResponseMessage Response, string FinalUrl)> GetProductPageAsync(
         string originalUrl,
         string url,
         CancellationToken cancellationToken)
     {
-        var response = await _httpClient.GetAsync(url, cancellationToken);
+        var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? url;
         var productUrl = BypassAffiliateShowcase(originalUrl, finalUrl);
-        if (string.Equals(productUrl, finalUrl, StringComparison.Ordinal))
+        if (string.Equals(productUrl, finalUrl, StringComparison.Ordinal)
+            || MercadoLivreAvailabilityRules.IsMercadoLivreUrl(productUrl))
         {
-            return (response, finalUrl);
+            return (response, productUrl);
         }
 
         response.Dispose();
-        var productResponse = await _httpClient.GetAsync(productUrl, cancellationToken);
+        var productResponse = await _httpClient.GetAsync(productUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         return (productResponse, productResponse.RequestMessage?.RequestUri?.ToString() ?? productUrl);
     }
+
+    private static OfferPageStatusDto Pending(string? finalUrl) =>
+        new()
+        {
+            IsAvailable = true,
+            Status = GroupOfferStatuses.Verificando,
+            FinalUrl = finalUrl
+        };
 
     private OfferPageStatusDto GenericStorefront(string originalUrl, string finalUrl)
     {

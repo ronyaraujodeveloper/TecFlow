@@ -228,6 +228,9 @@ flowchart LR
   MLAPI -->|MarketplaceAccounts token/refresh do tenant| SQL
   LIVECHK -->|desafio anti-robô ➔ Trip 15 min, HTML descartado, oferta Verificando| MLGUARD[MercadoLivreAntiBotGuard]
   MLAPI -->|vitrine lista.mercadolivre só sem trava ativa| MLGUARD
+  VAL -->|link ML: MLB da URL, redirects só por cabeçalho, sem baixar a página| MLAPI
+  MLMETA[ProductMetadataService] -->|ML: GetItemAsync com UserId do IAffiliateLinkGenerationContext| MLAPI
+  MLAPI -->|404 em /items ➔ GET /products/ID ➔ buy_box_winner ➔ /items/ID| MLAPP
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

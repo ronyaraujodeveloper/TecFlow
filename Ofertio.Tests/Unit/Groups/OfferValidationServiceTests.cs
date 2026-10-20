@@ -83,18 +83,21 @@ public class OfferValidationServiceTests
     public async Task ValidateProductPageStatusAsync_ShouldValidateFocusedProduct_WhenShortLinkLandsOnAffiliateShowcase()
     {
         var handler = new StubHandler { Html = "<html>Produto</html>" };
+        var api = new StubMercadoLivreApi(new OfficialOfferSnapshotDto { IsAvailable = true, Status = GroupOfferStatuses.Ativo });
         var service = new OfferValidationService(
             new StubMetadata(),
             new StubResolver("https://www.mercadolivre.com.br/social/achados?item_id=MLB4012345678&matt_tool=55555555&reco_client=home_affiliate-profile"),
             new HttpClient(handler),
-            NullLogger<OfferValidationService>.Instance);
+            NullLogger<OfferValidationService>.Instance,
+            api);
 
         var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
 
         Assert.True(page.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
         Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678", page.FinalUrl);
-        Assert.Equal("https://www.mercadolivre.com.br/p/MLB4012345678", handler.LastRequestUri);
+        Assert.Equal("MLB4012345678", api.LastItemId);
+        Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
@@ -117,7 +120,7 @@ public class OfferValidationServiceTests
 
         Assert.True(page.IsAvailable);
         Assert.Equal("https://www.mercadolivre.com.br/p/MLB19700000", page.FinalUrl);
-        Assert.Equal(2, handler.Calls);
+        Assert.Equal(1, handler.Calls);
     }
 
     [Fact]
@@ -135,45 +138,65 @@ public class OfferValidationServiceTests
     }
 
     [Fact]
-    public async Task ValidateAsync_ShouldMarkInactive_WhenListingIsClosed()
+    public async Task ValidateAsync_ShouldMarkMercadoLivreInactive_WhenApiReportsClosedListing()
     {
-        var service = CreateService(
-            "<html><body><h2>Publicação finalizada</h2></body></html>",
-            HttpStatusCode.OK,
-            "https://produto.mercadolivre.com.br/MLB-1-x-_JM");
+        const string url = "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM";
+        var (service, handler, api) = CreateMercadoLivreService(
+            url,
+            new OfficialOfferSnapshotDto { IsAvailable = false, Status = GroupOfferStatuses.Inativo });
 
-        var result = await service.ValidateAsync("https://produto.mercadolivre.com.br/MLB-1-x-_JM", 50m);
+        var result = await service.ValidateAsync(url, 50m);
 
         Assert.False(result.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Inativo, result.Status);
+        Assert.Equal("MLB4012345678", api.LastItemId);
+        Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
-    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreEsgotado_WhenPageShowsOnlyRelatedProducts()
+    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreEsgotado_WhenApiReportsNoStock()
     {
-        var service = CreateService(
-            "<html><body><h2>Produtos relacionados</h2><div class=\"carousel\">Fone A</div></body></html>",
-            HttpStatusCode.OK,
-            "https://www.mercadolivre.com.br/p/MLB19700000");
+        const string url = "https://www.mercadolivre.com.br/p/MLB19700000";
+        var (service, handler, _) = CreateMercadoLivreService(
+            url,
+            new OfficialOfferSnapshotDto { IsAvailable = false, Status = GroupOfferStatuses.Esgotado });
 
-        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/p/MLB19700000");
+        var page = await service.ValidateProductPageStatusAsync(url);
 
         Assert.False(page.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Esgotado, page.Status);
+        Assert.Null(page.Html);
+        Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
-    public async Task ValidateProductPageStatusAsync_ShouldMarkMercadoLivreInativo_WhenListingIsPaused()
+    public async Task ValidateProductPageStatusAsync_ShouldKeepMercadoLivreActive_WhenApiReportsActiveListing()
     {
-        var service = CreateService(
-            "<html><body><p>Anúncio pausado</p><h2>Produtos relacionados</h2></body></html>",
-            HttpStatusCode.OK,
-            "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM");
+        const string url = "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM";
+        var (service, handler, _) = CreateMercadoLivreService(
+            url,
+            new OfficialOfferSnapshotDto { IsAvailable = true, Status = GroupOfferStatuses.Ativo });
 
-        var page = await service.ValidateProductPageStatusAsync("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM");
+        var page = await service.ValidateProductPageStatusAsync(url);
 
-        Assert.False(page.IsAvailable);
-        Assert.Equal(GroupOfferStatuses.Inativo, page.Status);
+        Assert.True(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
+        Assert.Equal(url, page.FinalUrl);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateProductPageStatusAsync_ShouldKeepMercadoLivrePending_WithoutDownloadingPage_WhenApiFails()
+    {
+        const string url = "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM";
+        var (service, handler, _) = CreateMercadoLivreService(url, null);
+
+        var page = await service.ValidateProductPageStatusAsync(url);
+
+        Assert.True(page.IsAvailable);
+        Assert.Equal(GroupOfferStatuses.Verificando, page.Status);
+        Assert.Null(page.Html);
+        Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
@@ -184,30 +207,19 @@ public class OfferValidationServiceTests
             Html = "<html><body>Resultados</body></html>",
             FinalUrlByRequest = _ => "https://lista.mercadolivre.com.br/fone-bluetooth"
         };
+        var api = new StubMercadoLivreApi(new OfficialOfferSnapshotDto { IsAvailable = true });
         var service = new OfferValidationService(
             new StubMetadata(),
-            new StubResolver("https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM"),
+            new StubResolver("https://meli.la/abc123"),
             new HttpClient(handler),
-            NullLogger<OfferValidationService>.Instance);
+            NullLogger<OfferValidationService>.Instance,
+            api);
 
         var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
 
         Assert.False(page.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Esgotado, page.Status);
-    }
-
-    [Fact]
-    public async Task ValidateProductPageStatusAsync_ShouldKeepMercadoLivreActive_WhenBuyBoxIsPresent()
-    {
-        var service = CreateService(
-            "<html><body><button>Comprar agora</button><span>Cor Azul: Sem estoque</span><h2>Produtos relacionados</h2></body></html>",
-            HttpStatusCode.OK,
-            "https://www.mercadolivre.com.br/p/MLB19700000");
-
-        var page = await service.ValidateProductPageStatusAsync("https://www.mercadolivre.com.br/p/MLB19700000");
-
-        Assert.True(page.IsAvailable);
-        Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
+        Assert.Null(api.LastItemId);
     }
 
     [Fact]
@@ -295,6 +307,44 @@ public class OfferValidationServiceTests
             new StubResolver(finalUrl),
             http,
             NullLogger<OfferValidationService>.Instance);
+    }
+
+    private static (OfferValidationService Service, StubHandler Handler, StubMercadoLivreApi Api) CreateMercadoLivreService(
+        string url,
+        OfficialOfferSnapshotDto? item)
+    {
+        var handler = new StubHandler { Html = "<html><body>Comprar agora</body></html>" };
+        var api = new StubMercadoLivreApi(item);
+        var service = new OfferValidationService(
+            new StubMetadata(),
+            new StubResolver(url),
+            new HttpClient(handler),
+            NullLogger<OfferValidationService>.Instance,
+            api);
+        return (service, handler, api);
+    }
+
+    private sealed class StubMercadoLivreApi : IMercadoLivreApiService
+    {
+        private readonly OfficialOfferSnapshotDto? _item;
+
+        public StubMercadoLivreApi(OfficialOfferSnapshotDto? item) => _item = item;
+
+        public string? LastItemId { get; private set; }
+
+        public Task<OfficialOfferSnapshotDto?> GetItemAsync(int userId, string itemId, CancellationToken cancellationToken = default)
+        {
+            LastItemId = itemId;
+            return Task.FromResult(_item);
+        }
+
+        public Task<OfficialCatalogChannelResult> SearchProductsAsync(
+            int userId,
+            string query,
+            int limit = 20,
+            string? trackingId = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class StubResolver : IUrlResolverService

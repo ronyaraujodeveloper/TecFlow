@@ -928,6 +928,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Rotas do ML pela WebUi (`MercadoLivreWebUiProxy`):** a aplicação `/api` criada no site `Ofertio.WebUi` dividia o `OfertioApiPool` e derrubava a API com HTTP 500.35; foi removida e a WebUi passou a atender `/api/mercadolivre/callback` e `/api/mercadolivre/notifications` no host público, repassando à API em `localhost:5001`.
 - [x] **Reverse proxy YARP (`MercadoLivreWebUiProxy`):** o repasse manual virou `MapForwarder` (pacote `Yarp.ReverseProxy`) em `MercadoLivreProxyExtensions`, encaminhando as duas rotas do ML para `OrquestradorApi:BaseUrl`; o deploy remove a subaplicação `/api` do site WebUi se ela reaparecer.
 - [x] **Anúncios ML pela API oficial (`MercadoLivreOfficialItems`):** `GET api.mercadolibre.com/items/{id}` com `Authorization: Bearer` do OAuth da conta conectada (renovado pelo `refresh_token` quando expira ou é recusado); links `MLB` são validados pela API antes da página pública; desafio anti-robô descarta o HTML e suspende os GETs nas páginas do ML por 15 min; logs claros quando a conta não está conectada.
+- [x] **Resolvedor ML sem scraping (`MercadoLivreNoScraping`):** validação de ofertas, metadados do Gerador de Links e expansão de encurtadores deixaram de baixar a página pública do ML; o MLB vem da URL (redirects só por cabeçalho) e status/título/preço/imagem vêm de `/items/{id}` com Bearer e refresh automático; links de catálogo seguem `/products/{id}` até o anúncio ganhador.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

@@ -488,6 +488,48 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
+    public async Task GetItemAsync_WithCatalogId_ShouldFollowBuyBoxWinnerThroughProductsEndpoint()
+    {
+        var handler = new RoutingHandler();
+        handler.PathResponses["/items/MLB19700000"] = (HttpStatusCode.NotFound, """{"message":"Item with id MLB19700000 not found","error":"not_found"}""");
+        handler.PathResponses["/products/MLB19700000"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB19700000","name":"Fone Catálogo","pictures":[{"url":"https://http2.mlstatic.com/p.jpg"}],"buy_box_winner":{"item_id":"MLB123","price":3999.9}}""");
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var item = await sut.GetItemAsync(0, "MLB19700000");
+
+        Assert.NotNull(item);
+        Assert.Equal("Notebook Dell", item!.ProductName);
+        Assert.True(item.IsAvailable);
+        Assert.Equal(
+            ["/items/MLB19700000", "/products/MLB19700000", "/items/MLB123"],
+            handler.Requests.Select(request => request.Path));
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-static", request.Authorization));
+    }
+
+    [Fact]
+    public async Task GetItemAsync_WithoutUser_ShouldNotUseAnyTenantAccountToken()
+    {
+        var handler = new RoutingHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" },
+            db =>
+            {
+                var account = MercadoLivreAccount(trackingId: null);
+                account.AccessToken = "APP_USR-loja";
+                account.ExpiresAt = DateTime.UtcNow.AddHours(4);
+                db.MarketplaceAccounts.Add(account);
+            });
+
+        await sut.GetItemAsync(0, "MLB123");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("Bearer APP_USR-static", request.Authorization);
+    }
+
+    [Fact]
     public async Task SearchProductsAsync_WithAntiBotGuardTripped_ShouldNotScrapeLista()
     {
         var guard = new MercadoLivreAntiBotGuard();
@@ -587,6 +629,8 @@ public class MercadoLivreApiServiceTests
 
         public HashSet<string> RefusedBearers { get; } = new(StringComparer.Ordinal);
 
+        public Dictionary<string, (HttpStatusCode Status, string Body)> PathResponses { get; } = new(StringComparer.Ordinal);
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -600,7 +644,9 @@ public class MercadoLivreApiServiceTests
                 request.Headers.Authorization?.ToString(),
                 body));
 
-            var (status, content) = uri.AbsolutePath.Contains("oauth/token", StringComparison.Ordinal)
+            var (status, content) = PathResponses.TryGetValue(uri.AbsolutePath, out var routed)
+                ? routed
+                : uri.AbsolutePath.Contains("oauth/token", StringComparison.Ordinal)
                 ? (TokenBody.Contains("access_token", StringComparison.Ordinal) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, TokenBody)
                 : uri.Host.StartsWith("lista.", StringComparison.OrdinalIgnoreCase)
                     ? (HttpStatusCode.OK, ListaBody)

@@ -337,9 +337,72 @@ public class ProductMetadataServiceTests
         var result = await service.ExtractMetadataAsync("https://mercadolivre.com/sec/abc");
 
         Assert.Equal("MercadoLivre", service.LastResolvedPlatform);
-        Assert.DoesNotContain(requested, url => url.Contains("/api/v4/item/get", StringComparison.Ordinal));
+        Assert.Empty(requested);
         Assert.Equal("Fone Bluetooth Tws Com Cancelamento", result.ProductName);
         Assert.Null(result.ProductPrice);
+    }
+
+    [Fact]
+    public async Task ExtractMetadataAsync_ShouldReadMercadoLivreItemFromOfficialApi_WithGenerationUser()
+    {
+        var requested = new List<string>();
+        var expansion = new StubExpansionService(
+            "https://produto.mercadolivre.com.br/MLB-4012345678-fone-bluetooth-_JM");
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requested.Add(request.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var api = new StubMercadoLivreApi(new Ofertio.Business.Dto.OfficialOfferSnapshotDto
+        {
+            ProductName = "Fone Bluetooth JBL Tune 520BT",
+            Price = 249.90m,
+            ImageUrl = "https://http2.mlstatic.com/fone.jpg"
+        });
+        var service = new ProductMetadataService(
+            expansion,
+            new StubHttpClientFactory(handler),
+            NullLogger<ProductMetadataService>.Instance,
+            mercadoLivreApi: api,
+            generationContext: new AffiliateLinkGenerationContext { UserId = 7 });
+
+        var result = await service.ExtractMetadataAsync("https://meli.la/abc");
+
+        Assert.Empty(requested);
+        Assert.Equal(7, api.LastUserId);
+        Assert.Equal("MLB4012345678", api.LastItemId);
+        Assert.Equal("Fone Bluetooth JBL Tune 520BT", result.ProductName);
+        Assert.Equal(249.90m, result.ProductPrice);
+        Assert.Equal("https://http2.mlstatic.com/fone.jpg", result.ProductImageUrl);
+    }
+
+    private sealed class StubMercadoLivreApi : IMercadoLivreApiService
+    {
+        private readonly Ofertio.Business.Dto.OfficialOfferSnapshotDto? _item;
+
+        public StubMercadoLivreApi(Ofertio.Business.Dto.OfficialOfferSnapshotDto? item) => _item = item;
+
+        public int? LastUserId { get; private set; }
+
+        public string? LastItemId { get; private set; }
+
+        public Task<Ofertio.Business.Dto.OfficialOfferSnapshotDto?> GetItemAsync(
+            int userId,
+            string itemId,
+            CancellationToken cancellationToken = default)
+        {
+            LastUserId = userId;
+            LastItemId = itemId;
+            return Task.FromResult(_item);
+        }
+
+        public Task<Ofertio.Business.Dto.OfficialCatalogChannelResult> SearchProductsAsync(
+            int userId,
+            string query,
+            int limit = 20,
+            string? trackingId = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     [Fact]

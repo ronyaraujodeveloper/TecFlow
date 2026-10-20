@@ -17,6 +17,8 @@ namespace Ofertio.Tests.Unit.Radar;
 
 public class MercadoLivreApiServiceTests
 {
+    private const string SearchPath = "/products/search";
+
     [Fact]
     public async Task SearchProductsAsync_ShouldAskForOAuthWhenTokenIsMissing()
     {
@@ -79,7 +81,7 @@ public class MercadoLivreApiServiceTests
 
         var tokenRequest = Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
         Assert.Contains("grant_type=client_credentials", tokenRequest.Body, StringComparison.Ordinal);
-        var search = Assert.Single(handler.Requests, request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal));
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
         Assert.Equal("Bearer APP_USR-app", search.Authorization);
         var item = Assert.Single(result.Items);
         Assert.Contains("matt_tool=14343296", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
@@ -97,7 +99,7 @@ public class MercadoLivreApiServiceTests
         await sut.SearchProductsAsync(1, "iphone", 20);
 
         Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
-        Assert.Equal(2, handler.Requests.Count(request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal)));
+        Assert.Equal(2, handler.Requests.Count(request => request.Path == SearchPath));
     }
 
     [Fact]
@@ -121,7 +123,7 @@ public class MercadoLivreApiServiceTests
         var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
         Assert.Single(result.Items);
-        var search = Assert.Single(handler.Requests, request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal));
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
         Assert.Equal("Bearer APP_USR-new", search.Authorization);
         await using var verify = CreateDbContext(dbName);
         var stored = await verify.MarketplaceAccounts.IgnoreQueryFilters().SingleAsync();
@@ -138,9 +140,10 @@ public class MercadoLivreApiServiceTests
 
         var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
-        var search = Assert.Single(handler.Requests);
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
         Assert.Equal("Bearer ml-app-token", search.Authorization);
-        Assert.Equal("https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20", search.Url);
+        Assert.Equal("https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=dell%20i7&limit=20", search.Url);
+        Assert.All(handler.Requests, request => Assert.DoesNotContain("access_token", request.Url, StringComparison.Ordinal));
         Assert.Equal("Dell i7", Assert.Single(result.Items).ProductName);
     }
 
@@ -238,7 +241,7 @@ public class MercadoLivreApiServiceTests
 
         var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
-        var searches = handler.Requests.Where(request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal)).ToList();
+        var searches = handler.Requests.Where(request => request.Path == SearchPath).ToList();
         Assert.Equal(["Bearer APP_USR-stale", "Bearer APP_USR-renewed"], searches.Select(search => search.Authorization));
         var tokenRequest = Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
         Assert.Contains("grant_type=refresh_token", tokenRequest.Body, StringComparison.Ordinal);
@@ -271,7 +274,7 @@ public class MercadoLivreApiServiceTests
 
         var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
-        Assert.Single(handler.Requests, request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal));
+        Assert.Single(handler.Requests, request => request.Path == SearchPath);
         Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
         Assert.Empty(result.Items);
         Assert.Equal(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage, result.ErrorMessage);
@@ -309,8 +312,8 @@ public class MercadoLivreApiServiceTests
 
         await sut.SearchProductsAsync(1, "dell i7", 20);
 
-        var search = Assert.Single(handler.Requests);
-        Assert.Equal("Bearer APP_USR-own", search.Authorization);
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-own", request.Authorization));
+        Assert.Single(handler.Requests, request => request.Path == SearchPath);
     }
 
     [Fact]
@@ -336,10 +339,29 @@ public class MercadoLivreApiServiceTests
         Assert.Equal("Dell i7", item.ProductName);
         Assert.Equal(10m, item.Price);
         Assert.Equal("https://http2.mlstatic.com/t.jpg", item.ImageUrl);
+        Assert.StartsWith("https://www.mercadolivre.com.br/dell-i7/p/MLB1", item.SourceUrl, StringComparison.Ordinal);
         Assert.Contains("matt_tool=97303724", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
-        var search = Assert.Single(handler.Requests);
-        Assert.Equal("https://api.mercadolibre.com/sites/MLB/search?q=dell%20i7&limit=20", search.Url);
-        Assert.Equal("Bearer APP_USR-valid", search.Authorization);
+        Assert.Equal([SearchPath, "/products/MLB1"], handler.Requests.Select(request => request.Path));
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-valid", request.Authorization));
+        Assert.DoesNotContain(handler.Requests, request => request.Path.Contains("sites/MLB/search", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldSkipCatalogProductsWithoutBuyBoxWinner()
+    {
+        var handler = new RoutingHandler
+        {
+            SearchBody = """{"results":[{"id":"MLB1"},{"id":"MLB2"},{"id":"MLB3"}]}"""
+        };
+        handler.PathResponses["/products/MLB2"] = (HttpStatusCode.OK, """{"id":"MLB2","name":"Sem oferta","buy_box_winner":null}""");
+        handler.PathResponses["/products/MLB3"] = (HttpStatusCode.Forbidden, """{"message":"forbidden"}""");
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal("MLB1", Assert.Single(result.Items).ProductId);
+        Assert.Equal(4, handler.Requests.Count);
     }
 
     [Fact]
@@ -547,7 +569,10 @@ public class MercadoLivreApiServiceTests
         public HttpStatusCode SearchStatus { get; set; } = HttpStatusCode.OK;
 
         public string SearchBody { get; set; } =
-            """{"results":[{"id":"MLB1","title":"Dell i7","price":10,"permalink":"https://produto.mercadolivre.com.br/MLB-1","thumbnail":"https://http2.mlstatic.com/t.jpg"}]}""";
+            """{"keywords":"dell i7","results":[{"id":"MLB1","name":"Dell i7"}]}""";
+
+        public string ProductBody { get; set; } =
+            """{"id":"MLB1","name":"Dell i7","permalink":"https://www.mercadolivre.com.br/dell-i7/p/MLB1","pictures":[{"url":"https://http2.mlstatic.com/t.jpg"}],"buy_box_winner":{"item_id":"MLB111","price":10}}""";
 
         public string TokenBody { get; set; } = """{"error":"invalid_client"}""";
 
@@ -564,12 +589,15 @@ public class MercadoLivreApiServiceTests
         {
             var uri = request.RequestUri!;
             var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
-            Requests.Add(new CapturedRequest(
-                uri.AbsoluteUri,
-                uri.Host,
-                uri.AbsolutePath,
-                request.Headers.Authorization?.ToString(),
-                body));
+            lock (Requests)
+            {
+                Requests.Add(new CapturedRequest(
+                    uri.AbsoluteUri,
+                    uri.Host,
+                    uri.AbsolutePath,
+                    request.Headers.Authorization?.ToString(),
+                    body));
+            }
 
             var (status, content) = PathResponses.TryGetValue(uri.AbsolutePath, out var routed)
                 ? routed
@@ -579,7 +607,9 @@ public class MercadoLivreApiServiceTests
                         ? (HttpStatusCode.Forbidden, """{"message":"forbidden"}""")
                         : uri.AbsolutePath.StartsWith("/items/", StringComparison.Ordinal)
                             ? (HttpStatusCode.OK, ItemBody)
-                            : (SearchStatus, SearchBody);
+                            : uri.AbsolutePath.StartsWith("/products/", StringComparison.Ordinal) && uri.AbsolutePath != SearchPath
+                                ? (HttpStatusCode.OK, ProductBody)
+                                : (SearchStatus, SearchBody);
             return new HttpResponseMessage(status)
             {
                 RequestMessage = request,

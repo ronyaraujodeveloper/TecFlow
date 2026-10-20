@@ -1638,9 +1638,11 @@ flowchart TB
   BG[BuscaGlobal.razor /busca] --> OCS[OfficialCatalogSearchService]
   OCS --> MLS[MercadoLivreApiService.SearchProductsAsync]
   MLS --> TOKEN{access_token?}
-  TOKEN -->|conta OAuth do tenant ➔ AccessToken fixo ➔ token do app| OAUTH[GET api.mercadolibre.com/sites/MLB/search<br/>Authorization: Bearer, token fora da URL]
+  TOKEN -->|conta OAuth do tenant ➔ AccessToken fixo ➔ token do app| OAUTH[GET api.mercadolibre.com/products/search?status=active&site_id=MLB&q=<br/>Authorization: Bearer, token fora da URL<br/>sites/MLB/search descontinuado pelo ML: 403 para qualquer token]
   TOKEN -->|nenhum| CRED[Badge: Requer OAuth do Mercado Livre]
-  OAUTH -->|200| MATT[InjectMattTool matt_tool do tenant]
+  OAUTH -->|200 ids de catálogo| PROD[GET /products/ID em paralelo, até 4<br/>buy_box_winner price/original_price/free_shipping + permalink /p/MLB]
+  PROD -->|sem buy_box_winner ou recusado| SKIP[produto ignorado + log]
+  PROD -->|com oferta ganhadora| MATT[InjectMattTool matt_tool do tenant]
   MATT --> OK[Badge 🟢 N produtos, sem alerta]
   OAUTH -->|401/403 com token da conta| REFRESH[refresh_token ➔ nova tentativa]
   REFRESH -->|recusado de novo| DENY[Badge ❌ API oficial recusou a busca, reconectar a conta]

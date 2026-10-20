@@ -358,6 +358,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
     }
 
+    /// <summary>
+    /// <c>/sites/MLB/search</c> foi descontinuado pelo Mercado Livre para apps de terceiros (403 com qualquer token);
+    /// a busca usa o buscador de catálogo <c>/products/search</c> e o preço do anúncio ganhador em <c>/products/{id}</c>.
+    /// </summary>
     private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaApiAsync(
         string query,
         string? accessToken,
@@ -365,46 +369,66 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         int maxItems,
         CancellationToken cancellationToken)
     {
-        var searchUri = $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit={maxItems}";
+        var searchUri =
+            $"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={Uri.EscapeDataString(query)}&limit={maxItems}";
 
         var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
         if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
         {
-            _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
+            _logger.LogError("Erro API ML [{StatusCode}] em products/search: {Body}", statusCode, body);
             throw new MercadoLivreSearchForbiddenException($"HTTP {(int)statusCode}");
         }
 
         if (statusCode != HttpStatusCode.OK)
         {
-            _logger.LogError("Erro API ML [{StatusCode}]: {Body}", statusCode, body);
+            _logger.LogError("Erro API ML [{StatusCode}] em products/search: {Body}", statusCode, body);
             throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
         }
 
-        var payload = JsonSerializer.Deserialize<MercadoLivreSearchResponse>(body, SearchJsonOptions);
-        if (payload?.Results == null || payload.Results.Count == 0)
+        var productIds = MercadoLivreItemParser.ParseCatalogSearchIds(body).Take(maxItems).ToList();
+        if (productIds.Count == 0 || string.IsNullOrWhiteSpace(accessToken))
         {
             return [];
         }
 
-        return payload.Results
-            .Select(item => new OfficialCatalogProductDto
+        var offers = new OfficialCatalogProductDto?[productIds.Count];
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, productIds.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
+            async (index, token) =>
             {
-                Platform = "Mercado Livre",
-                PlatformType = MarketplaceType.MercadoLivre,
-                ProductId = string.IsNullOrWhiteSpace(item.Id) ? null : item.Id,
-                ProductName = string.IsNullOrWhiteSpace(item.Title) ? null : item.Title,
-                Price = item.Price,
-                OriginalPrice = item.OriginalPrice,
-                ImageUrl = string.IsNullOrWhiteSpace(item.SecureThumbnail)
-                    ? item.Thumbnail?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase)
-                    : item.SecureThumbnail.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
-                SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.Permalink, affiliateId),
-                Shipping = item.Shipping?.FreeShipping == true ? "Frete grátis" : null,
-                Source = "Api"
+                var (productStatus, productBody) = await SendApiAsync("products", productIds[index], accessToken, token);
+                if (productStatus != HttpStatusCode.OK)
+                {
+                    _logger.LogWarning(
+                        "[ML Busca] Produto de catálogo {ProductId} ignorado [{StatusCode}]: {Body}",
+                        productIds[index],
+                        (int)productStatus,
+                        productBody.Length > 300 ? productBody[..300] : productBody);
+                    return;
+                }
+
+                offers[index] = MercadoLivreItemParser.ParseCatalogOffer(productBody);
+            });
+
+        var items = offers
+            .OfType<OfficialCatalogProductDto>()
+            .Select(item =>
+            {
+                item.SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.SourceUrl, affiliateId);
+                return item;
             })
             .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
             .ToList();
+        _logger.LogInformation(
+            "[ML Busca] products/search '{Query}': {ProductCount} produtos de catálogo, {OfferCount} com anúncio ganhador (buy box).",
+            query,
+            productIds.Count,
+            items.Count);
+        return items;
     }
+
+    private const int CatalogLookupParallelism = 4;
 
     private async Task<(HttpStatusCode StatusCode, string Body)> SendSearchAsync(
         string searchUri,

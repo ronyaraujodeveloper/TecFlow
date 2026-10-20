@@ -129,3 +129,4 @@
 [2026-10-19 23:01:37] fix(ml): redirect_uri do OAuth Mercado Livre no callback publico dev.ofertio.com.br/api/mercadolivre/callback
 [2026-10-19 23:28:44] fix(ml): troca do code OAuth com campos explicitos e log do corpo do erro 400 do Mercado Livre
 [2026-10-19 23:43:20] fix(ml): PKCE S256 no OAuth do Mercado Livre com code_verifier no state selado e code_challenge na autorizacao
+[2026-10-19 23:59:22] fix(ml): Buscar Ofertas pelo catalogo oficial products/search com preco do buy_box_winner, sites/MLB/search descontinuado pelo ML

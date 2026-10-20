@@ -933,6 +933,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Callback público do OAuth ML (`MercadoLivreOAuthPublicCallback`):** `Integrations:MercadoLivre:RedirectUri` passou do túnel ngrok para `https://dev.ofertio.com.br/api/mercadolivre/callback` (servido pela WebUi via YARP até `MercadoLivreController`), usado na URL de autorização e na troca do `code`.
 - [x] **Diagnóstico da troca do code ML (`MercadoLivreOAuthExchangeDiagnostics`):** o POST `oauth/token` ganhou envio próprio; HTTP 400 registra o corpo do ML (`error`/`message`) com `redirect_uri` e `client_id`, sem segredos, e a mensagem da tela traz o código do erro em vez de "Falha na API OAuth (400)".
 - [x] **PKCE no OAuth ML (`MercadoLivreOAuthPkce`):** o diagnóstico revelou `code_verifier is a required parameter`; o `code_verifier` passou a ser gerado por autorização e guardado no state selado, a URL leva `code_challenge` S256 e a troca do `code` envia o verifier.
+- [x] **Busca ML pelo catálogo (`MercadoLivreCatalogSearch`):** com a conta autorizada, `sites/MLB/search` seguia em 403 (endpoint descontinuado pelo ML para terceiros); a Buscar Ofertas passou a usar `products/search` + `products/{id}` (preço do `buy_box_winner`).
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

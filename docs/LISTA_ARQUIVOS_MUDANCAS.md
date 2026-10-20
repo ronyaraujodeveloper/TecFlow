@@ -1708,6 +1708,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** - passa `dto.CodeVerifier` para a troca do `code`.
 - [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs**, **MarketplaceOAuthStateTests.cs** e **IntegracaoLojaServiceTests.cs** - vetor do RFC 7636, challenge na URL e verifier no POST, state sem verifier fora do ML, repasse do verifier no callback.
 
+### MercadoLivreCatalogSearch - Buscar Ofertas pelo catálogo oficial (`sites/MLB/search` descontinuado)
+
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `SearchViaApiAsync` usa `GET /products/search?status=active&site_id=MLB&q=` e `GET /products/{id}` (até 4 em paralelo) para o preço do `buy_box_winner`; log `[ML Busca]` com total de produtos e ofertas.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogSearchIds` e `ParseCatalogOffer` substituem `ParseSearch`.
+- [x] ~~**Ofertio.Business/Dto/MercadoLivreSearchDtos.cs**~~ *(removido)* - formato de `sites/MLB/search`, sem uso.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** e **MercadoLivreItemParserTests.cs** - URL do `products/search`, consulta por produto, produtos sem buy box ignorados, stub HTTP seguro para chamadas paralelas.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

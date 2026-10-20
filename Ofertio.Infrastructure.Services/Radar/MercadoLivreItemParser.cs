@@ -93,61 +93,103 @@ public static class MercadoLivreItemParser
         return (string.IsNullOrWhiteSpace(winnerId) ? null : winnerId.Trim(), name, image);
     }
 
-    public static IReadOnlyList<OfficialCatalogProductDto> ParseSearch(string json)
+    /// <summary><c>/products/search</c>: códigos dos produtos de catálogo, na ordem de relevância do Mercado Livre.</summary>
+    public static IReadOnlyList<string> ParseCatalogSearchIds(string json)
     {
-        var list = new List<OfficialCatalogProductDto>();
+        var ids = new List<string>();
         if (string.IsNullOrWhiteSpace(json))
         {
-            return list;
+            return ids;
         }
 
-        MercadoLivreSearchResponse? payload;
         try
         {
-            payload = JsonSerializer.Deserialize<MercadoLivreSearchResponse>(json, SearchJsonOptions);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("results", out var results)
+                || results.ValueKind != JsonValueKind.Array)
+            {
+                return ids;
+            }
+
+            foreach (var product in results.EnumerateArray())
+            {
+                var id = ReadString(product, "id");
+                if (id is not null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase))
+                {
+                    ids.Add(id);
+                }
+            }
         }
         catch (JsonException)
         {
-            return list;
         }
 
-        foreach (var item in payload?.Results ?? [])
+        return ids;
+    }
+
+    /// <summary>
+    /// <c>/products/{id}</c> como card da Buscar Ofertas: preço e frete do anúncio ganhador da buy box.
+    /// Sem <c>buy_box_winner</c> não há oferta ativa para divulgar.
+    /// </summary>
+    public static OfficialCatalogProductDto? ParseCatalogOffer(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
         {
-            var id = item.Id;
-            var permalink = item.Permalink;
-            if (string.IsNullOrWhiteSpace(permalink) && !string.IsNullOrWhiteSpace(id))
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || root.TryGetProperty("error", out _)
+                || !root.TryGetProperty("buy_box_winner", out var winner)
+                || winner.ValueKind != JsonValueKind.Object)
             {
-                permalink = "https://produto.mercadolivre.com.br/" + id.Replace("MLB", "MLB-", StringComparison.OrdinalIgnoreCase);
+                return null;
             }
 
-            if (string.IsNullOrWhiteSpace(permalink))
+            var price = ReadDecimal(winner, "price");
+            var id = ReadString(root, "id");
+            if (price is null or <= 0 || id is null)
             {
-                continue;
+                return null;
             }
 
-            var image = string.IsNullOrWhiteSpace(item.SecureThumbnail) ? item.Thumbnail : item.SecureThumbnail;
-            list.Add(new OfficialCatalogProductDto
+            var (_, name, image) = ParseCatalogProduct(json);
+            var free = winner.TryGetProperty("shipping", out var shipping)
+                && shipping.ValueKind == JsonValueKind.Object
+                && shipping.TryGetProperty("free_shipping", out var freeEl)
+                && freeEl.ValueKind == JsonValueKind.True;
+            return new OfficialCatalogProductDto
             {
                 Platform = nameof(MarketplaceType.MercadoLivre),
                 PlatformType = MarketplaceType.MercadoLivre,
-                ProductId = string.IsNullOrWhiteSpace(id) ? null : id,
-                ProductName = string.IsNullOrWhiteSpace(item.Title) ? null : item.Title,
-                Price = item.Price,
-                OriginalPrice = item.OriginalPrice,
-                ImageUrl = string.IsNullOrWhiteSpace(image) ? null : image,
-                SourceUrl = permalink,
-                Shipping = item.Shipping?.FreeShipping == true ? "Frete grátis" : null,
+                ProductId = id,
+                ProductName = string.IsNullOrWhiteSpace(name) ? null : name,
+                Price = price,
+                OriginalPrice = ReadDecimal(winner, "original_price"),
+                ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
+                SourceUrl = ReadString(root, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
+                Shipping = free ? "Frete grátis" : null,
                 Source = "Api"
-            });
+            };
         }
-
-        return list;
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
-    private static readonly JsonSerializerOptions SearchJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static string? ReadString(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.String
+        && !string.IsNullOrWhiteSpace(value.GetString())
+            ? value.GetString()!.Trim()
+            : null;
 
     private static decimal? ReadDecimal(JsonElement root, string name)
     {

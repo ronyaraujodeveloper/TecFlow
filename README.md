@@ -626,7 +626,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Dados pela API oficial:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` com `Authorization: Bearer` (refresh automático do token da conta); links de catálogo `/p/MLB...` usam `/products/{id}` ➔ anúncio ganhador.
   - Gerador de Links usa o token OAuth da conta do usuário logado; rotinas em segundo plano (sem usuário) usam `Integrations:MercadoLivre:AccessToken` ou o token do aplicativo, nunca a conta de outro tenant.
   - Sem MLB ou sem resposta da API: oferta "Verificando" e nome pelo slug da URL.
-- [x] **Busca por palavra-chave (Buscar Ofertas):** só `GET /sites/MLB/search` com `Authorization: Bearer` (conta OAuth do tenant com refresh ➔ `AccessToken` fixo ➔ token do app); o token não vai mais na URL (`access_token=` aparecia no log de requisições).
+- [x] **Busca por palavra-chave (Buscar Ofertas):** só API oficial com `Authorization: Bearer` (desde `MercadoLivreCatalogSearch` via `/products/search`; antes `GET /sites/MLB/search`) (conta OAuth do tenant com refresh ➔ `AccessToken` fixo ➔ token do app); o token não vai mais na URL (`access_token=` aparecia no log de requisições).
   - Removidos a busca anônima, a raspagem de `lista.mercadolivre.com.br`, o `MercadoLivreHtmlParser` e a opção `UseOfficialSearchApi`.
   - Recusa da API mostra "A API oficial do Mercado Livre recusou a busca (HTTP 403)..." pedindo para reconectar a conta, no lugar do aviso de verificação anti-robô.
 
@@ -642,7 +642,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **`code_verifier` no state selado:** gerado por autorização (64 caracteres, `MercadoLivrePkce`) e guardado criptografado no `state` (AES-GCM), sem sessão nem banco.
 - [x] **URL de autorização:** `code_challenge` (SHA-256 do verifier em base64url) + `code_challenge_method=S256`.
 - [x] **Troca do code:** o callback abre o state e envia `code_verifier` no `POST oauth/token`; o verifier nunca vai para log nem para a URL.
-- [ ] **Reautorizar:** links de autorização gerados antes do deploy não têm verifier; clicar de novo em "Autorizar Mercado Livre (OAuth)".
+- [x] **Reautorizar:** links de autorização gerados antes do deploy não têm verifier; clicar de novo em "Autorizar Mercado Livre (OAuth)" (conta 'AchadinhoCerto' reautorizada com sucesso).
+
+## 🔎 Busca ML pelo catálogo oficial (`MercadoLivreCatalogSearch`)
+
+- [x] **Causa do 403 com conta autorizada:** o Mercado Livre descontinuou `GET /sites/MLB/search` para apps de terceiros (abril/2025); ele responde `403 forbidden` mesmo com token OAuth válido e renovado.
+- [x] **Nova busca:** `GET /products/search?status=active&site_id=MLB&q={termo}&limit={n}` (buscador de produtos de catálogo, documentado) com `Authorization: Bearer` da conta ➔ `GET /products/{id}` para cada resultado (até 4 em paralelo) ➔ preço, preço original e frete do `buy_box_winner`, link da página do produto (`/p/MLB...`) com `matt_tool`.
+- [x] **Sem oferta ativa:** produto de catálogo sem `buy_box_winner` (ou recusado) é ignorado e registrado no log `[ML Busca]`.
+- [x] **Limpeza:** removidos `MercadoLivreSearchDtos.cs` e `MercadoLivreItemParser.ParseSearch` (formato da busca descontinuada).
+- [ ] **Limite conhecido:** só aparecem produtos de catálogo com anúncio ganhador; anúncios fora do catálogo não são listados pela API oficial.
 
 ---
 

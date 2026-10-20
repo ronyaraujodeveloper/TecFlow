@@ -1759,6 +1759,26 @@ flowchart TB
   SCORE --> BG
 ```
 
+### Pílulas de categoria e modal dos selos (`CategoryChipsAndScoreBadgeModal`)
+
+```mermaid
+flowchart TB
+  RESP[Resposta da busca<br/>MercadoLivreCategories] -->|mesmo termo| MERGE[OfficialCatalogSearchRules.MergeCategoryChips]
+  MERGE --> ALL[_allCategories<br/>todas as categorias do termo]
+  ALL --> VIS[VisibleCategoryChips<br/>6 mais relevantes + selecionada]
+  VIS --> CHIPS[Pílulas: selecionada azul, demais outline]
+  TOGGLE[bi-funnel Outras categorias] -->|_showAllCategories, sem API| VIS
+  CHIPS -->|1 clique em outra categoria| SEARCH[SearchInCategoryAsync]
+  SEARCH -->|categoria já carregada| SCREEN[ApplyScreenFilters]
+  SEARCH -->|nova categoria| OCS[OfficialCatalogSearchService]
+  OCS --> RESP
+  BADGE[button.badge.score-badge<br/>Oportunidade / Vantagem / Segurança] -->|hover ou foco| TIP[initTooltips: data-bs-trigger]
+  BADGE -->|clique ou toque| OPEN[OpenScoreHelpAsync]
+  OPEN -->|hideTooltips| TIP
+  OPEN -->|_scoreHelp + _scoreHelpItem| MODAL["Modal modalBadges<br/>faixas, critérios e números da oferta"]
+  MODAL -->|Entendi ou X| CLOSE[CloseScoreHelp]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

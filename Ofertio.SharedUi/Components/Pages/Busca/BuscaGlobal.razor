@@ -104,34 +104,53 @@
             </div>
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-categoria">Categoria (Mercado Livre)</label>
-                <select id="busca-categoria" class="form-select" @bind="_mlCategory" @bind:after="ApplyScreenFilters" disabled="@(_categories.Count == 0)">
-                    <option value="">@(_categories.Count == 0 ? "Busque para sugerir" : "Todas")</option>
-                    @foreach (var category in _categories)
+                <select id="busca-categoria" class="form-select" @bind="_mlCategory" @bind:after="ApplyScreenFilters" disabled="@(_allCategories.Count == 0)">
+                    <option value="">@(_allCategories.Count == 0 ? "Busque para sugerir" : "Todas")</option>
+                    @foreach (var category in _allCategories)
                     {
                         <option value="@category.Id">@category.Name</option>
                     }
                 </select>
             </div>
         </div>
-        @if (_categories.Count > 0)
+        @if (_allCategories.Count > 0)
         {
             <div class="d-flex flex-wrap align-items-center justify-content-center gap-1 mt-3" aria-label="Categorias sugeridas pelo Mercado Livre">
                 <span class="small text-muted me-1">Buscar só em:</span>
                 <button type="button"
                         class="btn btn-sm rounded-pill @(string.IsNullOrEmpty(_mlCategory) ? "btn-primary" : "btn-outline-secondary")"
+                        aria-pressed="@(string.IsNullOrEmpty(_mlCategory) ? "true" : "false")"
                         disabled="@_busy"
                         @onclick="() => SearchInCategoryAsync(null)">
                     <i class="bi bi-grid me-1" aria-hidden="true"></i>Todas
                 </button>
-                @foreach (var category in _categories)
+                @foreach (var category in OfficialCatalogSearchRules.VisibleCategoryChips(_allCategories, _mlCategory, _showAllCategories))
                 {
                     var categoryId = category.Id;
+                    var selected = IsSelectedCategory(categoryId);
                     <button type="button"
-                            class="btn btn-sm rounded-pill @(string.Equals(_mlCategory, categoryId, StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline-secondary")"
+                            class="btn btn-sm rounded-pill @(selected ? "btn-primary" : "btn-outline-secondary")"
+                            aria-pressed="@(selected ? "true" : "false")"
                             disabled="@_busy"
                             title="Buscar de novo no Mercado Livre só em @category.Name"
                             @onclick="() => SearchInCategoryAsync(categoryId)">
-                        <i class="bi bi-tag me-1" aria-hidden="true"></i>@category.Name
+                        <i class="bi @(selected ? "bi-check2-circle" : "bi-tag") me-1" aria-hidden="true"></i>@category.Name
+                    </button>
+                }
+                @if (_allCategories.Count > OfficialCatalogSearchRules.MaxVisibleCategoryChips)
+                {
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary ms-1"
+                            aria-expanded="@(_showAllCategories ? "true" : "false")"
+                            @onclick="() => _showAllCategories = !_showAllCategories">
+                        @if (_showAllCategories)
+                        {
+                            <i class="bi bi-funnel-fill" aria-hidden="true"></i><span> Menos categorias</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-funnel" aria-hidden="true"></i><span> Outras categorias (@(_allCategories.Count - OfficialCatalogSearchRules.MaxVisibleCategoryChips))</span>
+                        }
                     </button>
                 }
             </div>
@@ -286,33 +305,36 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-1 mb-2">
-                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore)">
-                                    Oportunidade @item.OpportunityScore<i class="bi bi-question-circle ms-1 score-help-icon"
-                                                                          tabindex="0"
-                                                                          role="button"
-                                                                          aria-label="O que é Oportunidade"
-                                                                          data-bs-toggle="tooltip"
-                                                                          data-bs-placement="top"
-                                                                          title="@OpportunityHelp"></i>
-                                </span>
-                                <span class="badge text-bg-light border">
-                                    Vantagem @item.AdvantageScore<i class="bi bi-question-circle ms-1 text-muted score-help-icon"
-                                                                    tabindex="0"
-                                                                    role="button"
-                                                                    aria-label="O que é Vantagem"
-                                                                    data-bs-toggle="tooltip"
-                                                                    data-bs-placement="top"
-                                                                    title="@AdvantageHelp"></i>
-                                </span>
-                                <span class="badge text-bg-light border">
-                                    Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)<i class="bi bi-question-circle ms-1 text-muted score-help-icon"
-                                                                                                          tabindex="0"
-                                                                                                          role="button"
-                                                                                                          aria-label="O que é Segurança"
-                                                                                                          data-bs-toggle="tooltip"
-                                                                                                          data-bs-placement="top"
-                                                                                                          title="@SafetyHelp"></i>
-                                </span>
+                                <button type="button"
+                                        class="badge score-badge cursor-pointer @OpportunityBadgeClass(item.OpportunityScore)"
+                                        aria-label="Oportunidade @item.OpportunityScore: ver como é calculada"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        data-bs-trigger="hover focus"
+                                        title="@OpportunityHelp"
+                                        @onclick="() => OpenScoreHelpAsync(ScoreHelpKind.Opportunity, item)">
+                                    Oportunidade @item.OpportunityScore<i class="bi bi-question-circle ms-1" aria-hidden="true"></i>
+                                </button>
+                                <button type="button"
+                                        class="badge score-badge cursor-pointer text-bg-light border"
+                                        aria-label="Vantagem @item.AdvantageScore: ver como é calculada"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        data-bs-trigger="hover focus"
+                                        title="@AdvantageHelp"
+                                        @onclick="() => OpenScoreHelpAsync(ScoreHelpKind.Advantage, item)">
+                                    Vantagem @item.AdvantageScore<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                </button>
+                                <button type="button"
+                                        class="badge score-badge cursor-pointer text-bg-light border"
+                                        aria-label="Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore): ver como é calculada"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        data-bs-trigger="hover focus"
+                                        title="@SafetyHelp"
+                                        @onclick="() => OpenScoreHelpAsync(ScoreHelpKind.Safety, item)">
+                                    Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                </button>
                             </div>
                             <h2 class="h6">@(item.ProductName ?? "Produto")</h2>
                             <p class="fw-semibold mb-1">
@@ -532,7 +554,7 @@
                         <li><strong>Vantagem (0–100):</strong> desconto (até 35), frete grátis (10), comissão (até 20), avaliação (até 15), ranking de mais vendidos (até 20) e unidades vendidas (até 10).</li>
                         <li><strong>Segurança:</strong> parte de 30 e soma loja oficial (+30), reputação verde do vendedor (+25), MercadoLíder (até +15), envio Full (+10), garantia (+5) e alta aprovação (+5); reputação ruim, produto usado e muitas avaliações negativas descontam. Alta a partir de @OfficialCatalogSearchRules.TrustedSafetyScore.</li>
                         <li><strong>Oportunidade:</strong> média de vantagem e segurança (0–39 baixa, 40–69 boa, 70–100 super oferta); só reordena a lista quando você escolhe "Melhor vantagem + segurança".</li>
-                        <li>Passe o mouse ou toque no <i class="bi bi-question-circle" aria-hidden="true"></i> dos selos do card para ver a explicação de cada nota.</li>
+                        <li>Passe o mouse sobre os selos Oportunidade, Vantagem e Segurança (<i class="bi bi-question-circle" aria-hidden="true"></i>) para um resumo; clique ou toque no selo inteiro para abrir a explicação completa com os números daquela oferta.</li>
                         <li>O painel "Métricas" resume as ofertas na tela: faixa e mediana de preço, % de vendedores confiáveis, nota média, maior comissão, melhor oportunidade e mais vendido.</li>
                     </ul>
 
@@ -551,7 +573,7 @@
                         <li>Produtos "família" (ex.: um modelo com várias configurações) trazem até @OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct variações com oferta.</li>
                         <li>Sem nenhuma oferta, a busca tenta sozinha um termo mais curto (remove as últimas palavras) e avisa o termo usado.</li>
                         <li><strong>Carregar mais</strong> continua a análise de onde parou, só no Mercado Livre.</li>
-                        <li><strong>Categoria</strong> é sugerida pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca e volta a "Todas" quando o termo muda. Os atalhos "Buscar só em" consultam o Mercado Livre de novo só naquela categoria, com 1 clique.</li>
+                        <li><strong>Categoria</strong> é sugerida pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca e volta a "Todas" quando o termo muda. Os atalhos "Buscar só em" consultam o Mercado Livre de novo só naquela categoria, com 1 clique; todas as categorias encontradas para o termo continuam visíveis (a selecionada em azul) para trocar direto. Com mais de @OfficialCatalogSearchRules.MaxVisibleCategoryChips categorias, "Outras categorias" mostra o restante sem nova consulta.</li>
                         <li>A busca de catálogo do Mercado Livre já devolve os produtos na relevância do próprio Mercado Livre; essa ordem é mantida em "Relevância (Padrão Mercado Livre)".</li>
                         <li>A API do Mercado Livre não informa cupons: "Apenas com cupom" esconde os resultados do Mercado Livre.</li>
                     </ul>
@@ -573,6 +595,69 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" @onclick="() => _showRules = false">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (_scoreHelp is { } scoreHelp && _scoreHelpItem is { } helpItem)
+{
+    <div id="modalBadges" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="busca-nota-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 id="busca-nota-title" class="modal-title h5">
+                        <i class="bi bi-question-circle me-1" aria-hidden="true"></i>@ScoreHelpTitle(scoreHelp)
+                    </h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseScoreHelp"></button>
+                </div>
+                <div class="modal-body small">
+                    @switch (scoreHelp)
+                    {
+                        case ScoreHelpKind.Opportunity:
+                            <p>Mede a atratividade da oferta de 0 a 100: é a média entre <strong>Vantagem</strong> e <strong>Segurança</strong>. Uma oferta só fica alta quando é vantajosa <em>e</em> vem de um vendedor confiável.</p>
+                            <ul class="list-unstyled mb-3">
+                                <li class="mb-1"><span class="badge text-bg-secondary me-2">0 a 39</span>Baixa: pouca vantagem ou vendedor pouco confiável.</li>
+                                <li class="mb-1"><span class="badge text-bg-warning me-2">40 a 69</span>Boa Oportunidade (Recomendado).</li>
+                                <li class="mb-1"><span class="badge text-bg-success me-2">70 a 100</span>Super Oferta!</li>
+                            </ul>
+                            <p class="mb-0">A Oportunidade só reordena a lista quando a ordenação é "Melhor vantagem + segurança"; em "Relevância" vale a ordem do Mercado Livre.</p>
+                            break;
+                        case ScoreHelpKind.Advantage:
+                            <p>Mede o quanto a oferta compensa, de 0 a 100. O principal componente é o <strong>desconto real sobre o preço de tabela</strong> (o preço original riscado): cada 1% de desconto vale 1 ponto, até 35.</p>
+                            <ul class="mb-3">
+                                <li>Desconto sobre o preço de tabela: até 35</li>
+                                <li>Frete grátis: 10</li>
+                                <li>Comissão de afiliado: até 20</li>
+                                <li>Avaliação dos compradores: até 15</li>
+                                <li>Ranking de mais vendidos: até 20</li>
+                                <li>Unidades vendidas: até 10</li>
+                            </ul>
+                            <p class="mb-0">Vantagem 0 indica preço normal de tabela, sem outros diferenciais.</p>
+                            break;
+                        default:
+                            <p>Mede a confiabilidade do vendedor. Parte de 30 pontos e soma ou desconta conforme os dados oficiais da loja.</p>
+                            <ul class="list-unstyled mb-2">
+                                <li class="mb-1"><span class="badge text-bg-success me-2">Alta</span>@OfficialCatalogSearchRules.TrustedSafetyScore pontos ou mais: Lojas Oficiais e MercadoLíder com reputação verde.</li>
+                                <li class="mb-1"><span class="badge text-bg-warning me-2">Média</span>45 a @(OfficialCatalogSearchRules.TrustedSafetyScore - 1) pontos: vendedor sem reputação consolidada.</li>
+                                <li class="mb-1"><span class="badge text-bg-secondary me-2">Baixa</span>Abaixo de 45: reputação ruim ou sem dados do vendedor.</li>
+                            </ul>
+                            <ul class="mb-0">
+                                <li>Soma: Loja Oficial (+30), reputação verde (+25) ou verde-clara (+15), MercadoLíder Platinum (+15), Gold (+10) ou Silver (+5), envio Full (+10), garantia (+5), aprovação de 97% ou mais (+5).</li>
+                                <li>Desconta: reputação laranja (−15) ou vermelha (−30), aprovação abaixo de 90% (−10), produto usado (−10), avaliação baixa (−5).</li>
+                            </ul>
+                            break;
+                    }
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        <strong>Nesta oferta:</strong> @ScoreHelpSummary(scoreHelp, helpItem)
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="CloseScoreHelp">
+                        <i class="bi bi-check2 me-1" aria-hidden="true"></i>Entendi
+                    </button>
                 </div>
             </div>
         </div>
@@ -651,8 +736,9 @@
     private bool _savingRates;
     private string? _ratesMessage;
     private string? _mlCategory;
-    private List<OfficialCatalogCategoryDto> _categories = [];
+    private List<OfficialCatalogCategoryDto> _allCategories = [];
     private string? _categoriesKeyword;
+    private bool _showAllCategories;
     private bool _busy;
     private bool _searching;
     private string _searchingStores = "as lojas";
@@ -800,13 +886,86 @@
         score >= 70 ? "text-bg-success" : score >= 40 ? "text-bg-warning" : "text-bg-secondary";
 
     private const string OpportunityHelp =
-        "Score de atratividade da oferta (0 a 100): média entre Vantagem e Segurança.\n• 0-39: Baixa\n• 40-69: Boa Oportunidade (Recomendado)\n• 70-100: Super Oferta!";
+        "Score de atratividade da oferta (0 a 100): média entre Vantagem e Segurança.\n• 0-39: Baixa\n• 40-69: Boa Oportunidade (Recomendado)\n• 70-100: Super Oferta!\nClique no selo para ver a explicação completa.";
 
     private const string AdvantageHelp =
-        "Score de vantagem da oferta (0 a 100).\n• Desconto real sobre o preço original: até 35\n• Frete grátis: 10 · Comissão: até 20\n• Avaliação: até 15 · Mais vendidos: até 20 · Unidades vendidas: até 10\nVantagem 0 indica preço normal de tabela, sem outros diferenciais.";
+        "Score de vantagem da oferta (0 a 100).\n• Desconto real sobre o preço original: até 35\n• Frete grátis: 10 · Comissão: até 20\n• Avaliação: até 15 · Mais vendidos: até 20 · Unidades vendidas: até 10\nVantagem 0 indica preço normal de tabela, sem outros diferenciais.\nClique no selo para ver a explicação completa.";
 
     private const string SafetyHelp =
-        "Nível de confiabilidade do vendedor.\n• Alta: Lojas Oficiais e MercadoLíder com reputação verde\n• Média/Baixa: Vendedores sem reputação consolidada.\nEnvio Full, garantia e produto novo também contam.";
+        "Nível de confiabilidade do vendedor.\n• Alta: Lojas Oficiais e MercadoLíder com reputação verde\n• Média/Baixa: Vendedores sem reputação consolidada.\nEnvio Full, garantia e produto novo também contam.\nClique no selo para ver a explicação completa.";
+
+    private enum ScoreHelpKind
+    {
+        Opportunity,
+        Advantage,
+        Safety
+    }
+
+    private ScoreHelpKind? _scoreHelp;
+    private OfficialCatalogProductDto? _scoreHelpItem;
+
+    private async Task OpenScoreHelpAsync(ScoreHelpKind kind, OfficialCatalogProductDto item)
+    {
+        _scoreHelp = kind;
+        _scoreHelpItem = item;
+        try
+        {
+            await JS.InvokeVoidAsync("hideTooltips");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Não foi possível fechar os tooltips antes do modal de notas.");
+        }
+    }
+
+    private void CloseScoreHelp()
+    {
+        _scoreHelp = null;
+        _scoreHelpItem = null;
+    }
+
+    private static string ScoreHelpTitle(ScoreHelpKind kind) => kind switch
+    {
+        ScoreHelpKind.Opportunity => "Oportunidade (0 a 100)",
+        ScoreHelpKind.Advantage => "Vantagem (0 a 100)",
+        _ => "Segurança (Alta, Média, Baixa)"
+    };
+
+    private static string ScoreHelpSummary(ScoreHelpKind kind, OfficialCatalogProductDto item)
+    {
+        switch (kind)
+        {
+            case ScoreHelpKind.Opportunity:
+                var band = item.OpportunityScore >= 70 ? "Super Oferta!"
+                    : item.OpportunityScore >= 40 ? "Boa Oportunidade" : "Baixa";
+                return $"Oportunidade {item.OpportunityScore} ({band}) = média de Vantagem {item.AdvantageScore} e Segurança {item.SafetyScore}.";
+            case ScoreHelpKind.Advantage:
+                var discount = OfficialCatalogSearchRules.DiscountPercent(item);
+                var discountText = discount > 0
+                    ? $"{discount:0}% de desconto (de {ProductMetadataHtmlParser.FormatBrl(item.OriginalPrice)} por {ProductMetadataHtmlParser.FormatBrl(item.Price)})"
+                    : "sem desconto sobre o preço de tabela";
+                return $"Vantagem {item.AdvantageScore}, {discountText}.";
+            default:
+                var traits = new List<string>();
+                if (item.IsOfficialStore)
+                {
+                    traits.Add("Loja Oficial");
+                }
+
+                if (OfficialCatalogSearchRules.ReputationLabel(item.SellerReputationLevel) is { } reputation)
+                {
+                    traits.Add(reputation);
+                }
+
+                if (item.IsFulfillment)
+                {
+                    traits.Add("envio Full");
+                }
+
+                var detail = traits.Count == 0 ? "sem dados de reputação do vendedor" : string.Join(", ", traits);
+                return $"Segurança {OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)} ({item.SafetyScore} pontos): {detail}.";
+        }
+    }
 
     private bool _refreshTooltips;
 
@@ -914,9 +1073,23 @@
         _refreshTooltips = true;
     }
 
+    private bool IsSelectedCategory(string? categoryId) =>
+        !string.IsNullOrEmpty(_mlCategory)
+        && string.Equals(_mlCategory, categoryId, StringComparison.OrdinalIgnoreCase);
+
     private async Task SearchInCategoryAsync(string? categoryId)
     {
+        var alreadyLoaded = _searched
+            && _error is null
+            && string.Equals(_lastFilter?.MercadoLivreCategory, categoryId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_lastFilter?.Keyword, _keyword?.Trim(), StringComparison.OrdinalIgnoreCase);
         _mlCategory = categoryId;
+        if (alreadyLoaded)
+        {
+            ApplyScreenFilters();
+            return;
+        }
+
         await SearchAsync();
     }
 
@@ -990,7 +1163,8 @@
         if (!string.Equals(keyword, _categoriesKeyword, StringComparison.OrdinalIgnoreCase))
         {
             _mlCategory = null;
-            _categories = [];
+            _allCategories = [];
+            _showAllCategories = false;
         }
 
         _busy = true;
@@ -1024,7 +1198,7 @@
             ApplyMercadoLivreScan(result.Data, keyword);
             if (result.Data.MercadoLivreCategories.Count > 0)
             {
-                _categories = result.Data.MercadoLivreCategories;
+                _allCategories = OfficialCatalogSearchRules.MergeCategoryChips(_allCategories, result.Data.MercadoLivreCategories);
                 _categoriesKeyword = keyword;
             }
 

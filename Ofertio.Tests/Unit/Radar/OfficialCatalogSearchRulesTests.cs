@@ -126,6 +126,34 @@ public class OfficialCatalogSearchRulesTests
         Assert.Equal(expected, OfficialCatalogSearchRules.IsAccessoryOffer(title, keyword));
     }
 
+    private static OfficialCatalogCategoryDto Category(string id) => new() { Id = id, Name = id };
+
+    [Fact]
+    public void MergeCategoryChips_ShouldKeepOriginalOrderAndAppendOnlyNewCategories()
+    {
+        var original = new[] { Category("MLB-CHINELOS"), Category("MLB-SANDALIAS"), Category("MLB-TENIS") };
+
+        var merged = OfficialCatalogSearchRules.MergeCategoryChips(
+            original,
+            [Category("mlb-sandalias"), Category("MLB-MEIAS"), Category(" ")]);
+
+        Assert.Equal(["MLB-CHINELOS", "MLB-SANDALIAS", "MLB-TENIS", "MLB-MEIAS"], merged.Select(category => category.Id));
+    }
+
+    [Fact]
+    public void VisibleCategoryChips_Collapsed_ShouldShowTopCategoriesPlusTheSelectedOne()
+    {
+        var all = Enumerable.Range(1, 9).Select(index => Category($"MLB-{index}")).ToList();
+
+        var collapsed = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-8", expanded: false);
+        var expanded = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-8", expanded: true);
+        var withinTop = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-2", expanded: false);
+
+        Assert.Equal(["MLB-1", "MLB-2", "MLB-3", "MLB-4", "MLB-5", "MLB-6", "MLB-8"], collapsed.Select(category => category.Id));
+        Assert.Equal(9, expanded.Count);
+        Assert.Equal(OfficialCatalogSearchRules.MaxVisibleCategoryChips, withinTop.Count);
+    }
+
     [Fact]
     public void FilterLoadedResults_MainProductsOnly_ShouldDropAccessoriesAndKeepRelevanceOrder()
     {

@@ -2841,11 +2841,20 @@ html, body {
     text-align: left;
 }
 
-.score-help-icon {
-    cursor: help;
+.cursor-pointer {
+    cursor: pointer;
+    user-select: none;
 }
 
-.score-help-icon:focus-visible {
+.score-badge {
+    border: 0;
+}
+
+.score-badge:hover {
+    filter: brightness(0.95);
+}
+
+.score-badge:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }

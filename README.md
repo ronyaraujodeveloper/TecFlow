@@ -739,6 +739,13 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Tooltips:** ícone (?) com `data-bs-toggle="tooltip"`, `data-bs-placement="top"` e `title`; `window.initTooltips` (`hover focus click`) no primeiro render e após cada atualização da lista.
 - [ ] **Validar com a conta real:** buscar "iphone 15" com e sem "Apenas produtos principais" e conferir os atalhos de categoria.
 
+## 🏷️ Pílulas de categoria e selos clicáveis (`CategoryChipsAndScoreBadgeModal`)
+
+- [x] **Categorias preservadas:** todas as categorias encontradas para o termo ficam na tela (`MergeCategoryChips`); a selecionada fica azul e as demais outline; troca direta com 1 clique, sem passar por "Todas".
+- [x] **Outras categorias:** acima de 6, o botão `bi-funnel` alterna o restante sem nova chamada à API (a selecionada sempre aparece).
+- [x] **Selos clicáveis:** o selo inteiro de Oportunidade, Vantagem e Segurança tem tooltip (hover/foco), `cursor: pointer; user-select: none` e abre o modal de explicação controlado pelo componente, com os números daquela oferta.
+- [ ] **Validar no navegador:** buscar "chinelo", clicar em "Sandálias e tamancos", trocar direto para outra pílula e abrir o modal de cada selo (desktop e celular).
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

@@ -137,3 +137,4 @@
 [2026-10-20 19:30:44] feat(busca): comissao do ML estimada por categoria (tabela de afiliado), galeria de imagens em modal e botao Abrir ao lado de Converter
 [2026-10-20 19:38:56] feat(busca): tooltips (?) nos selos Oportunidade, Vantagem e Seguranca com Bootstrap Tooltip inicializado no OnAfterRenderAsync
 [2026-10-20 20:09:16] feat(busca): relevancia nativa do ML como ordenacao padrao, categorias em 1 clique, filtro anti-acessorios e tooltips nos icones com initTooltips
+[2026-10-20 20:41:37] feat(busca): pilulas de categoria preservadas com selecao em azul e Outras categorias, selos clicaveis com modal de explicacao das notas

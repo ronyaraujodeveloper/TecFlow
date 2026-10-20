@@ -1793,6 +1793,14 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - `.score-help-icon`.
 - [x] **Ofertio.Tests/Unit/Radar/** - `IsAccessoryOffer`, filtro de produtos principais com ordem de relevância e varredura do ML sem acessórios e sem `sort=`.
 
+### CategoryChipsAndScoreBadgeModal - Pílulas de categoria preservadas e selos clicáveis com modal de explicação
+
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `MergeCategoryChips` (une as categorias do termo sem perder a ordem original), `VisibleCategoryChips` e `MaxVisibleCategoryChips` (6 mais relevantes + a selecionada; o resto em "Outras categorias").
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - `_allCategories` preserva todas as categorias do termo (buscar numa categoria não remove as outras pílulas), selecionada em azul (`btn-primary`, `aria-pressed`) e demais outline; troca direta com 1 clique; clicar na categoria já carregada não chama a API; botão `bi-funnel` "Outras categorias" alterna as demais sem nova consulta. Selos Oportunidade/Vantagem/Segurança viraram `<button class="badge score-badge cursor-pointer">` com tooltip no selo inteiro (`hover focus`) e clique que abre o modal `#modalBadges` (estado `_scoreHelp`/`_scoreHelpItem` no componente) com faixas, critérios e os números da oferta.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - `initTooltips` respeita `data-bs-trigger` do elemento; `window.hideTooltips` fecha os balões ao abrir o modal.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.cursor-pointer` (`cursor: pointer; user-select: none`) e `.score-badge` no lugar de `.score-help-icon`.
+- [x] **Ofertio.Tests/Unit/Radar/OfficialCatalogSearchRulesTests.cs** - `MergeCategoryChips` e `VisibleCategoryChips`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -531,6 +531,57 @@ public static class OfficialCatalogSearchRules
     private static int Percent(int part, int total) =>
         total == 0 ? 0 : (int)Math.Round(part * 100m / total, MidpointRounding.AwayFromZero);
 
+    /// <summary>Pílulas de categoria ("Buscar só em") exibidas antes de "Outras categorias".</summary>
+    public const int MaxVisibleCategoryChips = 6;
+
+    /// <summary>
+    /// Une as categorias já exibidas para o termo com as de uma nova busca do mesmo termo: a ordem original
+    /// (relevância do Mercado Livre) é mantida e só as novas entram no fim. Buscar numa categoria devolve só ela,
+    /// e as demais pílulas precisam continuar na tela.
+    /// </summary>
+    public static List<OfficialCatalogCategoryDto> MergeCategoryChips(
+        IEnumerable<OfficialCatalogCategoryDto> known,
+        IEnumerable<OfficialCatalogCategoryDto> incoming)
+    {
+        var merged = new List<OfficialCatalogCategoryDto>();
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var category in known.Concat(incoming))
+        {
+            if (!string.IsNullOrWhiteSpace(category.Id) && ids.Add(category.Id.Trim()))
+            {
+                merged.Add(category);
+            }
+        }
+
+        return merged;
+    }
+
+    /// <summary>
+    /// Pílulas visíveis: todas quando expandido; recolhido, as <paramref name="max"/> primeiras (mais relevantes)
+    /// e também a selecionada, se ela estiver entre as "outras".
+    /// </summary>
+    public static List<OfficialCatalogCategoryDto> VisibleCategoryChips(
+        IReadOnlyList<OfficialCatalogCategoryDto> all,
+        string? selectedId,
+        bool expanded,
+        int max = MaxVisibleCategoryChips)
+    {
+        if (expanded || all.Count <= max)
+        {
+            return [.. all];
+        }
+
+        var visible = all.Take(max).ToList();
+        var selected = all.Skip(max).FirstOrDefault(category =>
+            string.Equals(category.Id, selectedId, StringComparison.OrdinalIgnoreCase));
+        if (selected is not null)
+        {
+            visible.Add(selected);
+        }
+
+        return visible;
+    }
+
     public static decimal DiscountPercent(OfficialCatalogProductDto item) =>
         item.Price is > 0 && item.OriginalPrice > item.Price
             ? (item.OriginalPrice.Value - item.Price.Value) / item.OriginalPrice.Value * 100m

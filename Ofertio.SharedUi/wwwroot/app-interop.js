@@ -132,7 +132,8 @@
 
 window.scrollToTop = window.ofertioAppInterop.scrollToTop;
 
-/* Tooltips do Bootstrap ([data-bs-toggle="tooltip"]) em elementos renderizados pelo Blazor: hover, foco e clique/toque.
+/* Tooltips do Bootstrap ([data-bs-toggle="tooltip"]) em elementos renderizados pelo Blazor: hover, foco e clique/toque,
+   ou o data-bs-trigger do elemento (a config passada em JS sobrepõe os data-attributes no Bootstrap).
    initTooltips pode ser chamado a cada atualização da lista: reaproveita a instância de cada elemento e descarta
    as de elementos que o Blazor removeu (senão o balão ficaria órfão na tela). */
 (function registerTooltips() {
@@ -165,7 +166,7 @@ window.scrollToTop = window.ofertioAppInterop.scrollToTop;
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl, {
-                trigger: "hover focus click",
+                trigger: tooltipTriggerEl.getAttribute("data-bs-trigger") || "hover focus click",
                 customClass: "ofertio-tooltip",
                 container: "body"
             });
@@ -173,6 +174,13 @@ window.scrollToTop = window.ofertioAppInterop.scrollToTop;
             return tooltip;
         });
         return instances.size;
+    };
+
+    window.hideTooltips = function () {
+        instances.forEach(function (tooltip) {
+            tooltip.hide();
+        });
+        return true;
     };
 
     window.disposeTooltips = function () {

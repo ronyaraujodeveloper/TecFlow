@@ -1683,6 +1683,30 @@ flowchart TB
   BG -->|ⓘ Como funciona| RULES[Modal de regras: lojas conectadas, matt_tool, limites da varredura]
 ```
 
+### Métricas de afiliado da Buscar Ofertas (`AffiliateOfferMetrics`)
+
+```mermaid
+flowchart TB
+  SCAN[MercadoLivreApiService.ScanCatalogAsync] --> ENR[EnrichCatalogMetricsAsync]
+  ENR --> MG[GET /items?ids=...&attributes=sold_quantity,seller_id,...<br/>lotes de 20]
+  ENR --> USR[GET /users/SELLER<br/>reputação, MercadoLíder, vendas concluídas]
+  ENR --> REV[GET /reviews/item/ITEM?catalog_product_id=<br/>nota média e total]
+  ENR --> HL[GET /highlights/MLB/category/CAT<br/>ranking de mais vendidos]
+  SHP[ShopeeAffiliateOfferService productOfferV2] -->|commissionRate, commission, sales, ratingStar, shopType| OCS
+  MG --> OCS[OfficialCatalogSearchService]
+  USR --> OCS
+  REV --> OCS
+  HL --> OCS
+  PROF[(AffiliateMiningProfiles<br/>MercadoLivre/AmazonCommissionPercent)] -->|LoadCommissionRatesAsync| OCS
+  OCS --> COM[ApplyCommission: API Shopee ou sua taxa]
+  COM --> SCORE[ScoreOffer: Vantagem, Segurança, Oportunidade, destaques e alertas]
+  SCORE --> SORT[ApplySort melhor_oportunidade / mais_vendidos / maior_comissao / melhor_avaliacao]
+  SORT --> BG[BuscaGlobal.razor]
+  BG --> MET[BuildMetrics: painel de métricas das ofertas na tela]
+  BG -->|modal de regras: salvar taxas| RADAR[IOfferRadarApiService PUT api/radar/perfil]
+  RADAR --> PROF
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

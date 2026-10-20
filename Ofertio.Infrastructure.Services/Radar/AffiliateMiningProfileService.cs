@@ -44,6 +44,8 @@ public sealed class AffiliateMiningProfileService : IAffiliateMiningProfileServi
         entity.MinCommissionPercent = request.MinCommissionPercent is > 0 and <= 90
             ? decimal.Round(request.MinCommissionPercent, 2)
             : 5;
+        entity.MercadoLivreCommissionPercent = OfficialCatalogSearchRules.NormalizeCommissionPercent(request.MercadoLivreCommissionPercent);
+        entity.AmazonCommissionPercent = OfficialCatalogSearchRules.NormalizeCommissionPercent(request.AmazonCommissionPercent);
         entity.RestrictToActiveStores = request.RestrictToActiveStores;
         entity.AutoPilotEnabled = request.AutoPilotEnabled;
         entity.AutoPilotChannel = NormalizeChannel(request.AutoPilotChannel);
@@ -93,6 +95,8 @@ public sealed class AffiliateMiningProfileService : IAffiliateMiningProfileServi
             MinTicket = entity.MinTicket,
             MaxTicket = entity.MaxTicket,
             MinCommissionPercent = entity.MinCommissionPercent,
+            MercadoLivreCommissionPercent = entity.MercadoLivreCommissionPercent,
+            AmazonCommissionPercent = entity.AmazonCommissionPercent,
             RestrictToActiveStores = entity.RestrictToActiveStores,
             AutoPilotEnabled = entity.AutoPilotEnabled,
             AutoPilotChannel = entity.AutoPilotChannel,

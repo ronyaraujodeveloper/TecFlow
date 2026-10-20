@@ -677,6 +677,16 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Modal de regras:** "Como funciona a busca e as regras" mostra as lojas conectadas do usuário, o `matt_tool` usado e os limites/regras da busca.
 - [ ] **Validar com a conta real:** repetir "dell inspiron" + Notebooks e conferir o selo "N ofertas · 100 produtos analisados".
 
+## 📊 Métricas de afiliado na Buscar Ofertas (`AffiliateOfferMetrics`)
+
+- [x] **Comissão:** Shopee pela API (`commissionRate`/`commission`); Mercado Livre e Amazon pela taxa do usuário (modal de regras ou Radar → Perfil), pois as APIs não expõem a comissão de afiliado.
+- [x] **Vendidos, avaliações e mais vendidos:** ML via `/items` em lote, `/reviews/item` e `/highlights` da categoria; Shopee via `sales` e `ratingStar`. Sem dado, o card mostra "não informado".
+- [x] **Vantagem e segurança:** notas 0–100 por oferta (desconto, frete, comissão, avaliação, ranking, vendas × loja oficial, reputação, MercadoLíder, Full, garantia, condição) e "Oportunidade" como ordenação padrão.
+- [x] **Painel de métricas:** faixa/mediana de preço, % vendedores confiáveis, % loja oficial e frete grátis, nota média, maior comissão, melhor oportunidade, mais vendido e menor preço.
+- [x] **Filtros de tela:** somente loja oficial, vendedores confiáveis e mais vendidos.
+- [ ] **Informar sua taxa do ML:** salvar a taxa média do painel de afiliados no modal de regras para ver a comissão estimada.
+- [ ] **Validar com a conta real:** conferir no log `[ML Busca] Métricas:` quantos vendedores, avaliações, ranking e vendas a API devolveu (o ML pode omitir `sold_quantity` para quem não é o vendedor).
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

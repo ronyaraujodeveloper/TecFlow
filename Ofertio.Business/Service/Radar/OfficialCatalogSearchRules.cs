@@ -142,6 +142,9 @@ public static class OfficialCatalogSearchRules
                 || item.PlatformType != MarketplaceType.MercadoLivre
                 || string.IsNullOrWhiteSpace(item.DomainId)
                 || string.Equals(item.DomainId, category, StringComparison.OrdinalIgnoreCase))
+            .Where(item => filter.OfficialStoreOnly != true || item.IsOfficialStore)
+            .Where(item => filter.TrustedSellersOnly != true || item.SafetyScore >= TrustedSafetyScore)
+            .Where(item => filter.BestSellersOnly != true || item.BestSellerPosition is not null)
             .Where(item => PassesOptionalFilters(item, filter))
             .ToList();
     }
@@ -172,21 +175,275 @@ public static class OfficialCatalogSearchRules
             || item.Shipping.Contains("gratis", StringComparison.OrdinalIgnoreCase)
             || item.Shipping.Contains("free", StringComparison.OrdinalIgnoreCase));
 
+    public const string SortBestOpportunity = "melhor_oportunidade";
     public const string SortRelevance = "relevancia";
     public const string SortLowestPrice = "menor_preco";
     public const string SortBiggestDiscount = "maior_desconto";
+    public const string SortBestSellers = "mais_vendidos";
+    public const string SortHighestCommission = "maior_comissao";
+    public const string SortBestRating = "melhor_avaliacao";
 
     public static IReadOnlyList<OfficialCatalogProductDto> ApplySort(
         IReadOnlyList<OfficialCatalogProductDto> items,
         string? sortBy) => sortBy?.Trim().ToLowerInvariant() switch
         {
+            SortBestOpportunity => items
+                .OrderByDescending(item => item.OpportunityScore)
+                .ThenBy(item => item.Price ?? decimal.MaxValue)
+                .ToList(),
             SortLowestPrice => items.OrderBy(item => item.Price ?? decimal.MaxValue).ToList(),
             SortBiggestDiscount => items
                 .OrderByDescending(DiscountPercent)
                 .ThenBy(item => item.Price ?? decimal.MaxValue)
                 .ToList(),
+            SortBestSellers => items
+                .OrderBy(item => item.BestSellerPosition ?? int.MaxValue)
+                .ThenByDescending(item => item.SoldQuantity ?? -1)
+                .ThenByDescending(item => item.RatingCount ?? -1)
+                .ToList(),
+            SortHighestCommission => items
+                .OrderByDescending(item => item.EstimatedCommission ?? -1m)
+                .ThenByDescending(item => item.CommissionPercent ?? -1m)
+                .ToList(),
+            SortBestRating => items
+                .OrderByDescending(item => item.RatingAverage ?? -1m)
+                .ThenByDescending(item => item.RatingCount ?? -1)
+                .ToList(),
             _ => items
         };
+
+    public const int TrustedSafetyScore = 70;
+    public const decimal MaxCommissionPercent = 90m;
+
+    /// <summary>Taxa de comissão informada pelo usuário: vazia, zero ou acima de 90% vira "não configurada".</summary>
+    public static decimal? NormalizeCommissionPercent(decimal? percent) =>
+        percent is > 0 and <= MaxCommissionPercent ? decimal.Round(percent.Value, 2) : null;
+
+    /// <summary>
+    /// Comissão estimada: a Shopee informa a taxa por oferta; no Mercado Livre e na Amazon usa a taxa do perfil do usuário,
+    /// porque as APIs oficiais não expõem a comissão de afiliado.
+    /// </summary>
+    public static void ApplyCommission(
+        OfficialCatalogProductDto item,
+        decimal? mercadoLivrePercent,
+        decimal? amazonPercent)
+    {
+        if (item.CommissionPercent is null)
+        {
+            var userRate = item.PlatformType switch
+            {
+                MarketplaceType.MercadoLivre => NormalizeCommissionPercent(mercadoLivrePercent),
+                MarketplaceType.Amazon => NormalizeCommissionPercent(amazonPercent),
+                _ => null
+            };
+            if (userRate is null)
+            {
+                return;
+            }
+
+            item.CommissionPercent = userRate;
+            item.CommissionSource = "Sua taxa";
+            item.EstimatedCommission = null;
+        }
+
+        if (item.EstimatedCommission is null && item.Price is > 0 && item.CommissionPercent is > 0)
+        {
+            item.EstimatedCommission = decimal.Round(item.Price.Value * item.CommissionPercent.Value / 100m, 2);
+        }
+    }
+
+    /// <summary>
+    /// Notas de 0 a 100. Segurança: loja oficial, reputação e MercadoLíder do vendedor, Full, garantia e condição.
+    /// Vantagem: desconto, frete grátis, comissão, avaliação, ranking de mais vendidos e unidades vendidas.
+    /// </summary>
+    public static void ScoreOffer(OfficialCatalogProductDto item)
+    {
+        var highlights = new List<string>();
+        var warnings = new List<string>();
+
+        var safety = 30;
+        if (item.IsOfficialStore)
+        {
+            safety += 30;
+            highlights.Add("Loja oficial");
+        }
+
+        switch (item.SellerReputationLevel?.Trim().ToLowerInvariant())
+        {
+            case "5_green":
+                safety += 25;
+                break;
+            case "4_light_green":
+                safety += 15;
+                break;
+            case "3_yellow":
+                warnings.Add("Reputação amarela");
+                break;
+            case "2_orange":
+                safety -= 15;
+                warnings.Add("Reputação laranja");
+                break;
+            case "1_red":
+                safety -= 30;
+                warnings.Add("Reputação vermelha");
+                break;
+        }
+
+        switch (item.SellerPowerStatus?.Trim().ToLowerInvariant())
+        {
+            case "platinum":
+                safety += 15;
+                highlights.Add("MercadoLíder Platinum");
+                break;
+            case "gold":
+                safety += 10;
+                highlights.Add("MercadoLíder Gold");
+                break;
+            case "silver":
+                safety += 5;
+                highlights.Add("MercadoLíder");
+                break;
+            case "preferred":
+                safety += 10;
+                highlights.Add("Vendedor indicado");
+                break;
+        }
+
+        if (item.SellerPositiveRate is >= 0.97m)
+        {
+            safety += 5;
+        }
+        else if (item.SellerPositiveRate is < 0.9m)
+        {
+            safety -= 10;
+            warnings.Add("Muitas avaliações negativas do vendedor");
+        }
+
+        if (item.IsFulfillment)
+        {
+            safety += 10;
+            highlights.Add("Envio Full");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Warranty)
+            && !item.Warranty.Contains("sem garantia", StringComparison.OrdinalIgnoreCase))
+        {
+            safety += 5;
+        }
+
+        if (string.Equals(item.Condition, "used", StringComparison.OrdinalIgnoreCase))
+        {
+            safety -= 10;
+            warnings.Add("Produto usado");
+        }
+
+        if (!item.IsOfficialStore
+            && string.IsNullOrWhiteSpace(item.SellerReputationLevel)
+            && string.IsNullOrWhiteSpace(item.SellerPowerStatus))
+        {
+            warnings.Add("Sem dados do vendedor");
+        }
+
+        var advantage = 0;
+        var discount = DiscountPercent(item);
+        advantage += (int)Math.Min(35m, discount);
+        if (discount >= 10m)
+        {
+            highlights.Add($"-{discount:0}%");
+        }
+
+        if (IsFreeShipping(item))
+        {
+            advantage += 10;
+        }
+
+        if (item.CommissionPercent is > 0)
+        {
+            advantage += (int)Math.Min(20m, item.CommissionPercent.Value * 2m);
+        }
+
+        if (item.RatingAverage is { } rating)
+        {
+            advantage += rating >= 4.7m ? 15 : rating >= 4.3m ? 10 : rating >= 4m ? 5 : 0;
+            if (rating < 3.5m && item.RatingCount is >= 5)
+            {
+                warnings.Add("Avaliação baixa");
+                safety -= 5;
+            }
+        }
+
+        if (item.BestSellerPosition is { } position)
+        {
+            advantage += position <= 3 ? 20 : position <= 10 ? 15 : 10;
+            highlights.Add($"{position}º mais vendido");
+        }
+
+        if (item.SoldQuantity is { } sold)
+        {
+            advantage += sold >= 1000 ? 10 : sold >= 100 ? 5 : 0;
+        }
+
+        item.SafetyScore = Math.Clamp(safety, 0, 100);
+        item.AdvantageScore = Math.Clamp(advantage, 0, 100);
+        item.OpportunityScore = (item.SafetyScore + item.AdvantageScore + 1) / 2;
+        item.Highlights = highlights;
+        item.Warnings = warnings;
+    }
+
+    public static string SafetyLabel(int score) =>
+        score >= TrustedSafetyScore ? "Alta" : score >= 45 ? "Média" : "Baixa";
+
+    public static string? ReputationLabel(string? level) => level?.Trim().ToLowerInvariant() switch
+    {
+        "5_green" => "reputação verde",
+        "4_light_green" => "reputação verde-clara",
+        "3_yellow" => "reputação amarela",
+        "2_orange" => "reputação laranja",
+        "1_red" => "reputação vermelha",
+        _ => null
+    };
+
+    /// <summary>Resumo das ofertas visíveis: faixa e mediana de preço, frete, loja oficial, nota média e destaques.</summary>
+    public static OfficialCatalogSearchMetricsDto BuildMetrics(IReadOnlyList<OfficialCatalogProductDto> items)
+    {
+        if (items.Count == 0)
+        {
+            return new OfficialCatalogSearchMetricsDto();
+        }
+
+        var prices = items.Where(item => item.Price is > 0).Select(item => item.Price!.Value).OrderBy(price => price).ToList();
+        decimal? median = prices.Count == 0
+            ? null
+            : prices.Count % 2 == 1
+                ? prices[prices.Count / 2]
+                : (prices[(prices.Count / 2) - 1] + prices[prices.Count / 2]) / 2m;
+        var rated = items.Where(item => item.RatingAverage is > 0).ToList();
+        var sold = items.Where(item => item.SoldQuantity is > 0).ToList();
+        return new OfficialCatalogSearchMetricsDto
+        {
+            Count = items.Count,
+            MinPrice = prices.Count == 0 ? null : prices[0],
+            MaxPrice = prices.Count == 0 ? null : prices[^1],
+            MedianPrice = median,
+            AveragePrice = prices.Count == 0 ? null : decimal.Round(prices.Average(), 2),
+            FreeShippingPercent = Percent(items.Count(IsFreeShipping), items.Count),
+            OfficialStorePercent = Percent(items.Count(item => item.IsOfficialStore), items.Count),
+            TrustedSellerPercent = Percent(items.Count(item => item.SafetyScore >= TrustedSafetyScore), items.Count),
+            AverageRating = rated.Count == 0 ? null : decimal.Round(rated.Average(item => item.RatingAverage!.Value), 1),
+            TotalSoldKnown = sold.Count == 0 ? null : sold.Sum(item => item.SoldQuantity!.Value),
+            BestOpportunity = items.MaxBy(item => item.OpportunityScore),
+            BestSeller = items
+                .Where(item => item.BestSellerPosition is not null || item.SoldQuantity is > 0)
+                .OrderBy(item => item.BestSellerPosition ?? int.MaxValue)
+                .ThenByDescending(item => item.SoldQuantity ?? 0)
+                .FirstOrDefault(),
+            TopCommission = items.Where(item => item.EstimatedCommission is > 0).MaxBy(item => item.EstimatedCommission),
+            Cheapest = items.Where(item => item.Price is > 0).MinBy(item => item.Price)
+        };
+    }
+
+    private static int Percent(int part, int total) =>
+        total == 0 ? 0 : (int)Math.Round(part * 100m / total, MidpointRounding.AwayFromZero);
 
     public static decimal DiscountPercent(OfficialCatalogProductDto item) =>
         item.Price is > 0 && item.OriginalPrice > item.Price

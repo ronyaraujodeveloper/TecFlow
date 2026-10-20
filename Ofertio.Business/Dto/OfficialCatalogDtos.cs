@@ -28,6 +28,99 @@ public class OfficialCatalogProductDto
 
     /// <summary>Domínio do catálogo do Mercado Livre (ex.: <c>MLB-NOTEBOOKS</c>), usado no filtro de categoria da tela.</summary>
     public string? DomainId { get; set; }
+
+    /// <summary>Anúncio que vende o produto (ML: <c>item_id</c> do ganhador da buy box).</summary>
+    public string? ListingId { get; set; }
+
+    public string? CategoryId { get; set; }
+
+    /// <summary>Percentual de comissão de afiliado (Shopee: informado pela API; ML/Amazon: taxa do perfil do usuário).</summary>
+    public decimal? CommissionPercent { get; set; }
+
+    public decimal? EstimatedCommission { get; set; }
+
+    /// <summary>"API Shopee" ou "Sua taxa" (perfil); nulo quando não há como estimar.</summary>
+    public string? CommissionSource { get; set; }
+
+    /// <summary>Unidades vendidas, quando a loja informa pela API.</summary>
+    public int? SoldQuantity { get; set; }
+
+    public decimal? RatingAverage { get; set; }
+
+    public int? RatingCount { get; set; }
+
+    public string? SellerId { get; set; }
+
+    public string? SellerName { get; set; }
+
+    /// <summary>Reputação do vendedor no ML: <c>5_green</c>, <c>4_light_green</c>, <c>3_yellow</c>, <c>2_orange</c>, <c>1_red</c>.</summary>
+    public string? SellerReputationLevel { get; set; }
+
+    /// <summary>ML: <c>platinum</c>/<c>gold</c>/<c>silver</c> (MercadoLíder); Shopee: <c>preferred</c>.</summary>
+    public string? SellerPowerStatus { get; set; }
+
+    /// <summary>Fração de avaliações positivas do vendedor (0 a 1).</summary>
+    public decimal? SellerPositiveRate { get; set; }
+
+    public int? SellerCompletedSales { get; set; }
+
+    public bool IsOfficialStore { get; set; }
+
+    /// <summary>Envio Full (estoque no centro de distribuição do Mercado Livre).</summary>
+    public bool IsFulfillment { get; set; }
+
+    public string? Warranty { get; set; }
+
+    /// <summary><c>new</c> ou <c>used</c>.</summary>
+    public string? Condition { get; set; }
+
+    /// <summary>Posição no ranking de mais vendidos da categoria (ML <c>highlights</c>).</summary>
+    public int? BestSellerPosition { get; set; }
+
+    /// <summary>0 a 100: desconto, frete, comissão, avaliação e vendas.</summary>
+    public int AdvantageScore { get; set; }
+
+    /// <summary>0 a 100: loja oficial, reputação, MercadoLíder, Full, garantia e condição.</summary>
+    public int SafetyScore { get; set; }
+
+    /// <summary>Média de vantagem e segurança, usada em "Melhor vantagem + segurança".</summary>
+    public int OpportunityScore { get; set; }
+
+    public List<string> Highlights { get; set; } = [];
+
+    public List<string> Warnings { get; set; } = [];
+}
+
+/// <summary>Resumo das ofertas visíveis na tela (métricas da busca).</summary>
+public sealed class OfficialCatalogSearchMetricsDto
+{
+    public int Count { get; init; }
+
+    public decimal? MinPrice { get; init; }
+
+    public decimal? MaxPrice { get; init; }
+
+    public decimal? MedianPrice { get; init; }
+
+    public decimal? AveragePrice { get; init; }
+
+    public int FreeShippingPercent { get; init; }
+
+    public int OfficialStorePercent { get; init; }
+
+    public int TrustedSellerPercent { get; init; }
+
+    public decimal? AverageRating { get; init; }
+
+    public int? TotalSoldKnown { get; init; }
+
+    public OfficialCatalogProductDto? BestOpportunity { get; init; }
+
+    public OfficialCatalogProductDto? BestSeller { get; init; }
+
+    public OfficialCatalogProductDto? TopCommission { get; init; }
+
+    public OfficialCatalogProductDto? Cheapest { get; init; }
 }
 
 public class OfficialCatalogChannelResult
@@ -123,6 +216,9 @@ public sealed class MercadoLivreCatalogSearchRequest
     public bool AllowShorterQuery { get; init; } = true;
 
     public bool IncludeCategories { get; init; } = true;
+
+    /// <summary>Reputação do vendedor, avaliações, vendas e ranking de mais vendidos (chamadas extras à API).</summary>
+    public bool IncludeMetrics { get; init; } = true;
 
     public string? TrackingId { get; init; }
 }

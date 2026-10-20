@@ -33,6 +33,81 @@ public class MercadoLivreItemParserTests
     }
 
     [Fact]
+    public void ParseCatalogOffer_ShouldMapSellerListingAndSafetySignals()
+    {
+        const string json = """
+            {"id":"MLB5","name":"Notebook","domain_id":"MLB-NOTEBOOKS","buy_box_winner":{"item_id":"MLB555","price":3999,"seller_id":123456,"official_store_id":789,"category_id":"MLB1652","warranty":"Garantia de fábrica: 12 meses","condition":"new","shipping":{"free_shipping":true,"logistic_type":"fulfillment"}}}
+            """;
+
+        var item = MercadoLivreItemParser.ParseCatalogOffer(json);
+
+        Assert.NotNull(item);
+        Assert.Equal("MLB555", item!.ListingId);
+        Assert.Equal("123456", item.SellerId);
+        Assert.Equal("MLB1652", item.CategoryId);
+        Assert.True(item.IsOfficialStore);
+        Assert.True(item.IsFulfillment);
+        Assert.Equal("new", item.Condition);
+        Assert.Equal("Garantia de fábrica: 12 meses", item.Warranty);
+    }
+
+    [Fact]
+    public void ParseItemsMultiget_ShouldReadSoldQuantityAndSkipFailedEntries()
+    {
+        const string json = """
+            [{"code":200,"body":{"id":"MLB1","sold_quantity":250,"seller_id":42,"official_store_id":null,"condition":"new","shipping":{"logistic_type":"cross_docking"},"category_id":"MLB1652"}},
+             {"code":200,"body":{"id":"MLB2","sold_quantity":0}},
+             {"code":404,"body":{"id":"MLB3","message":"not found"}}]
+            """;
+
+        var listings = MercadoLivreItemParser.ParseItemsMultiget(json);
+
+        Assert.Equal(2, listings.Count);
+        Assert.Equal(250, listings["MLB1"].SoldQuantity);
+        Assert.Equal("42", listings["MLB1"].SellerId);
+        Assert.False(listings["MLB1"].IsOfficialStore);
+        Assert.False(listings["MLB1"].IsFulfillment);
+        Assert.Null(listings["MLB2"].SoldQuantity);
+        Assert.Empty(MercadoLivreItemParser.ParseItemsMultiget("""{"message":"forbidden"}"""));
+    }
+
+    [Fact]
+    public void ParseSeller_ShouldReadReputationPowerStatusAndRatings()
+    {
+        const string json = """
+            {"id":42,"nickname":"LOJA.DELL","seller_reputation":{"level_id":"5_green","power_seller_status":"platinum","transactions":{"completed":15230,"ratings":{"positive":0.98,"negative":0.01,"neutral":0.01}}}}
+            """;
+
+        var seller = MercadoLivreItemParser.ParseSeller(json);
+
+        Assert.Equal(new MercadoLivreSellerMetrics("LOJA.DELL", "5_green", "platinum", 15230, 0.98m), seller);
+        Assert.Null(MercadoLivreItemParser.ParseSeller("""{"id":42,"nickname":"SEM"}"""));
+    }
+
+    [Fact]
+    public void ParseReviewSummary_ShouldReadAverageAndTotal()
+    {
+        Assert.Equal(
+            new MercadoLivreReviewSummary(4.7m, 1234),
+            MercadoLivreItemParser.ParseReviewSummary("""{"paging":{"total":1234},"rating_average":4.68,"reviews":[]}"""));
+        Assert.Null(MercadoLivreItemParser.ParseReviewSummary("""{"paging":{"total":0},"rating_average":0}"""));
+    }
+
+    [Fact]
+    public void ParseBestSellerPositions_ShouldMapProductsAndItemsToRankingPosition()
+    {
+        const string json = """
+            {"query_data":{"highlight_type":"BEST_SELLER","criteria":"CATEGORY","id":"MLB1652"},"content":[{"id":"MLB10","position":1,"type":"PRODUCT"},{"id":"MLB777","position":2,"type":"ITEM"},{"id":"MLB10","position":9,"type":"PRODUCT"}]}
+            """;
+
+        var positions = MercadoLivreItemParser.ParseBestSellerPositions(json);
+
+        Assert.Equal(1, positions["MLB10"]);
+        Assert.Equal(2, positions["MLB777"]);
+        Assert.Empty(MercadoLivreItemParser.ParseBestSellerPositions("""{"message":"forbidden"}"""));
+    }
+
+    [Fact]
     public void ParseDomainDiscovery_ShouldMapDomainsWithNamesWithoutDuplicates()
     {
         const string json = """

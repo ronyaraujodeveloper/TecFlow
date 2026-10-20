@@ -50,6 +50,19 @@
                     <input id="min-commission" class="form-control" inputmode="decimal" value="@_minCommission" @oninput="e => _minCommission = e.Value?.ToString()" />
                 </div>
             </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="ml-commission">Sua comissão no Mercado Livre (%)</label>
+                    <input id="ml-commission" class="form-control" inputmode="decimal" value="@_mlCommission" @oninput="e => _mlCommission = e.Value?.ToString()" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="amazon-commission">Sua comissão na Amazon (%)</label>
+                    <input id="amazon-commission" class="form-control" inputmode="decimal" value="@_amazonCommission" @oninput="e => _amazonCommission = e.Value?.ToString()" />
+                </div>
+                <div class="col-md-4 small text-muted align-self-end">
+                    Usadas para estimar a comissão na Buscar Ofertas (as APIs do ML e da Amazon não informam a taxa).
+                </div>
+            </div>
             <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" id="restrict-stores" checked="@_restrict" @onchange="e => _restrict = (bool)(e.Value ?? true)" />
                 <label class="form-check-label" for="restrict-stores">Buscar apenas nas plataformas com integração ativa</label>
@@ -85,6 +98,8 @@
     private string? _minTicket;
     private string? _maxTicket;
     private string? _minCommission = "5";
+    private string? _mlCommission;
+    private string? _amazonCommission;
     private bool _restrict = true;
     private bool _autoPilot;
     private string _channel = "WhatsApp";
@@ -114,6 +129,8 @@
             _minTicket = profile.MinTicket?.ToString("0.##");
             _maxTicket = profile.MaxTicket?.ToString("0.##");
             _minCommission = profile.MinCommissionPercent.ToString("0.##");
+            _mlCommission = profile.MercadoLivreCommissionPercent?.ToString("0.##");
+            _amazonCommission = profile.AmazonCommissionPercent?.ToString("0.##");
             _restrict = profile.RestrictToActiveStores;
             _autoPilot = profile.AutoPilotEnabled;
             _channel = profile.AutoPilotChannel;
@@ -140,6 +157,8 @@
                 MinTicket = ParseDecimal(_minTicket),
                 MaxTicket = ParseDecimal(_maxTicket),
                 MinCommissionPercent = ParseDecimal(_minCommission) ?? 5,
+                MercadoLivreCommissionPercent = ParseDecimal(_mlCommission),
+                AmazonCommissionPercent = ParseDecimal(_amazonCommission),
                 RestrictToActiveStores = _restrict,
                 AutoPilotEnabled = _autoPilot,
                 AutoPilotChannel = _channel

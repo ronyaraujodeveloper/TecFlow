@@ -20,6 +20,14 @@ public class AffiliateMiningProfile : BaseEntity
     [Column(TypeName = "decimal(5,2)")]
     public decimal MinCommissionPercent { get; set; } = 5;
 
+    /// <summary>Taxa de comissão de afiliado do usuário no Mercado Livre (o ML não expõe a taxa por API).</summary>
+    [Column(TypeName = "decimal(5,2)")]
+    public decimal? MercadoLivreCommissionPercent { get; set; }
+
+    /// <summary>Taxa de comissão de afiliado do usuário na Amazon (a PA-API não expõe a taxa).</summary>
+    [Column(TypeName = "decimal(5,2)")]
+    public decimal? AmazonCommissionPercent { get; set; }
+
     public bool RestrictToActiveStores { get; set; } = true;
 
     public bool AutoPilotEnabled { get; set; }

@@ -72,7 +72,9 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var internalTask = filter.MercadoLivreOffset > 0
             ? Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([])
             : SearchLocalProductsAsync(keyword, limit, cancellationToken);
-        await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask);
+        var ratesTask = LoadCommissionRatesAsync(userId, cancellationToken);
+        await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask, ratesTask);
+        var (mercadoLivreRate, amazonRate) = ratesTask.Result;
 
         var mlItems = mlTask.Result.Items;
         var shopeeItems = shopeeTask.Result.Items;
@@ -87,17 +89,21 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             amazonItems.Count,
             localItems.Count);
 
-        var merged = OfficialCatalogSearchRules.ApplySort(
-                mlItems
-                    .Concat(shopeeItems)
-                    .Concat(amazonItems)
-                    .Concat(localItems)
-                    .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
-                    .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
-                    .Select(group => group.First())
-                    .ToList(),
-                filter.SortBy)
+        var deduplicated = mlItems
+            .Concat(shopeeItems)
+            .Concat(amazonItems)
+            .Concat(localItems)
+            .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
+            .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
             .ToList();
+        foreach (var item in deduplicated)
+        {
+            OfficialCatalogSearchRules.ApplyCommission(item, mercadoLivreRate, amazonRate);
+            OfficialCatalogSearchRules.ScoreOffer(item);
+        }
+
+        var merged = OfficialCatalogSearchRules.ApplySort(deduplicated, filter.SortBy).ToList();
 
         var ml = mlTask.Result;
         var mlStatus = OfficialCatalogSearchRules.BuildChannelStatus(
@@ -189,6 +195,27 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         {
             return OfficialCatalogChannelResult.Failed(
                 string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado" : ex.Message);
+        }
+    }
+
+    private async Task<(decimal? MercadoLivre, decimal? Amazon)> LoadCommissionRatesAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var profile = await dbContext.AffiliateMiningProfiles
+                .AsNoTracking()
+                .Where(item => item.UserId == userId)
+                .Select(item => new { item.MercadoLivreCommissionPercent, item.AmazonCommissionPercent })
+                .FirstOrDefaultAsync(cancellationToken);
+            return (profile?.MercadoLivreCommissionPercent, profile?.AmazonCommissionPercent);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Não foi possível carregar as taxas de comissão do usuário {UserId}.", userId);
+            return (null, null);
         }
     }
 

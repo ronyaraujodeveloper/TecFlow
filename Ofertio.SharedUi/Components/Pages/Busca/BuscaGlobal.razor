@@ -13,6 +13,7 @@
 @inject IOfficialCatalogSearchApiService SearchApi
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IAffiliateLinkApiService AffiliateLinkApi
+@inject IOfferRadarApiService RadarApi
 @inject NavigationManager Navigation
 @inject ILogger<BuscaGlobal> Logger
 
@@ -59,6 +60,18 @@
                 <input id="busca-frete" class="form-check-input" type="checkbox" @bind="_freeShippingOnly" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-frete">Somente frete grátis</label>
             </div>
+            <div class="form-check">
+                <input id="busca-oficial" class="form-check-input" type="checkbox" @bind="_officialOnly" @bind:after="ApplyScreenFilters" />
+                <label class="form-check-label" for="busca-oficial">Somente loja oficial</label>
+            </div>
+            <div class="form-check">
+                <input id="busca-confiavel" class="form-check-input" type="checkbox" @bind="_trustedOnly" @bind:after="ApplyScreenFilters" />
+                <label class="form-check-label" for="busca-confiavel">Somente vendedores confiáveis</label>
+            </div>
+            <div class="form-check">
+                <input id="busca-mais-vendidos" class="form-check-input" type="checkbox" @bind="_bestSellersOnly" @bind:after="ApplyScreenFilters" />
+                <label class="form-check-label" for="busca-mais-vendidos">Somente mais vendidos</label>
+            </div>
         </div>
         <div class="row g-2 mt-2">
             <div class="col-6 col-md-3">
@@ -72,9 +85,13 @@
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
                 <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ApplyScreenFilters">
-                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância</option>
+                    <option value="@OfficialCatalogSearchRules.SortBestOpportunity">Melhor vantagem + segurança</option>
+                    <option value="@OfficialCatalogSearchRules.SortBestSellers">Mais vendidos</option>
+                    <option value="@OfficialCatalogSearchRules.SortHighestCommission">Maior comissão</option>
+                    <option value="@OfficialCatalogSearchRules.SortBestRating">Melhor avaliação</option>
                     <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
                     <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
+                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância da loja</option>
                 </select>
             </div>
             <div class="col-6 col-md-3">
@@ -144,6 +161,57 @@
     }
     @if (_items is { Count: > 0 })
     {
+        var metrics = OfficialCatalogSearchRules.BuildMetrics(_items);
+        <section class="card border-0 shadow-sm mb-4" aria-label="Métricas da busca">
+            <div class="card-body">
+                <h2 class="h6 fw-bold mb-3">Métricas das @metrics.Count ofertas na tela</h2>
+                <div class="row g-3 small">
+                    <div class="col-6 col-lg-3">
+                        <div class="text-muted">Faixa de preço</div>
+                        <div class="fw-semibold">@ProductMetadataHtmlParser.FormatBrl(metrics.MinPrice) – @ProductMetadataHtmlParser.FormatBrl(metrics.MaxPrice)</div>
+                        <div class="text-muted">Mediana @ProductMetadataHtmlParser.FormatBrl(metrics.MedianPrice)</div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="text-muted">Segurança</div>
+                        <div class="fw-semibold">@metrics.TrustedSellerPercent% vendedores confiáveis</div>
+                        <div class="text-muted">@metrics.OfficialStorePercent% loja oficial · @metrics.FreeShippingPercent% frete grátis</div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="text-muted">Avaliação média</div>
+                        <div class="fw-semibold">@(metrics.AverageRating is { } averageRating ? $"⭐ {averageRating:0.0}" : "não informada")</div>
+                        <div class="text-muted">@(metrics.TotalSoldKnown is { } totalSold ? $"{totalSold:N0} vendidos (informados)" : "vendas não informadas pela API")</div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="text-muted">Maior comissão estimada</div>
+                        <div class="fw-semibold">@(metrics.TopCommission is { } top ? ProductMetadataHtmlParser.FormatBrl(top.EstimatedCommission) : "—")</div>
+                        <div class="text-muted">
+                            @if (metrics.TopCommission is null)
+                            {
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @onclick="() => _showRules = true">Informe sua taxa</button>
+                            }
+                            else
+                            {
+                                @Shorten(metrics.TopCommission.ProductName)
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mt-2 small">
+                    @if (metrics.BestOpportunity is { } best)
+                    {
+                        <div class="col-12 col-lg-4"><span class="badge text-bg-success me-1">🏅 Melhor oportunidade</span>@Shorten(best.ProductName) · @ProductMetadataHtmlParser.FormatBrl(best.Price)</div>
+                    }
+                    @if (metrics.BestSeller is { } seller)
+                    {
+                        <div class="col-12 col-lg-4"><span class="badge text-bg-warning me-1">🏆 Mais vendido</span>@Shorten(seller.ProductName) · @ProductMetadataHtmlParser.FormatBrl(seller.Price)</div>
+                    }
+                    @if (metrics.Cheapest is { } cheapest)
+                    {
+                        <div class="col-12 col-lg-4"><span class="badge text-bg-info me-1">💲 Menor preço</span>@Shorten(cheapest.ProductName) · @ProductMetadataHtmlParser.FormatBrl(cheapest.Price)</div>
+                    }
+                </div>
+            </div>
+        </section>
         <div class="row g-3">
             @foreach (var item in _items)
             {
@@ -174,11 +242,88 @@
                                     }
                                 </div>
                             </div>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore)" title="Média de vantagem e segurança">Oportunidade @item.OpportunityScore</span>
+                                <span class="badge text-bg-light border" title="Desconto, frete, comissão, avaliação e vendas">Vantagem @item.AdvantageScore</span>
+                                <span class="badge text-bg-light border" title="Loja oficial, reputação, MercadoLíder, Full, garantia e condição">Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)</span>
+                            </div>
                             <h2 class="h6">@(item.ProductName ?? "Produto")</h2>
-                            <p class="fw-semibold mb-1">@ProductMetadataHtmlParser.FormatBrl(item.Price)</p>
+                            <p class="fw-semibold mb-1">
+                                @ProductMetadataHtmlParser.FormatBrl(item.Price)
+                                @if (item.OriginalPrice > item.Price)
+                                {
+                                    <small class="text-muted text-decoration-line-through ms-1">@ProductMetadataHtmlParser.FormatBrl(item.OriginalPrice)</small>
+                                }
+                            </p>
                             @if (!string.IsNullOrWhiteSpace(item.Shipping))
                             {
-                                <p class="small text-muted mb-2">@item.Shipping</p>
+                                <p class="small text-muted mb-1">@item.Shipping</p>
+                            }
+                            <ul class="list-unstyled small mb-2">
+                                <li>
+                                    💰
+                                    @if (item.EstimatedCommission is > 0)
+                                    {
+                                        <span>Comissão estimada <strong>@ProductMetadataHtmlParser.FormatBrl(item.EstimatedCommission)</strong> (@($"{item.CommissionPercent:0.##}")%, @item.CommissionSource)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Comissão: informe sua taxa nas regras</span>
+                                    }
+                                </li>
+                                <li>
+                                    ⭐
+                                    @if (item.RatingAverage is { } rating)
+                                    {
+                                        <span>@($"{rating:0.0}") @(item.RatingCount is > 0 ? $"({item.RatingCount:N0} avaliações)" : string.Empty)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Sem avaliações informadas</span>
+                                    }
+                                </li>
+                                <li>
+                                    🛒
+                                    @if (item.SoldQuantity is { } sold)
+                                    {
+                                        <span>@($"{sold:N0}") vendidos</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Vendas não informadas pela API</span>
+                                    }
+                                    @if (item.BestSellerPosition is { } position)
+                                    {
+                                        <span class="badge text-bg-warning ms-1">🏆 @(position)º mais vendido da categoria</span>
+                                    }
+                                </li>
+                                @if (!string.IsNullOrWhiteSpace(item.SellerName) || item.SellerReputationLevel is not null || item.IsOfficialStore)
+                                {
+                                    <li>
+                                        🏪 @(item.SellerName ?? "Vendedor")
+                                        @if (OfficialCatalogSearchRules.ReputationLabel(item.SellerReputationLevel) is { } reputation)
+                                        {
+                                            <span class="text-muted">· @reputation</span>
+                                        }
+                                        @if (item.SellerCompletedSales is > 0)
+                                        {
+                                            <span class="text-muted">· @($"{item.SellerCompletedSales:N0}") vendas concluídas</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                            @if (item.Highlights.Count > 0 || item.Warnings.Count > 0)
+                            {
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    @foreach (var highlight in item.Highlights)
+                                    {
+                                        <span class="badge rounded-pill text-bg-success">@highlight</span>
+                                    }
+                                    @foreach (var warning in item.Warnings)
+                                    {
+                                        <span class="badge rounded-pill text-bg-danger">⚠ @warning</span>
+                                    }
+                                </div>
                             }
                             <button type="button"
                                     class="btn btn-primary mt-auto"
@@ -243,6 +388,38 @@
                         <li>ID de afiliado do Mercado Livre (<code>matt_tool</code>) nos links: <strong>@(string.IsNullOrWhiteSpace(_mlTrackingId) ? "não configurado (usa o padrão do sistema)" : _mlTrackingId)</strong></li>
                     </ul>
 
+                    <h3 class="h6 fw-bold">Sua comissão</h3>
+                    <p class="mb-2">
+                        A Shopee informa a comissão de cada oferta pela API. O Mercado Livre e a Amazon não expõem a taxa de afiliado por API:
+                        informe a sua taxa média (consulte o painel de afiliado de cada loja) para estimarmos a comissão por produto.
+                    </p>
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-5">
+                            <label class="form-label small fw-semibold" for="taxa-ml">Mercado Livre (%)</label>
+                            <input id="taxa-ml" class="form-control form-control-sm" type="number" step="0.1" min="0" max="90" @bind="_mlCommissionPercent" />
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small fw-semibold" for="taxa-amazon">Amazon (%)</label>
+                            <input id="taxa-amazon" class="form-control form-control-sm" type="number" step="0.1" min="0" max="90" @bind="_amazonCommissionPercent" />
+                        </div>
+                        <div class="col-2">
+                            <button type="button" class="btn btn-sm btn-primary w-100" disabled="@_savingRates" @onclick="SaveCommissionRatesAsync">Salvar</button>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(_ratesMessage))
+                    {
+                        <p class="small text-muted mb-3">@_ratesMessage</p>
+                    }
+
+                    <h3 class="h6 fw-bold">Métricas e notas de cada oferta</h3>
+                    <ul class="mb-3">
+                        <li><strong>Vendidos, avaliações e mais vendidos:</strong> vêm das APIs oficiais (ML: anúncio, avaliações e ranking de mais vendidos da categoria; Shopee: vendas e nota). Quando a loja não informa, o card mostra "não informado".</li>
+                        <li><strong>Vantagem (0–100):</strong> desconto (até 35), frete grátis (10), comissão (até 20), avaliação (até 15), ranking de mais vendidos (até 20) e unidades vendidas (até 10).</li>
+                        <li><strong>Segurança:</strong> parte de 30 e soma loja oficial (+30), reputação verde do vendedor (+25), MercadoLíder (até +15), envio Full (+10), garantia (+5) e alta aprovação (+5); reputação ruim, produto usado e muitas avaliações negativas descontam. Alta a partir de @OfficialCatalogSearchRules.TrustedSafetyScore.</li>
+                        <li><strong>Oportunidade:</strong> média de vantagem e segurança; é a ordenação padrão "Melhor vantagem + segurança".</li>
+                        <li>O painel "Métricas" resume as ofertas na tela: faixa e mediana de preço, % de vendedores confiáveis, nota média, maior comissão, melhor oportunidade e mais vendido.</li>
+                    </ul>
+
                     <h3 class="h6 fw-bold">Onde buscamos</h3>
                     <ul class="mb-3">
                         <li>Somente as APIs oficiais das lojas; páginas públicas não são lidas.</li>
@@ -265,9 +442,9 @@
                     <h3 class="h6 fw-bold">Filtros</h3>
                     <ul class="mb-3">
                         <li><strong>Buscar</strong> consulta as lojas com o termo e todos os filtros marcados (preço, frete grátis, categoria).</li>
-                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
+                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, loja oficial, vendedores confiáveis, mais vendidos, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
                         <li>Para trazer produtos que ainda não foram carregados com o novo filtro, clique em <strong>Buscar</strong> de novo.</li>
-                        <li>Ordenação: relevância (ordem das lojas), menor preço ou maior desconto.</li>
+                        <li>Ordenação: melhor vantagem + segurança, mais vendidos, maior comissão, melhor avaliação, menor preço, maior desconto ou relevância da loja.</li>
                     </ul>
 
                     <h3 class="h6 fw-bold">Links de afiliado</h3>
@@ -293,7 +470,14 @@
     private bool _freeShippingOnly;
     private decimal? _minPrice;
     private decimal? _maxPrice;
-    private string _sortBy = OfficialCatalogSearchRules.SortRelevance;
+    private string _sortBy = OfficialCatalogSearchRules.SortBestOpportunity;
+    private bool _officialOnly;
+    private bool _trustedOnly;
+    private bool _bestSellersOnly;
+    private decimal? _mlCommissionPercent;
+    private decimal? _amazonCommissionPercent;
+    private bool _savingRates;
+    private string? _ratesMessage;
     private string? _mlCategory;
     private List<OfficialCatalogCategoryDto> _categories = [];
     private string? _categoriesKeyword;
@@ -317,8 +501,78 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadMercadoLivreTrackingIdAsync();
+        await Task.WhenAll(LoadMercadoLivreTrackingIdAsync(), LoadCommissionRatesAsync());
     }
+
+    private async Task LoadCommissionRatesAsync()
+    {
+        try
+        {
+            var result = await RadarApi.GetProfileAsync();
+            if (result.Success && result.Data?.Profile is { } profile)
+            {
+                _mlCommissionPercent = profile.MercadoLivreCommissionPercent;
+                _amazonCommissionPercent = profile.AmazonCommissionPercent;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Não foi possível carregar as taxas de comissão do perfil.");
+        }
+    }
+
+    private async Task SaveCommissionRatesAsync()
+    {
+        _savingRates = true;
+        _ratesMessage = null;
+        try
+        {
+            var current = await RadarApi.GetProfileAsync();
+            if (!current.Success || current.Data?.Profile is not { } profile)
+            {
+                _ratesMessage = current.ErrorMessage ?? "Não foi possível carregar o seu perfil para salvar as taxas.";
+                return;
+            }
+
+            profile.MercadoLivreCommissionPercent = OfficialCatalogSearchRules.NormalizeCommissionPercent(_mlCommissionPercent);
+            profile.AmazonCommissionPercent = OfficialCatalogSearchRules.NormalizeCommissionPercent(_amazonCommissionPercent);
+            var saved = await RadarApi.SaveProfileAsync(profile);
+            if (!saved.Success || saved.Data?.Profile is not { } updated)
+            {
+                _ratesMessage = saved.ErrorMessage ?? "Não foi possível salvar as taxas.";
+                return;
+            }
+
+            _mlCommissionPercent = updated.MercadoLivreCommissionPercent;
+            _amazonCommissionPercent = updated.AmazonCommissionPercent;
+            foreach (var item in _relevanceOrder.Where(item => item.CommissionSource != "API Shopee"))
+            {
+                item.CommissionPercent = null;
+                item.EstimatedCommission = null;
+                item.CommissionSource = null;
+                OfficialCatalogSearchRules.ApplyCommission(item, _mlCommissionPercent, _amazonCommissionPercent);
+                OfficialCatalogSearchRules.ScoreOffer(item);
+            }
+
+            ApplyScreenFilters();
+            _ratesMessage = "Taxas salvas no seu perfil; as comissões da tela foram recalculadas.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao salvar as taxas de comissão.");
+            _ratesMessage = "Falha ao salvar as taxas.";
+        }
+        finally
+        {
+            _savingRates = false;
+        }
+    }
+
+    private static string Shorten(string? text, int max = 60) =>
+        string.IsNullOrWhiteSpace(text) ? "Produto" : text.Length <= max ? text : text[..max].TrimEnd() + "…";
+
+    private static string OpportunityBadgeClass(int score) =>
+        score >= 70 ? "text-bg-success" : score >= 45 ? "text-bg-warning" : "text-bg-secondary";
 
     private async Task LoadMercadoLivreTrackingIdAsync()
     {
@@ -379,6 +633,9 @@
         MercadoLivre = _ml,
         MercadoLivreTrackingId = _mlTrackingId,
         MercadoLivreCategory = string.IsNullOrWhiteSpace(_mlCategory) ? null : _mlCategory,
+        OfficialStoreOnly = _officialOnly ? true : null,
+        TrustedSellersOnly = _trustedOnly ? true : null,
+        BestSellersOnly = _bestSellersOnly ? true : null,
         Shopee = _shopee,
         Amazon = _amazon
     };

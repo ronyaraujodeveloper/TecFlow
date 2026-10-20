@@ -12,7 +12,17 @@ public class OfficialCatalogSearchFilter
 
     public bool? FreeShippingOnly { get; set; }
 
-    /// <summary><c>relevancia</c> (padrão), <c>menor_preco</c> ou <c>maior_desconto</c>.</summary>
+    /// <summary>Filtros de tela sobre o que já foi carregado (não alteram a consulta às lojas).</summary>
+    public bool? OfficialStoreOnly { get; set; }
+
+    public bool? TrustedSellersOnly { get; set; }
+
+    public bool? BestSellersOnly { get; set; }
+
+    /// <summary>
+    /// <c>melhor_oportunidade</c>, <c>relevancia</c> (padrão da API), <c>menor_preco</c>, <c>maior_desconto</c>,
+    /// <c>mais_vendidos</c>, <c>maior_comissao</c> ou <c>melhor_avaliacao</c>.
+    /// </summary>
     public string? SortBy { get; set; }
 
     /// <summary>Domínio de catálogo do Mercado Livre (ex.: <c>MLB-NOTEBOOKS</c>).</summary>

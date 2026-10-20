@@ -15,6 +15,10 @@ public class AffiliateMiningProfileDto
 
     public decimal MinCommissionPercent { get; set; } = 5;
 
+    public decimal? MercadoLivreCommissionPercent { get; set; }
+
+    public decimal? AmazonCommissionPercent { get; set; }
+
     public bool RestrictToActiveStores { get; set; } = true;
 
     public bool AutoPilotEnabled { get; set; }

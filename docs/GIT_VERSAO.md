@@ -133,3 +133,4 @@
 [2026-10-20 12:49:59] fix(ml): ofertas de catalogo sem buy box via faixa de preco, products/items e produto filho; modal de carregamento na Buscar Ofertas
 [2026-10-20 13:19:59] feat(busca): varredura paginada do catalogo ML com carregar mais, filtros de preco e frete gratis na varredura, termo mais curto, ordenacao e categoria
 [2026-10-20 13:42:37] fix(busca): varredura ML ate 100 produtos quando ha oferta, variacoes de produto pai, filtros aplicados na tela apos a busca e modal de regras
+[2026-10-20 18:31:53] feat(busca): metricas de afiliado na Buscar Ofertas com comissao, vendidos, avaliacoes, mais vendidos e notas de vantagem e seguranca

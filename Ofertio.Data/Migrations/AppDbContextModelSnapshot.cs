@@ -88,6 +88,9 @@ namespace Ofertio.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("AmazonCommissionPercent")
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<string>("AutoPilotChannel")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -101,6 +104,9 @@ namespace Ofertio.Data.Migrations
 
                     b.Property<decimal?>("MaxTicket")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MercadoLivreCommissionPercent")
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<decimal>("MinCommissionPercent")
                         .HasColumnType("decimal(5,2)");

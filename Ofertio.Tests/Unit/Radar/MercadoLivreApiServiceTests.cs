@@ -694,6 +694,56 @@ public class MercadoLivreApiServiceTests
         Assert.Null(result.NextOffset);
     }
 
+    [Fact]
+    public async Task SearchCatalogAsync_ShouldEnrichOffersWithSalesSellerReviewsAndBestSellerRanking()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath switch
+            {
+                SearchPath => (HttpStatusCode.OK, SearchPage(["MLB1"], 1)),
+                "/products/MLB1" => (HttpStatusCode.OK, """{"id":"MLB1","name":"Dell Inspiron","buy_box_winner":{"item_id":"MLB111","price":3999,"seller_id":42,"category_id":"MLB1652","shipping":{"free_shipping":true}}}"""),
+                "/items" => (HttpStatusCode.OK, """[{"code":200,"body":{"id":"MLB111","sold_quantity":321,"warranty":"12 meses","condition":"new"}}]"""),
+                "/users/42" => (HttpStatusCode.OK, """{"id":42,"nickname":"LOJA.DELL","seller_reputation":{"level_id":"5_green","power_seller_status":"gold","transactions":{"completed":900,"ratings":{"positive":0.99}}}}"""),
+                "/reviews/item/MLB111" => (HttpStatusCode.OK, """{"paging":{"total":87},"rating_average":4.6}"""),
+                "/highlights/MLB/category/MLB1652" => (HttpStatusCode.OK, """{"content":[{"id":"MLB9","position":1,"type":"PRODUCT"},{"id":"MLB1","position":3,"type":"PRODUCT"}]}"""),
+                _ => null
+            }
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest { Query = "dell inspiron", IncludeCategories = false });
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(321, item.SoldQuantity);
+        Assert.Equal("LOJA.DELL", item.SellerName);
+        Assert.Equal("5_green", item.SellerReputationLevel);
+        Assert.Equal("gold", item.SellerPowerStatus);
+        Assert.Equal(900, item.SellerCompletedSales);
+        Assert.Equal(0.99m, item.SellerPositiveRate);
+        Assert.Equal(4.6m, item.RatingAverage);
+        Assert.Equal(87, item.RatingCount);
+        Assert.Equal(3, item.BestSellerPosition);
+        Assert.Equal("12 meses", item.Warranty);
+        var multiget = Assert.Single(handler.Requests, request => request.Path == "/items");
+        Assert.Contains("ids=MLB111", multiget.Url, StringComparison.Ordinal);
+        Assert.Contains(handler.Requests, request => request.Url.EndsWith("/reviews/item/MLB111?catalog_product_id=MLB1", StringComparison.Ordinal));
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-static", request.Authorization));
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldNotCallMetricsEndpoints()
+    {
+        var handler = new RoutingHandler();
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.DoesNotContain(handler.Requests, request =>
+            request.Path == "/items" || request.Path.StartsWith("/users/", StringComparison.Ordinal)
+            || request.Path.StartsWith("/reviews/", StringComparison.Ordinal) || request.Path.StartsWith("/highlights/", StringComparison.Ordinal));
+    }
+
     private static IReadOnlyList<string> Range(int offset, int count) =>
         Enumerable.Range(offset, count).Select(index => $"MLB{index}").ToList();
 

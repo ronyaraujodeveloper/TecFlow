@@ -113,7 +113,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
             var size = OfficialCatalogSearchRules.ClampLimit(limit);
             var gql =
                 "{ productOfferV2(keyword: \"" + escaped + "\", page: 1, limit: " + size
-                + ") { nodes { itemId shopId productName priceMin productStatus imageUrl productLink shopName } } }";
+                + ") { nodes { itemId shopId productName priceMin productStatus imageUrl productLink shopName shopType commissionRate commission sales ratingStar priceDiscountRate } } }";
             var jsonBody = JsonSerializer.Serialize(new { query = gql });
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var sign = Sign(appId!, secret!, timestamp, jsonBody);
@@ -221,6 +221,11 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
                 }
             }
 
+            var commissionRate = ReadFlexibleDecimal(node, "commissionRate");
+            var discountRate = ReadFlexibleDecimal(node, "priceDiscountRate");
+            var shopTypes = ReadShopTypes(node);
+            var sales = ReadFlexibleDecimal(node, "sales");
+            var rating = ReadFlexibleDecimal(node, "ratingStar");
             list.Add(new OfficialCatalogProductDto
             {
                 Platform = nameof(MarketplaceType.Shopee),
@@ -228,13 +233,61 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
                 ProductId = string.IsNullOrWhiteSpace(shopId) ? itemId : $"{shopId}:{itemId}",
                 ProductName = node.TryGetProperty("productName", out var name) ? name.GetString() : null,
                 Price = price,
+                OriginalPrice = price is > 0 && discountRate is > 0 and < 100
+                    ? decimal.Round(price.Value / (1m - (discountRate.Value / 100m)), 2)
+                    : null,
                 ImageUrl = node.TryGetProperty("imageUrl", out var img) ? img.GetString() : null,
                 SourceUrl = link,
-                Source = "Api"
+                Source = "Api",
+                CommissionPercent = commissionRate is > 0
+                    ? decimal.Round(commissionRate.Value <= 1m ? commissionRate.Value * 100m : commissionRate.Value, 2)
+                    : null,
+                EstimatedCommission = ReadFlexibleDecimal(node, "commission") is decimal commission and > 0 ? decimal.Round(commission, 2) : null,
+                CommissionSource = commissionRate is > 0 ? "API Shopee" : null,
+                SoldQuantity = sales is > 0 ? (int)Math.Min(int.MaxValue, sales.Value) : null,
+                RatingAverage = rating is > 0 ? decimal.Round(rating.Value, 1) : null,
+                SellerName = node.TryGetProperty("shopName", out var shopName) && shopName.ValueKind == JsonValueKind.String
+                    ? shopName.GetString()
+                    : null,
+                IsOfficialStore = shopTypes.Contains(1),
+                SellerPowerStatus = shopTypes.Contains(2) || shopTypes.Contains(4) ? "preferred" : null
             });
         }
 
         return list;
+    }
+
+    private static decimal? ReadFlexibleDecimal(JsonElement node, string name)
+    {
+        if (!node.TryGetProperty(name, out var el))
+        {
+            return null;
+        }
+
+        if (el.ValueKind == JsonValueKind.Number && el.TryGetDecimal(out var numeric))
+        {
+            return numeric;
+        }
+
+        return el.ValueKind == JsonValueKind.String
+            && decimal.TryParse(el.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : null;
+    }
+
+    /// <summary>Shopee <c>shopType</c>: 1 = Shopee Mall (loja oficial), 2 = Indicado, 4 = Indicado+.</summary>
+    private static IReadOnlyList<int> ReadShopTypes(JsonElement node)
+    {
+        if (!node.TryGetProperty("shopType", out var el))
+        {
+            return [];
+        }
+
+        List<JsonElement> source = el.ValueKind == JsonValueKind.Array ? el.EnumerateArray().ToList() : [el];
+        return source
+            .Where(value => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out _))
+            .Select(value => value.GetInt32())
+            .ToList();
     }
 
     private async Task<MarketplaceAccount?> LoadShopeeAccountAsync(int userId, CancellationToken cancellationToken)

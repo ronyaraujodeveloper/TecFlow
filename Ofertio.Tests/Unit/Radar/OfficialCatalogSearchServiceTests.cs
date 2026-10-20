@@ -201,10 +201,72 @@ public class OfficialCatalogSearchServiceTests
         Assert.Equal(40, captured!.Offset);
         Assert.False(captured.AllowShorterQuery);
         Assert.False(captured.IncludeCategories);
-        factory.Verify(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()), Times.Never);
+        factory.Verify(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()), Times.Once);
         var mlStatus = result.Channels.Single(c => c.Key == "MercadoLivre");
         Assert.Equal("0 ofertas · 40 produtos analisados (sem anúncio ativo)", mlStatus.Message);
         Assert.Null(result.MercadoLivreNextOffset);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ShouldEstimateCommissionFromUserProfileAndScoreOffers()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        await using (var seed = CreateNamedDbContext(dbName))
+        {
+            seed.AffiliateMiningProfiles.Add(new Ofertio.Core.Entities.AffiliateMiningProfile
+            {
+                UserId = 7,
+                MercadoLivreCommissionPercent = 5m
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var ml = new Mock<IMercadoLivreApiService>();
+        ml.Setup(x => x.SearchCatalogAsync(It.IsAny<int>(), It.IsAny<MercadoLivreCatalogSearchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OfficialCatalogChannelResult
+            {
+                Items =
+                [
+                    new OfficialCatalogProductDto
+                    {
+                        Platform = "Mercado Livre",
+                        PlatformType = MarketplaceType.MercadoLivre,
+                        ProductId = "RISCO",
+                        Price = 1000m,
+                        SellerReputationLevel = "1_red",
+                        SourceUrl = "https://www.mercadolivre.com.br/p/RISCO"
+                    },
+                    new OfficialCatalogProductDto
+                    {
+                        Platform = "Mercado Livre",
+                        PlatformType = MarketplaceType.MercadoLivre,
+                        ProductId = "OFICIAL",
+                        Price = 2000m,
+                        IsOfficialStore = true,
+                        SellerReputationLevel = "5_green",
+                        SourceUrl = "https://www.mercadolivre.com.br/p/OFICIAL"
+                    }
+                ],
+                ScannedCount = 20
+            });
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => CreateNamedDbContext(dbName));
+        var sut = CreateSut(ml, factory);
+
+        var result = await sut.SearchAsync(7, new OfficialCatalogSearchFilter
+        {
+            Keyword = "dell inspiron",
+            SortBy = "melhor_oportunidade"
+        });
+
+        Assert.Equal(["OFICIAL", "RISCO"], result.DataList!.Select(item => item.ProductId));
+        var oficial = result.DataList![0];
+        Assert.Equal(5m, oficial.CommissionPercent);
+        Assert.Equal(100m, oficial.EstimatedCommission);
+        Assert.Equal("Sua taxa", oficial.CommissionSource);
+        Assert.True(oficial.SafetyScore > result.DataList[1].SafetyScore);
+        Assert.Contains("Reputação vermelha", result.DataList[1].Warnings);
     }
 
     private static OfficialCatalogProductDto MlItem(string id, decimal price, decimal? original, string shipping) => new()
@@ -244,14 +306,16 @@ public class OfficialCatalogSearchServiceTests
             NullLogger<OfficialCatalogSearchService>.Instance);
     }
 
-    private static AppDbContext CreateDbContext()
+    private static AppDbContext CreateDbContext() => CreateNamedDbContext(Guid.NewGuid().ToString());
+
+    private static AppDbContext CreateNamedDbContext(string name)
     {
         var encryption = new Mock<IEncryptionService>();
         encryption.Setup(e => e.Encrypt(It.IsAny<string>())).Returns<string>(s => s);
         encryption.Setup(e => e.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(name)
             .Options;
 
         return new AppDbContext(options, encryption.Object, new Ofertio.Database.MultiTenancy.NullCurrentTenantService());

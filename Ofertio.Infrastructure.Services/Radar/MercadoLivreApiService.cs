@@ -249,7 +249,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 TargetOffers = limit,
                 TrackingId = trackingId,
                 AllowShorterQuery = false,
-                IncludeCategories = false
+                IncludeCategories = false,
+                IncludeMetrics = false
             },
             cancellationToken);
 
@@ -484,6 +485,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             .Select(group => group.First())
             .ToList();
         var categories = MergeCategories(await categoriesTask, seenDomains, request.DomainId);
+        if (request.IncludeMetrics)
+        {
+            await EnrichCatalogMetricsAsync(finalItems, accessToken, cancellationToken);
+        }
 
         _logger.LogInformation(
             "[ML Busca] products/search '{Query}' (termo usado '{EffectiveQuery}', offset {Offset}): {Scanned} produtos de catálogo analisados, {OfferCount} ofertas após filtros, próximo offset {NextOffset}.",
@@ -557,6 +562,177 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 offers[index] = await ResolveCatalogOffersAsync(productIds[index], accessToken, followChildren: true, token));
         return offers.SelectMany(productOffers => productOffers ?? []).ToList();
     }
+
+    /// <summary>
+    /// Métricas das ofertas encontradas, só pela API oficial: vendas e dados do anúncio (<c>/items</c> em lote),
+    /// reputação do vendedor (<c>/users</c>), avaliações (<c>/reviews/item</c>) e ranking de mais vendidos
+    /// (<c>/highlights</c>). Falhas deixam a métrica vazia sem afetar a busca.
+    /// </summary>
+    private async Task EnrichCatalogMetricsAsync(
+        IReadOnlyList<OfficialCatalogProductDto> items,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var listingIds = items
+            .Select(item => item.ListingId)
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (listingIds.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var chunk in listingIds.Chunk(MultigetChunkSize))
+        {
+            var listings = await FetchOptionalAsync(
+                $"items?ids={string.Join(',', chunk.Select(Uri.EscapeDataString))}&attributes=id,sold_quantity,seller_id,official_store_id,warranty,condition,shipping,category_id",
+                accessToken,
+                MercadoLivreItemParser.ParseItemsMultiget,
+                cancellationToken);
+            foreach (var item in items)
+            {
+                if (item.ListingId is null || listings is null || !listings.TryGetValue(item.ListingId, out var listing))
+                {
+                    continue;
+                }
+
+                item.SoldQuantity ??= listing.SoldQuantity;
+                item.SellerId ??= listing.SellerId;
+                item.IsOfficialStore |= listing.IsOfficialStore;
+                item.IsFulfillment |= listing.IsFulfillment;
+                item.Warranty ??= listing.Warranty;
+                item.Condition ??= listing.Condition;
+                item.CategoryId ??= listing.CategoryId;
+            }
+        }
+
+        var sellerIds = items.Select(item => item.SellerId).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
+        var categoryIds = items
+            .Select(item => item.CategoryId)
+            .OfType<string>()
+            .GroupBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .Select(group => group.Key)
+            .Take(MaxBestSellerCategories)
+            .ToList();
+        var reviewed = items.Where(item => item.ListingId is not null).ToList();
+
+        var sellersTask = FetchManyAsync(
+            sellerIds,
+            id => $"users/{Uri.EscapeDataString(id)}",
+            MercadoLivreItemParser.ParseSeller,
+            accessToken,
+            cancellationToken);
+        var reviewsTask = FetchManyAsync(
+            reviewed.Select(item => item.ListingId!).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            listingId => BuildReviewsPath(
+                listingId,
+                reviewed.FirstOrDefault(item => string.Equals(item.ListingId, listingId, StringComparison.OrdinalIgnoreCase))?.ProductId),
+            MercadoLivreItemParser.ParseReviewSummary,
+            accessToken,
+            cancellationToken);
+        var rankingTask = FetchManyAsync(
+            categoryIds,
+            id => $"highlights/MLB/category/{Uri.EscapeDataString(id)}",
+            MercadoLivreItemParser.ParseBestSellerPositions,
+            accessToken,
+            cancellationToken);
+        await Task.WhenAll(sellersTask, reviewsTask, rankingTask);
+
+        var sellers = sellersTask.Result;
+        var reviews = reviewsTask.Result;
+        var rankings = rankingTask.Result.Values.ToList();
+        foreach (var item in items)
+        {
+            if (item.SellerId is not null && sellers.TryGetValue(item.SellerId, out var seller))
+            {
+                item.SellerName ??= seller.Nickname;
+                item.SellerReputationLevel ??= seller.ReputationLevel;
+                item.SellerPowerStatus ??= seller.PowerSellerStatus;
+                item.SellerCompletedSales ??= seller.CompletedSales;
+                item.SellerPositiveRate ??= seller.PositiveRate;
+            }
+
+            if (item.ListingId is not null && reviews.TryGetValue(item.ListingId, out var review))
+            {
+                item.RatingAverage ??= review.Average;
+                item.RatingCount ??= review.Total;
+            }
+
+            foreach (var ranking in rankings)
+            {
+                if ((item.ProductId is not null && ranking.TryGetValue(item.ProductId, out var position))
+                    || (item.ListingId is not null && ranking.TryGetValue(item.ListingId, out position)))
+                {
+                    item.BestSellerPosition = Math.Min(item.BestSellerPosition ?? int.MaxValue, position);
+                }
+            }
+        }
+
+        _logger.LogInformation(
+            "[ML Busca] Métricas: {Sellers} vendedores, {Reviews} anúncios com avaliações, {Ranked} no ranking de mais vendidos, {Sold} com vendas informadas.",
+            sellers.Count,
+            reviews.Count,
+            items.Count(item => item.BestSellerPosition is not null),
+            items.Count(item => item.SoldQuantity is not null));
+    }
+
+    private static string BuildReviewsPath(string listingId, string? productId) =>
+        string.IsNullOrWhiteSpace(productId) || string.Equals(productId, listingId, StringComparison.OrdinalIgnoreCase)
+            ? $"reviews/item/{Uri.EscapeDataString(listingId)}"
+            : $"reviews/item/{Uri.EscapeDataString(listingId)}?catalog_product_id={Uri.EscapeDataString(productId)}";
+
+    private async Task<IReadOnlyDictionary<string, T>> FetchManyAsync<T>(
+        IReadOnlyList<string> keys,
+        Func<string, string> pathFor,
+        Func<string, T?> parse,
+        string accessToken,
+        CancellationToken cancellationToken)
+        where T : class
+    {
+        var results = new ConcurrentDictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+        await Parallel.ForEachAsync(
+            keys,
+            new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
+            async (key, token) =>
+            {
+                var parsed = await FetchOptionalAsync(pathFor(key), accessToken, parse, token);
+                if (parsed is not null)
+                {
+                    results[key] = parsed;
+                }
+            });
+        return results;
+    }
+
+    private async Task<T?> FetchOptionalAsync<T>(
+        string relativePath,
+        string accessToken,
+        Func<string, T?> parse,
+        CancellationToken cancellationToken)
+        where T : class
+    {
+        try
+        {
+            var (statusCode, body) = await SendApiPathAsync(relativePath, accessToken, cancellationToken);
+            if (statusCode == HttpStatusCode.OK)
+            {
+                return parse(body);
+            }
+
+            _logger.LogDebug("[ML Busca] Métrica indisponível [{StatusCode}] em {Path}.", (int)statusCode, relativePath);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(ex, "[ML Busca] Falha ao consultar a métrica {Path}.", relativePath);
+        }
+
+        return null;
+    }
+
+    private const int MultigetChunkSize = 20;
+    private const int MaxBestSellerCategories = 5;
 
     /// <summary>Sugestões de categoria (domínios de catálogo) para o termo; falhas não afetam a busca.</summary>
     private async Task<IReadOnlyList<OfficialCatalogCategoryDto>> DiscoverCategoriesAsync(

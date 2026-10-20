@@ -11,6 +11,24 @@ public sealed record MercadoLivreCatalogSearchPage(
     int? Total,
     IReadOnlyList<string> DomainIds);
 
+public sealed record MercadoLivreListingMetrics(
+    int? SoldQuantity,
+    string? SellerId,
+    bool IsOfficialStore,
+    bool IsFulfillment,
+    string? Warranty,
+    string? Condition,
+    string? CategoryId);
+
+public sealed record MercadoLivreSellerMetrics(
+    string? Nickname,
+    string? ReputationLevel,
+    string? PowerSellerStatus,
+    int? CompletedSales,
+    decimal? PositiveRate);
+
+public sealed record MercadoLivreReviewSummary(decimal? Average, int Total);
+
 public static class MercadoLivreItemParser
 {
     public static OfficialOfferSnapshotDto? Parse(string json)
@@ -119,7 +137,7 @@ public static class MercadoLivreItemParser
             if (root.TryGetProperty("paging", out var paging)
                 && paging.ValueKind == JsonValueKind.Object
                 && paging.TryGetProperty("total", out var totalEl)
-                && totalEl.TryGetInt32(out var parsedTotal))
+                && TryReadInt(totalEl, out var parsedTotal))
             {
                 total = parsedTotal;
             }
@@ -297,8 +315,8 @@ public static class MercadoLivreItemParser
 
         var id = ReadString(product, "id")!;
         var (_, name, image) = ParseCatalogProduct(product.GetRawText());
-        var free = offer.TryGetProperty("shipping", out var shipping)
-            && shipping.ValueKind == JsonValueKind.Object
+        var hasShipping = offer.TryGetProperty("shipping", out var shipping) && shipping.ValueKind == JsonValueKind.Object;
+        var free = hasShipping
             && shipping.TryGetProperty("free_shipping", out var freeEl)
             && freeEl.ValueKind == JsonValueKind.True;
         var original = ReadDecimal(offer, "original_price");
@@ -314,7 +332,171 @@ public static class MercadoLivreItemParser
             SourceUrl = ReadString(product, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
             Shipping = free ? "Frete grátis" : null,
             Source = "Api",
-            DomainId = ReadString(product, "domain_id")
+            DomainId = ReadString(product, "domain_id"),
+            ListingId = ReadString(offer, "item_id"),
+            CategoryId = ReadString(offer, "category_id"),
+            SellerId = ReadId(offer, "seller_id"),
+            IsOfficialStore = ReadId(offer, "official_store_id") is not null,
+            IsFulfillment = hasShipping && string.Equals(ReadString(shipping, "logistic_type"), "fulfillment", StringComparison.OrdinalIgnoreCase),
+            Warranty = ReadString(offer, "warranty"),
+            Condition = ReadString(offer, "condition")
+        };
+    }
+
+    /// <summary><c>/items?ids=...&amp;attributes=...</c>: dados de anúncio por id (vendas só quando o ML informa).</summary>
+    public static IReadOnlyDictionary<string, MercadoLivreListingMetrics> ParseItemsMultiget(string json)
+    {
+        var result = new Dictionary<string, MercadoLivreListingMetrics>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return result;
+            }
+
+            foreach (var entry in doc.RootElement.EnumerateArray())
+            {
+                if (entry.ValueKind != JsonValueKind.Object
+                    || (entry.TryGetProperty("code", out var code) && TryReadInt(code, out var status) && status != 200)
+                    || !entry.TryGetProperty("body", out var body)
+                    || ReadString(body, "id") is not { } id)
+                {
+                    continue;
+                }
+
+                var hasShipping = body.TryGetProperty("shipping", out var shipping) && shipping.ValueKind == JsonValueKind.Object;
+                int? sold = body.TryGetProperty("sold_quantity", out var soldEl) && TryReadInt(soldEl, out var soldValue) && soldValue > 0
+                    ? soldValue
+                    : null;
+                result[id] = new MercadoLivreListingMetrics(
+                    sold,
+                    ReadId(body, "seller_id"),
+                    ReadId(body, "official_store_id") is not null,
+                    hasShipping && string.Equals(ReadString(shipping, "logistic_type"), "fulfillment", StringComparison.OrdinalIgnoreCase),
+                    ReadString(body, "warranty"),
+                    ReadString(body, "condition"),
+                    ReadString(body, "category_id"));
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return result;
+    }
+
+    /// <summary><c>/users/{id}</c>: apelido e reputação pública do vendedor.</summary>
+    public static MercadoLivreSellerMetrics? ParseSeller(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("seller_reputation", out var reputation)
+                || reputation.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            int? completed = null;
+            decimal? positive = null;
+            if (reputation.TryGetProperty("transactions", out var transactions) && transactions.ValueKind == JsonValueKind.Object)
+            {
+                if (transactions.TryGetProperty("completed", out var completedEl) && TryReadInt(completedEl, out var completedValue))
+                {
+                    completed = completedValue;
+                }
+
+                if (transactions.TryGetProperty("ratings", out var ratings) && ratings.ValueKind == JsonValueKind.Object)
+                {
+                    positive = ReadDecimal(ratings, "positive");
+                }
+            }
+
+            return new MercadoLivreSellerMetrics(
+                ReadString(root, "nickname"),
+                ReadString(reputation, "level_id"),
+                ReadString(reputation, "power_seller_status"),
+                completed,
+                positive);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary><c>/reviews/item/{id}</c>: nota média e total de avaliações.</summary>
+    public static MercadoLivreReviewSummary? ParseReviewSummary(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            var root = doc.RootElement;
+            var average = ReadDecimal(root, "rating_average");
+            int? total = root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("paging", out var paging)
+                && paging.ValueKind == JsonValueKind.Object
+                && paging.TryGetProperty("total", out var totalEl)
+                && TryReadInt(totalEl, out var totalValue)
+                    ? totalValue
+                    : null;
+            return average is > 0 || total is > 0
+                ? new MercadoLivreReviewSummary(average is > 0 ? decimal.Round(average.Value, 1) : null, total ?? 0)
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary><c>/highlights/MLB/category/{id}</c>: posição de produtos e anúncios no ranking de mais vendidos.</summary>
+    public static IReadOnlyDictionary<string, int> ParseBestSellerPositions(string json)
+    {
+        var positions = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("content", out var content)
+                || content.ValueKind != JsonValueKind.Array)
+            {
+                return positions;
+            }
+
+            foreach (var entry in content.EnumerateArray())
+            {
+                if (ReadString(entry, "id") is { } id
+                    && entry.TryGetProperty("position", out var positionEl)
+                    && TryReadInt(positionEl, out var position)
+                    && position > 0)
+                {
+                    positions.TryAdd(id, position);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return positions;
+    }
+
+    private static string? ReadId(JsonElement element, string name)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(name, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.String when !string.IsNullOrWhiteSpace(value.GetString()) => value.GetString()!.Trim(),
+            _ => null
         };
     }
 
@@ -348,6 +530,12 @@ public static class MercadoLivreItemParser
             return null;
         }
 
-        return el.TryGetDecimal(out var value) ? value : null;
+        return el.ValueKind == JsonValueKind.Number && el.TryGetDecimal(out var value) ? value : null;
+    }
+
+    private static bool TryReadInt(JsonElement element, out int value)
+    {
+        value = 0;
+        return element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out value);
     }
 }

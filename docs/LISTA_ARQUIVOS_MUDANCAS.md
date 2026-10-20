@@ -1744,6 +1744,22 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - mudar filtros depois da busca filtra só a tela (`ApplyScreenFilters`), "Mostrando X de Y" e Buscar consulta as lojas; link "Como funciona a busca e as regras" abre modal com as lojas conectadas do usuário, `matt_tool` e regras/limites da busca.
 - [x] **Ofertio.Tests/Unit/Radar/** - varredura até 100 com poucas ofertas, variações do produto pai, `FilterLoadedResults`.
 
+### AffiliateOfferMetrics - Comissão, vendas, avaliações, mais vendidos, vantagem e segurança na Buscar Ofertas
+
+- [x] **Ofertio.Core/Entities/AffiliateMiningProfile.cs** - `MercadoLivreCommissionPercent` e `AmazonCommissionPercent` (taxa de afiliado do usuário; as APIs não expõem).
+- [x] **Ofertio.Data/Migrations/20261020170056_AddAffiliateCommissionRates.cs** - colunas `decimal(5,2)` nulas em `AffiliateMiningProfiles`.
+- [x] **Ofertio.Business/Dto/OfferRadarDtos.cs** e **Ofertio.Infrastructure.Services/Radar/AffiliateMiningProfileService.cs** - taxas no DTO do perfil, normalizadas ao salvar.
+- [x] **Ofertio.Business/Dto/OfficialCatalogDtos.cs** - métricas no card (`ListingId`, `CategoryId`, comissão, vendas, avaliações, vendedor/reputação/MercadoLíder, loja oficial, Full, garantia, condição, ranking, `AdvantageScore`/`SafetyScore`/`OpportunityScore`, destaques e alertas), `OfficialCatalogSearchMetricsDto` e `MercadoLivreCatalogSearchRequest.IncludeMetrics`.
+- [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - filtros de tela `OfficialStoreOnly`, `TrustedSellersOnly`, `BestSellersOnly` e novas ordenações.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `ApplyCommission`, `NormalizeCommissionPercent`, `ScoreOffer`, `SafetyLabel`, `ReputationLabel`, `BuildMetrics`, ordenações melhor oportunidade/mais vendidos/maior comissão/melhor avaliação.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - vendedor/anúncio/Full/garantia no `buy_box_winner`; `ParseItemsMultiget`, `ParseSeller`, `ParseReviewSummary`, `ParseBestSellerPositions`; leitura numérica segura (`TryReadInt`).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `EnrichCatalogMetricsAsync`: `/items` em lote (vendas), `/users/{id}` (reputação), `/reviews/item/{id}` (avaliações) e `/highlights/MLB/category/{id}` (mais vendidos), falhas ignoradas; `SearchProductsAsync` sem métricas.
+- [x] **Ofertio.Infrastructure.Services/Radar/ShopeeAffiliateOfferService.cs** - `productOfferV2` com `commissionRate`, `commission`, `sales`, `ratingStar`, `priceDiscountRate` e `shopType`.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - lê as taxas do perfil, aplica comissão e notas antes de ordenar.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - painel de métricas, métricas e notas no card, filtros loja oficial/vendedores confiáveis/mais vendidos, ordenação padrão "Melhor vantagem + segurança", taxas editáveis no modal de regras.
+- [x] **Ofertio.SharedUi/Components/Pages/Radar/RadarPerfil.razor** - campos de comissão do ML e da Amazon (preservados ao salvar o perfil).
+- [x] **Ofertio.Tests/Unit/Radar/** - regras (comissão, notas, ordenações, métricas, filtros), parsers do ML, enriquecimento, `ShopeeAffiliateOfferServiceTests` (novo) e comissão do perfil na busca.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

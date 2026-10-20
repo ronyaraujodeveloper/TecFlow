@@ -937,6 +937,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Ofertas sem buy box + modal (`MercadoLivreCatalogOfferFallback`):** "dell i7" voltava 20 produtos de catálogo e 0 ofertas; o preço passou a cair para a faixa da buy box, `/products/{id}/items` e o primeiro produto filho, e a tela ganhou modal de carregamento durante a busca.
 - [x] **Varredura e filtros na Buscar Ofertas (`MercadoLivreCatalogSearchScan`):** "Dell Inspiron" trazia só 3 ofertas de 20 produtos de catálogo; a busca passou a paginar até ~20 ofertas ou 100 produtos com "Carregar mais", aplicar preço e frete grátis durante a varredura, tentar termos mais curtos, ordenar, filtrar por categoria (`domain_id`) e mostrar quantos produtos foram analisados.
 - [x] **Teto da varredura e filtros na tela (`MercadoLivreScanBudgetAndScreenFilters`):** "dell inspiron" + Notebooks parava em 40 produtos com 1 oferta; a varredura passou a ir até 100 quando já há oferta, produtos "pai" trazem até 4 variações, filtros alterados após a busca filtram só a tela e a página ganhou modal com as regras e as lojas do usuário.
+- [x] **Métricas de afiliado (`AffiliateOfferMetrics`):** a Buscar Ofertas passou a servir para análise: comissão estimada (Shopee pela API; ML/Amazon pela taxa do perfil), vendidos, avaliações, ranking de mais vendidos, reputação do vendedor, notas de vantagem/segurança/oportunidade, painel de métricas e filtros de loja oficial, vendedor confiável e mais vendidos.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

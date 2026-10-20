@@ -1677,6 +1677,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Tests/Unit/LinkStrategies/AffiliateLinkInfrastructureTests.cs** - expansão para no produto do ML sem baixar a página.
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - catálogo via `/products` e token sem usuário não usa conta de tenant.
 
+### MercadoLivreSearchOAuthOnly - Buscar Ofertas do ML só pela API oficial com Bearer
+
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `SearchProductsAsync` sempre com Bearer (conta OAuth ➔ token fixo ➔ token do app); removidos a busca anônima, `SearchViaListaAsync`, `SearchListaFallbackAsync`, `ApplyDocumentHeaders`, a dependência de `MercadoLivreAntiBotGuard` e o `access_token` na query string.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - removidos `MercadoLivreScraperBlockedMessage` e `BuildMercadoLivreListaUrl`; `MercadoLivreSearchForbiddenMessage` pede para reconectar a conta.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - removida a opção `UseOfficialSearchApi`.
+- [x] ~~**Ofertio.Business/Integrations/MercadoLivre/MercadoLivreHtmlParser.cs**~~ - excluído (parser da vitrine `lista.mercadolivre.com.br`).
+- [x] ~~**Ofertio.Tests/Unit/Radar/MercadoLivreHtmlParserTests.cs**~~ - excluído junto com o parser.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - Bearer só no cabeçalho, recusa vira mensagem sem raspar a vitrine, sem token não faz requisição.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

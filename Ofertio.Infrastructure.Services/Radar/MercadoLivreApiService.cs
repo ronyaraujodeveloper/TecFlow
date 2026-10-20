@@ -41,20 +41,17 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private readonly IOptionsMonitor<MercadoLivreIntegrationOptions> _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
-    private readonly MercadoLivreAntiBotGuard? _antiBotGuard;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
         IOptionsMonitor<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<MercadoLivreApiService> logger,
-        MercadoLivreAntiBotGuard? antiBotGuard = null)
+        ILogger<MercadoLivreApiService> logger)
     {
         _httpClient = httpClient;
         _options = options;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
-        _antiBotGuard = antiBotGuard;
         EnsurePublicUserAgent(_httpClient);
     }
 
@@ -250,38 +247,16 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
-        if (!_options.CurrentValue.UseOfficialSearchApi)
-        {
-            var publicItems = await TrySearchPublicApiAsync(query, affiliateId, maxItems, cancellationToken);
-            if (publicItems is not null)
-            {
-                return ToChannelResult(publicItems);
-            }
-
-            _logger.LogInformation(
-                "[ML Busca] API pública recusou '{Query}'; buscando na vitrine lista.mercadolivre.com.br.",
-                query);
-            var primary = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-            if (primary.Items.Count > 0)
-            {
-                return OfficialCatalogChannelResult.From(primary.Items);
-            }
-
-            return primary.Blocked
-                ? OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreScraperBlockedMessage)
-                : OfficialCatalogChannelResult.Empty;
-        }
-
         var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
         var accessToken = accountToken
             ?? ResolveStaticAccessToken()
             ?? await GetAppAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(accessToken))
         {
-            var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-            return scraped.Items.Count > 0
-                ? OfficialCatalogChannelResult.From(scraped.Items)
-                : OfficialCatalogChannelResult.Unconfigured();
+            _logger.LogWarning(
+                "[ML Busca] Sem access_token para buscar '{Query}': conecte a conta Mercado Livre em Minhas Lojas ou configure Integrations:MercadoLivre:AppId/SecretKey.",
+                query);
+            return OfficialCatalogChannelResult.Unconfigured();
         }
 
         if (accountToken is not null)
@@ -306,9 +281,12 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
         catch (MercadoLivreSearchForbiddenException ex)
         {
-            _logger.LogWarning("API MLB recusou a busca de '{Query}' ({Reason}); usando a vitrine lista.mercadolivre.com.br.", query, ex.Message);
+            _logger.LogWarning(
+                "[ML Busca] API oficial recusou a busca de '{Query}' com o token do aplicativo ({Reason}); conecte a conta Mercado Livre em Minhas Lojas (OAuth).",
+                query,
+                ex.Message);
             EvictAppToken(accessToken);
-            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
+            return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
         catch (Exception ex)
         {
@@ -317,29 +295,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 : ex.Message;
             _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
             return OfficialCatalogChannelResult.Failed(tracedError);
-        }
-    }
-
-    private async Task<IReadOnlyList<OfficialCatalogProductDto>?> TrySearchPublicApiAsync(
-        string query,
-        string? affiliateId,
-        int maxItems,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var items = await SearchViaApiAsync(query, accessToken: null, affiliateId, maxItems, cancellationToken);
-            _logger.LogInformation(
-                "[ML Busca] API pública sites/MLB/search devolveu {Count} ofertas para '{Query}' (matt_tool={AffiliateId}).",
-                items.Count,
-                query,
-                affiliateId ?? "-");
-            return items;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("[ML Busca] API pública sites/MLB/search indisponível para '{Query}' ({Reason}).", query, ex.Message);
-            return null;
         }
     }
 
@@ -354,10 +309,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         if (renewedToken is null)
         {
             _logger.LogWarning(
-                "[ML Busca] Não foi possível renovar o token da conta '{AccountName}' (Id={AccountId}); usando a vitrine lista.mercadolivre.com.br.",
+                "[ML Busca] Não foi possível renovar o token da conta '{AccountName}' (Id={AccountId}). Reconecte a conta Mercado Livre em Minhas Lojas.",
                 DescribeAccount(account),
                 account.Id);
-            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
+            return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
 
         LogAccountTokenUsage(account, query, renewed: true);
@@ -369,24 +324,12 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(
-                "[ML Busca] API MLB recusou também o token renovado da conta '{AccountName}' (Id={AccountId}) ({Reason}); usando a vitrine lista.mercadolivre.com.br.",
+                "[ML Busca] API oficial recusou também o token renovado da conta '{AccountName}' (Id={AccountId}) ({Reason}).",
                 DescribeAccount(account),
                 account.Id,
                 ex.Message);
-            return await SearchListaFallbackAsync(query, affiliateId, maxItems, cancellationToken);
+            return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
-    }
-
-    private async Task<OfficialCatalogChannelResult> SearchListaFallbackAsync(
-        string query,
-        string? affiliateId,
-        int maxItems,
-        CancellationToken cancellationToken)
-    {
-        var scraped = await SearchViaListaAsync(query, affiliateId, maxItems, cancellationToken);
-        return scraped.Items.Count > 0
-            ? OfficialCatalogChannelResult.From(scraped.Items)
-            : OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
     }
 
     private static OfficialCatalogChannelResult ToChannelResult(IReadOnlyList<OfficialCatalogProductDto> items) =>
@@ -423,10 +366,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         CancellationToken cancellationToken)
     {
         var searchUri = $"https://api.mercadolibre.com/sites/MLB/search?q={Uri.EscapeDataString(query)}&limit={maxItems}";
-        if (!string.IsNullOrWhiteSpace(accessToken))
-        {
-            searchUri += $"&access_token={Uri.EscapeDataString(accessToken)}";
-        }
 
         var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
         if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
@@ -482,82 +421,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         return (response.StatusCode, body);
-    }
-
-    private async Task<(IReadOnlyList<OfficialCatalogProductDto> Items, bool Blocked)> SearchViaListaAsync(
-        string query,
-        string? affiliateId,
-        int maxItems,
-        CancellationToken cancellationToken)
-    {
-        var listaUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
-        if (_antiBotGuard?.IsBlocked == true)
-        {
-            _logger.LogWarning(
-                "[ML Busca] Vitrine pública em pausa até {BlockedUntil:HH:mm} UTC após desafio anti-robô; '{Query}' não será raspada.",
-                _antiBotGuard.BlockedUntil,
-                query);
-            return ([], true);
-        }
-
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, listaUrl);
-            ApplyDocumentHeaders(request);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            var html = await response.Content.ReadAsStringAsync(cancellationToken);
-            var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri;
-            if (!response.IsSuccessStatusCode || OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(finalUrl, html))
-            {
-                if (OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(finalUrl, html))
-                {
-                    _antiBotGuard?.Trip();
-                }
-
-                _logger.LogWarning(
-                    "Vitrine ML indisponível para '{Query}' [{StatusCode}] {Url}",
-                    query,
-                    response.StatusCode,
-                    finalUrl ?? listaUrl);
-                return ([], true);
-            }
-
-            var items = MercadoLivreHtmlParser.ParseSearchResults(html)
-                .Take(maxItems)
-                .Select(item =>
-                {
-                    item.SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.SourceUrl, affiliateId);
-                    return item;
-                })
-                .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
-                .ToList();
-            _logger.LogInformation(
-                "[ML Busca] Vitrine lista.mercadolivre.com.br devolveu {Count} ofertas para '{Query}' (matt_tool={AffiliateId}).",
-                items.Count,
-                query,
-                affiliateId ?? "-");
-            return (items, false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Falha ao raspar a vitrine do Mercado Livre para '{Query}'.", query);
-            return ([], true);
-        }
-    }
-
-    private static void ApplyDocumentHeaders(HttpRequestMessage request)
-    {
-        ApplyHeader(request.Headers, "User-Agent", PublicUserAgent);
-        ApplyHeader(request.Headers, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        ApplyHeader(request.Headers, "Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
-        ApplyHeader(request.Headers, "Sec-Ch-Ua", "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"");
-        ApplyHeader(request.Headers, "Sec-Ch-Ua-Mobile", "?0");
-        ApplyHeader(request.Headers, "Sec-Ch-Ua-Platform", "\"Windows\"");
-        ApplyHeader(request.Headers, "Sec-Fetch-Dest", "document");
-        ApplyHeader(request.Headers, "Sec-Fetch-Mode", "navigate");
-        ApplyHeader(request.Headers, "Sec-Fetch-Site", "none");
-        ApplyHeader(request.Headers, "Sec-Fetch-User", "?1");
-        ApplyHeader(request.Headers, "Upgrade-Insecure-Requests", "1");
     }
 
     private async Task<string?> GetAppAccessTokenAsync(CancellationToken cancellationToken)

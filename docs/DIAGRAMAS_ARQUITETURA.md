@@ -1626,21 +1626,20 @@ sequenceDiagram
   end
 ```
 
-### Vitrine pública como motor primário (`MLBScraperPrimary`)
+### Busca ML só pela API oficial (`MercadoLivreSearchOAuthOnly`, substitui `MLBScraperPrimary`)
 
 ```mermaid
 flowchart TB
   BG[BuscaGlobal.razor /busca] --> OCS[OfficialCatalogSearchService]
   OCS --> MLS[MercadoLivreApiService.SearchProductsAsync]
-  MLS --> FLAG{UseOfficialSearchApi?}
-  FLAG -->|true| OAUTH[Fluxo OAuth + refresh<br/>sites/MLB/search]
-  FLAG -->|false padrão| PUB[GET api.mercadolibre.com/sites/MLB/search<br/>anônimo, sem token]
-  PUB -->|200| MATT
-  PUB -->|403 / falha| LISTA[GET lista.mercadolivre.com.br/query<br/>headers Chrome 129 + GZip/Deflate/Brotli]
-  LISTA -->|cards .ui-search-layout__item / .poly-card| PARSER[MercadoLivreHtmlParser<br/>título, preço, preço original, imagem, link]
-  PARSER --> MATT[InjectMattTool matt_tool do tenant]
+  MLS --> TOKEN{access_token?}
+  TOKEN -->|conta OAuth do tenant ➔ AccessToken fixo ➔ token do app| OAUTH[GET api.mercadolibre.com/sites/MLB/search<br/>Authorization: Bearer, token fora da URL]
+  TOKEN -->|nenhum| CRED[Badge: Requer OAuth do Mercado Livre]
+  OAUTH -->|200| MATT[InjectMattTool matt_tool do tenant]
   MATT --> OK[Badge 🟢 N produtos, sem alerta]
-  LISTA -->|bot_challenge / account-verification| BLOCK[Badge ❌ vitrine pediu verificação anti-robô]
+  OAUTH -->|401/403 com token da conta| REFRESH[refresh_token ➔ nova tentativa]
+  REFRESH -->|recusado de novo| DENY[Badge ❌ API oficial recusou a busca, reconectar a conta]
+  OAUTH -->|403 com token do app| DENY
 ```
 
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok

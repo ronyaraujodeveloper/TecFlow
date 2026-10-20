@@ -125,3 +125,4 @@
 [2026-10-19 21:35:00] feat(webui): reverse proxy YARP de /api/mercadolivre para a API
 [2026-10-19 22:01:19] feat(ml): items pela API oficial com Bearer OAuth e trava anti-robo na pagina publica
 [2026-10-19 22:19:47] feat(ml): resolvedor de links e metadados do Mercado Livre via API oficial sem scraping publico
+[2026-10-19 22:34:38] fix(ml): busca de ofertas do Mercado Livre so pela API oficial com Bearer, sem vitrine publica

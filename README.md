@@ -315,12 +315,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 - [x] **Vinculação Obrigatória do Access Token por Tenant:**
   - Todo consumo do endpoint de busca do Mercado Livre (`/sites/MLB/search`) deve obrigatoriamente resgatar o `AccessToken` ativo da conta vinculada ao tenant atual e adicioná-lo ao cabeçalho HTTP `Authorization: Bearer {AccessToken}`.
-  - Entregue em `MLBOAuthSearchTokenFix` (conta do tenant + Bearer por requisição); vale quando `UseOfficialSearchApi = true`.
+  - Entregue em `MLBOAuthSearchTokenFix` (conta do tenant + Bearer por requisição); desde `MercadoLivreNoScraping` é o único caminho da busca.
 - [x] **Auto-Refresh de Token em Chamadas de Busca:**
   - Ao receber status HTTP 401 ou HTTP 403 da API oficial, o serviço de busca deve acionar o fluxo de renovação via `refresh_token` utilizando as credenciais do Vault Master antes de registrar falha.
   - Entregue em `MLBOAuthSearchTokenFix`; em produção o ML respondeu `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` também ao token renovado (app aguardando homologação no portal).
 
 ## 🕸️ Vitrine Pública como Motor Primário da Busca ML (`MLBScraperPrimary`)
+
+> **Substituído por `MercadoLivreNoScraping`:** a raspagem da vitrine, a busca anônima e a opção `UseOfficialSearchApi` foram removidas; o histórico abaixo fica só como registro.
 
 - [x] **API oficial desligada até a homologação do app:**
   - `Integrations:MercadoLivre:UseOfficialSearchApi` (padrão `false`): `SearchProductsAsync` não chama `/sites/MLB/search`; com `true` volta o fluxo OAuth + refresh.
@@ -333,6 +335,8 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `http2.mlstatic.com/resources/sites/MLB/suggest?q=` responde 404 e `.../autosuggest?q=` responde 403 a chamadas do servidor; além disso só devolve termos de busca (sem preço, imagem ou link), então não gera ofertas. O desafio anti-robô da vitrine não é contornado por código: a saída é a homologação do app (`UseOfficialSearchApi = true`) ou a busca executada no navegador do usuário.
 
 ## 🌐 Busca Pública Leve do Mercado Livre (`MLBPublicSearch`)
+
+> **Substituído por `MercadoLivreNoScraping`:** a busca anônima foi removida; toda busca usa `Authorization: Bearer`.
 
 - [x] **API pública anônima como primeira tentativa:**
   - Com `UseOfficialSearchApi = false`, `SearchProductsAsync` chama `GET https://api.mercadolibre.com/sites/MLB/search?q={query}&limit=20` sem token nem escopos; mapeia `id`, `title`, `price`, `thumbnail` e `permalink`.
@@ -622,7 +626,9 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Dados pela API oficial:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` com `Authorization: Bearer` (refresh automático do token da conta); links de catálogo `/p/MLB...` usam `/products/{id}` ➔ anúncio ganhador.
   - Gerador de Links usa o token OAuth da conta do usuário logado; rotinas em segundo plano (sem usuário) usam `Integrations:MercadoLivre:AccessToken` ou o token do aplicativo, nunca a conta de outro tenant.
   - Sem MLB ou sem resposta da API: oferta "Verificando" e nome pelo slug da URL.
-- [ ] **Busca por palavra-chave (Radar):** a vitrine `lista.mercadolivre.com.br` ainda é o último recurso quando `sites/MLB/search` recusa o token (já protegida pela trava anti-robô).
+- [x] **Busca por palavra-chave (Buscar Ofertas):** só `GET /sites/MLB/search` com `Authorization: Bearer` (conta OAuth do tenant com refresh ➔ `AccessToken` fixo ➔ token do app); o token não vai mais na URL (`access_token=` aparecia no log de requisições).
+  - Removidos a busca anônima, a raspagem de `lista.mercadolivre.com.br`, o `MercadoLivreHtmlParser` e a opção `UseOfficialSearchApi`.
+  - Recusa da API mostra "A API oficial do Mercado Livre recusou a busca (HTTP 403)..." pedindo para reconectar a conta, no lugar do aviso de verificação anti-robô.
 
 ---
 

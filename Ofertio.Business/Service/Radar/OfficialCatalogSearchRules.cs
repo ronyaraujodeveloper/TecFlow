@@ -46,12 +46,9 @@ public static class OfficialCatalogSearchRules
         "Requer OAuth do Mercado Livre para buscar ofertas";
 
     public const string MercadoLivreSearchForbiddenMessage =
-        "API MLB recusou a busca (HTTP 403) e a vitrine pública do Mercado Livre não retornou ofertas. Conecte a loja via OAuth ou tente novamente em instantes.";
+        "A API oficial do Mercado Livre recusou a busca (HTTP 403). Conecte ou reconecte a conta Mercado Livre em Minhas Lojas (OAuth); a vitrine pública não é consultada para evitar o bloqueio anti-robô.";
 
-    public const string MercadoLivreScraperBlockedMessage =
-        "A vitrine pública do Mercado Livre pediu verificação anti-robô e não retornou ofertas. Tente novamente em instantes.";
-
-    /// <summary>401/403 ou erro de escopo de usuário: a busca deve cair na vitrine HTML.</summary>
+    /// <summary>401/403 ou erro de escopo de usuário na busca oficial (o token precisa ser renovado ou a conta reconectada).</summary>
     public static bool IsMercadoLivreSearchRefused(HttpStatusCode statusCode, string? body)
     {
         if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
@@ -105,14 +102,6 @@ public static class OfficialCatalogSearchRules
             name.Replace(" ", string.Empty, StringComparison.Ordinal),
             "MercadoLivre",
             StringComparison.OrdinalIgnoreCase);
-    }
-
-    public static string BuildMercadoLivreListaUrl(string query)
-    {
-        var slug = string.Join(
-            "-",
-            query.Trim().Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries));
-        return "https://lista.mercadolivre.com.br/" + Uri.EscapeDataString(slug);
     }
 
     public static string? ResolveMercadoLivreAffiliateId(string? trackingId, string? affiliateTrackingId)

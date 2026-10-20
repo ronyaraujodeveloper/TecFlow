@@ -132,3 +132,4 @@
 [2026-10-19 23:59:22] fix(ml): Buscar Ofertas pelo catalogo oficial products/search com preco do buy_box_winner, sites/MLB/search descontinuado pelo ML
 [2026-10-20 12:49:59] fix(ml): ofertas de catalogo sem buy box via faixa de preco, products/items e produto filho; modal de carregamento na Buscar Ofertas
 [2026-10-20 13:19:59] feat(busca): varredura paginada do catalogo ML com carregar mais, filtros de preco e frete gratis na varredura, termo mais curto, ordenacao e categoria
+[2026-10-20 13:42:37] fix(busca): varredura ML ate 100 produtos quando ha oferta, variacoes de produto pai, filtros aplicados na tela apos a busca e modal de regras

@@ -667,7 +667,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Termo mais curto:** sem nenhuma oferta, tenta automaticamente removendo as últimas palavras ("Dell Inspiron i7 16GB" ➔ "Dell Inspiron i7" ➔ "Dell Inspiron") e avisa o termo usado.
 - [x] **Ordenação:** relevância, menor preço ou maior desconto (reordena na tela sem nova consulta).
 - [x] **Categoria:** domínios sugeridos pelo `domain_discovery` e pelos resultados; ao escolher, a busca envia `domain_id`.
-- [ ] **Validar com a conta real:** conferir no log `[ML Busca] products/search ... analisados ... ofertas após filtros` quantos produtos são analisados por busca e o tempo de resposta.
+- [x] **Validar com a conta real:** o log mostrou "dell inspiron" + Notebooks parando em 40 produtos analisados com 1 oferta, corrigido abaixo.
+
+## 🧮 Teto da varredura, filtros na tela e regras (`MercadoLivreScanBudgetAndScreenFilters`)
+
+- [x] **Teto de 100 de fato:** quando o termo já trouxe alguma oferta, a varredura segue até 100 produtos (o limite de 40 só reserva espaço para tentar termos mais curtos quando nada foi encontrado).
+- [x] **Variações:** produto "pai" do catálogo (ex.: modelo com várias configurações) traz até 4 variações com oferta, cada uma em um card.
+- [x] **Filtros na tela:** depois da busca, mudar lojas, preço, frete grátis, cupom, categoria ou ordenação filtra só os resultados carregados; Buscar consulta as plataformas de novo.
+- [x] **Modal de regras:** "Como funciona a busca e as regras" mostra as lojas conectadas do usuário, o `matt_tool` usado e os limites/regras da busca.
+- [ ] **Validar com a conta real:** repetir "dell inspiron" + Notebooks e conferir o selo "N ofertas · 100 produtos analisados".
 
 ---
 

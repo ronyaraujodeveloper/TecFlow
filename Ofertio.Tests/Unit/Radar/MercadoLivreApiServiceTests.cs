@@ -380,19 +380,28 @@ public class MercadoLivreApiServiceTests
         handler.PathResponses["/products/MLB20/items"] = (
             HttpStatusCode.OK,
             """{"results":[{"item_id":"MLB201","price":4999},{"item_id":"MLB202","price":4599.9,"shipping":{"free_shipping":true}}]}""");
-        handler.PathResponses["/products/MLB30"] = (HttpStatusCode.OK, """{"id":"MLB30","name":"Dell Inspiron (pai)","buy_box_winner":null,"children_ids":["MLB31","MLB32"]}""");
+        handler.PathResponses["/products/MLB30"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB30","name":"Dell Inspiron (pai)","domain_id":"MLB-NOTEBOOKS","buy_box_winner":null,"children_ids":["MLB31","MLB32","MLB33","MLB34","MLB35"]}""");
         handler.PathResponses["/products/MLB30/items"] = (HttpStatusCode.NotFound, """{"message":"not found"}""");
         handler.PathResponses["/products/MLB31"] = (
             HttpStatusCode.OK,
             """{"id":"MLB31","name":"Dell Inspiron i7 16GB","permalink":"https://www.mercadolivre.com.br/dell/p/MLB31","buy_box_winner":{"item_id":"MLB311","price":5299}}""");
+        handler.PathResponses["/products/MLB32"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB32","name":"Dell Inspiron i5 8GB","domain_id":"MLB-NOTEBOOKS","buy_box_winner":{"item_id":"MLB321","price":3899}}""");
+        handler.PathResponses["/products/MLB33"] = (HttpStatusCode.OK, """{"id":"MLB33","name":"Sem oferta","buy_box_winner":null}""");
+        handler.PathResponses["/products/MLB33/items"] = (HttpStatusCode.NotFound, """{"message":"No winners found"}""");
+        handler.PathResponses["/products/MLB34"] = (HttpStatusCode.OK, """{"id":"MLB34","name":"Dell Inspiron i3","buy_box_winner":{"item_id":"MLB341","price":2999}}""");
         var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
 
         var result = await sut.SearchProductsAsync(1, "dell i7", 20);
 
-        Assert.Equal(["MLB10", "MLB20", "MLB31"], result.Items.Select(item => item.ProductId));
-        Assert.Equal([3500m, 4599.9m, 5299m], result.Items.Select(item => item.Price!.Value));
+        Assert.Equal(["MLB10", "MLB20", "MLB31", "MLB32", "MLB34"], result.Items.Select(item => item.ProductId));
+        Assert.Equal([3500m, 4599.9m, 5299m, 3899m, 2999m], result.Items.Select(item => item.Price!.Value));
         Assert.Equal("Frete grátis", result.Items[1].Shipping);
-        Assert.DoesNotContain(handler.Requests, request => request.Path == "/products/MLB32");
+        Assert.Equal("MLB-NOTEBOOKS", result.Items[2].DomainId);
+        Assert.DoesNotContain(handler.Requests, request => request.Path == "/products/MLB35");
         Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-static", request.Authorization));
     }
 
@@ -572,6 +581,33 @@ public class MercadoLivreApiServiceTests
             handler.Requests.Where(request => request.Path == SearchPath).Select(request => request.Url));
         Assert.Equal(["MLB-NOTEBOOKS", "MLB-GAMING_HEADSETS"], result.Categories.Select(category => category.Id));
         Assert.Equal(["Notebooks", "Gaming headsets"], result.Categories.Select(category => category.Name));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WhenTermHasFewOffers_ShouldKeepScanningUpToTheFullBudget()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage(Range(QueryValue(uri, "offset") is { } offset ? int.Parse(offset) : 0, 20), 500))
+                : CatalogProduct(uri, id => id == "MLB0" ? (4000m, false) : null)
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "dell inspiron",
+            DomainId = "MLB-NOTEBOOKS",
+            IncludeCategories = false
+        });
+
+        Assert.Equal("MLB0", Assert.Single(result.Items).ProductId);
+        Assert.Equal(OfficialCatalogSearchRules.MercadoLivreMaxScannedProducts, result.ScannedCount);
+        Assert.Equal(OfficialCatalogSearchRules.MercadoLivreMaxScannedProducts, result.NextOffset);
+        Assert.Equal("dell inspiron", result.EffectiveQuery);
+        Assert.All(
+            handler.Requests.Where(request => request.Path == SearchPath),
+            request => Assert.Equal("dell inspiron", QueryValue(new Uri(request.Url), "q")));
     }
 
     [Fact]

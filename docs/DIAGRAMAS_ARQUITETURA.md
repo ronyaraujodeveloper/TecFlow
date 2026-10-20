@@ -1665,9 +1665,9 @@ flowchart TB
   SCA --> SCAN[ScanCatalogAsync]
   SCAN -->|1ª página| DD[GET sites/MLB/domain_discovery/search<br/>sugestões de categoria, falha ignorada]
   SCAN --> PAGE[GET products/search limit=20 &offset= &domain_id=]
-  PAGE --> RES[ResolveCatalogOfferAsync em paralelo, até 8<br/>buy box ➔ faixa ➔ /items ➔ filho]
+  PAGE --> RES[ResolveCatalogOffersAsync em paralelo, até 8<br/>buy box ➔ faixa ➔ /items ➔ até 4 variações children_ids]
   RES --> FIL[PassesPriceAndShipping<br/>preço mín./máx. + frete grátis]
-  FIL -->|menos que a meta e menos de 100 analisados| PAGE
+  FIL -->|menos que a meta e menos de 100 analisados<br/>teto de 40 só enquanto o termo não tem oferta| PAGE
   FIL -->|meta atingida ou fim do catálogo| OUT[Items + ScannedCount + NextOffset + EffectiveQuery + Categories]
   FIL -->|0 ofertas no termo| SHORT[BuildShorterQueries ➔ remove a última palavra]
   SHORT --> PAGE
@@ -1678,6 +1678,9 @@ flowchart TB
   SORT --> BG
   BADGE --> BG
   BG -->|Carregar mais: só ML, termo usado, MercadoLivreOffset| OCS
+  BG -->|filtro alterado após a busca| LOCAL[FilterLoadedResults + ApplySort<br/>só os resultados carregados, sem chamar as lojas]
+  LOCAL --> BG
+  BG -->|ⓘ Como funciona| RULES[Modal de regras: lojas conectadas, matt_tool, limites da varredura]
 ```
 
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok

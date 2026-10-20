@@ -416,15 +416,21 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             }
 
             var candidate = candidates[index];
-            var cap = index < candidates.Count - 1
-                ? Math.Min(OfficialCatalogSearchRules.MercadoLivreScanPerQueryWithFallback, remaining)
-                : remaining;
+            var hasShorterCandidate = index < candidates.Count - 1;
             var offset = startOffset;
             var candidateScanned = 0;
             effectiveQuery = candidate;
             nextOffset = null;
-            while (candidateScanned < cap && items.Count < target)
+            while (items.Count < target)
             {
+                var cap = hasShorterCandidate && items.Count == 0
+                    ? Math.Min(OfficialCatalogSearchRules.MercadoLivreScanPerQueryWithFallback, remaining)
+                    : remaining;
+                if (candidateScanned >= cap)
+                {
+                    break;
+                }
+
                 var page = await FetchCatalogPageAsync(
                     candidate,
                     request.DomainId,
@@ -543,13 +549,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         string accessToken,
         CancellationToken cancellationToken)
     {
-        var offers = new OfficialCatalogProductDto?[productIds.Count];
+        var offers = new IReadOnlyList<OfficialCatalogProductDto>[productIds.Count];
         await Parallel.ForEachAsync(
             Enumerable.Range(0, productIds.Count),
             new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
             async (index, token) =>
-                offers[index] = await ResolveCatalogOfferAsync(productIds[index], accessToken, followChildren: true, token));
-        return offers.OfType<OfficialCatalogProductDto>().ToList();
+                offers[index] = await ResolveCatalogOffersAsync(productIds[index], accessToken, followChildren: true, token));
+        return offers.SelectMany(productOffers => productOffers ?? []).ToList();
     }
 
     /// <summary>Sugestões de categoria (domínios de catálogo) para o termo; falhas não afetam a busca.</summary>
@@ -609,10 +615,11 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private const int MaxCategorySuggestions = 8;
 
     /// <summary>
-    /// Oferta de um produto de catálogo, só pela API oficial: <c>buy_box_winner</c> ➔ faixa de preço da buy box ➔
-    /// menor preço em <c>/products/{id}/items</c> ➔ primeiro produto filho (produtos "pai" não são compráveis).
+    /// Ofertas de um produto de catálogo, só pela API oficial: <c>buy_box_winner</c> ➔ faixa de preço da buy box ➔
+    /// menor preço em <c>/products/{id}/items</c> ➔ variações (<c>children_ids</c>, até
+    /// <see cref="OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct"/>), pois produtos "pai" não são compráveis.
     /// </summary>
-    private async Task<OfficialCatalogProductDto?> ResolveCatalogOfferAsync(
+    private async Task<IReadOnlyList<OfficialCatalogProductDto>> ResolveCatalogOffersAsync(
         string productId,
         string accessToken,
         bool followChildren,
@@ -626,13 +633,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 productId,
                 (int)productStatus,
                 Truncate(productBody));
-            return null;
+            return [];
         }
 
         var offer = MercadoLivreItemParser.ParseCatalogOffer(productBody);
         if (offer is not null)
         {
-            return offer;
+            return [offer];
         }
 
         var (itemsStatus, itemsBody) = await SendApiPathAsync(
@@ -644,17 +651,28 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             offer = MercadoLivreItemParser.ParseCatalogItemsOffer(productBody, itemsBody);
             if (offer is not null)
             {
-                return offer;
+                return [offer];
             }
         }
 
         var children = MercadoLivreItemParser.ParseCatalogChildrenIds(productBody);
         if (followChildren && children.Count > 0)
         {
-            offer = await ResolveCatalogOfferAsync(children[0], accessToken, followChildren: false, cancellationToken);
-            if (offer is not null)
+            var childOffers = new List<OfficialCatalogProductDto>();
+            foreach (var childId in children.Take(OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct))
             {
-                return offer;
+                childOffers.AddRange(await ResolveCatalogOffersAsync(childId, accessToken, followChildren: false, cancellationToken));
+            }
+
+            if (childOffers.Count > 0)
+            {
+                var parentDomain = MercadoLivreItemParser.ParseCatalogDomainId(productBody);
+                foreach (var childOffer in childOffers.Where(item => string.IsNullOrWhiteSpace(item.DomainId)))
+                {
+                    childOffer.DomainId = parentDomain;
+                }
+
+                return childOffers;
             }
         }
 
@@ -664,7 +682,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             (int)itemsStatus,
             Truncate(itemsBody),
             children.Count);
-        return null;
+        return [];
     }
 
     private static string Truncate(string body) => body.Length > 300 ? body[..300] : body;

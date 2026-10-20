@@ -46,6 +46,51 @@ public class OfficialCatalogSearchRulesTests
     }
 
     [Fact]
+    public void FilterLoadedResults_ShouldFilterOnlyLoadedItemsByStoreCategoryPriceAndShipping()
+    {
+        IReadOnlyList<OfficialCatalogProductDto> items =
+        [
+            new() { ProductId = "ML-NB", PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-NOTEBOOKS", Price = 4000m, Shipping = "Frete grátis" },
+            new() { ProductId = "ML-PC", PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-DESKTOP_COMPUTERS", Price = 3000m, Shipping = "Frete grátis" },
+            new() { ProductId = "SHP", PlatformType = MarketplaceType.Shopee, Price = 3500m },
+            new() { ProductId = "LOCAL", PlatformType = null, Price = 100m }
+        ];
+
+        Assert.Equal(
+            ["ML-NB", "SHP", "LOCAL"],
+            OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+            {
+                MercadoLivre = true,
+                Shopee = true,
+                MercadoLivreCategory = "MLB-NOTEBOOKS"
+            }).Select(item => item.ProductId));
+        Assert.Equal(
+            ["ML-NB", "ML-PC"],
+            OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+            {
+                MercadoLivre = true,
+                Shopee = true,
+                FreeShippingOnly = true
+            }).Select(item => item.ProductId));
+        Assert.Equal(
+            ["ML-PC", "SHP"],
+            OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+            {
+                MercadoLivre = true,
+                Shopee = true,
+                MinPrice = 2000m,
+                MaxPrice = 3600m
+            }).Select(item => item.ProductId));
+        Assert.Equal(
+            ["SHP", "LOCAL"],
+            OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+            {
+                MercadoLivre = false,
+                Shopee = true
+            }).Select(item => item.ProductId));
+    }
+
+    [Fact]
     public void HumanizeMercadoLivreDomain_ShouldTurnDomainIdIntoReadableName()
     {
         Assert.Equal("Gaming headsets", OfficialCatalogSearchRules.HumanizeMercadoLivreDomain("MLB-GAMING_HEADSETS"));

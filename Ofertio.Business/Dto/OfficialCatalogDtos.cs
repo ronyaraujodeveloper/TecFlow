@@ -25,6 +25,9 @@ public class OfficialCatalogProductDto
     public string? Shipping { get; set; }
 
     public string Source { get; set; } = "Api";
+
+    /// <summary>Domínio do catálogo do Mercado Livre (ex.: <c>MLB-NOTEBOOKS</c>), usado no filtro de categoria da tela.</summary>
+    public string? DomainId { get; set; }
 }
 
 public class OfficialCatalogChannelResult

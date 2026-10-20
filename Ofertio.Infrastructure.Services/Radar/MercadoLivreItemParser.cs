@@ -313,8 +313,22 @@ public static class MercadoLivreItemParser
             ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
             SourceUrl = ReadString(product, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
             Shipping = free ? "Frete grátis" : null,
-            Source = "Api"
+            Source = "Api",
+            DomainId = ReadString(product, "domain_id")
         };
+    }
+
+    public static string? ParseCatalogDomainId(string productJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(productJson) ? "null" : productJson);
+            return ReadString(doc.RootElement, "domain_id");
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static string? ReadString(JsonElement element, string name) =>

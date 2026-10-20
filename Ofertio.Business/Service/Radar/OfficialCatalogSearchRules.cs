@@ -120,6 +120,32 @@ public static class OfficialCatalogSearchRules
         PassesPriceAndShipping(item, filter.MinPrice, filter.MaxPrice, filter.FreeShippingOnly == true)
         && (filter.HasCoupon != true || !string.IsNullOrWhiteSpace(item.CouponCode));
 
+    /// <summary>
+    /// Filtros aplicados na tela sobre o que a última busca carregou (sem consultar as lojas):
+    /// lojas marcadas, preço, frete grátis, cupom e categoria do Mercado Livre.
+    /// </summary>
+    public static IReadOnlyList<OfficialCatalogProductDto> FilterLoadedResults(
+        IReadOnlyList<OfficialCatalogProductDto> items,
+        OfficialCatalogSearchFilter filter)
+    {
+        var anyStore = filter.MercadoLivre || filter.Shopee || filter.Amazon;
+        var category = filter.MercadoLivreCategory?.Trim();
+        return items
+            .Where(item => !anyStore || item.PlatformType switch
+            {
+                MarketplaceType.MercadoLivre => filter.MercadoLivre,
+                MarketplaceType.Shopee => filter.Shopee,
+                MarketplaceType.Amazon => filter.Amazon,
+                _ => true
+            })
+            .Where(item => string.IsNullOrEmpty(category)
+                || item.PlatformType != MarketplaceType.MercadoLivre
+                || string.IsNullOrWhiteSpace(item.DomainId)
+                || string.Equals(item.DomainId, category, StringComparison.OrdinalIgnoreCase))
+            .Where(item => PassesOptionalFilters(item, filter))
+            .ToList();
+    }
+
     /// <summary>Faixa de preço e frete grátis: usados também durante a varredura do Mercado Livre.</summary>
     public static bool PassesPriceAndShipping(
         OfficialCatalogProductDto item,
@@ -172,8 +198,11 @@ public static class OfficialCatalogSearchRules
     /// <summary>Teto de produtos de catálogo analisados por busca (cada um custa 1 a 4 chamadas à API).</summary>
     public const int MercadoLivreMaxScannedProducts = 100;
 
-    /// <summary>Com termos mais curtos ainda por tentar, o termo atual não consome o teto inteiro.</summary>
+    /// <summary>Enquanto o termo não trouxe nenhuma oferta e há termo mais curto por tentar, ele não consome o teto inteiro.</summary>
     public const int MercadoLivreScanPerQueryWithFallback = 40;
+
+    /// <summary>Variações (<c>children_ids</c>) consultadas por produto "pai" do catálogo; cada uma com oferta vira um card.</summary>
+    public const int MercadoLivreMaxChildrenPerProduct = 4;
 
     /// <summary>"Dell Inspiron i7 16GB" ➔ "Dell Inspiron i7" ➔ "Dell Inspiron" ➔ "Dell".</summary>
     public static IReadOnlyList<string> BuildShorterQueries(string? query)

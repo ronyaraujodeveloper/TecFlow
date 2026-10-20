@@ -21,7 +21,10 @@
 <div class="dashboard-page">
     <div class="text-center mb-4">
         <h1 class="h3 fw-bold mb-1">Buscar Ofertas</h1>
-        <p class="text-muted small mb-0">Consulta paralela nas APIs oficiais do Mercado Livre, Shopee e Amazon.</p>
+        <p class="text-muted small mb-1">Consulta paralela nas APIs oficiais do Mercado Livre, Shopee e Amazon.</p>
+        <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => _showRules = true">
+            ⓘ Como funciona a busca e as regras
+        </button>
     </div>
 
     <form class="col-12 col-lg-8 mx-auto mb-4 px-0" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
@@ -37,38 +40,38 @@
         </div>
         <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
             <div class="form-check">
-                <input id="busca-ml" class="form-check-input" type="checkbox" @bind="_ml" />
+                <input id="busca-ml" class="form-check-input" type="checkbox" @bind="_ml" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-ml">Mercado Livre</label>
             </div>
             <div class="form-check">
-                <input id="busca-shopee" class="form-check-input" type="checkbox" @bind="_shopee" />
+                <input id="busca-shopee" class="form-check-input" type="checkbox" @bind="_shopee" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-shopee">Shopee</label>
             </div>
             <div class="form-check">
-                <input id="busca-amazon" class="form-check-input" type="checkbox" @bind="_amazon" />
+                <input id="busca-amazon" class="form-check-input" type="checkbox" @bind="_amazon" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-amazon">Amazon</label>
             </div>
             <div class="form-check">
-                <input id="busca-cupom" class="form-check-input" type="checkbox" @bind="_couponOnly" />
+                <input id="busca-cupom" class="form-check-input" type="checkbox" @bind="_couponOnly" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-cupom">Apenas com cupom</label>
             </div>
             <div class="form-check">
-                <input id="busca-frete" class="form-check-input" type="checkbox" @bind="_freeShippingOnly" />
+                <input id="busca-frete" class="form-check-input" type="checkbox" @bind="_freeShippingOnly" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-frete">Somente frete grátis</label>
             </div>
         </div>
         <div class="row g-2 mt-2">
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-min">Preço mín.</label>
-                <input id="busca-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" />
+                <input id="busca-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" @bind:after="ApplyScreenFilters" />
             </div>
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-max">Preço máx.</label>
-                <input id="busca-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" />
+                <input id="busca-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" @bind:after="ApplyScreenFilters" />
             </div>
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
-                <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ResortItems">
+                <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ApplyScreenFilters">
                     <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância</option>
                     <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
                     <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
@@ -76,7 +79,7 @@
             </div>
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-categoria">Categoria (Mercado Livre)</label>
-                <select id="busca-categoria" class="form-select" @bind="_mlCategory" disabled="@(_categories.Count == 0)">
+                <select id="busca-categoria" class="form-select" @bind="_mlCategory" @bind:after="ApplyScreenFilters" disabled="@(_categories.Count == 0)">
                     <option value="">@(_categories.Count == 0 ? "Busque para sugerir" : "Todas")</option>
                     @foreach (var category in _categories)
                     {
@@ -124,7 +127,18 @@
         </div>
     }
 
-    @if (_searched && !_busy && (_items is null || _items.Count == 0))
+    @if (_searched && _relevanceOrder.Count > 0 && _items.Count != _relevanceOrder.Count)
+    {
+        <p class="small text-muted text-center mb-3">
+            Mostrando @_items.Count de @_relevanceOrder.Count resultados carregados. Os filtros alterados valem só para o que está na tela;
+            clique em <strong>Buscar</strong> para consultar as lojas de novo com eles.
+        </p>
+    }
+    @if (_searched && !_busy && _relevanceOrder.Count > 0 && _items.Count == 0)
+    {
+        <div class="alert alert-light border">Nenhum resultado carregado atende aos filtros. Ajuste os filtros ou clique em Buscar para consultar as lojas de novo.</div>
+    }
+    else if (_searched && !_busy && _relevanceOrder.Count == 0)
     {
         <div class="alert alert-light border">Nenhum produto retornado. Confira as lojas marcadas e as chaves da Amazon/Shopee.</div>
     }
@@ -206,6 +220,70 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (_showRules)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="busca-regras-title">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 id="busca-regras-title" class="modal-title h5">Como funciona a Buscar Ofertas</h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="() => _showRules = false"></button>
+                </div>
+                <div class="modal-body small">
+                    <h3 class="h6 fw-bold">Suas configurações</h3>
+                    <ul class="mb-3">
+                        @if (_storeSummaries.Count == 0)
+                        {
+                            <li>Nenhuma loja conectada em <strong>Minhas Lojas</strong>: o Mercado Livre exige a conta conectada (OAuth) para buscar.</li>
+                        }
+                        @foreach (var store in _storeSummaries)
+                        {
+                            <li><strong>@store.Platform</strong> — @store.Detail</li>
+                        }
+                        <li>ID de afiliado do Mercado Livre (<code>matt_tool</code>) nos links: <strong>@(string.IsNullOrWhiteSpace(_mlTrackingId) ? "não configurado (usa o padrão do sistema)" : _mlTrackingId)</strong></li>
+                    </ul>
+
+                    <h3 class="h6 fw-bold">Onde buscamos</h3>
+                    <ul class="mb-3">
+                        <li>Somente as APIs oficiais das lojas; páginas públicas não são lidas.</li>
+                        <li><strong>Mercado Livre:</strong> catálogo oficial com a sua conta conectada. Só aparecem produtos de catálogo com anúncio ativo e preço.</li>
+                        <li><strong>Shopee:</strong> exige a chave de API de afiliado. <strong>Amazon:</strong> exige a PA-API configurada.</li>
+                        <li><strong>Base Local (Grupos):</strong> ofertas já capturadas nos seus grupos que contêm o termo (até @OfficialCatalogSearchRules.MaxLimit).</li>
+                    </ul>
+
+                    <h3 class="h6 fw-bold">Regras do Mercado Livre</h3>
+                    <ul class="mb-3">
+                        <li>A busca analisa o catálogo em páginas de @OfficialCatalogSearchRules.MercadoLivreScanPageSize produtos até juntar cerca de @OfficialCatalogSearchRules.MaxLimit ofertas ou analisar @OfficialCatalogSearchRules.MercadoLivreMaxScannedProducts produtos.</li>
+                        <li>Muitos produtos de catálogo não têm anúncio ativo; o selo mostra quantos foram analisados e quantos tinham oferta.</li>
+                        <li>Produtos "família" (ex.: um modelo com várias configurações) trazem até @OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct variações com oferta.</li>
+                        <li>Sem nenhuma oferta, a busca tenta sozinha um termo mais curto (remove as últimas palavras) e avisa o termo usado.</li>
+                        <li><strong>Carregar mais</strong> continua a análise de onde parou, só no Mercado Livre.</li>
+                        <li><strong>Categoria</strong> é sugerida a partir do termo depois da primeira busca e volta a "Todas" quando o termo muda.</li>
+                        <li>A API do Mercado Livre não informa cupons: "Apenas com cupom" esconde os resultados do Mercado Livre.</li>
+                    </ul>
+
+                    <h3 class="h6 fw-bold">Filtros</h3>
+                    <ul class="mb-3">
+                        <li><strong>Buscar</strong> consulta as lojas com o termo e todos os filtros marcados (preço, frete grátis, categoria).</li>
+                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
+                        <li>Para trazer produtos que ainda não foram carregados com o novo filtro, clique em <strong>Buscar</strong> de novo.</li>
+                        <li>Ordenação: relevância (ordem das lojas), menor preço ou maior desconto.</li>
+                    </ul>
+
+                    <h3 class="h6 fw-bold">Links de afiliado</h3>
+                    <ul class="mb-0">
+                        <li><strong>Converter &amp; Gerar Link</strong> usa a loja da plataforma cadastrada em Minhas Lojas; sem ela, o link não é convertido.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="() => _showRules = false">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private string _keyword = string.Empty;
     private bool _ml = true;
@@ -234,6 +312,8 @@
     private int? _mlNextOffset;
     private string? _mlEffectiveQuery;
     private string? _mlTrackingId;
+    private bool _showRules;
+    private List<(string Platform, string Detail)> _storeSummaries = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -245,6 +325,10 @@
         try
         {
             var response = await IntegracaoApi.ListAsync();
+            _storeSummaries = (response.DataList ?? [])
+                .Where(item => item.Status != MarketplaceIntegrationStatus.Inactive)
+                .Select(item => (PlatformDisplayName(item.PlatformType), DescribeStore(item)))
+                .ToList();
             var store = response.DataList?
                 .Where(item => item.Status != MarketplaceIntegrationStatus.Inactive
                     && OfficialCatalogSearchRules.MatchesMercadoLivreAccount(
@@ -262,6 +346,47 @@
             Logger.LogWarning(ex, "Não foi possível carregar o TrackingId do Mercado Livre para a busca.");
         }
     }
+
+    private static string PlatformDisplayName(MarketplaceType platform) => platform switch
+    {
+        MarketplaceType.MercadoLivre => "Mercado Livre",
+        _ => platform.ToString()
+    };
+
+    private static string DescribeStore(MarketplaceAccountDto store)
+    {
+        var name = string.IsNullOrWhiteSpace(store.FriendlyName) ? store.ShopName : store.FriendlyName;
+        var status = store.Status == MarketplaceIntegrationStatus.Expired ? "expirada" : "ativa";
+        var detail = string.IsNullOrWhiteSpace(name) ? $"loja {status}" : $"{name} ({status})";
+        if (store.PlatformType == MarketplaceType.MercadoLivre)
+        {
+            detail += store.HasOAuthToken
+                ? " · busca autorizada (OAuth)"
+                : " · sem OAuth: conecte a conta para buscar no Mercado Livre";
+        }
+
+        return detail;
+    }
+
+    private OfficialCatalogSearchFilter CurrentFilter() => new()
+    {
+        Keyword = _keyword?.Trim() ?? string.Empty,
+        MinPrice = _minPrice,
+        MaxPrice = _maxPrice,
+        HasCoupon = _couponOnly ? true : null,
+        FreeShippingOnly = _freeShippingOnly ? true : null,
+        SortBy = _sortBy,
+        MercadoLivre = _ml,
+        MercadoLivreTrackingId = _mlTrackingId,
+        MercadoLivreCategory = string.IsNullOrWhiteSpace(_mlCategory) ? null : _mlCategory,
+        Shopee = _shopee,
+        Amazon = _amazon
+    };
+
+    private void ApplyScreenFilters() =>
+        _items = [.. OfficialCatalogSearchRules.ApplySort(
+            OfficialCatalogSearchRules.FilterLoadedResults(_relevanceOrder, CurrentFilter()),
+            _sortBy)];
 
     private static string ChannelGlyph(string? state) => state switch
     {
@@ -350,20 +475,7 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            var filter = new OfficialCatalogSearchFilter
-            {
-                Keyword = keyword,
-                MinPrice = _minPrice,
-                MaxPrice = _maxPrice,
-                HasCoupon = _couponOnly ? true : null,
-                FreeShippingOnly = _freeShippingOnly ? true : null,
-                SortBy = _sortBy,
-                MercadoLivre = _ml,
-                MercadoLivreTrackingId = _mlTrackingId,
-                MercadoLivreCategory = string.IsNullOrWhiteSpace(_mlCategory) ? null : _mlCategory,
-                Shopee = _shopee,
-                Amazon = _amazon
-            };
+            var filter = CurrentFilter();
             var result = await SearchApi.SearchAsync(filter);
             _searched = true;
             _lastFilter = filter;
@@ -375,7 +487,7 @@
             }
 
             _relevanceOrder = [.. result.Data.DataList ?? []];
-            _items = [.. OfficialCatalogSearchRules.ApplySort(_relevanceOrder, _sortBy)];
+            ApplyScreenFilters();
             _channels = result.Data.Channels ?? [];
             ApplyMercadoLivreScan(result.Data, keyword);
             if (result.Data.MercadoLivreCategories.Count > 0)
@@ -416,9 +528,6 @@
             await InvokeAsync(StateHasChanged);
         }
     }
-
-    private void ResortItems() =>
-        _items = [.. OfficialCatalogSearchRules.ApplySort(_relevanceOrder, _sortBy)];
 
     private void ApplyMercadoLivreScan(OfficialCatalogSearchResponseDto response, string typedKeyword)
     {
@@ -474,7 +583,7 @@
                 .Where(item => known.Add(item.SourceUrl.Trim()))
                 .ToList();
             _relevanceOrder.AddRange(added);
-            ResortItems();
+            ApplyScreenFilters();
             _mlNextOffset = result.Data.MercadoLivreNextOffset;
 
             var mlChannel = result.Data.Channels?.FirstOrDefault(item =>

@@ -1735,6 +1735,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - "Somente frete grátis", "Ordenar por" (reordena sem nova consulta), "Categoria (Mercado Livre)" sugerida pelo termo, aviso de termo encurtado e botão "Carregar mais (Mercado Livre)" com o modal de carregamento.
 - [x] **Ofertio.Tests/Unit/Radar/** - `MercadoLivreApiServiceTests` (páginas até a meta, filtros na varredura, termo mais curto, `domain_id`/`offset`), `OfficialCatalogSearchServiceTests` (pedido, ordenação, selo, "Carregar mais"), `OfficialCatalogSearchRulesTests` e `MercadoLivreItemParserTests`; fakes de `IMercadoLivreApiService` em `ProductMetadataServiceTests` e `OfferValidationServiceTests`.
 
+### MercadoLivreScanBudgetAndScreenFilters - Teto de 100 produtos, variações de produto "pai", filtros na tela e modal de regras
+
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - o teto de 40 produtos por termo só vale enquanto o termo não trouxe oferta (antes parava em 40 com 1 oferta); `ResolveCatalogOffersAsync` devolve até 4 variações com oferta de um produto "pai", herdando o `domain_id` do pai.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `DomainId` nos cards do catálogo e `ParseCatalogDomainId`.
+- [x] **Ofertio.Business/Dto/OfficialCatalogDtos.cs** - `OfficialCatalogProductDto.DomainId`.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `FilterLoadedResults` (lojas, categoria, preço, frete e cupom sobre o que já foi carregado) e `MercadoLivreMaxChildrenPerProduct`.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - mudar filtros depois da busca filtra só a tela (`ApplyScreenFilters`), "Mostrando X de Y" e Buscar consulta as lojas; link "Como funciona a busca e as regras" abre modal com as lojas conectadas do usuário, `matt_tool` e regras/limites da busca.
+- [x] **Ofertio.Tests/Unit/Radar/** - varredura até 100 com poucas ofertas, variações do produto pai, `FilterLoadedResults`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

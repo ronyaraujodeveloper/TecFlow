@@ -1692,6 +1692,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Service/Master/SystemSettingCatalog.cs** - exemplo da chave no cofre do Master aponta para o callback público.
 - [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs** - URL de autorização e troca do `code` usam exatamente o callback público, mesmo com a requisição vinda de `localhost`.
 
+### MercadoLivreOAuthExchangeDiagnostics - Troca do code com diagnóstico do erro 400
+
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - `ExchangeMercadoLivreCodeAsync` envia `grant_type`, `client_id` (`AppId`), `client_secret` (`SecretKey`), `code` e `redirect_uri` configurado; em 400 registra `[ML OAuth]` com `error`/`message`/corpo do ML, `redirect_uri` e `client_id` (nunca `client_secret`/`code`) e devolve o código do erro à tela.
+- [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs** - campos exatos do POST e log do `invalid_grant` sem segredo.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

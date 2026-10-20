@@ -634,6 +634,7 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 
 - [x] **`redirect_uri` fixo no domínio público:** `Integrations:MercadoLivre:RedirectUri` = `https://dev.ofertio.com.br/api/mercadolivre/callback` em `appsettings.json` e `appsettings.Homologacao.json` da API; o botão "Autorizar Mercado Livre (OAuth)" e a troca do `code` usam exatamente esse valor (prevalece sobre o host da requisição; o cofre do Master não tem a chave gravada).
 - [ ] **App do ML:** a Redirect URI cadastrada em developers.mercadolivre.com.br precisa ser idêntica (`https://dev.ofertio.com.br/api/mercadolivre/callback`).
+- [x] **Troca do code com diagnóstico (`MercadoLivreOAuthExchangeDiagnostics`):** `POST https://api.mercadolibre.com/oauth/token` com `grant_type=authorization_code`, `client_id`, `client_secret`, `code` e o `redirect_uri` acima; em HTTP 400 o log `[ML OAuth]` grava `error`, `message` e o corpo da resposta do ML (`invalid_grant`, `invalid_client`, `redirect_uri_mismatch`...) com `redirect_uri` e `client_id` enviados, sem `client_secret` nem `code`, e a tela mostra o código do erro.
 
 ---
 

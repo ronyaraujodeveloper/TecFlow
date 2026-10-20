@@ -127,3 +127,4 @@
 [2026-10-19 22:19:47] feat(ml): resolvedor de links e metadados do Mercado Livre via API oficial sem scraping publico
 [2026-10-19 22:34:38] fix(ml): busca de ofertas do Mercado Livre so pela API oficial com Bearer, sem vitrine publica
 [2026-10-19 23:01:37] fix(ml): redirect_uri do OAuth Mercado Livre no callback publico dev.ofertio.com.br/api/mercadolivre/callback
+[2026-10-19 23:28:44] fix(ml): troca do code OAuth com campos explicitos e log do corpo do erro 400 do Mercado Livre

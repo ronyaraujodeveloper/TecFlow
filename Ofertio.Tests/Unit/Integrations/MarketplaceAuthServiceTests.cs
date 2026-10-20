@@ -299,7 +299,9 @@ public class MarketplaceAuthServiceTests
         _tokenRepository.Verify(r => r.UpsertAsync(It.Is<MarketplaceToken>(t => t.AccessToken == "new-token")), Times.Once);
     }
 
-    private MarketplaceAuthService CreateMercadoLivreService(MercadoLivreIntegrationOptions options) =>
+    private MarketplaceAuthService CreateMercadoLivreService(
+        MercadoLivreIntegrationOptions options,
+        Microsoft.Extensions.Logging.ILogger<MarketplaceAuthService>? logger = null) =>
         new(
             _tokenRepository.Object,
             _accountRepository.Object,
@@ -309,10 +311,97 @@ public class MarketplaceAuthServiceTests
             _httpClientFactory.Object,
             MarketplaceTestOptionsFactory.TikTokOptions(),
             MarketplaceTestOptionsFactory.ShopeeOptions(),
-            NullLogger<MarketplaceAuthService>.Instance,
+            logger ?? NullLogger<MarketplaceAuthService>.Instance,
             _hostEnvironment.Object,
             _tenants.Object,
             Options.Create(options));
+
+    [Fact]
+    public async Task ExchangeMercadoLivreCodeAsync_ShouldPostExactFields_WithPublicCallback()
+    {
+        const string publicCallback = "https://dev.ofertio.com.br/api/mercadolivre/callback";
+        string? body = null;
+        HttpRequestMessage? captured = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            captured = request;
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"access_token":"APP_USR-1","expires_in":21600,"refresh_token":"TG-r"}""")
+            };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("Ofertio.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var service = CreateMercadoLivreService(new MercadoLivreIntegrationOptions
+        {
+            AppId = "123456",
+            SecretKey = "secret",
+            RedirectUri = publicCallback
+        });
+
+        var result = await service.ExchangeMercadoLivreCodeAsync("TG-code", "https://localhost:7002/integracoes/oauth/callback");
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(HttpMethod.Post, captured!.Method);
+        Assert.Equal("https://api.mercadolibre.com/oauth/token", captured.RequestUri!.AbsoluteUri);
+        var fields = body!.Split('&')
+            .Select(pair => pair.Split('=', 2))
+            .ToDictionary(parts => parts[0], parts => Uri.UnescapeDataString(parts[1].Replace('+', ' ')));
+        Assert.Equal(
+            new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = "123456",
+                ["client_secret"] = "secret",
+                ["code"] = "TG-code",
+                ["redirect_uri"] = publicCallback
+            },
+            fields);
+    }
+
+    [Fact]
+    public async Task ExchangeMercadoLivreCodeAsync_OnBadRequest_ShouldLogMercadoLivreBodyAndExposeError()
+    {
+        const string mlBody =
+            """{"message":"Error validating grant. Your authorization code or refresh token may be expired or it was already used","error":"invalid_grant","status":400,"cause":[]}""";
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(mlBody)
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("Ofertio.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<MarketplaceAuthService>>();
+        var service = CreateMercadoLivreService(
+            new MercadoLivreIntegrationOptions
+            {
+                AppId = "123456",
+                SecretKey = "super-secret",
+                RedirectUri = "https://dev.ofertio.com.br/api/mercadolivre/callback"
+            },
+            logger.Object);
+
+        var result = await service.ExchangeMercadoLivreCodeAsync("TG-used-code", null);
+
+        Assert.False(result.Success);
+        Assert.Contains("invalid_grant", result.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("HTTP 400", result.ErrorMessage, StringComparison.Ordinal);
+        logger.Verify(
+            l => l.Log(
+                Microsoft.Extensions.Logging.LogLevel.Error,
+                It.IsAny<Microsoft.Extensions.Logging.EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    state.ToString()!.Contains("invalid_grant", StringComparison.Ordinal)
+                    && state.ToString()!.Contains("Error validating grant", StringComparison.Ordinal)
+                    && state.ToString()!.Contains("https://dev.ofertio.com.br/api/mercadolivre/callback", StringComparison.Ordinal)
+                    && !state.ToString()!.Contains("super-secret", StringComparison.Ordinal)
+                    && !state.ToString()!.Contains("TG-used-code", StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
 
     [Fact]
     public void GenerateAuthorizationUrl_ShouldUseConfiguredRedirect_WhenMarketplaceIsMercadoLivre()

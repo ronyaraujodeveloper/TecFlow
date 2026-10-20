@@ -117,6 +117,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             return MarketplaceOAuthExchangeResult.Fail("Redirect URI do OAuth Mercado Livre não informada.");
         }
 
+        var clientId = _mercadoLivreOptions.AppId.Trim();
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, _mercadoLivreOptions.TokenUrl)
@@ -124,7 +125,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     ["grant_type"] = "authorization_code",
-                    ["client_id"] = _mercadoLivreOptions.AppId.Trim(),
+                    ["client_id"] = clientId,
                     ["client_secret"] = _mercadoLivreOptions.SecretKey.Trim(),
                     ["code"] = code.Trim(),
                     ["redirect_uri"] = redirect
@@ -132,12 +133,28 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             };
             request.Headers.Accept.ParseAdd("application/json");
 
-            var payload = await SendTokenRequestAsync(request, cancellationToken);
+            var client = _httpClientFactory.CreateClient("Ofertio.MarketplaceOAuth");
+            using var response = await client.SendAsync(request, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return FailMercadoLivreTokenExchange(response.StatusCode, content, clientId, redirect);
+            }
+
+            var payload = ParseTokenPayload(content);
             if (string.IsNullOrWhiteSpace(payload.AccessToken))
             {
+                _logger.LogError(
+                    "[ML OAuth] Resposta 200 sem access_token na troca do code. redirect_uri={RedirectUri} client_id={ClientId}",
+                    redirect,
+                    clientId);
                 return MarketplaceOAuthExchangeResult.Fail("Mercado Livre não retornou access token.");
             }
 
+            _logger.LogInformation(
+                "[ML OAuth] Code trocado por access_token. redirect_uri={RedirectUri} client_id={ClientId}",
+                redirect,
+                clientId);
             return new MarketplaceOAuthExchangeResult
             {
                 Success = true,
@@ -153,6 +170,74 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             return MarketplaceOAuthExchangeResult.Fail(
                 $"Mercado Livre recusou a autorização: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Recusa do POST /oauth/token: o corpo do ML (sem dados da requisição, que contém client_secret e code) vai para o
+    /// log e o código do erro (invalid_grant, invalid_client, redirect_uri_mismatch...) volta para a tela.
+    /// </summary>
+    private MarketplaceOAuthExchangeResult FailMercadoLivreTokenExchange(
+        System.Net.HttpStatusCode statusCode,
+        string body,
+        string clientId,
+        string redirectUri)
+    {
+        var (error, message) = ReadOAuthError(body);
+        var loggedBody = body.Length > 2000 ? body[..2000] : body;
+        if (statusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            _logger.LogError(
+                "[ML OAuth] Mercado Livre recusou a troca do code (400) Error={Error} Message={Message} redirect_uri={RedirectUri} client_id={ClientId} Resposta={Body}",
+                error ?? "-",
+                message ?? "-",
+                redirectUri,
+                clientId,
+                loggedBody);
+        }
+        else
+        {
+            _logger.LogError(
+                "[ML OAuth] Falha na troca do code [{StatusCode}] redirect_uri={RedirectUri} client_id={ClientId} Resposta={Body}",
+                (int)statusCode,
+                redirectUri,
+                clientId,
+                loggedBody);
+        }
+
+        var detail = string.Join(" — ", new[] { error, message }.Where(part => !string.IsNullOrWhiteSpace(part)));
+        return MarketplaceOAuthExchangeResult.Fail(
+            string.IsNullOrWhiteSpace(detail)
+                ? $"Mercado Livre recusou a autorização (HTTP {(int)statusCode})."
+                : $"Mercado Livre recusou a autorização (HTTP {(int)statusCode}): {detail}");
+    }
+
+    private static (string? Error, string? Message) ReadOAuthError(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return (null, null);
+            }
+
+            return (ReadString(root, "error"), ReadString(root, "message") ?? ReadString(root, "error_description"));
+        }
+        catch (JsonException)
+        {
+            return (null, null);
+        }
+
+        static string? ReadString(JsonElement root, string name) =>
+            root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
     }
 
     public const string MercadoLivreMissingCredentialsMessage =
@@ -591,6 +676,11 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             throw new InvalidOperationException($"Falha na API OAuth ({(int)response.StatusCode}).");
         }
 
+        return ParseTokenPayload(content);
+    }
+
+    private static OAuthTokenPayload ParseTokenPayload(string content)
+    {
         var parsed = JsonSerializer.Deserialize<MarketplaceOAuthTokenResponse>(content)
             ?? throw new InvalidOperationException("Resposta OAuth inválida.");
 

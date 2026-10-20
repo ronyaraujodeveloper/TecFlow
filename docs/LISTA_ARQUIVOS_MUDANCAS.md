@@ -1646,6 +1646,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Dto/MercadoLivreNotificationDto.cs** - payload `_id`, `resource`, `user_id`, `topic`, `application_id`, `attempts`, `sent`, `received`.
 - [x] **Ofertio.Tests/Unit/Controllers/MercadoLivreControllerTests.cs** - callback com redirect, state forjado (400 JSON), autorização negada e notificações sempre 200.
 
+### MercadoLivreWebUiProxy - Rotas do ML pelo host público da WebUi
+
+- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - `GET /api/mercadolivre/callback` no mesmo handler de `/integracoes/oauth/callback`; `POST /api/mercadolivre/notifications` anônimo, sem antiforgery, lê até 64 KB, responde 200 e repassa à API (`Orquestrador`) em segundo plano.
+- [x] **IIS** - removida a aplicação `/api` do site `Ofertio.WebUi` (dividia o `OfertioApiPool` com o site `Ofertio.API` e causava HTTP 500.35 na porta 5001); backup `antes-remover-api-webui-20261019211928`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

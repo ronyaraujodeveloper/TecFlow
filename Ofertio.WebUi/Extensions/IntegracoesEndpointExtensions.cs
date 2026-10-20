@@ -18,7 +18,71 @@ public static class IntegracoesEndpointExtensions
         group.MapGet("/oauth/start", StartMarketplaceOAuthAsync);
         group.MapGet("/oauth/callback", FinishMarketplaceOAuthAsync).AllowAnonymous();
 
+        // Rotas cadastradas no app do Mercado Livre: o host público é o da WebUi, a API só escuta em localhost:5001.
+        endpoints.MapGet(MercadoLivreCallbackPath, FinishMarketplaceOAuthAsync).AllowAnonymous();
+        endpoints.MapPost(MercadoLivreNotificationsPath, ForwardMercadoLivreNotificationAsync)
+            .AllowAnonymous()
+            .DisableAntiforgery();
+
         return endpoints;
+    }
+
+    public const string MercadoLivreCallbackPath = "/api/mercadolivre/callback";
+    public const string MercadoLivreNotificationsPath = "/api/mercadolivre/notifications";
+
+    private const int MaxMercadoLivreNotificationBytes = 64 * 1024;
+
+    /// <summary>
+    /// Responde 200 assim que lê o payload (o ML reenvia quando não recebe 200 em até 500 ms)
+    /// e repassa o JSON para <c>POST api/mercadolivre/notifications</c> da API em segundo plano.
+    /// </summary>
+    private static async Task<IResult> ForwardMercadoLivreNotificationAsync(
+        HttpContext httpContext,
+        IHttpClientFactory httpClientFactory,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("Ofertio.WebUi.MercadoLivre");
+        var body = await ReadBoundedBodyAsync(httpContext.Request.Body, MaxMercadoLivreNotificationBytes, httpContext.RequestAborted);
+        if (body is null)
+        {
+            logger.LogWarning("Notificação Mercado Livre acima de {MaxBytes} bytes descartada.", MaxMercadoLivreNotificationBytes);
+            return Results.Ok();
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var client = httpClientFactory.CreateClient("Orquestrador");
+                using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+                using var response = await client.PostAsync("api/mercadolivre/notifications", content, timeout.Token);
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("API recusou a notificação Mercado Livre. Status={StatusCode}", (int)response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Falha ao repassar notificação Mercado Livre para a API.");
+            }
+        });
+
+        return Results.Ok();
+    }
+
+    private static async Task<string?> ReadBoundedBodyAsync(Stream body, int maxBytes, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[maxBytes + 1];
+        var total = 0;
+        int read;
+        while (total < buffer.Length
+               && (read = await body.ReadAsync(buffer.AsMemory(total), cancellationToken)) > 0)
+        {
+            total += read;
+        }
+
+        return total > maxBytes ? null : System.Text.Encoding.UTF8.GetString(buffer, 0, total);
     }
 
     private static async Task<IResult> StartMarketplaceOAuthAsync(

@@ -221,6 +221,8 @@ flowchart LR
   MLCTRL -->|MercadoLivreOAuthCallbackFlow nonce + LinkAsync ➔ redirect /marketplace-accounts| SQL
   MLAPP -->|POST api/mercadolivre/notifications topic/resource| MLCTRL
   MLCTRL -->|Ok 200 imediato + log Topic/Resource/UserId| MLAPP
+  MLAPP -->|host público WebUi /api/mercadolivre/callback e /notifications| MLPROXY[WebUi IntegracoesEndpointExtensions]
+  MLPROXY -->|callback ➔ POST api/marketplace-auth/mercadolivre/callback; notifications ➔ 200 + repasse em segundo plano| MLCTRL
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

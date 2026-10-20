@@ -122,3 +122,4 @@
 [2026-10-19 19:37:32] chore(webui): Kestrel Http1AndHttp2 no endpoint HTTPS 7002
 [2026-10-19 20:48:02] feat(api): MercadoLivreController com callback OAuth e notificacoes em api/mercadolivre
 [2026-10-19 21:24:14] fix(webui): rotas /api/mercadolivre no host publico da WebUi com repasse para a API
+[2026-10-19 21:35:00] feat(webui): reverse proxy YARP de /api/mercadolivre para a API

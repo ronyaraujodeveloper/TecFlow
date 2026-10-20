@@ -62,8 +62,11 @@ dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup
 Garante que `MarketplaceAccounts`, `ShortAffiliateLinks` e `ShortAffiliateLinkAccounts` existam em `Ofertio` (SQLEXPRESS) usado pelo pool `OfertioApiPool`.
 
 2.4. Iniciar os Pools do IIS e Reciclar o Servidor
+
+A WebUi repassa `/api/mercadolivre/callback` e `/api/mercadolivre/notifications` para a API (YARP). Não pode existir subaplicação `/api` no site `Ofertio.WebUi`: no `OfertioApiPool` ela derruba a API com HTTP 500.35.
 ```powershell
 Import-Module WebAdministration
+if (Get-WebApplication -Site "Ofertio.WebUi" -Name "api") { Remove-WebApplication -Site "Ofertio.WebUi" -Name "api" }
 Start-WebAppPool -Name "OfertioApiPool"
 Start-WebAppPool -Name "OfertioWebUiPool"
 iisreset

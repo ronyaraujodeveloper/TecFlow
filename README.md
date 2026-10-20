@@ -599,7 +599,8 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - `POST api/mercadolivre/notifications`: lê o JSON (`topic`, `resource`, `user_id`, `application_id`, `attempts`) e responde `200 OK` imediatamente, inclusive com payload vazio ou inválido, para o ML não reenviar nem desativar o tópico.
 - [x] **Fluxo compartilhado:** `MercadoLivreOAuthCallbackFlow` atende tanto o novo `GET` quanto o `POST api/marketplace-auth/mercadolivre/callback` usado pela WebUi.
 - [x] **`Program.cs` da API:** `builder.Services.AddControllers()` e `app.MapControllers()` já presentes.
-- [x] **Host público pela WebUi (`MercadoLivreWebUiProxy`):** a WebUi atende `GET /api/mercadolivre/callback` (mesmo handler de `/integracoes/oauth/callback`, que conclui o state selado na API) e `POST /api/mercadolivre/notifications` (responde 200 e repassa o JSON para a API em `localhost:5001` em segundo plano).
+- [x] **Host público pela WebUi (`MercadoLivreWebUiProxy`, YARP):** `MercadoLivreProxyExtensions` (`AddHttpForwarder` + `MapForwarder`) repassa `/api/mercadolivre/callback` e `/api/mercadolivre/notifications` para `OrquestradorApi:BaseUrl` (`http://localhost:5001` no IIS), preservando método, query, corpo e o redirect 302 da API.
+  - O `EXECUCAO_HOMOLOGACAO.md` remove a subaplicação `/api` do site `Ofertio.WebUi` se ela existir.
   - ⚠️ Não criar aplicação `/api` dentro do site `Ofertio.WebUi` no IIS: no mesmo `OfertioApiPool` ela derruba a API com **HTTP 500.35** (dois apps in-process no mesmo pool) e, com pool próprio, duplica os workers da API.
 - [ ] **Cadastro no app do ML:** Redirect URI do app e `Integrations:MercadoLivre:RedirectUri` = `https://<host público da WebUi>/api/mercadolivre/callback`; URL de notificações = `https://<host público da WebUi>/api/mercadolivre/notifications`.
 

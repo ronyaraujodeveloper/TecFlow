@@ -28,6 +28,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<CircuitHandler, BlazorCircuitLoggingHandler>();
 builder.Services.AddWebUiServices(builder.Configuration, builder.Environment);
 builder.Services.AddWebUiAuthentication(builder.Configuration);
+builder.Services.AddMercadoLivreProxy();
 
 var app = builder.Build();
 
@@ -53,6 +54,7 @@ app.UseAntiforgery();
 
 app.MapWebUiAuthEndpoints();
 app.MapIntegracoesEndpoints();
+app.MapMercadoLivreProxy();
 app.MapMasterEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

@@ -1648,7 +1648,11 @@ API / Orquestrador / Worker / WebUi
 
 ### MercadoLivreWebUiProxy - Rotas do ML pelo host público da WebUi
 
-- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - `GET /api/mercadolivre/callback` no mesmo handler de `/integracoes/oauth/callback`; `POST /api/mercadolivre/notifications` anônimo, sem antiforgery, lê até 64 KB, responde 200 e repassa à API (`Orquestrador`) em segundo plano.
+- [x] **Ofertio.WebUi/Extensions/MercadoLivreProxyExtensions.cs** - YARP: `AddHttpForwarder` + `MapForwarder` de `/api/mercadolivre/callback` e `/api/mercadolivre/notifications` para `OrquestradorApi:BaseUrl`, anônimos.
+- [x] **Ofertio.WebUi/Program.cs** - `AddMercadoLivreProxy()` e `MapMercadoLivreProxy()`.
+- [x] **Ofertio.WebUi/Ofertio.WebUi.csproj** - pacote `Yarp.ReverseProxy` 2.3.0.
+- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - removido o repasse manual (handler de callback e `Task.Run` das notificações) substituído pelo YARP.
+- [x] **docs/EXECUCAO_HOMOLOGACAO.md** - passo 2.4 remove a subaplicação `/api` do site `Ofertio.WebUi` se existir.
 - [x] **IIS** - removida a aplicação `/api` do site `Ofertio.WebUi` (dividia o `OfertioApiPool` com o site `Ofertio.API` e causava HTTP 500.35 na porta 5001); backup `antes-remover-api-webui-20261019211928`.
 
 ---

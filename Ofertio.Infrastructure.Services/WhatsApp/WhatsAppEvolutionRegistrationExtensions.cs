@@ -76,6 +76,7 @@ public static class WhatsAppEvolutionRegistrationExtensions
             configuration.GetSection(Ofertio.Business.Integrations.Amazon.AmazonPaApiOptions.SectionName));
         services.Configure<Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions>(
             configuration.GetSection(Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions.SectionName));
+        services.AddSingleton(_ => new Ofertio.Business.Integrations.MercadoLivre.MercadoLivreAntiBotGuard());
         services.AddHttpClient<IMercadoLivreApiService, Ofertio.Infrastructure.Services.Radar.MercadoLivreApiService>(client =>
         {
             client.BaseAddress = new Uri("https://api.mercadolibre.com/");

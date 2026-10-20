@@ -33,52 +33,134 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     private static readonly ConcurrentDictionary<string, (string Token, DateTime ExpiresAt)> AppTokenCache =
         new(StringComparer.Ordinal);
 
+    private static readonly TimeSpan NotConnectedLogInterval = TimeSpan.FromMinutes(30);
+
+    private static readonly ConcurrentDictionary<int, DateTime> NotConnectedLoggedAt = new();
+
     private readonly HttpClient _httpClient;
     private readonly IOptionsMonitor<MercadoLivreIntegrationOptions> _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
+    private readonly MercadoLivreAntiBotGuard? _antiBotGuard;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
         IOptionsMonitor<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<MercadoLivreApiService> logger)
+        ILogger<MercadoLivreApiService> logger,
+        MercadoLivreAntiBotGuard? antiBotGuard = null)
     {
         _httpClient = httpClient;
         _options = options;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
+        _antiBotGuard = antiBotGuard;
         EnsurePublicUserAgent(_httpClient);
     }
 
-    public async Task<OfficialOfferSnapshotDto?> GetItemAsync(string itemId, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// <c>GET https://api.mercadolibre.com/items/{id}</c> com <c>Authorization: Bearer</c>: token OAuth da conta
+    /// conectada no painel (renovado via refresh_token quando expira ou é recusado) ➔ token fixo ➔ token do app.
+    /// </summary>
+    public async Task<OfficialOfferSnapshotDto?> GetItemAsync(
+        int userId,
+        string itemId,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
             return null;
         }
 
+        itemId = itemId.Trim();
         try
         {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                $"https://api.mercadolibre.com/items/{Uri.EscapeDataString(itemId.Trim())}");
-            ApplyBrowserHeaders(request);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
+            var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
+            LogItemAccountState(userId, itemId, account, accountToken);
+
+            var accessToken = accountToken
+                ?? ResolveStaticAccessToken()
+                ?? await GetAppAccessTokenAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
-                _logger.LogError("Erro API ML [{StatusCode}]: {Body}", response.StatusCode, json);
+                _logger.LogWarning(
+                    "[ML Item] Sem access_token para consultar o item {ItemId}: conecte a conta Mercado Livre em Minhas Lojas ou configure Integrations:MercadoLivre:AppId/SecretKey.",
+                    itemId);
                 return null;
             }
 
-            return MercadoLivreItemParser.Parse(json);
+            var (statusCode, body) = await SendItemAsync(itemId, accessToken, cancellationToken);
+            if ((statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) && accountToken is not null)
+            {
+                _logger.LogWarning(
+                    "[ML Item] API recusou o token da conta '{AccountName}' (Id={AccountId}) para o item {ItemId} [{StatusCode}]; renovando via refresh_token.",
+                    DescribeAccount(account!),
+                    account!.Id,
+                    itemId,
+                    (int)statusCode);
+                var renewedToken = await RefreshAccountTokenAsync(account, cancellationToken);
+                if (renewedToken is not null)
+                {
+                    (statusCode, body) = await SendItemAsync(itemId, renewedToken, cancellationToken);
+                }
+            }
+
+            if (statusCode != HttpStatusCode.OK)
+            {
+                _logger.LogError("[ML Item] Erro API ML [{StatusCode}] no item {ItemId}: {Body}", statusCode, itemId, body);
+                return null;
+            }
+
+            return MercadoLivreItemParser.Parse(body);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Exceção ao consultar item Mercado Livre '{Item}'", itemId);
+            _logger.LogError(ex, "[ML Item] Exceção ao consultar item Mercado Livre '{Item}'", itemId);
             return null;
         }
+    }
+
+    private void LogItemAccountState(int userId, string itemId, MarketplaceAccount? account, string? accountToken)
+    {
+        if (account is null || (!HasOAuthToken(account) && string.IsNullOrWhiteSpace(account.RefreshToken)))
+        {
+            var now = DateTime.UtcNow;
+            if (NotConnectedLoggedAt.TryGetValue(userId, out var loggedAt) && now - loggedAt < NotConnectedLogInterval)
+            {
+                return;
+            }
+
+            NotConnectedLoggedAt[userId] = now;
+            _logger.LogWarning(
+                "[ML Item] Nenhuma conta Mercado Livre conectada/autorizada no painel para o usuário {UserId}. Conecte em Minhas Lojas ➔ Mercado Livre (OAuth) para consultar o item {ItemId} com o token da loja.",
+                userId,
+                itemId);
+            return;
+        }
+
+        if (accountToken is null)
+        {
+            _logger.LogWarning(
+                "[ML Item] Token OAuth da conta '{AccountName}' (Id={AccountId}) expirado e o refresh_token não renovou o acesso. Reconecte a conta Mercado Livre em Minhas Lojas.",
+                DescribeAccount(account),
+                account.Id);
+        }
+    }
+
+    private async Task<(HttpStatusCode StatusCode, string Body)> SendItemAsync(
+        string itemId,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://api.mercadolibre.com/items/{Uri.EscapeDataString(itemId)}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
+        ApplyBrowserHeaders(request);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response.StatusCode, body);
     }
 
     public async Task<OfficialCatalogChannelResult> SearchProductsAsync(
@@ -340,6 +422,15 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         CancellationToken cancellationToken)
     {
         var listaUrl = OfficialCatalogSearchRules.BuildMercadoLivreListaUrl(query);
+        if (_antiBotGuard?.IsBlocked == true)
+        {
+            _logger.LogWarning(
+                "[ML Busca] Vitrine pública em pausa até {BlockedUntil:HH:mm} UTC após desafio anti-robô; '{Query}' não será raspada.",
+                _antiBotGuard.BlockedUntil,
+                query);
+            return ([], true);
+        }
+
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, listaUrl);
@@ -349,6 +440,11 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri;
             if (!response.IsSuccessStatusCode || OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(finalUrl, html))
             {
+                if (OfficialCatalogSearchRules.IsMercadoLivreVerificationPage(finalUrl, html))
+                {
+                    _antiBotGuard?.Trip();
+                }
+
                 _logger.LogWarning(
                     "Vitrine ML indisponível para '{Query}' [{StatusCode}] {Url}",
                     query,

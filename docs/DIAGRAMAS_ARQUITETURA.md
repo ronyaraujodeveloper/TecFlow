@@ -223,6 +223,11 @@ flowchart LR
   MLCTRL -->|Ok 200 imediato + log Topic/Resource/UserId| MLAPP
   MLAPP -->|host público WebUi /api/mercadolivre/callback e /notifications| MLPROXY[WebUi MercadoLivreProxyExtensions YARP MapForwarder]
   MLPROXY -->|repasse HTTP OrquestradorApi:BaseUrl http://localhost:5001| MLCTRL
+  LIVECHK[LiveCheckSearchService] -->|link MLB: GetItemAsync userId antes da página pública| MLAPI[MercadoLivreApiService]
+  MLAPI -->|GET api.mercadolibre.com/items/ID Authorization Bearer conta OAuth ➔ refresh_token ➔ token do app| MLAPP
+  MLAPI -->|MarketplaceAccounts token/refresh do tenant| SQL
+  LIVECHK -->|desafio anti-robô ➔ Trip 15 min, HTML descartado, oferta Verificando| MLGUARD[MercadoLivreAntiBotGuard]
+  MLAPI -->|vitrine lista.mercadolivre só sem trava ativa| MLGUARD
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL

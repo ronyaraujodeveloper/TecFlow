@@ -7,7 +7,10 @@ namespace Ofertio.Business.Interfaces.Services;
 
 public interface IMercadoLivreApiService
 {
-    Task<OfficialOfferSnapshotDto?> GetItemAsync(string itemId, CancellationToken cancellationToken = default);
+    Task<OfficialOfferSnapshotDto?> GetItemAsync(
+        int userId,
+        string itemId,
+        CancellationToken cancellationToken = default);
 
     Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,

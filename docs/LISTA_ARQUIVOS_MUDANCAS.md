@@ -1655,6 +1655,16 @@ API / Orquestrador / Worker / WebUi
 - [x] **docs/EXECUCAO_HOMOLOGACAO.md** - passo 2.4 remove a subaplicação `/api` do site `Ofertio.WebUi` se existir.
 - [x] **IIS** - removida a aplicação `/api` do site `Ofertio.WebUi` (dividia o `OfertioApiPool` com o site `Ofertio.API` e causava HTTP 500.35 na porta 5001); backup `antes-remover-api-webui-20261019211928`.
 
+### MercadoLivreOfficialItems - Anúncios pela API oficial com OAuth e trava anti-robô
+
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreAntiBotGuard.cs** - trava singleton de 15 min após desafio anti-robô; `IsChallengePage` separa desafio da página do anúncio (`ui-pdp`).
+- [x] **Ofertio.Business/Interfaces/Services/ILiveSearchServices.cs** - `IMercadoLivreApiService.GetItemAsync(userId, itemId)`.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `/items/{id}` com `Authorization: Bearer` (conta OAuth ➔ token fixo ➔ token do app), refresh antes da consulta e após 401/403, logs `[ML Item]` de conta não conectada; vitrine respeita e aciona a trava.
+- [x] **Ofertio.Infrastructure.Services/Radar/LiveCheckSearchService.cs** - API oficial antes da página pública para links `MLB`; desafio anti-robô descarta o HTML, aciona a trava e mantém a oferta "Verificando".
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - registro singleton de `MercadoLivreAntiBotGuard`.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** - Bearer da conta, refresh do token expirado, retry após 403, sem credencial não chama `/items`, vitrine com trava.
+- [x] **Ofertio.Tests/Unit/Radar/LiveCheckSearchServiceTests.cs** - API antes da página, desafio aciona a trava, trava evita GET, expiração e detecção do desafio.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

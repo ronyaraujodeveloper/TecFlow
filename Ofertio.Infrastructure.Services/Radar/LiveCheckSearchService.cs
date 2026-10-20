@@ -18,6 +18,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
     private readonly IOfferValidationService _htmlValidation;
     private readonly AppDbContext _context;
     private readonly ILogger<LiveCheckSearchService> _logger;
+    private readonly MercadoLivreAntiBotGuard _antiBotGuard;
 
     public LiveCheckSearchService(
         IMercadoLivreApiService mercadoLivre,
@@ -25,7 +26,8 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         IAmazonPaApiService amazon,
         IOfferValidationService htmlValidation,
         AppDbContext context,
-        ILogger<LiveCheckSearchService> logger)
+        ILogger<LiveCheckSearchService> logger,
+        MercadoLivreAntiBotGuard antiBotGuard)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
@@ -33,6 +35,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         _htmlValidation = htmlValidation;
         _context = context;
         _logger = logger;
+        _antiBotGuard = antiBotGuard;
     }
 
     public async Task<OfficialOfferSnapshotDto> CheckAndPersistAsync(
@@ -125,7 +128,41 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         decimal? capturedPrice,
         CancellationToken cancellationToken = default)
     {
+        var isMercadoLivre = (GroupOfferCaptureRules.DetectPlatform(url) ?? platform) == MarketplaceType.MercadoLivre;
+        string? officialSku = null;
+        if (isMercadoLivre
+            && ProductSkuRules.TryExtract(url, platform, out var directKey, out var directSku)
+            && directKey == nameof(MarketplaceType.MercadoLivre))
+        {
+            officialSku = directSku;
+            var official = await _mercadoLivre.GetItemAsync(userId, directSku, cancellationToken);
+            if (official is not null)
+            {
+                return FromApi(official, capturedPrice, null);
+            }
+        }
+
+        if (isMercadoLivre && _antiBotGuard.IsBlocked)
+        {
+            _logger.LogWarning(
+                "[ML Item] Página pública do Mercado Livre em pausa até {BlockedUntil:HH:mm} UTC após desafio anti-robô; oferta mantida sem raspar. Url={Url}",
+                _antiBotGuard.BlockedUntil,
+                url);
+            return PendingAntiBot(url, capturedPrice);
+        }
+
         var page = await _htmlValidation.ValidateProductPageStatusAsync(url ?? string.Empty, cancellationToken);
+        if ((isMercadoLivre || MercadoLivreAvailabilityRules.IsMercadoLivreUrl(page.FinalUrl))
+            && MercadoLivreAntiBotGuard.IsChallengePage(page.FinalUrl, page.Html))
+        {
+            _antiBotGuard.Trip();
+            _logger.LogWarning(
+                "[ML Item] Mercado Livre devolveu desafio anti-robô para {Url}; HTML descartado e página pública pausada por {Minutes} min. Conecte a conta Mercado Livre (OAuth) para validar pela API oficial.",
+                url,
+                MercadoLivreAntiBotGuard.Cooldown.TotalMinutes);
+            return PendingAntiBot(url, capturedPrice);
+        }
+
         var resolvedProductUrl = MercadoLivreShowcaseRules.TryResolveDirectProductUrl(page.FinalUrl, out var resolved)
             ? resolved
             : null;
@@ -147,7 +184,10 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
         {
             if (platformKey == nameof(MarketplaceType.MercadoLivre))
             {
-                api = await _mercadoLivre.GetItemAsync(sku, cancellationToken);
+                if (!string.Equals(sku, officialSku, StringComparison.OrdinalIgnoreCase))
+                {
+                    api = await _mercadoLivre.GetItemAsync(userId, sku, cancellationToken);
+                }
             }
             else if (platformKey == nameof(MarketplaceType.Shopee))
             {
@@ -165,13 +205,7 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
 
         if (api is not null)
         {
-            if (LiveSearchRules.IsCheaper(capturedPrice, api.Price))
-            {
-                api.Status = GroupOfferStatuses.PrecoAlterado;
-            }
-
-            api.ResolvedProductUrl ??= resolvedProductUrl;
-            return api;
+            return FromApi(api, capturedPrice, resolvedProductUrl);
         }
 
         var html = await _htmlValidation.ValidateFromPageAsync(page, url ?? string.Empty, capturedPrice, cancellationToken);
@@ -187,4 +221,30 @@ public sealed class LiveCheckSearchService : ILiveCheckSearchService
             ResolvedProductUrl = resolvedProductUrl
         };
     }
+
+    private static OfficialOfferSnapshotDto FromApi(
+        OfficialOfferSnapshotDto api,
+        decimal? capturedPrice,
+        string? resolvedProductUrl)
+    {
+        if (LiveSearchRules.IsCheaper(capturedPrice, api.Price))
+        {
+            api.Status = GroupOfferStatuses.PrecoAlterado;
+        }
+
+        api.ResolvedProductUrl ??= resolvedProductUrl;
+        return api;
+    }
+
+    /// <summary>Sem API e com a página bloqueada: mantém a oferta em verificação, sem preço novo nem HTML do desafio.</summary>
+    private static OfficialOfferSnapshotDto PendingAntiBot(string? url, decimal? capturedPrice) =>
+        new()
+        {
+            IsAvailable = true,
+            Status = GroupOfferStatuses.Verificando,
+            Price = capturedPrice,
+            Source = MercadoLivreAntiBotGuard.AntiBotSource,
+            Platform = MarketplaceType.MercadoLivre,
+            ResolvedProductUrl = MercadoLivreShowcaseRules.TryResolveDirectProductUrl(url, out var direct) ? direct : null
+        };
 }

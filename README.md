@@ -604,6 +604,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
   - ⚠️ Não criar aplicação `/api` dentro do site `Ofertio.WebUi` no IIS: no mesmo `OfertioApiPool` ela derruba a API com **HTTP 500.35** (dois apps in-process no mesmo pool) e, com pool próprio, duplica os workers da API.
 - [ ] **Cadastro no app do ML:** Redirect URI do app e `Integrations:MercadoLivre:RedirectUri` = `https://<host público da WebUi>/api/mercadolivre/callback`; URL de notificações = `https://<host público da WebUi>/api/mercadolivre/notifications`.
 
+## 🛡️ Anúncios do Mercado Livre pela API oficial (`MercadoLivreOfficialItems`)
+
+- [x] **`MercadoLivreApiService.GetItemAsync(userId, itemId)`:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` sempre com `Authorization: Bearer`.
+  - Ordem do token: OAuth da conta Mercado Livre conectada no painel (tenant do usuário) ➔ `Integrations:MercadoLivre:AccessToken` ➔ token do aplicativo (`client_credentials`).
+  - Token expirado é renovado pelo `refresh_token` antes da consulta (e gravado na conta); se a API responder 401/403, renova e tenta mais uma vez.
+  - Logs `[ML Item]` claros quando a conta não foi conectada/autorizada (no máximo um aviso a cada 30 min por usuário) e quando o refresh falha (pede para reconectar em Minhas Lojas).
+- [x] **`LiveCheckSearchService` (Verificar anúncio e revalidação):** link direto do ML (`MLB...`) consulta a API oficial antes de qualquer GET na página pública; se a API responder, a página nem é baixada.
+- [x] **Trava anti-robô (`MercadoLivreAntiBotGuard`, singleton):**
+  - Ao receber o desafio (`account-verification`, `bot_challenge`...) na página do anúncio ou na vitrine `lista.mercadolivre.com.br`, o HTML é descartado e os GETs nas páginas públicas do ML ficam suspensos por 15 min.
+  - Nesse período a oferta fica "Verificando" com o preço capturado (`Source = AntiBot`) e a busca não raspa a vitrine.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

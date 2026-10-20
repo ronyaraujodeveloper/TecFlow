@@ -301,7 +301,8 @@ public class MarketplaceAuthServiceTests
 
     private MarketplaceAuthService CreateMercadoLivreService(
         MercadoLivreIntegrationOptions options,
-        Microsoft.Extensions.Logging.ILogger<MarketplaceAuthService>? logger = null) =>
+        Microsoft.Extensions.Logging.ILogger<MarketplaceAuthService>? logger = null,
+        IOAuthStateProtector? stateProtector = null) =>
         new(
             _tokenRepository.Object,
             _accountRepository.Object,
@@ -314,7 +315,62 @@ public class MarketplaceAuthServiceTests
             logger ?? NullLogger<MarketplaceAuthService>.Instance,
             _hostEnvironment.Object,
             _tenants.Object,
-            Options.Create(options));
+            Options.Create(options),
+            stateProtector);
+
+    [Fact]
+    public void MercadoLivrePkce_ShouldMatchRfc7636S256Vector()
+    {
+        Assert.Equal(
+            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            MercadoLivrePkce.ComputeCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"));
+        Assert.Matches("^[A-Za-z0-9_-]{64}$", MercadoLivrePkce.CreateCodeVerifier());
+        Assert.NotEqual(MercadoLivrePkce.CreateCodeVerifier(), MercadoLivrePkce.CreateCodeVerifier());
+    }
+
+    [Fact]
+    public async Task MercadoLivreOAuth_ShouldSendPkceChallengeInUrlAndVerifierInTokenExchange()
+    {
+        const string publicCallback = "https://dev.ofertio.com.br/api/mercadolivre/callback";
+        string? body = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"access_token":"APP_USR-1","expires_in":21600,"refresh_token":"TG-r"}""")
+            };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient("Ofertio.MarketplaceOAuth"))
+            .Returns(new HttpClient(handler));
+        var protector = new OAuthStateProtector(Convert.ToBase64String(new byte[32]));
+        var state = MarketplaceOAuthStateRules.Create(7, Guid.NewGuid(), MarketplaceType.MercadoLivre, "Loja ML", publicCallback);
+        var service = CreateMercadoLivreService(
+            new MercadoLivreIntegrationOptions { AppId = "123456", SecretKey = "secret", RedirectUri = publicCallback },
+            stateProtector: protector);
+
+        var url = service.GenerateAuthorizationUrl(MarketplaceType.MercadoLivre, publicCallback, protector.Protect(state));
+        var result = await service.ExchangeMercadoLivreCodeAsync("TG-code", publicCallback, state.CodeVerifier);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Contains("code_challenge=" + Uri.EscapeDataString(MercadoLivrePkce.ComputeCodeChallenge(state.CodeVerifier!)), url);
+        Assert.Contains("code_challenge_method=S256", url);
+        Assert.DoesNotContain(state.CodeVerifier!, url, StringComparison.Ordinal);
+        Assert.Contains("code_verifier=" + Uri.EscapeDataString(state.CodeVerifier!), body);
+    }
+
+    [Fact]
+    public void GenerateAuthorizationUrl_ShouldOmitPkce_WhenStateIsNotSealed()
+    {
+        var service = CreateMercadoLivreService(
+            new MercadoLivreIntegrationOptions { AppId = "123456", SecretKey = "secret" },
+            stateProtector: new OAuthStateProtector(Convert.ToBase64String(new byte[32])));
+
+        var url = service.GenerateAuthorizationUrl(MarketplaceType.MercadoLivre, "https://tunnel.test/cb", "ticket-ml");
+
+        Assert.DoesNotContain("code_challenge", url, StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task ExchangeMercadoLivreCodeAsync_ShouldPostExactFields_WithPublicCallback()

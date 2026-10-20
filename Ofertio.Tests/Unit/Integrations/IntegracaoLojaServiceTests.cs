@@ -336,6 +336,7 @@ public class IntegracaoLojaServiceTests
         auth.Setup(service => service.ExchangeMercadoLivreCodeAsync(
                 "TG-real-code",
                 "https://tunnel.test/integracoes/oauth/callback",
+                "pkce-verifier-do-state",
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MarketplaceOAuthExchangeResult
             {
@@ -358,7 +359,8 @@ public class IntegracaoLojaServiceTests
             PlatformType = MarketplaceType.MercadoLivre,
             FriendlyName = "Conta ML",
             AuthorizationCode = "TG-real-code",
-            RedirectUri = "https://tunnel.test/integracoes/oauth/callback"
+            RedirectUri = "https://tunnel.test/integracoes/oauth/callback",
+            CodeVerifier = "pkce-verifier-do-state"
         });
 
         Assert.True(result.Status, result.Descricao);
@@ -389,6 +391,7 @@ public class IntegracaoLojaServiceTests
         var auth = new Mock<IMarketplaceAuthService>();
         auth.Setup(service => service.ExchangeMercadoLivreCodeAsync(
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(MarketplaceOAuthExchangeResult.Fail("Configure Integrations:MercadoLivre:AppId e SecretKey."));

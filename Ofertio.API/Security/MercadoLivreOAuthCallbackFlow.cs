@@ -61,7 +61,8 @@ public static class MercadoLivreOAuthCallbackFlow
                     PlatformType = MarketplaceType.MercadoLivre,
                     AuthorizationCode = request.Code.Trim(),
                     FriendlyName = state.FriendlyName,
-                    RedirectUri = state.CallbackUri
+                    RedirectUri = state.CallbackUri,
+                    CodeVerifier = state.CodeVerifier
                 },
                 cancellationToken);
             if (!result.Status)

@@ -232,6 +232,8 @@ flowchart LR
   MLAUTH[MarketplaceAuthService authorize-url] -->|redirect_uri = Integrations:MercadoLivre:RedirectUri https://dev.ofertio.com.br/api/mercadolivre/callback| MLAPP
   MLCTRL -->|ExchangeMercadoLivreCodeAsync POST oauth/token grant_type, client_id, client_secret, code, redirect_uri| MLAUTH
   MLAUTH -->|400 ➔ log [ML OAuth] error/message/corpo + mensagem com o código do erro| MLCTRL
+  MLAUTH -->|PKCE: abre state selado ➔ code_challenge SHA-256 + code_challenge_method=S256 na URL| MLPKCE[MercadoLivrePkce + MarketplaceOAuthState.CodeVerifier]
+  MLCTRL -->|state.CodeVerifier ➔ IntegracaoLojaDto ➔ code_verifier no POST oauth/token| MLAUTH
   MLMETA[ProductMetadataService] -->|ML: GetItemAsync com UserId do IAffiliateLinkGenerationContext| MLAPI
   MLAPI -->|404 em /items ➔ GET /products/ID ➔ buy_box_winner ➔ /items/ID| MLAPP
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]

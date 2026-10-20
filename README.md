@@ -636,6 +636,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [ ] **App do ML:** a Redirect URI cadastrada em developers.mercadolivre.com.br precisa ser idêntica (`https://dev.ofertio.com.br/api/mercadolivre/callback`).
 - [x] **Troca do code com diagnóstico (`MercadoLivreOAuthExchangeDiagnostics`):** `POST https://api.mercadolibre.com/oauth/token` com `grant_type=authorization_code`, `client_id`, `client_secret`, `code` e o `redirect_uri` acima; em HTTP 400 o log `[ML OAuth]` grava `error`, `message` e o corpo da resposta do ML (`invalid_grant`, `invalid_client`, `redirect_uri_mismatch`...) com `redirect_uri` e `client_id` enviados, sem `client_secret` nem `code`, e a tela mostra o código do erro.
 
+## 🔐 PKCE no OAuth do Mercado Livre (`MercadoLivreOAuthPkce`)
+
+- [x] **Causa:** o app do ML exige PKCE; a troca do `code` voltava `invalid_request — code_verifier is a required parameter`.
+- [x] **`code_verifier` no state selado:** gerado por autorização (64 caracteres, `MercadoLivrePkce`) e guardado criptografado no `state` (AES-GCM), sem sessão nem banco.
+- [x] **URL de autorização:** `code_challenge` (SHA-256 do verifier em base64url) + `code_challenge_method=S256`.
+- [x] **Troca do code:** o callback abre o state e envia `code_verifier` no `POST oauth/token`; o verifier nunca vai para log nem para a URL.
+- [ ] **Reautorizar:** links de autorização gerados antes do deploy não têm verifier; clicar de novo em "Autorizar Mercado Livre (OAuth)".
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

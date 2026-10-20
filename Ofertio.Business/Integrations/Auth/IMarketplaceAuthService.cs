@@ -22,5 +22,6 @@ public interface IMarketplaceAuthService
     Task<MarketplaceOAuthExchangeResult> ExchangeMercadoLivreCodeAsync(
         string code,
         string? redirectUri,
+        string? codeVerifier = null,
         CancellationToken cancellationToken = default);
 }

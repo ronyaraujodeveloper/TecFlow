@@ -32,4 +32,8 @@ public class IntegracaoLojaDto
     /// <summary>Redirect URI usada na autorização OAuth (obrigatória na troca do code do Mercado Livre).</summary>
     [JsonPropertyName("redirectUri")]
     public string? RedirectUri { get; set; }
+
+    /// <summary>PKCE do Mercado Livre: vem só do state selado no callback, nunca do corpo da requisição.</summary>
+    [JsonIgnore]
+    public string? CodeVerifier { get; set; }
 }

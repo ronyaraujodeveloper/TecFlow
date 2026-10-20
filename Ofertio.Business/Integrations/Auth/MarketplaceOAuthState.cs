@@ -1,4 +1,5 @@
-﻿using Ofertio.Core.Enums;
+﻿using Ofertio.Business.Integrations.MercadoLivre;
+using Ofertio.Core.Enums;
 
 namespace Ofertio.Business.Integrations.Auth;
 
@@ -10,7 +11,8 @@ public sealed record MarketplaceOAuthState(
     string FriendlyName,
     string? CallbackUri,
     string Nonce,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt,
+    string? CodeVerifier = null);
 
 /// <summary>Sela (criptografia autenticada) e abre o <c>state</c> do OAuth.</summary>
 public interface IOAuthStateProtector
@@ -52,7 +54,8 @@ public static class MarketplaceOAuthStateRules
             string.IsNullOrWhiteSpace(friendlyName) ? "Mercado Livre" : friendlyName.Trim(),
             string.IsNullOrWhiteSpace(callbackUri) ? null : callbackUri.Trim(),
             Guid.NewGuid().ToString("N"),
-            (now ?? DateTimeOffset.UtcNow).Add(Lifetime));
+            (now ?? DateTimeOffset.UtcNow).Add(Lifetime),
+            platform == MarketplaceType.MercadoLivre ? MercadoLivrePkce.CreateCodeVerifier() : null);
 
     /// <summary>Retorno para a origem onde o OAuth começou (ex.: https://localhost:7002/marketplace-accounts?status=success).</summary>
     public static string BuildReturnUrl(string? callbackUri, bool success, string? message = null)

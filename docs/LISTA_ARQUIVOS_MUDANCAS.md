@@ -1697,6 +1697,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - `ExchangeMercadoLivreCodeAsync` envia `grant_type`, `client_id` (`AppId`), `client_secret` (`SecretKey`), `code` e `redirect_uri` configurado; em 400 registra `[ML OAuth]` com `error`/`message`/corpo do ML, `redirect_uri` e `client_id` (nunca `client_secret`/`code`) e devolve o código do erro à tela.
 - [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs** - campos exatos do POST e log do `invalid_grant` sem segredo.
 
+### MercadoLivreOAuthPkce - PKCE S256 no OAuth do Mercado Livre (`code_verifier is a required parameter`)
+
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivrePkce.cs** *(novo)* - `CreateCodeVerifier` (64 caracteres base64url) e `ComputeCodeChallenge` (base64url do SHA-256, método `S256`), conforme RFC 7636.
+- [x] **Ofertio.Business/Integrations/Auth/MarketplaceOAuthState.cs** - `CodeVerifier` opcional no state selado (AES-GCM), gerado em `Create` só para o Mercado Livre.
+- [x] **Ofertio.Business/Integrations/Auth/IMarketplaceAuthService.cs** - `ExchangeMercadoLivreCodeAsync(code, redirectUri, codeVerifier, cancellationToken)`.
+- [x] **Ofertio.Business/Dto/IntegracaoLojaDto.cs** - `CodeVerifier` com `[JsonIgnore]`: só vem do state selado, nunca do corpo da requisição.
+- [x] **Ofertio.Infrastructure.Services/Integrations/Auth/MarketplaceAuthService.cs** - recebe `IOAuthStateProtector` opcional; a URL de autorização ganha `code_challenge` + `code_challenge_method=S256` derivados do verifier do state; a troca do `code` envia `code_verifier` (aviso no log quando falta, sem registrar o valor).
+- [x] **Ofertio.API/Security/MercadoLivreOAuthCallbackFlow.cs** - repassa `state.CodeVerifier` para `LinkAsync`.
+- [x] **Ofertio.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** - passa `dto.CodeVerifier` para a troca do `code`.
+- [x] **Ofertio.Tests/Unit/Integrations/MarketplaceAuthServiceTests.cs**, **MarketplaceOAuthStateTests.cs** e **IntegracaoLojaServiceTests.cs** - vetor do RFC 7636, challenge na URL e verifier no POST, state sem verifier fora do ML, repasse do verifier no callback.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

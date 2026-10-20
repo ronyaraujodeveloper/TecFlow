@@ -38,6 +38,21 @@ public class MarketplaceOAuthStateTests
     }
 
     [Fact]
+    public void Create_ShouldSealPkceVerifierOnlyForMercadoLivre()
+    {
+        var protector = new OAuthStateProtector(Key);
+        var mercadoLivre = MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.MercadoLivre, "Loja ML", Callback);
+        var shopee = MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.Shopee, "Loja SP", Callback);
+
+        Assert.Matches("^[A-Za-z0-9_-]{64}$", mercadoLivre.CodeVerifier);
+        Assert.Null(shopee.CodeVerifier);
+        var sealedState = protector.Protect(mercadoLivre);
+        Assert.DoesNotContain(mercadoLivre.CodeVerifier!, sealedState, StringComparison.Ordinal);
+        Assert.True(protector.TryUnprotect(sealedState, out var opened));
+        Assert.Equal(mercadoLivre.CodeVerifier, opened!.CodeVerifier);
+    }
+
+    [Fact]
     public void Protector_ShouldRejectTamperedForeignExpiredOrPlainStates()
     {
         var protector = new OAuthStateProtector(Key);
@@ -103,7 +118,8 @@ public class MarketplaceOAuthStateTests
     public async Task AnonymousCallback_ShouldSaveTokensForSealedUserAndReturnToOrigin()
     {
         var protector = new OAuthStateProtector(Key);
-        var sealedState = protector.Protect(MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.MercadoLivre, "Loja ML", Callback));
+        var state = MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.MercadoLivre, "Loja ML", Callback);
+        var sealedState = protector.Protect(state);
         IntegracaoLojaDto? linked = null;
         string? tenantDuringLink = null;
         var lojas = new Mock<IIntegracaoLojaService>();
@@ -128,6 +144,7 @@ public class MarketplaceOAuthStateTests
         Assert.Equal("TG-code", linked.AuthorizationCode);
         Assert.Equal("Loja ML", linked.FriendlyName);
         Assert.Equal(Callback, linked.RedirectUri);
+        Assert.Equal(state.CodeVerifier, linked.CodeVerifier);
         Assert.Equal(TenantId.ToString(), tenantDuringLink);
     }
 

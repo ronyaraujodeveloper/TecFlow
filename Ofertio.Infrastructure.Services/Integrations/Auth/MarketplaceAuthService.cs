@@ -36,6 +36,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private readonly ILogger<MarketplaceAuthService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly ITenantProvisioningService _tenantProvisioning;
+    private readonly IOAuthStateProtector? _stateProtector;
 
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
@@ -49,9 +50,11 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         ILogger<MarketplaceAuthService> logger,
         IHostEnvironment hostEnvironment,
         ITenantProvisioningService tenantProvisioning,
-        IOptions<MercadoLivreIntegrationOptions>? mercadoLivreOptions = null)
+        IOptions<MercadoLivreIntegrationOptions>? mercadoLivreOptions = null,
+        IOAuthStateProtector? stateProtector = null)
     {
         _mercadoLivreOptions = mercadoLivreOptions?.Value ?? new MercadoLivreIntegrationOptions();
+        _stateProtector = stateProtector;
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
         _context = context;
@@ -88,6 +91,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     public async Task<MarketplaceOAuthExchangeResult> ExchangeMercadoLivreCodeAsync(
         string code,
         string? redirectUri,
+        string? codeVerifier = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -118,18 +122,29 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         }
 
         var clientId = _mercadoLivreOptions.AppId.Trim();
+        var fields = new Dictionary<string, string>
+        {
+            ["grant_type"] = "authorization_code",
+            ["client_id"] = clientId,
+            ["client_secret"] = _mercadoLivreOptions.SecretKey.Trim(),
+            ["code"] = code.Trim(),
+            ["redirect_uri"] = redirect
+        };
+        if (string.IsNullOrWhiteSpace(codeVerifier))
+        {
+            _logger.LogWarning(
+                "[ML OAuth] Troca do code sem code_verifier (PKCE): o state não trouxe o verifier; apps com PKCE obrigatório recusam. Autorize novamente em Minhas Lojas.");
+        }
+        else
+        {
+            fields["code_verifier"] = codeVerifier.Trim();
+        }
+
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, _mercadoLivreOptions.TokenUrl)
             {
-                Content = new FormUrlEncodedContent(new Dictionary<string, string>
-                {
-                    ["grant_type"] = "authorization_code",
-                    ["client_id"] = clientId,
-                    ["client_secret"] = _mercadoLivreOptions.SecretKey.Trim(),
-                    ["code"] = code.Trim(),
-                    ["redirect_uri"] = redirect
-                })
+                Content = new FormUrlEncodedContent(fields)
             };
             request.Headers.Accept.ParseAdd("application/json");
 
@@ -252,13 +267,32 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             throw new InvalidOperationException(MercadoLivreMissingCredentialsMessage);
         }
 
+        var codeChallenge = ResolveMercadoLivreCodeChallenge(state);
         return AppendQuery(_mercadoLivreOptions.AuthorizeUrl, new Dictionary<string, string?>
         {
             ["response_type"] = "code",
             ["client_id"] = _mercadoLivreOptions.AppId.Trim(),
             ["redirect_uri"] = ResolveMercadoLivreRedirectUri(redirectUri),
-            ["state"] = state
+            ["state"] = state,
+            ["code_challenge"] = codeChallenge,
+            ["code_challenge_method"] = codeChallenge is null ? null : MercadoLivrePkce.ChallengeMethod
         });
+    }
+
+    /// <summary>
+    /// O verifier PKCE viaja dentro do state selado (AES-GCM); aqui só sai o challenge derivado dele.
+    /// </summary>
+    private string? ResolveMercadoLivreCodeChallenge(string state)
+    {
+        if (_stateProtector is null
+            || !_stateProtector.TryUnprotect(state, out var sealedState)
+            || string.IsNullOrWhiteSpace(sealedState?.CodeVerifier))
+        {
+            _logger.LogWarning("[ML OAuth] URL de autorização sem code_challenge (PKCE): state não selado ou sem verifier.");
+            return null;
+        }
+
+        return MercadoLivrePkce.ComputeCodeChallenge(sealedState.CodeVerifier);
     }
 
     private string ResolveMercadoLivreRedirectUri(string? redirectUri) =>

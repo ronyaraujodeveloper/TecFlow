@@ -567,6 +567,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             oauth = await _marketplaceAuthService.ExchangeMercadoLivreCodeAsync(
                 dto.AuthorizationCode.Trim(),
                 dto.RedirectUri,
+                dto.CodeVerifier,
                 cancellationToken);
             if (!oauth.Success)
             {

@@ -707,6 +707,7 @@ public class MercadoLivreApiServiceTests
                 "/users/42" => (HttpStatusCode.OK, """{"id":42,"nickname":"LOJA.DELL","seller_reputation":{"level_id":"5_green","power_seller_status":"gold","transactions":{"completed":900,"ratings":{"positive":0.99}}}}"""),
                 "/reviews/item/MLB111" => (HttpStatusCode.OK, """{"paging":{"total":87},"rating_average":4.6}"""),
                 "/highlights/MLB/category/MLB1652" => (HttpStatusCode.OK, """{"content":[{"id":"MLB9","position":1,"type":"PRODUCT"},{"id":"MLB1","position":3,"type":"PRODUCT"}]}"""),
+                "/categories/MLB1652" => (HttpStatusCode.OK, """{"id":"MLB1652","name":"Notebooks","path_from_root":[{"id":"MLB1648","name":"Informática"},{"id":"MLB1652","name":"Notebooks"}]}"""),
                 _ => null
             }
         };
@@ -715,6 +716,10 @@ public class MercadoLivreApiServiceTests
         var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest { Query = "dell inspiron", IncludeCategories = false });
 
         var item = Assert.Single(result.Items);
+        Assert.Equal("MLB1652", item.CategoryId);
+        Assert.Equal("Notebooks", item.CategoryName);
+        Assert.Equal("MLB1648", item.RootCategoryId);
+        Assert.Equal("Informática", item.RootCategoryName);
         Assert.Equal(321, item.SoldQuantity);
         Assert.Equal("LOJA.DELL", item.SellerName);
         Assert.Equal("5_green", item.SellerReputationLevel);
@@ -741,7 +746,8 @@ public class MercadoLivreApiServiceTests
 
         Assert.DoesNotContain(handler.Requests, request =>
             request.Path == "/items" || request.Path.StartsWith("/users/", StringComparison.Ordinal)
-            || request.Path.StartsWith("/reviews/", StringComparison.Ordinal) || request.Path.StartsWith("/highlights/", StringComparison.Ordinal));
+            || request.Path.StartsWith("/reviews/", StringComparison.Ordinal) || request.Path.StartsWith("/highlights/", StringComparison.Ordinal)
+            || request.Path.StartsWith("/categories/", StringComparison.Ordinal));
     }
 
     private static IReadOnlyList<string> Range(int offset, int count) =>

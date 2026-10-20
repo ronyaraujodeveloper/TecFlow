@@ -1707,6 +1707,28 @@ flowchart TB
   RADAR --> PROF
 ```
 
+### Comissão do Mercado Livre por categoria (`MercadoLivreCategoryCommission`)
+
+```mermaid
+flowchart TB
+  MG[GET /items?ids=...&attributes=...,category_id] -->|category_id MLB1652| CAT[FetchCategoryPathsAsync<br/>cache 12 h]
+  CAT -->|fora do cache| API[GET /categories/MLB1652<br/>path_from_root]
+  API --> ROOT[RootCategoryId MLB1648 · RootCategoryName Informática]
+  CAT --> ROOT
+  ROOT --> OCS[OfficialCatalogSearchService]
+  OCS --> AC{ApplyCommission}
+  AC -->|Shopee| SHP[commissionRate da API]
+  AC -->|ML categoria na tabela| TAB[AffiliateCommissionRules<br/>16% / 12% / 5% / 0%]
+  AC -->|ML fora da tabela ou Amazon| PROF[(AffiliateMiningProfiles<br/>sua taxa)]
+  SHP --> CARD[BuscaGlobal.razor<br/>💰 Comissão estimada: 5% Informática]
+  TAB --> CARD
+  PROF --> CARD
+  PIC["GET /products/ID pictures · PA-API Images.Variants"] -->|ImageUrls| CARD
+  CARD -->|clique na foto| GAL[Modal da galeria<br/>anterior / próxima / miniaturas]
+  CARD -->|Abrir| STORE[Oferta na loja em nova aba]
+  CARD -->|Converter & Gerar Link| LINK[IAffiliateLinkApiService]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

@@ -29,6 +29,8 @@ public sealed record MercadoLivreSellerMetrics(
 
 public sealed record MercadoLivreReviewSummary(decimal? Average, int Total);
 
+public sealed record MercadoLivreCategoryPath(string? Name, string? RootId, string? RootName);
+
 public static class MercadoLivreItemParser
 {
     public static OfficialOfferSnapshotDto? Parse(string json)
@@ -97,23 +99,43 @@ public static class MercadoLivreItemParser
         var name = root.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
             ? nameEl.GetString()
             : null;
-        string? image = null;
-        if (root.TryGetProperty("pictures", out var pictures) && pictures.ValueKind == JsonValueKind.Array)
+        var image = ReadPictureUrls(root, 1).FirstOrDefault();
+
+        return (string.IsNullOrWhiteSpace(winnerId) ? null : winnerId.Trim(), name, image);
+    }
+
+    public const int MaxGalleryPictures = 12;
+
+    /// <summary><c>pictures[].url</c> do produto de catálogo, sem repetição, em https.</summary>
+    private static List<string> ReadPictureUrls(JsonElement product, int max)
+    {
+        var urls = new List<string>();
+        if (!product.TryGetProperty("pictures", out var pictures) || pictures.ValueKind != JsonValueKind.Array)
         {
-            foreach (var picture in pictures.EnumerateArray())
+            return urls;
+        }
+
+        foreach (var picture in pictures.EnumerateArray())
+        {
+            var url = ReadString(picture, "url") ?? ReadString(picture, "secure_url");
+            if (url is null)
             {
-                if (picture.ValueKind == JsonValueKind.Object
-                    && picture.TryGetProperty("url", out var urlEl)
-                    && urlEl.ValueKind == JsonValueKind.String
-                    && !string.IsNullOrWhiteSpace(urlEl.GetString()))
-                {
-                    image = urlEl.GetString();
-                    break;
-                }
+                continue;
+            }
+
+            url = url.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
+            if (!urls.Contains(url, StringComparer.OrdinalIgnoreCase))
+            {
+                urls.Add(url);
+            }
+
+            if (urls.Count >= max)
+            {
+                break;
             }
         }
 
-        return (string.IsNullOrWhiteSpace(winnerId) ? null : winnerId.Trim(), name, image);
+        return urls;
     }
 
     /// <summary><c>/products/search</c>: códigos dos produtos de catálogo, na ordem de relevância do Mercado Livre.</summary>
@@ -329,6 +351,7 @@ public static class MercadoLivreItemParser
             Price = price,
             OriginalPrice = original > price ? original : null,
             ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
+            ImageUrls = ReadPictureUrls(product, MaxGalleryPictures),
             SourceUrl = ReadString(product, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
             Shipping = free ? "Frete grátis" : null,
             Source = "Api",
@@ -446,6 +469,35 @@ public static class MercadoLivreItemParser
             return average is > 0 || total is > 0
                 ? new MercadoLivreReviewSummary(average is > 0 ? decimal.Round(average.Value, 1) : null, total ?? 0)
                 : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary><c>/categories/{id}</c>: nome da categoria e a categoria raiz (primeiro item de <c>path_from_root</c>).</summary>
+    public static MercadoLivreCategoryPath? ParseCategory(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object || ReadString(root, "id") is not { } id)
+            {
+                return null;
+            }
+
+            var name = ReadString(root, "name");
+            if (root.TryGetProperty("path_from_root", out var path)
+                && path.ValueKind == JsonValueKind.Array
+                && path.GetArrayLength() > 0
+                && ReadString(path[0], "id") is { } rootId)
+            {
+                return new MercadoLivreCategoryPath(name, rootId, ReadString(path[0], "name"));
+            }
+
+            return new MercadoLivreCategoryPath(name, id, name);
         }
         catch (JsonException)
         {

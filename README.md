@@ -27,6 +27,35 @@ Para evitar que a acentuação em PT-BR fique quebrada (ex: exibir '??' ou carac
    - SQL Server (`Database:Provider=SqlServer`): `UseSqlServer` e migrations em `Ofertio.Data`.
    - PostgreSQL (Homologação IIS): driver `Npgsql` com `Client Encoding=UTF8;Encoding=UTF8;` na connection string.
 
+## 🎨 Diretrizes de Interface (UI/UX) - Padronização de Botões
+
+### 1. Ícones Obrigatórios em Ações e Botões
+Todos os botões da aplicação (`<button>`, `<a>` estilizados como botão ou elementos clicáveis de ação) **DEVEM obrigatoriamente incluir um ícone representativo** utilizando a biblioteca **Bootstrap Icons** (`bi bi-*`) antes do rótulo de texto.
+
+#### 📌 Regras de Implementação:
+- **Espaçamento:** Mantenha um pequeno espaçamento visual entre o ícone e o texto (ex: classe Bootstrap `me-1` ou `gap-1` no contêiner flex).
+- **Semântica dos Ícones Padrão:**
+  - 🔄 **Atualizar / Refresh / Sincronizar:** `<i class="bi bi-arrow-repeat"></i>`
+  - 🗑️ **Limpar / Excluir / Deletar:** `<i class="bi bi-trash"></i>`
+  - ⚙️ **Filtros / Configurações:** `<i class="bi bi-gear"></i>`
+  - 🔍 **Buscar / Pesquisar:** `<i class="bi bi-search"></i>`
+  - ↗️ **Abrir / Link Externo:** `<i class="bi bi-box-arrow-up-right"></i>`
+  - ☑️ **Verificar / Validar:** `<i class="bi bi-check-circle"></i>`
+  - 📋 **Clonar / Copiar:** `<i class="bi bi-copy"></i>`
+  - 👁️‍🗨️ **Ocultar / Descartar:** `<i class="bi bi-eye-slash"></i>`
+  - 🔑 **Autorizar / Conectar OAuth:** `<i class="bi bi-key"></i>` ou `<i class="bi bi-shield-check"></i>`
+
+#### Exemplo de Código Blazor/HTML:
+```html
+<!-- Exemplo Correto -->
+<button class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-repeat me-1"></i> Atualizar
+</button>
+
+<button class="btn btn-primary">
+    <i class="bi bi-copy me-1"></i> Clonar
+</button>
+
 ---
 
 ## 📚 Documentação Complementar
@@ -686,6 +715,15 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Filtros de tela:** somente loja oficial, vendedores confiáveis e mais vendidos.
 - [ ] **Informar sua taxa do ML:** salvar a taxa média do painel de afiliados no modal de regras para ver a comissão estimada.
 - [ ] **Validar com a conta real:** conferir no log `[ML Busca] Métricas:` quantos vendedores, avaliações, ranking e vendas a API devolveu (o ML pode omitir `sold_quantity` para quem não é o vendedor).
+
+## 💰 Comissão do Mercado Livre por categoria (`MercadoLivreCategoryCommission`)
+
+- [x] **Categoria do anúncio:** `category_id` do `/items` ➔ `/categories/{id}` (`path_from_root`) ➔ categoria raiz, com cache de 12 h.
+- [x] **Regras de comissão:** `AffiliateCommissionRules` com a tabela do afiliado generalista do ML (venda direta): 16% Beleza/Moda/Esportes, 12% Casa/Ferramentas/Games/Brinquedos e outras, 5% Eletrônicos/Informática/Celulares/Câmeras/Eletrodomésticos, 0% Alimentos e Bebidas; fora da tabela vale a taxa do perfil.
+- [x] **Card:** "💰 Comissão estimada: 5% (Informática) · R$ …" no lugar de "informe sua taxa nas regras"; a tabela aparece no modal de regras.
+- [x] **Imagem:** clique abre modal ampliado com anterior/próxima e miniaturas (ML: todas as fotos do produto; Amazon: variantes; Shopee: foto principal).
+- [x] **Botões:** "Converter & Gerar Link" e "Abrir" lado a lado, com ícones no padrão dos Grupos monitorados.
+- [ ] **Conferir as taxas:** comparar a tabela com o painel de afiliado do ML (o ML pode mudar as taxas; a venda indireta paga a metade).
 
 ---
 

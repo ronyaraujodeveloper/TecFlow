@@ -94,6 +94,32 @@ public class MercadoLivreItemParserTests
     }
 
     [Fact]
+    public void ParseCategory_ShouldReadNameAndRootFromPathFromRoot()
+    {
+        Assert.Equal(
+            new MercadoLivreCategoryPath("Notebooks", "MLB1648", "Informática"),
+            MercadoLivreItemParser.ParseCategory("""{"id":"MLB1652","name":"Notebooks","path_from_root":[{"id":"MLB1648","name":"Informática"},{"id":"MLB1652","name":"Notebooks"}]}"""));
+        Assert.Equal(
+            new MercadoLivreCategoryPath("Informática", "MLB1648", "Informática"),
+            MercadoLivreItemParser.ParseCategory("""{"id":"MLB1648","name":"Informática"}"""));
+        Assert.Null(MercadoLivreItemParser.ParseCategory("""{"message":"Category not found","error":"not_found"}"""));
+    }
+
+    [Fact]
+    public void ParseCatalogOffer_ShouldCollectAllProductPicturesForTheGallery()
+    {
+        const string json = """
+            {"id":"MLB1","name":"Fone","pictures":[{"url":"http://http2.mlstatic.com/a.jpg"},{"url":"https://http2.mlstatic.com/b.jpg"},{"url":"https://http2.mlstatic.com/b.jpg"}],"buy_box_winner":{"item_id":"MLB9","price":99}}
+            """;
+
+        var item = MercadoLivreItemParser.ParseCatalogOffer(json);
+
+        Assert.NotNull(item);
+        Assert.Equal("https://http2.mlstatic.com/a.jpg", item!.ImageUrl);
+        Assert.Equal(["https://http2.mlstatic.com/a.jpg", "https://http2.mlstatic.com/b.jpg"], item.ImageUrls);
+    }
+
+    [Fact]
     public void ParseBestSellerPositions_ShouldMapProductsAndItemsToRankingPosition()
     {
         const string json = """

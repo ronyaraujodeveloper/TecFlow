@@ -52,7 +52,7 @@
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold" for="ml-commission">Sua comissão no Mercado Livre (%)</label>
+                    <label class="form-label fw-semibold" for="ml-commission">Mercado Livre (%) — categorias fora da tabela</label>
                     <input id="ml-commission" class="form-control" inputmode="decimal" value="@_mlCommission" @oninput="e => _mlCommission = e.Value?.ToString()" />
                 </div>
                 <div class="col-md-4">
@@ -60,7 +60,7 @@
                     <input id="amazon-commission" class="form-control" inputmode="decimal" value="@_amazonCommission" @oninput="e => _amazonCommission = e.Value?.ToString()" />
                 </div>
                 <div class="col-md-4 small text-muted align-self-end">
-                    Usadas para estimar a comissão na Buscar Ofertas (as APIs do ML e da Amazon não informam a taxa).
+                    No Mercado Livre a Buscar Ofertas estima a comissão pela categoria do anúncio (tabela do afiliado); esta taxa vale só para categorias fora da tabela. A API da Amazon não informa a taxa.
                 </div>
             </div>
             <div class="form-check mb-2">

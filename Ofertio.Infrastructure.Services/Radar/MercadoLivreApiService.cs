@@ -638,13 +638,25 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             MercadoLivreItemParser.ParseBestSellerPositions,
             accessToken,
             cancellationToken);
-        await Task.WhenAll(sellersTask, reviewsTask, rankingTask);
+        var categoryPathsTask = FetchCategoryPathsAsync(
+            items.Select(item => item.CategoryId).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            accessToken,
+            cancellationToken);
+        await Task.WhenAll(sellersTask, reviewsTask, rankingTask, categoryPathsTask);
 
         var sellers = sellersTask.Result;
         var reviews = reviewsTask.Result;
         var rankings = rankingTask.Result.Values.ToList();
+        var categoryPaths = categoryPathsTask.Result;
         foreach (var item in items)
         {
+            if (item.CategoryId is not null && categoryPaths.TryGetValue(item.CategoryId, out var categoryPath))
+            {
+                item.CategoryName ??= categoryPath.Name;
+                item.RootCategoryId ??= categoryPath.RootId;
+                item.RootCategoryName ??= categoryPath.RootName;
+            }
+
             if (item.SellerId is not null && sellers.TryGetValue(item.SellerId, out var seller))
             {
                 item.SellerName ??= seller.Nickname;
@@ -671,12 +683,57 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
 
         _logger.LogInformation(
-            "[ML Busca] Métricas: {Sellers} vendedores, {Reviews} anúncios com avaliações, {Ranked} no ranking de mais vendidos, {Sold} com vendas informadas.",
+            "[ML Busca] Métricas: {Sellers} vendedores, {Reviews} anúncios com avaliações, {Ranked} no ranking de mais vendidos, {Sold} com vendas informadas, {Categorized} com categoria raiz.",
             sellers.Count,
             reviews.Count,
             items.Count(item => item.BestSellerPosition is not null),
-            items.Count(item => item.SoldQuantity is not null));
+            items.Count(item => item.SoldQuantity is not null),
+            items.Count(item => item.RootCategoryId is not null));
     }
+
+    /// <summary><c>/categories/{id}</c> só para as categorias ainda fora do cache (a árvore do ML muda raramente).</summary>
+    private async Task<IReadOnlyDictionary<string, MercadoLivreCategoryPath>> FetchCategoryPathsAsync(
+        IReadOnlyList<string> categoryIds,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var missing = categoryIds
+            .Where(id => !CategoryPathCache.TryGetValue(id, out var cached) || cached.ExpiresAt <= now)
+            .Take(MaxCategoryLookups)
+            .ToList();
+        if (missing.Count > 0)
+        {
+            var fetched = await FetchManyAsync(
+                missing,
+                id => $"categories/{Uri.EscapeDataString(id)}",
+                MercadoLivreItemParser.ParseCategory,
+                accessToken,
+                cancellationToken);
+            foreach (var (id, path) in fetched)
+            {
+                CategoryPathCache[id] = (path, now.Add(CategoryPathCacheDuration));
+            }
+        }
+
+        var result = new Dictionary<string, MercadoLivreCategoryPath>(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in categoryIds)
+        {
+            if (CategoryPathCache.TryGetValue(id, out var cached))
+            {
+                result[id] = cached.Path;
+            }
+        }
+
+        return result;
+    }
+
+    private static readonly ConcurrentDictionary<string, (MercadoLivreCategoryPath Path, DateTime ExpiresAt)> CategoryPathCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly TimeSpan CategoryPathCacheDuration = TimeSpan.FromHours(12);
+
+    private const int MaxCategoryLookups = 20;
 
     private static string BuildReviewsPath(string listingId, string? productId) =>
         string.IsNullOrWhiteSpace(productId) || string.Equals(productId, listingId, StringComparison.OrdinalIgnoreCase)

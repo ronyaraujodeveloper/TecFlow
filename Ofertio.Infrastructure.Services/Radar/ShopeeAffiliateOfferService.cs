@@ -243,7 +243,7 @@ public sealed class ShopeeAffiliateOfferService : IShopeeAffiliateOfferService
                     ? decimal.Round(commissionRate.Value <= 1m ? commissionRate.Value * 100m : commissionRate.Value, 2)
                     : null,
                 EstimatedCommission = ReadFlexibleDecimal(node, "commission") is decimal commission and > 0 ? decimal.Round(commission, 2) : null,
-                CommissionSource = commissionRate is > 0 ? "API Shopee" : null,
+                CommissionSource = commissionRate is > 0 ? AffiliateCommissionRules.SourceShopeeApi : null,
                 SoldQuantity = sales is > 0 ? (int)Math.Min(int.MaxValue, sales.Value) : null,
                 RatingAverage = rating is > 0 ? decimal.Round(rating.Value, 1) : null,
                 SellerName = node.TryGetProperty("shopName", out var shopName) && shopName.ValueKind == JsonValueKind.String

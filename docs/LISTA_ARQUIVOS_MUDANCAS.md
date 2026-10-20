@@ -1760,6 +1760,20 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/Radar/RadarPerfil.razor** - campos de comissão do ML e da Amazon (preservados ao salvar o perfil).
 - [x] **Ofertio.Tests/Unit/Radar/** - regras (comissão, notas, ordenações, métricas, filtros), parsers do ML, enriquecimento, `ShopeeAffiliateOfferServiceTests` (novo) e comissão do perfil na busca.
 
+### MercadoLivreCategoryCommission - Comissão do ML por categoria, galeria de imagens e botão Abrir
+
+- [x] **Ofertio.Business/Service/Radar/AffiliateCommissionRules.cs** (novo) - tabela do afiliado generalista do ML (venda direta) por categoria raiz (16% / 12% / 5% / 0%), busca por id (`MLB1648`) ou nome normalizado, fontes "API Shopee", "Tabela ML por categoria" e "Sua taxa".
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `ApplyCommission`: API Shopee ➔ tabela ML pela categoria raiz ➔ taxa do perfil; categorias a 0% calculam R$ 0; `ResetEstimatedCommission` (recalcular sem perder a taxa da Shopee).
+- [x] **Ofertio.Business/Dto/OfficialCatalogDtos.cs** - `CategoryName`, `RootCategoryId`, `RootCategoryName`, `CommissionCategory` e `ImageUrls` (galeria).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCategory` (`/categories/{id}` ➔ `path_from_root`), `MercadoLivreCategoryPath` e todas as fotos de `pictures` (até 12) em `ImageUrls`.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `FetchCategoryPathsAsync`: `category_id` do `/items` ➔ `/categories/{id}` em paralelo com as métricas, cache de 12 h; log `[ML Busca] Métricas` com "com categoria raiz".
+- [x] **Ofertio.Infrastructure.Services/Radar/AmazonPaApiService.cs** - recurso `Images.Variants.Large` para a galeria.
+- [x] **Ofertio.Infrastructure.Services/Radar/ShopeeAffiliateOfferService.cs** - fonte da comissão pela constante `AffiliateCommissionRules.SourceShopeeApi`.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - "💰 Comissão estimada: 5% (Informática) · R$ …", tabela de comissão no modal de regras, modal da imagem com anterior/próxima e miniaturas, botões "Converter & Gerar Link" + "Abrir" (padrão `monitored-offer-actions` dos Grupos monitorados).
+- [x] **Ofertio.SharedUi/Components/Pages/Radar/RadarPerfil.razor** - taxa do ML passa a valer só para categorias fora da tabela.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - estilos `offer-gallery-*` (miniatura clicável, palco, navegação e miniaturas).
+- [x] **Ofertio.Tests/Unit/Radar/** - tabela por categoria, prioridade da comissão, `ResetEstimatedCommission`, `ParseCategory`, fotos do produto, galeria da Amazon e categoria raiz no enriquecimento.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

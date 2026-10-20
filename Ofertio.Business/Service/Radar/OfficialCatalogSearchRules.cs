@@ -220,8 +220,8 @@ public static class OfficialCatalogSearchRules
         percent is > 0 and <= MaxCommissionPercent ? decimal.Round(percent.Value, 2) : null;
 
     /// <summary>
-    /// Comissão estimada: a Shopee informa a taxa por oferta; no Mercado Livre e na Amazon usa a taxa do perfil do usuário,
-    /// porque as APIs oficiais não expõem a comissão de afiliado.
+    /// Comissão estimada: a Shopee informa a taxa por oferta; no Mercado Livre vale a tabela do afiliado pela categoria
+    /// raiz do anúncio e, fora dela, a taxa do perfil do usuário; na Amazon, só a taxa do perfil (a API não expõe a comissão).
     /// </summary>
     public static void ApplyCommission(
         OfficialCatalogProductDto item,
@@ -230,26 +230,54 @@ public static class OfficialCatalogSearchRules
     {
         if (item.CommissionPercent is null)
         {
-            var userRate = item.PlatformType switch
+            var categoryRate = item.PlatformType == MarketplaceType.MercadoLivre
+                ? AffiliateCommissionRules.FindMercadoLivreRate(item.RootCategoryId, item.RootCategoryName)
+                : null;
+            if (categoryRate is not null)
             {
-                MarketplaceType.MercadoLivre => NormalizeCommissionPercent(mercadoLivrePercent),
-                MarketplaceType.Amazon => NormalizeCommissionPercent(amazonPercent),
-                _ => null
-            };
-            if (userRate is null)
+                item.CommissionPercent = categoryRate.Percent;
+                item.CommissionSource = AffiliateCommissionRules.SourceMercadoLivreTable;
+                item.CommissionCategory = categoryRate.Name;
+            }
+            else
             {
-                return;
+                var userRate = item.PlatformType switch
+                {
+                    MarketplaceType.MercadoLivre => NormalizeCommissionPercent(mercadoLivrePercent),
+                    MarketplaceType.Amazon => NormalizeCommissionPercent(amazonPercent),
+                    _ => null
+                };
+                if (userRate is null)
+                {
+                    return;
+                }
+
+                item.CommissionPercent = userRate;
+                item.CommissionSource = AffiliateCommissionRules.SourceUserRate;
+                item.CommissionCategory = item.RootCategoryName;
             }
 
-            item.CommissionPercent = userRate;
-            item.CommissionSource = "Sua taxa";
             item.EstimatedCommission = null;
         }
 
-        if (item.EstimatedCommission is null && item.Price is > 0 && item.CommissionPercent is > 0)
+        if (item.EstimatedCommission is null && item.Price is > 0 && item.CommissionPercent is >= 0)
         {
             item.EstimatedCommission = decimal.Round(item.Price.Value * item.CommissionPercent.Value / 100m, 2);
         }
+    }
+
+    /// <summary>Taxa recalculada na tela (ex.: o usuário mudou a sua taxa): a comissão da API da Shopee é mantida.</summary>
+    public static void ResetEstimatedCommission(OfficialCatalogProductDto item)
+    {
+        if (item.CommissionSource == AffiliateCommissionRules.SourceShopeeApi)
+        {
+            return;
+        }
+
+        item.CommissionPercent = null;
+        item.EstimatedCommission = null;
+        item.CommissionSource = null;
+        item.CommissionCategory = null;
     }
 
     /// <summary>

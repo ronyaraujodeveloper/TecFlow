@@ -187,11 +187,12 @@
                         <div class="text-muted">
                             @if (metrics.TopCommission is null)
                             {
-                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @onclick="() => _showRules = true">Informe sua taxa</button>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @onclick="() => _showRules = true">Ver tabela de comissão</button>
                             }
                             else
                             {
                                 @Shorten(metrics.TopCommission.ProductName)
+                                <span>· @($"{metrics.TopCommission.CommissionPercent:0.##}")% (@CommissionLabel(metrics.TopCommission))</span>
                             }
                         </div>
                     </div>
@@ -223,7 +224,18 @@
                                 <div class="product-image-preview-box product-image-preview-box--sm">
                                     @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
                                     {
-                                        <img src="@item.ImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                        var photoCount = GalleryOf(item).Count;
+                                        <button type="button"
+                                                class="offer-gallery-trigger"
+                                                title="Ampliar imagem"
+                                                aria-label="Ampliar imagem de @(item.ProductName ?? "produto")"
+                                                @onclick="() => OpenGallery(item)">
+                                            <img src="@item.ImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                                            @if (photoCount > 1)
+                                            {
+                                                <span class="offer-gallery-count" aria-hidden="true">@photoCount</span>
+                                            }
+                                        </button>
                                     }
                                     else
                                     {
@@ -260,15 +272,21 @@
                                 <p class="small text-muted mb-1">@item.Shipping</p>
                             }
                             <ul class="list-unstyled small mb-2">
-                                <li>
+                                <li title="@item.CommissionSource">
                                     💰
-                                    @if (item.EstimatedCommission is > 0)
+                                    @if (item.CommissionPercent is { } commissionPercent)
                                     {
-                                        <span>Comissão estimada <strong>@ProductMetadataHtmlParser.FormatBrl(item.EstimatedCommission)</strong> (@($"{item.CommissionPercent:0.##}")%, @item.CommissionSource)</span>
+                                        <span>
+                                            Comissão estimada: <strong>@($"{commissionPercent:0.##}")%</strong> (@CommissionLabel(item))
+                                            @if (item.EstimatedCommission is > 0)
+                                            {
+                                                <span>· @ProductMetadataHtmlParser.FormatBrl(item.EstimatedCommission)</span>
+                                            }
+                                        </span>
                                     }
                                     else
                                     {
-                                        <span class="text-muted">Comissão: informe sua taxa nas regras</span>
+                                        <span class="text-muted">@MissingCommissionMessage(item)</span>
                                     }
                                 </li>
                                 <li>
@@ -325,12 +343,31 @@
                                     }
                                 </div>
                             }
-                            <button type="button"
-                                    class="btn btn-primary mt-auto"
-                                    disabled="@(_busy || _convertingUrl == item.SourceUrl)"
-                                    @onclick="() => ConvertAsync(item)">
-                                Converter &amp; Gerar Link
-                            </button>
+                            <div class="monitored-offer-actions mt-auto">
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        title="Converter e gerar link de afiliado"
+                                        disabled="@(_busy || _convertingUrl == item.SourceUrl)"
+                                        @onclick="() => ConvertAsync(item)">
+                                    @if (_convertingUrl == item.SourceUrl)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                    }
+                                    <span>Converter &amp; Gerar Link</span>
+                                </button>
+                                <a class="btn btn-outline-secondary"
+                                   href="@item.SourceUrl"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   title="Abrir a oferta na loja">
+                                    <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                                    <span>Abrir</span>
+                                </a>
+                            </div>
                         </div>
                     </article>
                 </div>
@@ -389,13 +426,34 @@
                     </ul>
 
                     <h3 class="h6 fw-bold">Sua comissão</h3>
-                    <p class="mb-2">
-                        A Shopee informa a comissão de cada oferta pela API. O Mercado Livre e a Amazon não expõem a taxa de afiliado por API:
-                        informe a sua taxa média (consulte o painel de afiliado de cada loja) para estimarmos a comissão por produto.
-                    </p>
+                    <ul class="mb-2">
+                        <li><strong>Shopee:</strong> a comissão de cada oferta vem da API de afiliados.</li>
+                        <li>
+                            <strong>Mercado Livre:</strong> estimada automaticamente pela categoria do anúncio (<code>category_id</code> ➔ categoria raiz),
+                            pela tabela do afiliado generalista em venda direta. Na venda indireta (o cliente compra outro produto) o ML paga a metade.
+                            O ML pode mudar as taxas: confira no seu painel de afiliado.
+                        </li>
+                        <li><strong>Amazon:</strong> a API não informa a comissão; usamos a sua taxa abaixo.</li>
+                    </ul>
+                    <div class="table-responsive mb-2">
+                        <table class="table table-sm small mb-0">
+                            <thead>
+                                <tr><th scope="col">Taxa ML</th><th scope="col">Categorias</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var group in AffiliateCommissionRules.MercadoLivreCategoryRates.GroupBy(rate => rate.Percent).OrderByDescending(group => group.Key))
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@($"{group.Key:0.##}")%</td>
+                                        <td>@string.Join("; ", group.Select(rate => rate.Name))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="row g-2 align-items-end mb-3">
                         <div class="col-5">
-                            <label class="form-label small fw-semibold" for="taxa-ml">Mercado Livre (%)</label>
+                            <label class="form-label small fw-semibold" for="taxa-ml">Mercado Livre (%) — fora da tabela</label>
                             <input id="taxa-ml" class="form-control form-control-sm" type="number" step="0.1" min="0" max="90" @bind="_mlCommissionPercent" />
                         </div>
                         <div class="col-5">
@@ -403,7 +461,9 @@
                             <input id="taxa-amazon" class="form-control form-control-sm" type="number" step="0.1" min="0" max="90" @bind="_amazonCommissionPercent" />
                         </div>
                         <div class="col-2">
-                            <button type="button" class="btn btn-sm btn-primary w-100" disabled="@_savingRates" @onclick="SaveCommissionRatesAsync">Salvar</button>
+                            <button type="button" class="btn btn-sm btn-primary w-100" disabled="@_savingRates" @onclick="SaveCommissionRatesAsync">
+                                <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Salvar
+                            </button>
                         </div>
                     </div>
                     @if (!string.IsNullOrWhiteSpace(_ratesMessage))
@@ -450,10 +510,63 @@
                     <h3 class="h6 fw-bold">Links de afiliado</h3>
                     <ul class="mb-0">
                         <li><strong>Converter &amp; Gerar Link</strong> usa a loja da plataforma cadastrada em Minhas Lojas; sem ela, o link não é convertido.</li>
+                        <li><strong>Abrir</strong> mostra a oferta na loja em outra aba. Clique na foto para ampliar e ver as outras fotos do produto.</li>
                     </ul>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" @onclick="() => _showRules = false">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (_galleryItem is not null && _galleryImages.Count > 0)
+{
+    var current = _galleryImages[Math.Clamp(_galleryIndex, 0, _galleryImages.Count - 1)];
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="busca-galeria-title">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 id="busca-galeria-title" class="modal-title h6 text-truncate">@(_galleryItem.ProductName ?? "Produto")</h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseGallery"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="offer-gallery-stage">
+                        <img src="@current" alt="Foto @(_galleryIndex + 1) de @_galleryImages.Count" class="offer-gallery-main" />
+                        @if (_galleryImages.Count > 1)
+                        {
+                            <button type="button" class="btn btn-light border offer-gallery-nav offer-gallery-nav--prev" title="Foto anterior" aria-label="Foto anterior" @onclick="() => MoveGallery(-1)">
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="btn btn-light border offer-gallery-nav offer-gallery-nav--next" title="Próxima foto" aria-label="Próxima foto" @onclick="() => MoveGallery(1)">
+                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </div>
+                    @if (_galleryImages.Count > 1)
+                    {
+                        <p class="small text-muted text-center my-2">Foto @(_galleryIndex + 1) de @_galleryImages.Count</p>
+                        <div class="d-flex flex-wrap justify-content-center gap-1">
+                            @for (var index = 0; index < _galleryImages.Count; index++)
+                            {
+                                var thumbIndex = index;
+                                <button type="button"
+                                        class="offer-gallery-thumb @(thumbIndex == _galleryIndex ? "active" : null)"
+                                        aria-label="Ver foto @(thumbIndex + 1)"
+                                        @onclick="() => _galleryIndex = thumbIndex">
+                                    <img src="@_galleryImages[thumbIndex]" alt="" loading="lazy" />
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-outline-secondary" href="@_galleryItem.SourceUrl" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir
+                    </a>
+                    <button type="button" class="btn btn-primary" @onclick="CloseGallery">Fechar</button>
                 </div>
             </div>
         </div>
@@ -545,11 +658,9 @@
 
             _mlCommissionPercent = updated.MercadoLivreCommissionPercent;
             _amazonCommissionPercent = updated.AmazonCommissionPercent;
-            foreach (var item in _relevanceOrder.Where(item => item.CommissionSource != "API Shopee"))
+            foreach (var item in _relevanceOrder)
             {
-                item.CommissionPercent = null;
-                item.EstimatedCommission = null;
-                item.CommissionSource = null;
+                OfficialCatalogSearchRules.ResetEstimatedCommission(item);
                 OfficialCatalogSearchRules.ApplyCommission(item, _mlCommissionPercent, _amazonCommissionPercent);
                 OfficialCatalogSearchRules.ScoreOffer(item);
             }
@@ -567,6 +678,61 @@
             _savingRates = false;
         }
     }
+
+    private OfficialCatalogProductDto? _galleryItem;
+    private List<string> _galleryImages = [];
+    private int _galleryIndex;
+
+    private static List<string> GalleryOf(OfficialCatalogProductDto item)
+    {
+        var images = item.ImageUrls
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (!string.IsNullOrWhiteSpace(item.ImageUrl)
+            && !images.Contains(item.ImageUrl, StringComparer.OrdinalIgnoreCase))
+        {
+            images.Insert(0, item.ImageUrl);
+        }
+
+        return images;
+    }
+
+    private void OpenGallery(OfficialCatalogProductDto item)
+    {
+        _galleryImages = GalleryOf(item);
+        _galleryIndex = 0;
+        _galleryItem = _galleryImages.Count > 0 ? item : null;
+    }
+
+    private void MoveGallery(int step) =>
+        _galleryIndex = (_galleryIndex + step + _galleryImages.Count) % _galleryImages.Count;
+
+    private void CloseGallery()
+    {
+        _galleryItem = null;
+        _galleryImages = [];
+        _galleryIndex = 0;
+    }
+
+    private static string CommissionLabel(OfficialCatalogProductDto item) => item.CommissionSource switch
+    {
+        AffiliateCommissionRules.SourceMercadoLivreTable => item.CommissionCategory ?? "tabela ML",
+        AffiliateCommissionRules.SourceUserRate => string.IsNullOrWhiteSpace(item.CommissionCategory)
+            ? "sua taxa"
+            : $"{item.CommissionCategory} · sua taxa",
+        _ => item.CommissionSource ?? "estimativa"
+    };
+
+    private static string MissingCommissionMessage(OfficialCatalogProductDto item) => item.PlatformType switch
+    {
+        MarketplaceType.MercadoLivre when !string.IsNullOrWhiteSpace(item.RootCategoryName) =>
+            $"Comissão: {item.RootCategoryName} fora da tabela de afiliados (defina a sua taxa nas regras)",
+        MarketplaceType.MercadoLivre => "Comissão: categoria não identificada pela API do Mercado Livre",
+        MarketplaceType.Amazon => "Comissão: defina a sua taxa da Amazon nas regras",
+        MarketplaceType.Shopee => "Comissão não informada pela API da Shopee",
+        _ => "Comissão não informada"
+    };
 
     private static string Shorten(string? text, int max = 60) =>
         string.IsNullOrWhiteSpace(text) ? "Produto" : text.Length <= max ? text : text[..max].TrimEnd() + "…";

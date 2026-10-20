@@ -20,6 +20,9 @@ public class OfficialCatalogProductDto
 
     public string? ImageUrl { get; set; }
 
+    /// <summary>Todas as fotos do produto (galeria do card); vazia quando a loja só informa a foto principal.</summary>
+    public List<string> ImageUrls { get; set; } = [];
+
     public string SourceUrl { get; set; } = string.Empty;
 
     public string? Shipping { get; set; }
@@ -32,15 +35,29 @@ public class OfficialCatalogProductDto
     /// <summary>Anúncio que vende o produto (ML: <c>item_id</c> do ganhador da buy box).</summary>
     public string? ListingId { get; set; }
 
+    /// <summary>Categoria do anúncio (ML: <c>category_id</c> de <c>/items</c>, ex.: <c>MLB1652</c>).</summary>
     public string? CategoryId { get; set; }
 
-    /// <summary>Percentual de comissão de afiliado (Shopee: informado pela API; ML/Amazon: taxa do perfil do usuário).</summary>
+    public string? CategoryName { get; set; }
+
+    /// <summary>Categoria raiz (ML: primeiro nível de <c>path_from_root</c>, ex.: <c>MLB1648</c> "Informática").</summary>
+    public string? RootCategoryId { get; set; }
+
+    public string? RootCategoryName { get; set; }
+
+    /// <summary>
+    /// Percentual de comissão de afiliado (Shopee: informado pela API; ML: tabela por categoria ou taxa do perfil;
+    /// Amazon: taxa do perfil do usuário).
+    /// </summary>
     public decimal? CommissionPercent { get; set; }
 
     public decimal? EstimatedCommission { get; set; }
 
-    /// <summary>"API Shopee" ou "Sua taxa" (perfil); nulo quando não há como estimar.</summary>
+    /// <summary>"API Shopee", "Tabela ML por categoria" ou "Sua taxa" (perfil); nulo quando não há como estimar.</summary>
     public string? CommissionSource { get; set; }
+
+    /// <summary>Categoria da tabela de comissão aplicada (ex.: "Informática").</summary>
+    public string? CommissionCategory { get; set; }
 
     /// <summary>Unidades vendidas, quando a loja informa pela API.</summary>
     public int? SoldQuantity { get; set; }

@@ -112,6 +112,75 @@ public class OfficialCatalogSearchRulesTests
     }
 
     [Fact]
+    public void ApplyCommission_ShouldUseMercadoLivreCategoryTableBeforeUserRate()
+    {
+        var notebook = new OfficialCatalogProductDto { PlatformType = MarketplaceType.MercadoLivre, Price = 4000m, RootCategoryId = "MLB1648", RootCategoryName = "Informática" };
+        var tenis = new OfficialCatalogProductDto { PlatformType = MarketplaceType.MercadoLivre, Price = 300m, RootCategoryName = "Calcados, roupas e bolsas" };
+        var racao = new OfficialCatalogProductDto { PlatformType = MarketplaceType.MercadoLivre, Price = 200m, RootCategoryId = "MLB1071", RootCategoryName = "Animais" };
+        var cafe = new OfficialCatalogProductDto { PlatformType = MarketplaceType.MercadoLivre, Price = 50m, RootCategoryId = "MLB1403", RootCategoryName = "Alimentos e Bebidas" };
+
+        foreach (var item in new[] { notebook, tenis, racao, cafe })
+        {
+            OfficialCatalogSearchRules.ApplyCommission(item, 4.5m, null);
+        }
+
+        Assert.Equal(5m, notebook.CommissionPercent);
+        Assert.Equal(200m, notebook.EstimatedCommission);
+        Assert.Equal("Informática", notebook.CommissionCategory);
+        Assert.Equal(AffiliateCommissionRules.SourceMercadoLivreTable, notebook.CommissionSource);
+        Assert.Equal(16m, tenis.CommissionPercent);
+        Assert.Equal("Calçados, Roupas e Bolsas", tenis.CommissionCategory);
+        Assert.Equal(4.5m, racao.CommissionPercent);
+        Assert.Equal(AffiliateCommissionRules.SourceUserRate, racao.CommissionSource);
+        Assert.Equal("Animais", racao.CommissionCategory);
+        Assert.Equal(0m, cafe.CommissionPercent);
+        Assert.Equal(0m, cafe.EstimatedCommission);
+    }
+
+    [Fact]
+    public void ApplyCommission_ShouldLeaveMercadoLivreEmptyWhenCategoryUnknownAndNoUserRate()
+    {
+        var item = new OfficialCatalogProductDto { PlatformType = MarketplaceType.MercadoLivre, Price = 100m, RootCategoryId = "MLB1071", RootCategoryName = "Animais" };
+
+        OfficialCatalogSearchRules.ApplyCommission(item, null, null);
+
+        Assert.Null(item.CommissionPercent);
+        Assert.Null(item.EstimatedCommission);
+    }
+
+    [Fact]
+    public void ResetEstimatedCommission_ShouldKeepShopeeApiRate()
+    {
+        var shopee = new OfficialCatalogProductDto { CommissionPercent = 8m, EstimatedCommission = 8m, CommissionSource = AffiliateCommissionRules.SourceShopeeApi };
+        var ml = new OfficialCatalogProductDto { CommissionPercent = 5m, EstimatedCommission = 10m, CommissionSource = AffiliateCommissionRules.SourceMercadoLivreTable, CommissionCategory = "Informática" };
+
+        OfficialCatalogSearchRules.ResetEstimatedCommission(shopee);
+        OfficialCatalogSearchRules.ResetEstimatedCommission(ml);
+
+        Assert.Equal(8m, shopee.CommissionPercent);
+        Assert.Null(ml.CommissionPercent);
+        Assert.Null(ml.EstimatedCommission);
+        Assert.Null(ml.CommissionSource);
+        Assert.Null(ml.CommissionCategory);
+    }
+
+    [Theory]
+    [InlineData("MLB1000", null, "Eletrônicos, Áudio e Vídeo")]
+    [InlineData("MLB999999", "Casa, Móveis e Decoração", "Casa, Móveis e Decoração")]
+    [InlineData(null, "ELETRODOMESTICOS", "Eletrodomésticos")]
+    public void FindMercadoLivreRate_ShouldMatchByIdOrNormalizedName(string? id, string? name, string expected)
+    {
+        Assert.Equal(expected, AffiliateCommissionRules.FindMercadoLivreRate(id, name)?.Name);
+    }
+
+    [Fact]
+    public void FindMercadoLivreRate_ShouldReturnNullForCategoriesOutsideTheTable()
+    {
+        Assert.Null(AffiliateCommissionRules.FindMercadoLivreRate("MLB1071", "Animais"));
+        Assert.Null(AffiliateCommissionRules.FindMercadoLivreRate(null, null));
+    }
+
+    [Fact]
     public void NormalizeCommissionPercent_ShouldRejectEmptyZeroAndAbsurdRates()
     {
         Assert.Null(OfficialCatalogSearchRules.NormalizeCommissionPercent(null));

@@ -125,7 +125,8 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
                     "ItemInfo.Title",
                     "Offers.Listings.Price",
                     "Images.Primary.Large",
-                    "Images.Primary.Medium"
+                    "Images.Primary.Medium",
+                    "Images.Variants.Large"
                 }
             });
             using var request = BuildSignedRequest(
@@ -254,16 +255,38 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
             }
 
             string? image = null;
-            if (item.TryGetProperty("Images", out var images)
-                && images.TryGetProperty("Primary", out var primary))
+            var gallery = new List<string>();
+            if (item.TryGetProperty("Images", out var images))
             {
-                if (primary.TryGetProperty("Large", out var large) && large.TryGetProperty("URL", out var largeUrl))
+                if (images.TryGetProperty("Primary", out var primary))
                 {
-                    image = largeUrl.GetString();
+                    if (primary.TryGetProperty("Large", out var large) && large.TryGetProperty("URL", out var largeUrl))
+                    {
+                        image = largeUrl.GetString();
+                    }
+                    else if (primary.TryGetProperty("Medium", out var medium) && medium.TryGetProperty("URL", out var mediumUrl))
+                    {
+                        image = mediumUrl.GetString();
+                    }
                 }
-                else if (primary.TryGetProperty("Medium", out var medium) && medium.TryGetProperty("URL", out var mediumUrl))
+
+                if (!string.IsNullOrWhiteSpace(image))
                 {
-                    image = mediumUrl.GetString();
+                    gallery.Add(image);
+                }
+
+                if (images.TryGetProperty("Variants", out var variants) && variants.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var variant in variants.EnumerateArray())
+                    {
+                        if (variant.TryGetProperty("Large", out var variantLarge)
+                            && variantLarge.TryGetProperty("URL", out var variantUrl)
+                            && variantUrl.GetString() is { Length: > 0 } variantImage
+                            && !gallery.Contains(variantImage, StringComparer.OrdinalIgnoreCase))
+                        {
+                            gallery.Add(variantImage);
+                        }
+                    }
                 }
             }
 
@@ -275,6 +298,7 @@ public sealed class AmazonPaApiService : IAmazonPaApiService
                 ProductName = title,
                 Price = price,
                 ImageUrl = image,
+                ImageUrls = gallery.Count > 1 ? gallery : [],
                 SourceUrl = url,
                 Source = "Api"
             });

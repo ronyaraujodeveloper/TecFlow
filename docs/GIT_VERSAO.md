@@ -134,3 +134,4 @@
 [2026-10-20 13:19:59] feat(busca): varredura paginada do catalogo ML com carregar mais, filtros de preco e frete gratis na varredura, termo mais curto, ordenacao e categoria
 [2026-10-20 13:42:37] fix(busca): varredura ML ate 100 produtos quando ha oferta, variacoes de produto pai, filtros aplicados na tela apos a busca e modal de regras
 [2026-10-20 18:31:53] feat(busca): metricas de afiliado na Buscar Ofertas com comissao, vendidos, avaliacoes, mais vendidos e notas de vantagem e seguranca
+[2026-10-20 19:30:44] feat(busca): comissao do ML estimada por categoria (tabela de afiliado), galeria de imagens em modal e botao Abrir ao lado de Converter

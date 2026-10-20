@@ -345,6 +345,12 @@ public class OfferValidationServiceTests
             string? trackingId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<OfficialCatalogChannelResult> SearchCatalogAsync(
+            int userId,
+            MercadoLivreCatalogSearchRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class StubResolver : IUrlResolverService

@@ -17,6 +17,39 @@ public class MercadoLivreItemParserTests
     }
 
     [Fact]
+    public void ParseCatalogSearchPage_ShouldReadTotalAndDomains()
+    {
+        const string json = """
+            {"paging":{"total":437,"offset":20,"limit":20},"results":[{"id":"MLB1","domain_id":"MLB-NOTEBOOKS"},{"id":"MLB2","domain_id":"MLB-NOTEBOOKS"},{"id":"MLB3"}]}
+            """;
+
+        var page = MercadoLivreItemParser.ParseCatalogSearchPage(json);
+
+        Assert.Equal(["MLB1", "MLB2", "MLB3"], page.ProductIds);
+        Assert.Equal(437, page.Total);
+        Assert.Equal(["MLB-NOTEBOOKS", "MLB-NOTEBOOKS"], page.DomainIds);
+        Assert.Null(MercadoLivreItemParser.ParseCatalogSearchPage("not json").Total);
+        Assert.Empty(MercadoLivreItemParser.ParseCatalogSearchPage(string.Empty).ProductIds);
+    }
+
+    [Fact]
+    public void ParseDomainDiscovery_ShouldMapDomainsWithNamesWithoutDuplicates()
+    {
+        const string json = """
+            [{"domain_id":"MLB-NOTEBOOKS","domain_name":"Notebooks","category_id":"MLB1652","category_name":"Notebooks"},
+             {"domain_id":"MLB-NOTEBOOKS","domain_name":"Notebooks"},
+             {"domain_id":"MLB-DESKTOP_COMPUTERS","category_name":"PCs"},
+             {"category_name":"sem domínio"}]
+            """;
+
+        var categories = MercadoLivreItemParser.ParseDomainDiscovery(json);
+
+        Assert.Equal(["MLB-NOTEBOOKS", "MLB-DESKTOP_COMPUTERS"], categories.Select(category => category.Id));
+        Assert.Equal(["Notebooks", "PCs"], categories.Select(category => category.Name));
+        Assert.Empty(MercadoLivreItemParser.ParseDomainDiscovery("""{"message":"forbidden"}"""));
+    }
+
+    [Fact]
     public void ParseCatalogOffer_ShouldMapBuyBoxWinnerPriceAndProductPage()
     {
         const string json = """

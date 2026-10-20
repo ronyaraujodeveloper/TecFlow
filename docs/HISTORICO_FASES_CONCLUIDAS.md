@@ -935,6 +935,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **PKCE no OAuth ML (`MercadoLivreOAuthPkce`):** o diagnóstico revelou `code_verifier is a required parameter`; o `code_verifier` passou a ser gerado por autorização e guardado no state selado, a URL leva `code_challenge` S256 e a troca do `code` envia o verifier.
 - [x] **Busca ML pelo catálogo (`MercadoLivreCatalogSearch`):** com a conta autorizada, `sites/MLB/search` seguia em 403 (endpoint descontinuado pelo ML para terceiros); a Buscar Ofertas passou a usar `products/search` + `products/{id}` (preço do `buy_box_winner`).
 - [x] **Ofertas sem buy box + modal (`MercadoLivreCatalogOfferFallback`):** "dell i7" voltava 20 produtos de catálogo e 0 ofertas; o preço passou a cair para a faixa da buy box, `/products/{id}/items` e o primeiro produto filho, e a tela ganhou modal de carregamento durante a busca.
+- [x] **Varredura e filtros na Buscar Ofertas (`MercadoLivreCatalogSearchScan`):** "Dell Inspiron" trazia só 3 ofertas de 20 produtos de catálogo; a busca passou a paginar até ~20 ofertas ou 100 produtos com "Carregar mais", aplicar preço e frete grátis durante a varredura, tentar termos mais curtos, ordenar, filtrar por categoria (`domain_id`) e mostrar quantos produtos foram analisados.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)

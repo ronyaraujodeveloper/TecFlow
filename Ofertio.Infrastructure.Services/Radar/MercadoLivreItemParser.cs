@@ -6,6 +6,11 @@ using Ofertio.Core.Enums;
 
 namespace Ofertio.Infrastructure.Services.Radar;
 
+public sealed record MercadoLivreCatalogSearchPage(
+    IReadOnlyList<string> ProductIds,
+    int? Total,
+    IReadOnlyList<string> DomainIds);
+
 public static class MercadoLivreItemParser
 {
     public static OfficialOfferSnapshotDto? Parse(string json)
@@ -94,30 +99,46 @@ public static class MercadoLivreItemParser
     }
 
     /// <summary><c>/products/search</c>: códigos dos produtos de catálogo, na ordem de relevância do Mercado Livre.</summary>
-    public static IReadOnlyList<string> ParseCatalogSearchIds(string json)
+    public static IReadOnlyList<string> ParseCatalogSearchIds(string json) => ParseCatalogSearchPage(json).ProductIds;
+
+    /// <summary>Página do <c>/products/search</c>: ids (ordem de relevância), total informado em <c>paging</c> e domínios.</summary>
+    public static MercadoLivreCatalogSearchPage ParseCatalogSearchPage(string json)
     {
         var ids = new List<string>();
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return ids;
-        }
-
+        var domains = new List<string>();
+        int? total = null;
         try
         {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.ValueKind != JsonValueKind.Object
-                || !doc.RootElement.TryGetProperty("results", out var results)
-                || results.ValueKind != JsonValueKind.Array)
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
             {
-                return ids;
+                return new MercadoLivreCatalogSearchPage(ids, total, domains);
             }
 
-            foreach (var product in results.EnumerateArray())
+            if (root.TryGetProperty("paging", out var paging)
+                && paging.ValueKind == JsonValueKind.Object
+                && paging.TryGetProperty("total", out var totalEl)
+                && totalEl.TryGetInt32(out var parsedTotal))
             {
-                var id = ReadString(product, "id");
-                if (id is not null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase))
+                total = parsedTotal;
+            }
+
+            if (root.TryGetProperty("results", out var results) && results.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var product in results.EnumerateArray())
                 {
-                    ids.Add(id);
+                    var id = ReadString(product, "id");
+                    if (id is not null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase))
+                    {
+                        ids.Add(id);
+                    }
+
+                    var domain = ReadString(product, "domain_id");
+                    if (domain is not null)
+                    {
+                        domains.Add(domain);
+                    }
                 }
             }
         }
@@ -125,7 +146,41 @@ public static class MercadoLivreItemParser
         {
         }
 
-        return ids;
+        return new MercadoLivreCatalogSearchPage(ids, total, domains);
+    }
+
+    /// <summary><c>/sites/MLB/domain_discovery/search</c>: domínios de catálogo prováveis para o termo, com nome.</summary>
+    public static IReadOnlyList<OfficialCatalogCategoryDto> ParseDomainDiscovery(string json)
+    {
+        var categories = new List<OfficialCatalogCategoryDto>();
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return categories;
+            }
+
+            foreach (var entry in doc.RootElement.EnumerateArray())
+            {
+                var id = ReadString(entry, "domain_id");
+                if (id is null || categories.Any(item => string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                categories.Add(new OfficialCatalogCategoryDto
+                {
+                    Id = id,
+                    Name = ReadString(entry, "domain_name") ?? ReadString(entry, "category_name") ?? id
+                });
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return categories;
     }
 
     /// <summary>

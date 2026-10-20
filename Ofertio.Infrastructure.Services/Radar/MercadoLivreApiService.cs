@@ -235,23 +235,38 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         return (response.StatusCode, body);
     }
 
-    public async Task<OfficialCatalogChannelResult> SearchProductsAsync(
+    public Task<OfficialCatalogChannelResult> SearchProductsAsync(
         int userId,
         string query,
         int limit = 20,
         string? trackingId = null,
+        CancellationToken cancellationToken = default) =>
+        SearchCatalogAsync(
+            userId,
+            new MercadoLivreCatalogSearchRequest
+            {
+                Query = query ?? string.Empty,
+                TargetOffers = limit,
+                TrackingId = trackingId,
+                AllowShorterQuery = false,
+                IncludeCategories = false
+            },
+            cancellationToken);
+
+    public async Task<OfficialCatalogChannelResult> SearchCatalogAsync(
+        int userId,
+        MercadoLivreCatalogSearchRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        var query = request.Query?.Trim() ?? string.Empty;
+        if (query.Length == 0)
         {
             return OfficialCatalogChannelResult.Empty;
         }
 
-        query = query.Trim();
-        var maxItems = OfficialCatalogSearchRules.ClampLimit(limit);
         var account = await LoadMercadoLivreAccountAsync(userId, cancellationToken);
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
-            FirstNonEmpty(trackingId, account?.TrackingId, account?.AffiliateTrackingId),
+            FirstNonEmpty(request.TrackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
         var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
         var accessToken = accountToken
@@ -272,8 +287,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
         try
         {
-            var apiItems = await SearchViaApiAsync(query, accessToken.Trim(), affiliateId, maxItems, cancellationToken);
-            return ToChannelResult(apiItems);
+            return await ScanCatalogAsync(request, query, accessToken.Trim(), affiliateId, cancellationToken);
         }
         catch (MercadoLivreSearchForbiddenException ex) when (accountToken is not null)
         {
@@ -283,7 +297,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 account!.Id,
                 query,
                 ex.Message);
-            return await RetryWithRenewedAccountTokenAsync(account, query, affiliateId, maxItems, cancellationToken);
+            return await RetryWithRenewedAccountTokenAsync(account, request, query, affiliateId, cancellationToken);
         }
         catch (MercadoLivreSearchForbiddenException ex)
         {
@@ -306,9 +320,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private async Task<OfficialCatalogChannelResult> RetryWithRenewedAccountTokenAsync(
         MarketplaceAccount account,
+        MercadoLivreCatalogSearchRequest request,
         string query,
         string? affiliateId,
-        int maxItems,
         CancellationToken cancellationToken)
     {
         var renewedToken = await RefreshAccountTokenAsync(account, cancellationToken);
@@ -324,8 +338,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         LogAccountTokenUsage(account, query, renewed: true);
         try
         {
-            var apiItems = await SearchViaApiAsync(query, renewedToken, affiliateId, maxItems, cancellationToken);
-            return ToChannelResult(apiItems);
+            return await ScanCatalogAsync(request, query, renewedToken, affiliateId, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -337,9 +350,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
     }
-
-    private static OfficialCatalogChannelResult ToChannelResult(IReadOnlyList<OfficialCatalogProductDto> items) =>
-        items.Count > 0 ? OfficialCatalogChannelResult.From(items) : OfficialCatalogChannelResult.Empty;
 
     private void LogAccountTokenUsage(MarketplaceAccount account, string query, bool renewed) =>
         _logger.LogInformation(
@@ -368,60 +378,235 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     /// <c>/sites/MLB/search</c> foi descontinuado pelo Mercado Livre para apps de terceiros (403 com qualquer token);
     /// a busca usa o buscador de catálogo <c>/products/search</c> e o preço do anúncio ganhador em <c>/products/{id}</c>.
     /// </summary>
-    private async Task<IReadOnlyList<OfficialCatalogProductDto>> SearchViaApiAsync(
+    /// <remarks>
+    /// A maioria dos produtos de catálogo não tem anúncio ativo, então a busca varre páginas de
+    /// <see cref="OfficialCatalogSearchRules.MercadoLivreScanPageSize"/> até juntar as ofertas pedidas ou atingir
+    /// <see cref="OfficialCatalogSearchRules.MercadoLivreMaxScannedProducts"/>; sem nenhuma oferta, tenta termos mais curtos.
+    /// </remarks>
+    private async Task<OfficialCatalogChannelResult> ScanCatalogAsync(
+        MercadoLivreCatalogSearchRequest request,
         string query,
-        string? accessToken,
+        string accessToken,
         string? affiliateId,
-        int maxItems,
         CancellationToken cancellationToken)
     {
-        var searchUri =
-            $"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={Uri.EscapeDataString(query)}&limit={maxItems}";
-
-        var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
-        if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
+        var target = OfficialCatalogSearchRules.ClampLimit(request.TargetOffers);
+        var startOffset = Math.Max(0, request.Offset);
+        var candidates = new List<string> { query };
+        if (request.AllowShorterQuery && startOffset == 0)
         {
-            _logger.LogError("Erro API ML [{StatusCode}] em products/search: {Body}", statusCode, body);
-            throw new MercadoLivreSearchForbiddenException($"HTTP {(int)statusCode}");
+            candidates.AddRange(OfficialCatalogSearchRules.BuildShorterQueries(query));
         }
 
-        if (statusCode != HttpStatusCode.OK)
+        var categoriesTask = request.IncludeCategories && startOffset == 0
+            ? DiscoverCategoriesAsync(query, accessToken, cancellationToken)
+            : Task.FromResult<IReadOnlyList<OfficialCatalogCategoryDto>>([]);
+
+        var items = new List<OfficialCatalogProductDto>();
+        var seenDomains = new List<string>();
+        var scanned = 0;
+        int? nextOffset = null;
+        var effectiveQuery = query;
+        for (var index = 0; index < candidates.Count && items.Count == 0; index++)
         {
-            _logger.LogError("Erro API ML [{StatusCode}] em products/search: {Body}", statusCode, body);
-            throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
+            var remaining = OfficialCatalogSearchRules.MercadoLivreMaxScannedProducts - scanned;
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            var candidate = candidates[index];
+            var cap = index < candidates.Count - 1
+                ? Math.Min(OfficialCatalogSearchRules.MercadoLivreScanPerQueryWithFallback, remaining)
+                : remaining;
+            var offset = startOffset;
+            var candidateScanned = 0;
+            effectiveQuery = candidate;
+            nextOffset = null;
+            while (candidateScanned < cap && items.Count < target)
+            {
+                var page = await FetchCatalogPageAsync(
+                    candidate,
+                    request.DomainId,
+                    offset,
+                    accessToken,
+                    throwWhenRefused: scanned + candidateScanned == 0,
+                    cancellationToken);
+                if (page is null || page.ProductIds.Count == 0)
+                {
+                    nextOffset = null;
+                    break;
+                }
+
+                seenDomains.AddRange(page.DomainIds);
+                var productIds = page.ProductIds.Take(cap - candidateScanned).ToList();
+                var offers = await ResolveCatalogOffersAsync(productIds, accessToken, cancellationToken);
+                items.AddRange(offers.Where(item => OfficialCatalogSearchRules.PassesPriceAndShipping(
+                    item,
+                    request.MinPrice,
+                    request.MaxPrice,
+                    request.FreeShippingOnly)));
+                candidateScanned += productIds.Count;
+                offset += productIds.Count;
+
+                var exhausted = page.ProductIds.Count < OfficialCatalogSearchRules.MercadoLivreScanPageSize
+                    || (page.Total is int total && offset >= total);
+                nextOffset = exhausted ? null : offset;
+                if (exhausted)
+                {
+                    break;
+                }
+            }
+
+            scanned += candidateScanned;
         }
 
-        var productIds = MercadoLivreItemParser.ParseCatalogSearchIds(body).Take(maxItems).ToList();
-        if (productIds.Count == 0 || string.IsNullOrWhiteSpace(accessToken))
+        if (items.Count == 0)
         {
-            return [];
+            effectiveQuery = query;
+            nextOffset = null;
         }
 
-        var offers = new OfficialCatalogProductDto?[productIds.Count];
-        await Parallel.ForEachAsync(
-            Enumerable.Range(0, productIds.Count),
-            new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
-            async (index, token) =>
-                offers[index] = await ResolveCatalogOfferAsync(productIds[index], accessToken, followChildren: true, token));
-
-        var items = offers
-            .OfType<OfficialCatalogProductDto>()
+        var finalItems = items
             .Select(item =>
             {
                 item.SourceUrl = MercadoLivreCommissionUrlBuilder.InjectMattTool(item.SourceUrl, affiliateId);
                 return item;
             })
             .Where(item => !string.IsNullOrWhiteSpace(item.SourceUrl))
+            .GroupBy(item => item.ProductId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
             .ToList();
+        var categories = MergeCategories(await categoriesTask, seenDomains, request.DomainId);
+
         _logger.LogInformation(
-            "[ML Busca] products/search '{Query}': {ProductCount} produtos de catálogo, {OfferCount} com oferta e preço.",
+            "[ML Busca] products/search '{Query}' (termo usado '{EffectiveQuery}', offset {Offset}): {Scanned} produtos de catálogo analisados, {OfferCount} ofertas após filtros, próximo offset {NextOffset}.",
             query,
-            productIds.Count,
-            items.Count);
-        return items;
+            effectiveQuery,
+            startOffset,
+            scanned,
+            finalItems.Count,
+            nextOffset?.ToString(CultureInfo.InvariantCulture) ?? "-");
+
+        return new OfficialCatalogChannelResult
+        {
+            Items = finalItems,
+            ScannedCount = scanned,
+            NextOffset = nextOffset,
+            EffectiveQuery = effectiveQuery,
+            Categories = categories
+        };
     }
 
-    private const int CatalogLookupParallelism = 6;
+    private async Task<MercadoLivreCatalogSearchPage?> FetchCatalogPageAsync(
+        string query,
+        string? domainId,
+        int offset,
+        string accessToken,
+        bool throwWhenRefused,
+        CancellationToken cancellationToken)
+    {
+        var searchUri =
+            $"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={Uri.EscapeDataString(query)}&limit={OfficialCatalogSearchRules.MercadoLivreScanPageSize}";
+        if (offset > 0)
+        {
+            searchUri += $"&offset={offset.ToString(CultureInfo.InvariantCulture)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(domainId))
+        {
+            searchUri += $"&domain_id={Uri.EscapeDataString(domainId.Trim())}";
+        }
+
+        var (statusCode, body) = await SendSearchAsync(searchUri, accessToken, cancellationToken);
+        if (statusCode == HttpStatusCode.OK)
+        {
+            return MercadoLivreItemParser.ParseCatalogSearchPage(body);
+        }
+
+        _logger.LogError("Erro API ML [{StatusCode}] em products/search: {Body}", statusCode, Truncate(body));
+        if (!throwWhenRefused)
+        {
+            return null;
+        }
+
+        if (OfficialCatalogSearchRules.IsMercadoLivreSearchRefused(statusCode, body))
+        {
+            throw new MercadoLivreSearchForbiddenException($"HTTP {(int)statusCode}");
+        }
+
+        throw new HttpRequestException($"ML HTTP {(int)statusCode} ({statusCode})");
+    }
+
+    private async Task<IReadOnlyList<OfficialCatalogProductDto>> ResolveCatalogOffersAsync(
+        IReadOnlyList<string> productIds,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var offers = new OfficialCatalogProductDto?[productIds.Count];
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, productIds.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
+            async (index, token) =>
+                offers[index] = await ResolveCatalogOfferAsync(productIds[index], accessToken, followChildren: true, token));
+        return offers.OfType<OfficialCatalogProductDto>().ToList();
+    }
+
+    /// <summary>Sugestões de categoria (domínios de catálogo) para o termo; falhas não afetam a busca.</summary>
+    private async Task<IReadOnlyList<OfficialCatalogCategoryDto>> DiscoverCategoriesAsync(
+        string query,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var (statusCode, body) = await SendApiPathAsync(
+                $"sites/MLB/domain_discovery/search?limit=6&q={Uri.EscapeDataString(query)}",
+                accessToken,
+                cancellationToken);
+            if (statusCode == HttpStatusCode.OK)
+            {
+                return MercadoLivreItemParser.ParseDomainDiscovery(body);
+            }
+
+            _logger.LogDebug("[ML Busca] domain_discovery [{StatusCode}] para '{Query}'.", (int)statusCode, query);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(ex, "[ML Busca] domain_discovery indisponível para '{Query}'.", query);
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<OfficialCatalogCategoryDto> MergeCategories(
+        IReadOnlyList<OfficialCatalogCategoryDto> discovered,
+        IReadOnlyList<string> seenDomains,
+        string? selectedDomainId)
+    {
+        var categories = discovered.ToList();
+        foreach (var domainId in seenDomains
+                     .GroupBy(id => id, StringComparer.OrdinalIgnoreCase)
+                     .OrderByDescending(group => group.Count())
+                     .Select(group => group.Key)
+                     .Append(selectedDomainId ?? string.Empty))
+        {
+            if (!string.IsNullOrWhiteSpace(domainId)
+                && !categories.Any(item => string.Equals(item.Id, domainId, StringComparison.OrdinalIgnoreCase)))
+            {
+                categories.Add(new OfficialCatalogCategoryDto
+                {
+                    Id = domainId.Trim(),
+                    Name = OfficialCatalogSearchRules.HumanizeMercadoLivreDomain(domainId)
+                });
+            }
+        }
+
+        return categories.Take(MaxCategorySuggestions).ToList();
+    }
+
+    private const int CatalogLookupParallelism = 8;
+    private const int MaxCategorySuggestions = 8;
 
     /// <summary>
     /// Oferta de um produto de catálogo, só pela API oficial: <c>buy_box_winner</c> ➔ faixa de preço da buy box ➔
@@ -436,7 +621,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var (productStatus, productBody) = await SendApiAsync("products", productId, accessToken, cancellationToken);
         if (productStatus != HttpStatusCode.OK)
         {
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "[ML Busca] Produto de catálogo {ProductId} ignorado: /products [{StatusCode}] {Body}",
                 productId,
                 (int)productStatus,
@@ -473,7 +658,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             }
         }
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "[ML Busca] Produto de catálogo {ProductId} sem oferta: sem buy_box_winner/faixa de preço, /items [{ItemsStatus}] {ItemsBody}, filhos={ChildCount}.",
             productId,
             (int)itemsStatus,

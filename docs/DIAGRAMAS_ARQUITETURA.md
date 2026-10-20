@@ -1656,6 +1656,30 @@ flowchart TB
   OAUTH -->|403 com token do app| DENY
 ```
 
+### Varredura paginada da Buscar Ofertas (`MercadoLivreCatalogSearchScan`)
+
+```mermaid
+flowchart TB
+  BG[BuscaGlobal.razor<br/>frete grátis, ordenar, categoria, preço] -->|OfficialCatalogSearchFilter| OCS[OfficialCatalogSearchService]
+  OCS -->|MercadoLivreCatalogSearchRequest| SCA[MercadoLivreApiService.SearchCatalogAsync]
+  SCA --> SCAN[ScanCatalogAsync]
+  SCAN -->|1ª página| DD[GET sites/MLB/domain_discovery/search<br/>sugestões de categoria, falha ignorada]
+  SCAN --> PAGE[GET products/search limit=20 &offset= &domain_id=]
+  PAGE --> RES[ResolveCatalogOfferAsync em paralelo, até 8<br/>buy box ➔ faixa ➔ /items ➔ filho]
+  RES --> FIL[PassesPriceAndShipping<br/>preço mín./máx. + frete grátis]
+  FIL -->|menos que a meta e menos de 100 analisados| PAGE
+  FIL -->|meta atingida ou fim do catálogo| OUT[Items + ScannedCount + NextOffset + EffectiveQuery + Categories]
+  FIL -->|0 ofertas no termo| SHORT[BuildShorterQueries ➔ remove a última palavra]
+  SHORT --> PAGE
+  DD --> OUT
+  OUT --> OCS
+  OCS --> SORT[ApplySort relevância / menor preço / maior desconto]
+  OCS --> BADGE[DescribeMercadoLivreScan: N ofertas · M produtos analisados]
+  SORT --> BG
+  BADGE --> BG
+  BG -->|Carregar mais: só ML, termo usado, MercadoLivreOffset| OCS
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

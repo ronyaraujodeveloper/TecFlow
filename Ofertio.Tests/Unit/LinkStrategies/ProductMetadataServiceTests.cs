@@ -403,6 +403,12 @@ public class ProductMetadataServiceTests
             string? trackingId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<Ofertio.Business.Dto.OfficialCatalogChannelResult> SearchCatalogAsync(
+            int userId,
+            Ofertio.Business.Dto.MercadoLivreCatalogSearchRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     [Fact]

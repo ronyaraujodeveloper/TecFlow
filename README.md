@@ -657,7 +657,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Causa da busca vazia:** "dell i7" trouxe 20 produtos de catálogo, nenhum com `buy_box_winner` (produtos "pai" sem configuração definida ou sem disputa de anúncios).
 - [x] **Cadeia de preço (só API oficial):** `buy_box_winner` ➔ `buy_box_winner_price_range.min` ➔ menor preço em `/products/{id}/items` ➔ primeiro produto filho (`children_ids`); o log `[ML Busca]` registra por que cada produto ficou sem oferta.
 - [x] **Modal de carregamento:** a Buscar Ofertas abre "Buscando ofertas..." com spinner ao clicar em Buscar e fecha quando o retorno chega (o `LoadingOverlay` do layout é estático e não aparecia nas páginas interativas).
-- [ ] **Validar com a conta real:** se os cards seguirem vazios, o log `[ML Busca] Produto de catálogo ... sem oferta` mostra a resposta de `/products/{id}/items`.
+- [x] **Validar com a conta real:** "Dell Inspiron" passou a trazer ofertas (3 de 20 produtos de catálogo); o volume baixo motivou a varredura abaixo.
+
+## 🔎 Varredura, filtros e ordenação na Buscar Ofertas (`MercadoLivreCatalogSearchScan`)
+
+- [x] **Paginação:** a busca do ML varre `products/search` em páginas de 20 até juntar ~20 ofertas ou analisar 100 produtos; botão "Carregar mais (Mercado Livre)" continua do próximo offset.
+- [x] **Filtros durante a varredura:** preço mín./máx. e "Somente frete grátis" são aplicados antes de contar a meta, para não descartar tudo depois.
+- [x] **Transparência:** selo do Mercado Livre mostra "N ofertas · M produtos analisados" (e "sem anúncio ativo" quando nenhum tinha oferta).
+- [x] **Termo mais curto:** sem nenhuma oferta, tenta automaticamente removendo as últimas palavras ("Dell Inspiron i7 16GB" ➔ "Dell Inspiron i7" ➔ "Dell Inspiron") e avisa o termo usado.
+- [x] **Ordenação:** relevância, menor preço ou maior desconto (reordena na tela sem nova consulta).
+- [x] **Categoria:** domínios sugeridos pelo `domain_discovery` e pelos resultados; ao escolher, a busca envia `domain_id`.
+- [ ] **Validar com a conta real:** conferir no log `[ML Busca] products/search ... analisados ... ofertas após filtros` quantos produtos são analisados por busca e o tempo de resposta.
 
 ---
 

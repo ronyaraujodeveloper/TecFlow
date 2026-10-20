@@ -18,6 +18,11 @@ public interface IMercadoLivreApiService
         int limit = 20,
         string? trackingId = null,
         CancellationToken cancellationToken = default);
+
+    Task<OfficialCatalogChannelResult> SearchCatalogAsync(
+        int userId,
+        MercadoLivreCatalogSearchRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IShopeeAffiliateOfferService

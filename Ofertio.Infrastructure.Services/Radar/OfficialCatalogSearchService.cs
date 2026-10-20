@@ -69,7 +69,9 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var amazonTask = includeAmazon
             ? _amazon.SearchProductsAsync(userId, keyword, limit, cancellationToken)
             : skipped;
-        var internalTask = SearchLocalProductsAsync(keyword, limit, cancellationToken);
+        var internalTask = filter.MercadoLivreOffset > 0
+            ? Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([])
+            : SearchLocalProductsAsync(keyword, limit, cancellationToken);
         await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask);
 
         var mlItems = mlTask.Result.Items;
@@ -85,14 +87,35 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             amazonItems.Count,
             localItems.Count);
 
-        var merged = mlItems
-            .Concat(shopeeItems)
-            .Concat(amazonItems)
-            .Concat(localItems)
-            .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
-            .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
+        var merged = OfficialCatalogSearchRules.ApplySort(
+                mlItems
+                    .Concat(shopeeItems)
+                    .Concat(amazonItems)
+                    .Concat(localItems)
+                    .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
+                    .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList(),
+                filter.SortBy)
             .ToList();
+
+        var ml = mlTask.Result;
+        var mlStatus = OfficialCatalogSearchRules.BuildChannelStatus(
+            "MercadoLivre",
+            "Mercado Livre",
+            includeMl,
+            OfficialCatalogSearchRules.CountVisibleOffers(mlItems, filter),
+            ml.MissingCredentials,
+            OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage,
+            ml.MissingCredentials ? null : ml.ErrorMessage);
+        if (includeMl && ml.ScannedCount > 0 && mlStatus.State is "ok" or "empty")
+        {
+            mlStatus.Message = OfficialCatalogSearchRules.DescribeMercadoLivreScan(
+                mlStatus.ProductCount,
+                ml.ScannedCount,
+                ml.EffectiveQuery,
+                keyword);
+        }
 
         return new OfficialCatalogSearchResponseDto
         {
@@ -101,16 +124,12 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                 ? "Nenhuma oferta encontrada nas APIs oficiais para este termo."
                 : $"{merged.Count} oferta(s) encontradas.",
             DataList = merged,
+            MercadoLivreNextOffset = includeMl ? ml.NextOffset : null,
+            MercadoLivreEffectiveQuery = includeMl ? ml.EffectiveQuery : null,
+            MercadoLivreCategories = includeMl ? ml.Categories.ToList() : [],
             Channels =
             [
-                OfficialCatalogSearchRules.BuildChannelStatus(
-                    "MercadoLivre",
-                    "Mercado Livre",
-                    includeMl,
-                    OfficialCatalogSearchRules.CountVisibleOffers(mlItems, filter),
-                    mlTask.Result.MissingCredentials,
-                    OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage,
-                    mlTask.Result.MissingCredentials ? null : mlTask.Result.ErrorMessage),
+                mlStatus,
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Shopee",
                     "Shopee",
@@ -145,11 +164,21 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     {
         try
         {
-            return await _mercadoLivre.SearchProductsAsync(
+            return await _mercadoLivre.SearchCatalogAsync(
                 userId,
-                keyword,
-                limit,
-                filter.MercadoLivreTrackingId,
+                new MercadoLivreCatalogSearchRequest
+                {
+                    Query = keyword,
+                    TargetOffers = limit,
+                    Offset = Math.Max(0, filter.MercadoLivreOffset),
+                    DomainId = string.IsNullOrWhiteSpace(filter.MercadoLivreCategory) ? null : filter.MercadoLivreCategory.Trim(),
+                    MinPrice = filter.MinPrice,
+                    MaxPrice = filter.MaxPrice,
+                    FreeShippingOnly = filter.FreeShippingOnly == true,
+                    AllowShorterQuery = filter.MercadoLivreOffset <= 0,
+                    IncludeCategories = filter.MercadoLivreOffset <= 0,
+                    TrackingId = filter.MercadoLivreTrackingId
+                },
                 cancellationToken);
         }
         catch (JsonException)

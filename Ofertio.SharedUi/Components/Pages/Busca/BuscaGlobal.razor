@@ -52,15 +52,37 @@
                 <input id="busca-cupom" class="form-check-input" type="checkbox" @bind="_couponOnly" />
                 <label class="form-check-label" for="busca-cupom">Apenas com cupom</label>
             </div>
+            <div class="form-check">
+                <input id="busca-frete" class="form-check-input" type="checkbox" @bind="_freeShippingOnly" />
+                <label class="form-check-label" for="busca-frete">Somente frete grátis</label>
+            </div>
         </div>
         <div class="row g-2 mt-2">
-            <div class="col-6">
+            <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-min">Preço mín.</label>
                 <input id="busca-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" />
             </div>
-            <div class="col-6">
+            <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-max">Preço máx.</label>
                 <input id="busca-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
+                <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ResortItems">
+                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância</option>
+                    <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
+                    <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="busca-categoria">Categoria (Mercado Livre)</label>
+                <select id="busca-categoria" class="form-select" @bind="_mlCategory" disabled="@(_categories.Count == 0)">
+                    <option value="">@(_categories.Count == 0 ? "Busque para sugerir" : "Todas")</option>
+                    @foreach (var category in _categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
             </div>
         </div>
     </form>
@@ -72,6 +94,10 @@
     @if (!string.IsNullOrWhiteSpace(_info))
     {
         <div class="alert alert-success py-2 small">@_info</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_notice))
+    {
+        <div class="alert alert-info py-2 small">@_notice</div>
     }
 
     @if (_searched && _channels.Count > 0)
@@ -152,6 +178,14 @@
             }
         </div>
     }
+    @if (_searched && _mlNextOffset is not null)
+    {
+        <div class="text-center mt-4">
+            <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="LoadMoreMercadoLivreAsync">
+                Carregar mais (Mercado Livre)
+            </button>
+        </div>
+    }
 </div>
 
 @if (_searching)
@@ -163,7 +197,7 @@
                     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status" aria-hidden="true"></div>
                     <h2 id="busca-loading-title" class="h6 fw-bold mb-1">Buscando ofertas...</h2>
                     <p class="small text-muted mb-0">
-                        Consultando @SelectedStoresLabel() nas APIs oficiais. Isso pode levar alguns segundos.
+                        Consultando @_searchingStores nas APIs oficiais. Isso pode levar alguns segundos.
                     </p>
                 </div>
             </div>
@@ -178,16 +212,27 @@
     private bool _shopee = true;
     private bool _amazon = true;
     private bool _couponOnly;
+    private bool _freeShippingOnly;
     private decimal? _minPrice;
     private decimal? _maxPrice;
+    private string _sortBy = OfficialCatalogSearchRules.SortRelevance;
+    private string? _mlCategory;
+    private List<OfficialCatalogCategoryDto> _categories = [];
+    private string? _categoriesKeyword;
     private bool _busy;
     private bool _searching;
+    private string _searchingStores = "as lojas";
     private bool _searched;
     private string? _error;
     private string? _info;
+    private string? _notice;
     private string? _convertingUrl;
     private List<OfficialCatalogProductDto> _items = [];
+    private List<OfficialCatalogProductDto> _relevanceOrder = [];
     private List<OfficialCatalogChannelStatusDto> _channels = [];
+    private OfficialCatalogSearchFilter? _lastFilter;
+    private int? _mlNextOffset;
+    private string? _mlEffectiveQuery;
     private string? _mlTrackingId;
 
     protected override async Task OnInitializedAsync()
@@ -284,27 +329,44 @@
             return;
         }
 
+        var keyword = _keyword?.Trim() ?? string.Empty;
+        if (!string.Equals(keyword, _categoriesKeyword, StringComparison.OrdinalIgnoreCase))
+        {
+            _mlCategory = null;
+            _categories = [];
+        }
+
         _busy = true;
         _searching = true;
+        _searchingStores = SelectedStoresLabel();
         _error = null;
         _info = null;
+        _notice = null;
         _channels = [];
         _items = [];
+        _relevanceOrder = [];
+        _mlNextOffset = null;
+        _mlEffectiveQuery = null;
         await InvokeAsync(StateHasChanged);
         try
         {
-            var result = await SearchApi.SearchAsync(new OfficialCatalogSearchFilter
+            var filter = new OfficialCatalogSearchFilter
             {
-                Keyword = _keyword,
+                Keyword = keyword,
                 MinPrice = _minPrice,
                 MaxPrice = _maxPrice,
                 HasCoupon = _couponOnly ? true : null,
+                FreeShippingOnly = _freeShippingOnly ? true : null,
+                SortBy = _sortBy,
                 MercadoLivre = _ml,
                 MercadoLivreTrackingId = _mlTrackingId,
+                MercadoLivreCategory = string.IsNullOrWhiteSpace(_mlCategory) ? null : _mlCategory,
                 Shopee = _shopee,
                 Amazon = _amazon
-            });
+            };
+            var result = await SearchApi.SearchAsync(filter);
             _searched = true;
+            _lastFilter = filter;
             if (!result.Success || result.Data is null)
             {
                 _items = [];
@@ -312,8 +374,16 @@
                 return;
             }
 
-            _items = [.. result.Data.DataList ?? []];
+            _relevanceOrder = [.. result.Data.DataList ?? []];
+            _items = [.. OfficialCatalogSearchRules.ApplySort(_relevanceOrder, _sortBy)];
             _channels = result.Data.Channels ?? [];
+            ApplyMercadoLivreScan(result.Data, keyword);
+            if (result.Data.MercadoLivreCategories.Count > 0)
+            {
+                _categories = result.Data.MercadoLivreCategories;
+                _categoriesKeyword = keyword;
+            }
+
             if (_items.Count > 0)
             {
                 _error = null;
@@ -338,6 +408,95 @@
             Logger.LogError(ex, "Falha na busca omnichannel.");
             _error = string.IsNullOrWhiteSpace(ex.Message) ? "Falha inesperada na busca." : ex.Message;
             _items = [];
+        }
+        finally
+        {
+            _busy = false;
+            _searching = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ResortItems() =>
+        _items = [.. OfficialCatalogSearchRules.ApplySort(_relevanceOrder, _sortBy)];
+
+    private void ApplyMercadoLivreScan(OfficialCatalogSearchResponseDto response, string typedKeyword)
+    {
+        _mlNextOffset = response.MercadoLivreNextOffset;
+        _mlEffectiveQuery = response.MercadoLivreEffectiveQuery;
+        if (!string.IsNullOrWhiteSpace(_mlEffectiveQuery)
+            && !string.Equals(_mlEffectiveQuery.Trim(), typedKeyword, StringComparison.OrdinalIgnoreCase))
+        {
+            _notice = $"Nenhuma oferta ativa no Mercado Livre para \"{typedKeyword}\"; mostrando resultados para \"{_mlEffectiveQuery.Trim()}\".";
+        }
+    }
+
+    private async Task LoadMoreMercadoLivreAsync()
+    {
+        if (_searching || _lastFilter is null || _mlNextOffset is not int offset)
+        {
+            return;
+        }
+
+        _busy = true;
+        _searching = true;
+        _searchingStores = "mais produtos do Mercado Livre";
+        _error = null;
+        _info = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var result = await SearchApi.SearchAsync(new OfficialCatalogSearchFilter
+            {
+                Keyword = string.IsNullOrWhiteSpace(_mlEffectiveQuery) ? _lastFilter.Keyword : _mlEffectiveQuery,
+                MinPrice = _lastFilter.MinPrice,
+                MaxPrice = _lastFilter.MaxPrice,
+                HasCoupon = _lastFilter.HasCoupon,
+                FreeShippingOnly = _lastFilter.FreeShippingOnly,
+                SortBy = _sortBy,
+                MercadoLivre = true,
+                MercadoLivreTrackingId = _lastFilter.MercadoLivreTrackingId,
+                MercadoLivreCategory = _lastFilter.MercadoLivreCategory,
+                MercadoLivreOffset = offset,
+                Shopee = false,
+                Amazon = false
+            });
+            if (!result.Success || result.Data is null)
+            {
+                _error = result.ErrorMessage ?? "Não foi possível carregar mais ofertas do Mercado Livre.";
+                return;
+            }
+
+            var known = _relevanceOrder
+                .Select(item => item.SourceUrl.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var added = (result.Data.DataList ?? [])
+                .Where(item => known.Add(item.SourceUrl.Trim()))
+                .ToList();
+            _relevanceOrder.AddRange(added);
+            ResortItems();
+            _mlNextOffset = result.Data.MercadoLivreNextOffset;
+
+            var mlChannel = result.Data.Channels?.FirstOrDefault(item =>
+                string.Equals(item.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase));
+            if (mlChannel is not null)
+            {
+                _channels = [.. _channels.Select(item =>
+                    string.Equals(item.Key, "MercadoLivre", StringComparison.OrdinalIgnoreCase) ? mlChannel : item)];
+                if (mlChannel.State is "error")
+                {
+                    _error = mlChannel.Message;
+                }
+            }
+
+            _info = added.Count == 0
+                ? "Nenhuma oferta nova nesta página do Mercado Livre."
+                : $"{added.Count} nova(s) oferta(s) do Mercado Livre carregada(s).";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao carregar mais ofertas do Mercado Livre.");
+            _error = string.IsNullOrWhiteSpace(ex.Message) ? "Falha inesperada na busca." : ex.Message;
         }
         finally
         {

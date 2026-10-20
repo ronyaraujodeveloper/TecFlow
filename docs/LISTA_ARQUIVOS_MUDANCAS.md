@@ -1723,6 +1723,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Services/Radar/IOfficialCatalogSearchApiService.cs** - `SearchAsync` assíncrono: o escopo de loading não fecha antes da resposta.
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** e **MercadoLivreItemParserTests.cs** - faixa de preço, `/items` mais barato, produto pai ➔ filho.
 
+### MercadoLivreCatalogSearchScan - Varredura paginada, filtros, termo mais curto, ordenação e categoria na Buscar Ofertas
+
+- [x] **Ofertio.Business/Dto/OfficialCatalogDtos.cs** - `OfficialCatalogChannelResult` com `ScannedCount`, `NextOffset`, `EffectiveQuery` e `Categories`; resposta com `MercadoLivreNextOffset`, `MercadoLivreEffectiveQuery` e `MercadoLivreCategories`; novos `OfficialCatalogCategoryDto` e `MercadoLivreCatalogSearchRequest`.
+- [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - `FreeShippingOnly`, `SortBy` (relevancia | menor_preco | maior_desconto), `MercadoLivreCategory` (domain_id) e `MercadoLivreOffset`.
+- [x] **Ofertio.Business/Interfaces/Services/ILiveSearchServices.cs** - `IMercadoLivreApiService.SearchCatalogAsync(userId, MercadoLivreCatalogSearchRequest)`.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `PassesPriceAndShipping`, `IsFreeShipping`, `ApplySort`/`DiscountPercent`, `BuildShorterQueries`, `HumanizeMercadoLivreDomain`, `DescribeMercadoLivreScan` e limites da varredura (páginas de 20, teto de 100 produtos, 40 por termo quando há termo mais curto por tentar).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - `SearchCatalogAsync` (token/conta/refresh); `ScanCatalogAsync` pagina `products/search` (`&offset=`, `&domain_id=`), aplica preço mín./máx. e frete grátis durante a varredura, para ao juntar as ofertas pedidas e devolve o próximo offset; sem ofertas tenta termos mais curtos; `domain_discovery` em paralelo para sugerir categorias; `SearchProductsAsync` vira atalho sem termo curto/categorias; logs por produto em Debug e resumo em Info; paralelismo 8.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogSearchPage` (ids, `paging.total`, `domain_id`) e `ParseDomainDiscovery`.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - monta o pedido do ML a partir do filtro, ordena após mesclar, selo "N ofertas · M produtos analisados" e expõe offset/termo/categorias; "Carregar mais" não consulta a base local.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - "Somente frete grátis", "Ordenar por" (reordena sem nova consulta), "Categoria (Mercado Livre)" sugerida pelo termo, aviso de termo encurtado e botão "Carregar mais (Mercado Livre)" com o modal de carregamento.
+- [x] **Ofertio.Tests/Unit/Radar/** - `MercadoLivreApiServiceTests` (páginas até a meta, filtros na varredura, termo mais curto, `domain_id`/`offset`), `OfficialCatalogSearchServiceTests` (pedido, ordenação, selo, "Carregar mais"), `OfficialCatalogSearchRulesTests` e `MercadoLivreItemParserTests`; fakes de `IMercadoLivreApiService` em `ProductMetadataServiceTests` e `OfferValidationServiceTests`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

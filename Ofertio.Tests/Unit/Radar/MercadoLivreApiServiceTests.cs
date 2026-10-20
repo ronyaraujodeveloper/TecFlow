@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Ofertio.Business.Dto;
 using Ofertio.Business.Integrations.Auth;
 using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Service.Radar;
@@ -544,6 +545,154 @@ public class MercadoLivreApiServiceTests
         Assert.Equal("Bearer APP_USR-static", request.Authorization);
     }
 
+    [Fact]
+    public async Task SearchCatalogAsync_ShouldScanPagesUntilTargetAndExposeNextOffsetAndCategories()
+    {
+        var offers = new HashSet<string>(Enumerable.Range(20, 5).Select(index => $"MLB{index}"));
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath switch
+            {
+                SearchPath => (HttpStatusCode.OK, SearchPage(Range(QueryValue(uri, "offset") is { } offset ? int.Parse(offset) : 0, 20), 200, "MLB-GAMING_HEADSETS")),
+                "/sites/MLB/domain_discovery/search" => (HttpStatusCode.OK, """[{"domain_id":"MLB-NOTEBOOKS","domain_name":"Notebooks"}]"""),
+                _ => CatalogProduct(uri, id => offers.Contains(id) ? (100m, true) : null)
+            }
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest { Query = "dell", TargetOffers = 5 });
+
+        Assert.Equal(5, result.Items.Count);
+        Assert.Equal(40, result.ScannedCount);
+        Assert.Equal(40, result.NextOffset);
+        Assert.Equal("dell", result.EffectiveQuery);
+        Assert.Equal(
+            ["https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=dell&limit=20",
+             "https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=dell&limit=20&offset=20"],
+            handler.Requests.Where(request => request.Path == SearchPath).Select(request => request.Url));
+        Assert.Equal(["MLB-NOTEBOOKS", "MLB-GAMING_HEADSETS"], result.Categories.Select(category => category.Id));
+        Assert.Equal(["Notebooks", "Gaming headsets"], result.Categories.Select(category => category.Name));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_ShouldApplyPriceRangeAndFreeShippingDuringScan()
+    {
+        var prices = new Dictionary<string, (decimal Price, bool Free)>
+        {
+            ["MLB1"] = (50m, true),
+            ["MLB2"] = (150m, false),
+            ["MLB3"] = (300m, true)
+        };
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage(["MLB1", "MLB2", "MLB3"], 3))
+                : CatalogProduct(uri, id => prices.TryGetValue(id, out var offer) ? offer : null)
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "fone",
+            MinPrice = 100m,
+            MaxPrice = 400m,
+            FreeShippingOnly = true,
+            IncludeCategories = false
+        });
+
+        Assert.Equal("MLB3", Assert.Single(result.Items).ProductId);
+        Assert.Equal(3, result.ScannedCount);
+        Assert.Null(result.NextOffset);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WhenTermHasNoOffers_ShouldRetryWithShorterQuery()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, QueryValue(uri, "q") == "dell inspiron"
+                    ? SearchPage(["MLB9"], 1)
+                    : SearchPage(["MLB1", "MLB2"], 2))
+                : CatalogProduct(uri, id => id == "MLB9" ? (3500m, false) : null)
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "dell inspiron i7 16gb",
+            IncludeCategories = false
+        });
+
+        Assert.Equal("MLB9", Assert.Single(result.Items).ProductId);
+        Assert.Equal("dell inspiron", result.EffectiveQuery);
+        Assert.Equal(5, result.ScannedCount);
+        Assert.Equal(
+            ["dell inspiron i7 16gb", "dell inspiron i7", "dell inspiron"],
+            handler.Requests.Where(request => request.Path == SearchPath).Select(request => QueryValue(new Uri(request.Url), "q")));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WithDomainAndOffset_ShouldSendFiltersAndNotShortenQuery()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage([], 0))
+                : null
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "dell inspiron",
+            Offset = 40,
+            DomainId = "MLB-NOTEBOOKS"
+        });
+
+        Assert.Empty(result.Items);
+        var search = Assert.Single(handler.Requests);
+        Assert.Equal(
+            "https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=dell%20inspiron&limit=20&offset=40&domain_id=MLB-NOTEBOOKS",
+            search.Url);
+        Assert.Null(result.NextOffset);
+    }
+
+    private static IReadOnlyList<string> Range(int offset, int count) =>
+        Enumerable.Range(offset, count).Select(index => $"MLB{index}").ToList();
+
+    private static string SearchPage(IReadOnlyList<string> ids, int total, string domainId = "MLB-NOTEBOOKS") =>
+        $$"""{"paging":{"total":{{total}},"offset":0,"limit":20},"results":[{{string.Join(",", ids.Select(id => $$"""{"id":"{{id}}","name":"{{id}}","domain_id":"{{domainId}}"}"""))}}]}""";
+
+    private static (HttpStatusCode Status, string Body)? CatalogProduct(Uri uri, Func<string, (decimal Price, bool Free)?> offerFor)
+    {
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length < 2 || segments[0] != "products")
+        {
+            return null;
+        }
+
+        if (segments.Length > 2)
+        {
+            return (HttpStatusCode.NotFound, """{"message":"No winners found"}""");
+        }
+
+        var id = segments[1];
+        return offerFor(id) is { } offer
+            ? (HttpStatusCode.OK,
+                $$"""{"id":"{{id}}","name":"{{id}}","permalink":"https://www.mercadolivre.com.br/p/{{id}}","buy_box_winner":{"item_id":"{{id}}1","price":{{offer.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"shipping":{"free_shipping":{{(offer.Free ? "true" : "false")}}"""
+                + "}}}")
+            : (HttpStatusCode.OK, $$"""{"id":"{{id}}","name":"{{id}}","buy_box_winner":null}""");
+    }
+
+    private static string? QueryValue(Uri uri, string key) =>
+        uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => pair.Split('=', 2))
+            .Where(pair => pair[0] == key)
+            .Select(pair => Uri.UnescapeDataString(pair.Length > 1 ? pair[1] : string.Empty))
+            .FirstOrDefault();
+
     private static MarketplaceAccount MercadoLivreAccount(string? trackingId) => new()
     {
         TenantId = Guid.NewGuid(),
@@ -614,6 +763,8 @@ public class MercadoLivreApiServiceTests
 
         public Dictionary<string, (HttpStatusCode Status, string Body)> PathResponses { get; } = new(StringComparer.Ordinal);
 
+        public Func<Uri, (HttpStatusCode Status, string Body)?>? Responder { get; set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -630,7 +781,9 @@ public class MercadoLivreApiServiceTests
                     body));
             }
 
-            var (status, content) = PathResponses.TryGetValue(uri.AbsolutePath, out var routed)
+            var (status, content) = Responder?.Invoke(uri) is { } answered
+                ? answered
+                : PathResponses.TryGetValue(uri.AbsolutePath, out var routed)
                 ? routed
                 : uri.AbsolutePath.Contains("oauth/token", StringComparison.Ordinal)
                 ? (TokenBody.Contains("access_token", StringComparison.Ordinal) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, TokenBody)

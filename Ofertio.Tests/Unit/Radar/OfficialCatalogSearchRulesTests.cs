@@ -8,6 +8,64 @@ namespace Ofertio.Tests.Unit.Radar;
 public class OfficialCatalogSearchRulesTests
 {
     [Fact]
+    public void BuildShorterQueries_ShouldDropLastWordsProgressively()
+    {
+        Assert.Equal(
+            ["Dell Inspiron i7", "Dell Inspiron", "Dell"],
+            OfficialCatalogSearchRules.BuildShorterQueries("  Dell  Inspiron i7 16GB "));
+        Assert.Empty(OfficialCatalogSearchRules.BuildShorterQueries("notebook"));
+        Assert.Empty(OfficialCatalogSearchRules.BuildShorterQueries("a b"));
+    }
+
+    [Fact]
+    public void ApplySort_ShouldOrderByLowestPriceOrBiggestDiscountAndKeepRelevance()
+    {
+        IReadOnlyList<OfficialCatalogProductDto> items =
+        [
+            new() { ProductId = "A", Price = 300m, OriginalPrice = 330m },
+            new() { ProductId = "B", Price = 100m, OriginalPrice = 200m },
+            new() { ProductId = "C", Price = null },
+            new() { ProductId = "D", Price = 200m }
+        ];
+
+        Assert.Equal(["B", "D", "A", "C"], OfficialCatalogSearchRules.ApplySort(items, "menor_preco").Select(item => item.ProductId));
+        Assert.Equal(["B", "A", "D", "C"], OfficialCatalogSearchRules.ApplySort(items, "maior_desconto").Select(item => item.ProductId));
+        Assert.Equal(["A", "B", "C", "D"], OfficialCatalogSearchRules.ApplySort(items, "relevancia").Select(item => item.ProductId));
+        Assert.Equal(["A", "B", "C", "D"], OfficialCatalogSearchRules.ApplySort(items, null).Select(item => item.ProductId));
+    }
+
+    [Fact]
+    public void PassesOptionalFilters_FreeShippingOnly_ShouldRequireFreeShipping()
+    {
+        var filter = new OfficialCatalogSearchFilter { FreeShippingOnly = true };
+
+        Assert.True(OfficialCatalogSearchRules.PassesOptionalFilters(new OfficialCatalogProductDto { Shipping = "Frete grátis" }, filter));
+        Assert.False(OfficialCatalogSearchRules.PassesOptionalFilters(new OfficialCatalogProductDto { Shipping = "R$ 19,90" }, filter));
+        Assert.False(OfficialCatalogSearchRules.PassesOptionalFilters(new OfficialCatalogProductDto(), filter));
+        Assert.True(OfficialCatalogSearchRules.PassesOptionalFilters(new OfficialCatalogProductDto(), new OfficialCatalogSearchFilter()));
+    }
+
+    [Fact]
+    public void HumanizeMercadoLivreDomain_ShouldTurnDomainIdIntoReadableName()
+    {
+        Assert.Equal("Gaming headsets", OfficialCatalogSearchRules.HumanizeMercadoLivreDomain("MLB-GAMING_HEADSETS"));
+        Assert.Equal("Notebooks", OfficialCatalogSearchRules.HumanizeMercadoLivreDomain("MLB-NOTEBOOKS"));
+    }
+
+    [Fact]
+    public void DescribeMercadoLivreScan_ShouldShowOffersScannedAndShortenedTerm()
+    {
+        Assert.Equal("12 ofertas · 80 produtos analisados", OfficialCatalogSearchRules.DescribeMercadoLivreScan(12, 80, "dell", "Dell"));
+        Assert.Equal("1 oferta · 20 produtos analisados", OfficialCatalogSearchRules.DescribeMercadoLivreScan(1, 20, null, "dell"));
+        Assert.Equal(
+            "0 ofertas · 100 produtos analisados (sem anúncio ativo)",
+            OfficialCatalogSearchRules.DescribeMercadoLivreScan(0, 100, "dell i7", "dell i7"));
+        Assert.Equal(
+            "3 ofertas · 45 produtos analisados · buscado como \"dell inspiron\"",
+            OfficialCatalogSearchRules.DescribeMercadoLivreScan(3, 45, "dell inspiron", "dell inspiron i7 16gb"));
+    }
+
+    [Fact]
     public void IsValidQuery_ShouldRequireTwoCharacters()
     {
         Assert.False(OfficialCatalogSearchRules.IsValidQuery(" "));

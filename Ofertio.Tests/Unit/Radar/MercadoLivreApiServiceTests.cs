@@ -737,6 +737,34 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
+    public async Task SearchCatalogAsync_MainProductsOnly_ShouldSkipAccessoriesAndKeepApiOrder()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath switch
+            {
+                SearchPath => (HttpStatusCode.OK, SearchPage(["MLB3", "MLB1", "MLB2"], 3)),
+                "/products/MLB1" => (HttpStatusCode.OK, """{"id":"MLB1","name":"Capa Case Para iPhone 15","buy_box_winner":{"item_id":"MLB11","price":49}}"""),
+                "/products/MLB2" => (HttpStatusCode.OK, """{"id":"MLB2","name":"Apple iPhone 15 128 GB","buy_box_winner":{"item_id":"MLB22","price":4999}}"""),
+                "/products/MLB3" => (HttpStatusCode.OK, """{"id":"MLB3","name":"iPhone 15 256 GB","buy_box_winner":{"item_id":"MLB33","price":5999}}"""),
+                _ => null
+            }
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "iphone 15",
+            IncludeCategories = false,
+            IncludeMetrics = false,
+            MainProductsOnly = true
+        });
+
+        Assert.Equal(["MLB3", "MLB2"], result.Items.Select(item => item.ProductId));
+        Assert.DoesNotContain(handler.Requests, request => request.Url.Contains("sort=", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SearchProductsAsync_ShouldNotCallMetricsEndpoints()
     {
         var handler = new RoutingHandler();

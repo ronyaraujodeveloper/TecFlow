@@ -19,9 +19,12 @@ public class OfficialCatalogSearchFilter
 
     public bool? BestSellersOnly { get; set; }
 
+    /// <summary>Oculta acessórios (capa, película, carregador, cabo...) quando o termo buscado não é um acessório.</summary>
+    public bool? MainProductsOnly { get; set; }
+
     /// <summary>
-    /// <c>melhor_oportunidade</c>, <c>relevancia</c> (padrão da API), <c>menor_preco</c>, <c>maior_desconto</c>,
-    /// <c>mais_vendidos</c>, <c>maior_comissao</c> ou <c>melhor_avaliacao</c>.
+    /// <c>relevancia</c> (padrão: ordem devolvida pelas lojas), <c>melhor_oportunidade</c> (score Ofertio),
+    /// <c>menor_preco</c>, <c>maior_desconto</c>, <c>mais_vendidos</c>, <c>maior_comissao</c> ou <c>melhor_avaliacao</c>.
     /// </summary>
     public string? SortBy { get; set; }
 

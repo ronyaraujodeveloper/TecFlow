@@ -378,6 +378,8 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
     /// <summary>
     /// <c>/sites/MLB/search</c> foi descontinuado pelo Mercado Livre para apps de terceiros (403 com qualquer token);
     /// a busca usa o buscador de catálogo <c>/products/search</c> e o preço do anúncio ganhador em <c>/products/{id}</c>.
+    /// O <c>/products/search</c> não aceita <c>sort</c> nem devolve <c>available_filters</c>: os resultados já vêm na
+    /// relevância do Mercado Livre (a ordem é preservada) e as categorias vêm de <c>domain_discovery</c> e dos <c>domain_id</c>.
     /// </summary>
     /// <remarks>
     /// A maioria dos produtos de catálogo não tem anúncio ativo, então a busca varre páginas de
@@ -448,11 +450,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 seenDomains.AddRange(page.DomainIds);
                 var productIds = page.ProductIds.Take(cap - candidateScanned).ToList();
                 var offers = await ResolveCatalogOffersAsync(productIds, accessToken, cancellationToken);
-                items.AddRange(offers.Where(item => OfficialCatalogSearchRules.PassesPriceAndShipping(
-                    item,
-                    request.MinPrice,
-                    request.MaxPrice,
-                    request.FreeShippingOnly)));
+                items.AddRange(offers.Where(item =>
+                    OfficialCatalogSearchRules.PassesPriceAndShipping(
+                        item,
+                        request.MinPrice,
+                        request.MaxPrice,
+                        request.FreeShippingOnly)
+                    && (!request.MainProductsOnly || !OfficialCatalogSearchRules.IsAccessoryOffer(item.ProductName, candidate))));
                 candidateScanned += productIds.Count;
                 offset += productIds.Count;
 

@@ -181,6 +181,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     MinPrice = filter.MinPrice,
                     MaxPrice = filter.MaxPrice,
                     FreeShippingOnly = filter.FreeShippingOnly == true,
+                    MainProductsOnly = filter.MainProductsOnly == true,
                     AllowShorterQuery = filter.MercadoLivreOffset <= 0,
                     IncludeCategories = filter.MercadoLivreOffset <= 0,
                     TrackingId = filter.MercadoLivreTrackingId

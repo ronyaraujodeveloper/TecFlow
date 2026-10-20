@@ -118,7 +118,65 @@ public static class OfficialCatalogSearchRules
         OfficialCatalogProductDto item,
         OfficialCatalogSearchFilter filter) =>
         PassesPriceAndShipping(item, filter.MinPrice, filter.MaxPrice, filter.FreeShippingOnly == true)
-        && (filter.HasCoupon != true || !string.IsNullOrWhiteSpace(item.CouponCode));
+        && (filter.HasCoupon != true || !string.IsNullOrWhiteSpace(item.CouponCode))
+        && (filter.MainProductsOnly != true || !IsAccessoryOffer(item.ProductName, filter.Keyword));
+
+    private static readonly HashSet<string> AccessoryWords = new(StringComparer.Ordinal)
+    {
+        "capa", "capinha", "case", "pelicula", "chaveiro", "carregador", "cabo", "fonte", "suporte",
+        "adaptador", "protetor", "skin", "estojo", "bateria", "teclado", "tela", "carcaca", "dobradica",
+        "cooler", "mochila", "pulseira", "controle", "refil"
+    };
+
+    /// <summary>
+    /// Acessório do produto buscado: uma palavra de acessório aparece antes do termo no título
+    /// ("Capa para iPhone 15", "Fonte Carregador Dell Inspiron"); "iPhone 15 + Capa" continua sendo produto principal.
+    /// Quando o próprio termo é um acessório ("capa iphone"), nada é ocultado.
+    /// </summary>
+    public static bool IsAccessoryOffer(string? title, string? keyword)
+    {
+        var titleWords = NormalizeWords(title);
+        if (titleWords.Count == 0)
+        {
+            return false;
+        }
+
+        var keywordWords = NormalizeWords(keyword).Where(word => word.Length >= 2).ToList();
+        if (keywordWords.Any(IsAccessoryWord))
+        {
+            return false;
+        }
+
+        var firstKeyword = titleWords.FindIndex(word => keywordWords.Contains(word, StringComparer.Ordinal));
+        var limit = firstKeyword >= 0 ? firstKeyword : Math.Min(2, titleWords.Count);
+        return titleWords.Take(limit).Any(IsAccessoryWord);
+    }
+
+    private static bool IsAccessoryWord(string word) =>
+        AccessoryWords.Contains(word)
+        || (word.EndsWith("es", StringComparison.Ordinal) && AccessoryWords.Contains(word[..^2]))
+        || (word.EndsWith('s') && AccessoryWords.Contains(word[..^1]));
+
+    private static List<string> NormalizeWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var builder = new System.Text.StringBuilder(text.Length);
+        foreach (var character in text.Normalize(System.Text.NormalizationForm.FormD))
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character) == System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            builder.Append(char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : ' ');
+        }
+
+        return builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
 
     /// <summary>
     /// Filtros aplicados na tela sobre o que a última busca carregou (sem consultar as lojas):

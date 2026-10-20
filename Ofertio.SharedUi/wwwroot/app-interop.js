@@ -132,18 +132,11 @@
 
 window.scrollToTop = window.ofertioAppInterop.scrollToTop;
 
-/* Tooltips do Bootstrap em elementos renderizados pelo Blazor (data-bs-toggle="tooltip" + data-bs-title).
-   Hover/foco no desktop; toque/clique abre e um toque fora fecha. */
-window.ofertioTooltips = (function () {
+/* Tooltips do Bootstrap ([data-bs-toggle="tooltip"]) em elementos renderizados pelo Blazor: hover, foco e clique/toque.
+   initTooltips pode ser chamado a cada atualização da lista: reaproveita a instância de cada elemento e descarta
+   as de elementos que o Blazor removeu (senão o balão ficaria órfão na tela). */
+(function registerTooltips() {
     const instances = new Set();
-
-    const hideAll = function (except) {
-        instances.forEach(function (tooltip) {
-            if (tooltip !== except) {
-                tooltip.hide();
-            }
-        });
-    };
 
     const prune = function () {
         instances.forEach(function (tooltip) {
@@ -156,42 +149,38 @@ window.ofertioTooltips = (function () {
 
     document.addEventListener("click", function (event) {
         const trigger = event.target.closest ? event.target.closest('[data-bs-toggle="tooltip"]') : null;
-        const current = trigger && window.bootstrap ? window.bootstrap.Tooltip.getInstance(trigger) : null;
-        hideAll(current);
-        if (current) {
-            current.show();
-        }
+        instances.forEach(function (tooltip) {
+            if (tooltip._element !== trigger) {
+                tooltip.hide();
+            }
+        });
     });
 
-    return {
-        init: function () {
-            if (!window.bootstrap || !window.bootstrap.Tooltip) {
-                return 0;
-            }
-
-            prune();
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                if (window.bootstrap.Tooltip.getInstance(element)) {
-                    return;
-                }
-
-                instances.add(new window.bootstrap.Tooltip(element, {
-                    trigger: "hover focus",
-                    placement: element.dataset.bsPlacement || "top",
-                    customClass: "ofertio-tooltip",
-                    container: "body"
-                }));
-            });
-            return instances.size;
-        },
-
-        disposeAll: function () {
-            instances.forEach(function (tooltip) {
-                tooltip.dispose();
-            });
-            instances.clear();
-            return true;
+    window.initTooltips = function () {
+        if (!window.bootstrap || !window.bootstrap.Tooltip) {
+            return 0;
         }
+
+        prune();
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl, {
+                trigger: "hover focus click",
+                customClass: "ofertio-tooltip",
+                container: "body"
+            });
+            instances.add(tooltip);
+            return tooltip;
+        });
+        return instances.size;
+    };
+
+    window.disposeTooltips = function () {
+        instances.forEach(function (tooltip) {
+            tooltip.dispose();
+        });
+        instances.clear();
+        return true;
     };
 })();
 

@@ -229,6 +229,9 @@ public sealed class MercadoLivreCatalogSearchRequest
 
     public bool FreeShippingOnly { get; init; }
 
+    /// <summary>Descarta acessórios durante a varredura, para a busca juntar produtos principais.</summary>
+    public bool MainProductsOnly { get; init; }
+
     /// <summary>Sem ofertas para o termo digitado, tenta versões mais curtas ("Dell Inspiron i7 16GB" ➔ "Dell Inspiron i7").</summary>
     public bool AllowShorterQuery { get; init; } = true;
 

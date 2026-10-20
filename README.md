@@ -731,6 +731,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Bootstrap Tooltip:** `bootstrap.bundle.min.js` carregado no WebUi e no Mobile; `ofertioTooltips.init` no `OnAfterRenderAsync` (hover/foco e toque/clique).
 - [x] **Conteúdo:** faixas da Oportunidade (0–39 baixa, 40–69 boa, 70–100 super oferta), composição da Vantagem (desconto real, frete, comissão, avaliação, ranking, vendas) e níveis de Segurança.
 
+## 🎯 Relevância e precisão da busca ML (`MercadoLivreRelevanceAndMainProducts`)
+
+- [x] **Relevância nativa:** "Relevância (Padrão Mercado Livre)" é a ordenação padrão e mantém a ordem exata da API; o score Ofertio só reordena em "Melhor vantagem + segurança". O `/products/search` não aceita `sort` (o `/sites/MLB/search`, que aceita, responde 403 para apps de terceiros) e já devolve na relevância do ML.
+- [x] **Categorias em 1 clique:** atalhos "Buscar só em" com os domínios sugeridos (`domain_discovery` + `domain_id` dos resultados), pois o `/products/search` não devolve `available_filters`.
+- [x] **Anti-acessórios:** "Apenas produtos principais (ocultar acessórios)" na tela e na varredura do ML.
+- [x] **Tooltips:** ícone (?) com `data-bs-toggle="tooltip"`, `data-bs-placement="top"` e `title`; `window.initTooltips` (`hover focus click`) no primeiro render e após cada atualização da lista.
+- [ ] **Validar com a conta real:** buscar "iphone 15" com e sem "Apenas produtos principais" e conferir os atalhos de categoria.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

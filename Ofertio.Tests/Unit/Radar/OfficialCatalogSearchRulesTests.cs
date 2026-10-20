@@ -111,6 +111,43 @@ public class OfficialCatalogSearchRulesTests
         Assert.Null(amazonWithoutRate.EstimatedCommission);
     }
 
+    [Theory]
+    [InlineData("Capa Case Para iPhone 15 Pro Max", "iphone 15", true)]
+    [InlineData("Película De Vidro 3D iPhone 15", "iphone 15", true)]
+    [InlineData("Fonte Carregador Para Notebook Dell Inspiron 65w", "dell inspiron", true)]
+    [InlineData("Kit 2 Cabos USB-C Samsung", "samsung galaxy", true)]
+    [InlineData("Apple iPhone 15 (128 GB) - Preto + Capa", "iphone 15", false)]
+    [InlineData("Notebook Dell Inspiron 15 I7 16GB Com Fonte Original", "dell inspiron", false)]
+    [InlineData("Capa Para iPhone 15 Transparente", "capa iphone 15", false)]
+    [InlineData("Chinelo Havaianas Top", "chinelo havaianas", false)]
+    [InlineData("", "iphone", false)]
+    public void IsAccessoryOffer_ShouldHideAccessoriesOnlyWhenTheTermIsAMainProduct(string title, string keyword, bool expected)
+    {
+        Assert.Equal(expected, OfficialCatalogSearchRules.IsAccessoryOffer(title, keyword));
+    }
+
+    [Fact]
+    public void FilterLoadedResults_MainProductsOnly_ShouldDropAccessoriesAndKeepRelevanceOrder()
+    {
+        var items = new List<OfficialCatalogProductDto>
+        {
+            new() { ProductId = "CAPA", PlatformType = MarketplaceType.MercadoLivre, ProductName = "Capa Para iPhone 15", OpportunityScore = 90 },
+            new() { ProductId = "IPHONE-B", PlatformType = MarketplaceType.MercadoLivre, ProductName = "iPhone 15 256 GB", OpportunityScore = 10 },
+            new() { ProductId = "IPHONE-A", PlatformType = MarketplaceType.MercadoLivre, ProductName = "Apple iPhone 15 128 GB", OpportunityScore = 80 }
+        };
+        var filter = new OfficialCatalogSearchFilter { Keyword = "iphone 15", MainProductsOnly = true };
+
+        var relevance = OfficialCatalogSearchRules.ApplySort(
+            OfficialCatalogSearchRules.FilterLoadedResults(items, filter),
+            OfficialCatalogSearchRules.SortRelevance);
+
+        Assert.Equal(["IPHONE-B", "IPHONE-A"], relevance.Select(item => item.ProductId));
+        Assert.Equal(
+            ["IPHONE-A", "IPHONE-B"],
+            OfficialCatalogSearchRules.ApplySort(relevance, OfficialCatalogSearchRules.SortBestOpportunity).Select(item => item.ProductId));
+        Assert.Equal(3, OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter { Keyword = "iphone 15" }).Count);
+    }
+
     [Fact]
     public void ApplyCommission_ShouldUseMercadoLivreCategoryTableBeforeUserRate()
     {

@@ -74,6 +74,12 @@
                 <input id="busca-mais-vendidos" class="form-check-input" type="checkbox" @bind="_bestSellersOnly" @bind:after="ApplyScreenFilters" />
                 <label class="form-check-label" for="busca-mais-vendidos">Somente mais vendidos</label>
             </div>
+            <div class="form-check">
+                <input id="busca-principais" class="form-check-input" type="checkbox" @bind="_mainProductsOnly" @bind:after="ApplyScreenFilters" />
+                <label class="form-check-label" for="busca-principais" title="Esconde capa, película, carregador, cabo, fonte e outros acessórios quando o termo buscado é o produto">
+                    Apenas produtos principais (ocultar acessórios)
+                </label>
+            </div>
         </div>
         <div class="row g-2 mt-2">
             <div class="col-6 col-md-3">
@@ -87,13 +93,13 @@
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
                 <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ApplyScreenFilters">
+                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância (Padrão Mercado Livre)</option>
                     <option value="@OfficialCatalogSearchRules.SortBestOpportunity">Melhor vantagem + segurança</option>
                     <option value="@OfficialCatalogSearchRules.SortBestSellers">Mais vendidos</option>
                     <option value="@OfficialCatalogSearchRules.SortHighestCommission">Maior comissão</option>
                     <option value="@OfficialCatalogSearchRules.SortBestRating">Melhor avaliação</option>
                     <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
                     <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
-                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância da loja</option>
                 </select>
             </div>
             <div class="col-6 col-md-3">
@@ -107,6 +113,29 @@
                 </select>
             </div>
         </div>
+        @if (_categories.Count > 0)
+        {
+            <div class="d-flex flex-wrap align-items-center justify-content-center gap-1 mt-3" aria-label="Categorias sugeridas pelo Mercado Livre">
+                <span class="small text-muted me-1">Buscar só em:</span>
+                <button type="button"
+                        class="btn btn-sm rounded-pill @(string.IsNullOrEmpty(_mlCategory) ? "btn-primary" : "btn-outline-secondary")"
+                        disabled="@_busy"
+                        @onclick="() => SearchInCategoryAsync(null)">
+                    <i class="bi bi-grid me-1" aria-hidden="true"></i>Todas
+                </button>
+                @foreach (var category in _categories)
+                {
+                    var categoryId = category.Id;
+                    <button type="button"
+                            class="btn btn-sm rounded-pill @(string.Equals(_mlCategory, categoryId, StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline-secondary")"
+                            disabled="@_busy"
+                            title="Buscar de novo no Mercado Livre só em @category.Name"
+                            @onclick="() => SearchInCategoryAsync(categoryId)">
+                        <i class="bi bi-tag me-1" aria-hidden="true"></i>@category.Name
+                    </button>
+                }
+            </div>
+        }
     </form>
 
     @if (!string.IsNullOrWhiteSpace(_error))
@@ -257,26 +286,32 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-1 mb-2">
-                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore) score-help-badge"
-                                      tabindex="0"
-                                      role="button"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-title="@OpportunityHelp">
-                                    Oportunidade @item.OpportunityScore<i class="bi bi-question-circle ms-1 opacity-75" aria-hidden="true"></i>
+                                <span class="badge @OpportunityBadgeClass(item.OpportunityScore)">
+                                    Oportunidade @item.OpportunityScore<i class="bi bi-question-circle ms-1 score-help-icon"
+                                                                          tabindex="0"
+                                                                          role="button"
+                                                                          aria-label="O que é Oportunidade"
+                                                                          data-bs-toggle="tooltip"
+                                                                          data-bs-placement="top"
+                                                                          title="@OpportunityHelp"></i>
                                 </span>
-                                <span class="badge text-bg-light border score-help-badge"
-                                      tabindex="0"
-                                      role="button"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-title="@AdvantageHelp">
-                                    Vantagem @item.AdvantageScore<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                <span class="badge text-bg-light border">
+                                    Vantagem @item.AdvantageScore<i class="bi bi-question-circle ms-1 text-muted score-help-icon"
+                                                                    tabindex="0"
+                                                                    role="button"
+                                                                    aria-label="O que é Vantagem"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-placement="top"
+                                                                    title="@AdvantageHelp"></i>
                                 </span>
-                                <span class="badge text-bg-light border score-help-badge"
-                                      tabindex="0"
-                                      role="button"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-title="@SafetyHelp">
-                                    Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)<i class="bi bi-question-circle ms-1 text-muted" aria-hidden="true"></i>
+                                <span class="badge text-bg-light border">
+                                    Segurança @OfficialCatalogSearchRules.SafetyLabel(item.SafetyScore)<i class="bi bi-question-circle ms-1 text-muted score-help-icon"
+                                                                                                          tabindex="0"
+                                                                                                          role="button"
+                                                                                                          aria-label="O que é Segurança"
+                                                                                                          data-bs-toggle="tooltip"
+                                                                                                          data-bs-placement="top"
+                                                                                                          title="@SafetyHelp"></i>
                                 </span>
                             </div>
                             <h2 class="h6">@(item.ProductName ?? "Produto")</h2>
@@ -496,7 +531,7 @@
                         <li><strong>Vendidos, avaliações e mais vendidos:</strong> vêm das APIs oficiais (ML: anúncio, avaliações e ranking de mais vendidos da categoria; Shopee: vendas e nota). Quando a loja não informa, o card mostra "não informado".</li>
                         <li><strong>Vantagem (0–100):</strong> desconto (até 35), frete grátis (10), comissão (até 20), avaliação (até 15), ranking de mais vendidos (até 20) e unidades vendidas (até 10).</li>
                         <li><strong>Segurança:</strong> parte de 30 e soma loja oficial (+30), reputação verde do vendedor (+25), MercadoLíder (até +15), envio Full (+10), garantia (+5) e alta aprovação (+5); reputação ruim, produto usado e muitas avaliações negativas descontam. Alta a partir de @OfficialCatalogSearchRules.TrustedSafetyScore.</li>
-                        <li><strong>Oportunidade:</strong> média de vantagem e segurança (0–39 baixa, 40–69 boa, 70–100 super oferta); é a ordenação padrão "Melhor vantagem + segurança".</li>
+                        <li><strong>Oportunidade:</strong> média de vantagem e segurança (0–39 baixa, 40–69 boa, 70–100 super oferta); só reordena a lista quando você escolhe "Melhor vantagem + segurança".</li>
                         <li>Passe o mouse ou toque no <i class="bi bi-question-circle" aria-hidden="true"></i> dos selos do card para ver a explicação de cada nota.</li>
                         <li>O painel "Métricas" resume as ofertas na tela: faixa e mediana de preço, % de vendedores confiáveis, nota média, maior comissão, melhor oportunidade e mais vendido.</li>
                     </ul>
@@ -516,16 +551,18 @@
                         <li>Produtos "família" (ex.: um modelo com várias configurações) trazem até @OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct variações com oferta.</li>
                         <li>Sem nenhuma oferta, a busca tenta sozinha um termo mais curto (remove as últimas palavras) e avisa o termo usado.</li>
                         <li><strong>Carregar mais</strong> continua a análise de onde parou, só no Mercado Livre.</li>
-                        <li><strong>Categoria</strong> é sugerida a partir do termo depois da primeira busca e volta a "Todas" quando o termo muda.</li>
+                        <li><strong>Categoria</strong> é sugerida pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca e volta a "Todas" quando o termo muda. Os atalhos "Buscar só em" consultam o Mercado Livre de novo só naquela categoria, com 1 clique.</li>
+                        <li>A busca de catálogo do Mercado Livre já devolve os produtos na relevância do próprio Mercado Livre; essa ordem é mantida em "Relevância (Padrão Mercado Livre)".</li>
                         <li>A API do Mercado Livre não informa cupons: "Apenas com cupom" esconde os resultados do Mercado Livre.</li>
                     </ul>
 
                     <h3 class="h6 fw-bold">Filtros</h3>
                     <ul class="mb-3">
                         <li><strong>Buscar</strong> consulta as lojas com o termo e todos os filtros marcados (preço, frete grátis, categoria).</li>
-                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, loja oficial, vendedores confiáveis, mais vendidos, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
+                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, loja oficial, vendedores confiáveis, mais vendidos, produtos principais, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
+                        <li><strong>Apenas produtos principais</strong> esconde ofertas cujo título começa por um acessório antes do termo buscado (capa, película, carregador, cabo, fonte, suporte...). Se o termo já for um acessório (ex.: "capa iphone"), nada é escondido.</li>
                         <li>Para trazer produtos que ainda não foram carregados com o novo filtro, clique em <strong>Buscar</strong> de novo.</li>
-                        <li>Ordenação: melhor vantagem + segurança, mais vendidos, maior comissão, melhor avaliação, menor preço, maior desconto ou relevância da loja.</li>
+                        <li>Ordenação: relevância (padrão, ordem exata devolvida pelas lojas), melhor vantagem + segurança (score Ofertio), mais vendidos, maior comissão, melhor avaliação, menor preço ou maior desconto.</li>
                     </ul>
 
                     <h3 class="h6 fw-bold">Links de afiliado</h3>
@@ -604,7 +641,8 @@
     private bool _freeShippingOnly;
     private decimal? _minPrice;
     private decimal? _maxPrice;
-    private string _sortBy = OfficialCatalogSearchRules.SortBestOpportunity;
+    private string _sortBy = OfficialCatalogSearchRules.SortRelevance;
+    private bool _mainProductsOnly;
     private bool _officialOnly;
     private bool _trustedOnly;
     private bool _bestSellersOnly;
@@ -770,19 +808,19 @@
     private const string SafetyHelp =
         "Nível de confiabilidade do vendedor.\n• Alta: Lojas Oficiais e MercadoLíder com reputação verde\n• Média/Baixa: Vendedores sem reputação consolidada.\nEnvio Full, garantia e produto novo também contam.";
 
-    private bool _tooltipsActive;
+    private bool _refreshTooltips;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_items.Count == 0 && !_tooltipsActive)
+        if (!firstRender && !_refreshTooltips)
         {
             return;
         }
 
+        _refreshTooltips = false;
         try
         {
-            await JS.InvokeAsync<int>("ofertioTooltips.init");
-            _tooltipsActive = _items.Count > 0;
+            await JS.InvokeVoidAsync("initTooltips");
         }
         catch (JSException ex)
         {
@@ -794,7 +832,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("ofertioTooltips.disposeAll");
+            await JS.InvokeVoidAsync("disposeTooltips");
         }
         catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
         {
@@ -863,14 +901,24 @@
         OfficialStoreOnly = _officialOnly ? true : null,
         TrustedSellersOnly = _trustedOnly ? true : null,
         BestSellersOnly = _bestSellersOnly ? true : null,
+        MainProductsOnly = _mainProductsOnly ? true : null,
         Shopee = _shopee,
         Amazon = _amazon
     };
 
-    private void ApplyScreenFilters() =>
+    private void ApplyScreenFilters()
+    {
         _items = [.. OfficialCatalogSearchRules.ApplySort(
             OfficialCatalogSearchRules.FilterLoadedResults(_relevanceOrder, CurrentFilter()),
             _sortBy)];
+        _refreshTooltips = true;
+    }
+
+    private async Task SearchInCategoryAsync(string? categoryId)
+    {
+        _mlCategory = categoryId;
+        await SearchAsync();
+    }
 
     private static string ChannelGlyph(string? state) => state switch
     {
@@ -1046,6 +1094,7 @@
                 MaxPrice = _lastFilter.MaxPrice,
                 HasCoupon = _lastFilter.HasCoupon,
                 FreeShippingOnly = _lastFilter.FreeShippingOnly,
+                MainProductsOnly = _lastFilter.MainProductsOnly,
                 SortBy = _sortBy,
                 MercadoLivre = true,
                 MercadoLivreTrackingId = _lastFilter.MercadoLivreTrackingId,

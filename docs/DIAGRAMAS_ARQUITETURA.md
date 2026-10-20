@@ -1734,11 +1734,29 @@ flowchart TB
 ```mermaid
 flowchart LR
   APP[App.razor / Mobile index.html] -->|bootstrap.bundle.min.js 5.3.3 + SRI| BS[window.bootstrap.Tooltip]
-  BG[BuscaGlobal.razor<br/>selos com data-bs-toggle=tooltip + data-bs-title] -->|OnAfterRenderAsync| INIT[ofertioTooltips.init<br/>app-interop.js]
+  BG[BuscaGlobal.razor<br/>ícones ? com data-bs-toggle=tooltip, data-bs-placement=top e title] -->|OnAfterRenderAsync: firstRender ou lista atualizada| INIT[window.initTooltips<br/>app-interop.js · hover focus click]
   INIT --> BS
   INIT -->|elementos removidos pelo Blazor| PRUNE[dispose]
-  BG -->|DisposeAsync| DISP[ofertioTooltips.disposeAll]
-  USER[Hover / foco / toque no ?] --> BS
+  BG -->|DisposeAsync| DISP[window.disposeTooltips]
+  USER[Hover / foco / clique ou toque no ?] --> BS
+```
+
+### Relevância, categorias e anti-acessórios na busca ML (`MercadoLivreRelevanceAndMainProducts`)
+
+```mermaid
+flowchart TB
+  BG[BuscaGlobal.razor] -->|SortBy=relevancia padrão, MainProductsOnly, MercadoLivreCategory| OCS[OfficialCatalogSearchService]
+  OCS -->|MainProductsOnly| SCAN[MercadoLivreApiService.ScanCatalogAsync]
+  SCAN -->|GET products/search?q=&domain_id= sem sort| PS[(API ML: ordem de relevância)]
+  SCAN -->|IsAccessoryOffer| SKIP[descarta capa, película, carregador... antes do termo]
+  SCAN -->|domain_discovery + domain_id| CATS[Categorias sugeridas]
+  CATS --> CHIPS[Atalhos Buscar só em: Notebooks, Tablets, Chinelos]
+  CHIPS -->|1 clique: SearchInCategoryAsync| OCS
+  OCS --> SORT{ApplySort}
+  SORT -->|relevancia| KEEP[ordem exata da API]
+  SORT -->|melhor_oportunidade| SCORE[score Ofertio]
+  KEEP --> BG
+  SCORE --> BG
 ```
 
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok

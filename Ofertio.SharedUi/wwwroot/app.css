@@ -2841,11 +2841,11 @@ html, body {
     text-align: left;
 }
 
-.score-help-badge {
+.score-help-icon {
     cursor: help;
 }
 
-.score-help-badge:focus-visible {
+.score-help-icon:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }

@@ -1781,6 +1781,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - `.ofertio-tooltip` (texto em várias linhas) e `.score-help-badge`.
 - [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - ícone `bi-question-circle` e `data-bs-title` nos três selos, `OnAfterRenderAsync` chama `ofertioTooltips.init`, `DisposeAsync` limpa os tooltips; cor de Oportunidade alinhada às faixas 0–39 / 40–69 / 70–100.
 
+### MercadoLivreRelevanceAndMainProducts - Relevância nativa, categorias em 1 clique, anti-acessórios e tooltips nos ícones
+
+- [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - `MainProductsOnly`; `relevancia` documentada como ordenação padrão.
+- [x] **Ofertio.Business/Dto/OfficialCatalogDtos.cs** - `MercadoLivreCatalogSearchRequest.MainProductsOnly` (descarta acessórios durante a varredura).
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `IsAccessoryOffer` (palavra de acessório antes do termo no título; termo-acessório desliga o filtro) aplicado em `PassesOptionalFilters`.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - varredura respeita `MainProductsOnly`; documentado que `/products/search` não aceita `sort` nem devolve `available_filters` (ordem já é a relevância do ML).
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - repassa `MainProductsOnly` à varredura do ML.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - ordenação padrão "Relevância (Padrão Mercado Livre)" (ordem da API, sem score), checkbox "Apenas produtos principais (ocultar acessórios)", atalhos "Buscar só em" por categoria, tooltip nos ícones (?) com `data-bs-toggle`/`data-bs-placement`/`title`, `initTooltips` no primeiro render e após cada atualização da lista.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - `window.initTooltips` (`hover focus click`, sem instância duplicada, descarta elementos removidos) e `window.disposeTooltips` no lugar de `ofertioTooltips`.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.score-help-icon`.
+- [x] **Ofertio.Tests/Unit/Radar/** - `IsAccessoryOffer`, filtro de produtos principais com ordem de relevância e varredura do ML sem acessórios e sem `sort=`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

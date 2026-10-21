@@ -36,7 +36,7 @@ public static class SlugHelper
                 continue;
             }
 
-            if (!char.IsLetterOrDigit(ch))
+            if (!char.IsAsciiLetterOrDigit(ch))
             {
                 continue;
             }

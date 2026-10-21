@@ -11,6 +11,8 @@ public class SlugHelperTests
     [InlineData("   ", "loja")]
     [InlineData(null, "loja")]
     [InlineData("api", "lojaApi")]
+    [InlineData("97303724", "97303724")]
+    [InlineData("Straße Ωmega 2", "StraeMega2")]
     public void GenerateSlug_ShouldSanitizeFriendlyName(string? name, string expected)
     {
         Assert.Equal(expected, SlugHelper.GenerateSlug(name));

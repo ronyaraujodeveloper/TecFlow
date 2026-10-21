@@ -1831,6 +1831,13 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor** - `_editingStore`, `OpenEditModal`; "Conectar nova loja" (`bi-plus-lg`) zera o modo edição; mensagem "Loja atualizada com sucesso.".
 - [x] **Ofertio.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** - UPDATE sem novo registro, loja de outro usuário, ID divergente, afiliado duplicado e ID vazio preservado.
 
+### ShortLinkNumericSlug - Link de rastreio com slug numérico (HTTP 404)
+
+- [x] **Ofertio.API/Controllers/ShortLinkRedirectController.cs** - rota `StoreRedirectTemplate` aceita slug `^[A-Za-z0-9]{1,80}$` (antes exigia letra no início e `/97303724/xh8pmzh` caía em 404); logs na entrada (slug + código) e no redirect 302 (host de destino).
+- [x] **Ofertio.WebUi/Extensions/ShortLinkProxyExtensions.cs** - `StoreRedirectPattern` com o mesmo regex do slug.
+- [x] **Ofertio.Util/Text/SlugHelper.cs** - `GenerateSlug` só mantém letras/dígitos ASCII, garantindo que todo slug gerado case com a rota.
+- [x] **Ofertio.Tests/Unit/Controllers/ShortLinkRedirectControllerTests.cs** e **Ofertio.Tests/Unit/Util/SlugHelperTests.cs** - template real da rota com slug numérico, redirect `/97303724/xh8pmzh` e slug ASCII.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

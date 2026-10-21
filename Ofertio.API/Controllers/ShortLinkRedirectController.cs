@@ -28,15 +28,26 @@ public class ShortLinkRedirectController : ControllerBase
     /// <summary>Compatível com links antigos /r/{code}.</summary>
     [HttpGet("/r/{code}")]
     public Task<IActionResult> RedirectLegacyAsync(string code, CancellationToken cancellationToken) =>
-        RedirectByCodeAsync(code, cancellationToken);
+        RedirectByCodeAsync(null, code, cancellationToken);
 
     /// <summary>Resolve código curto, registra telemetria e redireciona ao marketplace.</summary>
-    [HttpGet("/{storeSlug:regex(^[[A-Za-z]][[A-Za-z0-9]]{{0,79}}$)}/{code:length(6,8)}")]
+    /// <remarks>O slug vem de <c>SlugHelper.GenerateSlug</c> e pode começar com dígito (ex.: apelido "97303724").</remarks>
+    [HttpGet(StoreRedirectTemplate)]
     public Task<IActionResult> RedirectAsync(string storeSlug, string code, CancellationToken cancellationToken) =>
-        RedirectByCodeAsync(code, cancellationToken);
+        RedirectByCodeAsync(storeSlug, code, cancellationToken);
 
-    private async Task<IActionResult> RedirectByCodeAsync(string code, CancellationToken cancellationToken)
+    public const string StoreRedirectTemplate = "/{storeSlug:regex(^[[A-Za-z0-9]]{{1,80}}$)}/{code:length(6,8)}";
+
+    private async Task<IActionResult> RedirectByCodeAsync(
+        string? storeSlug,
+        string code,
+        CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "Short link recebido: slug={StoreSlug} code={ShortCode}",
+            storeSlug ?? "(r)",
+            code);
+
         if (string.IsNullOrWhiteSpace(code) || code.Length is < 6 or > 8)
         {
             return NotFound();
@@ -50,6 +61,11 @@ public class ShortLinkRedirectController : ControllerBase
             _logger.LogInformation("Código curto não encontrado: {ShortCode}", normalizedCode);
             return NotFound();
         }
+
+        _logger.LogInformation(
+            "Short link {ShortCode} resolvido: redirect 302 para {DestinationHost}",
+            normalizedCode,
+            Uri.TryCreate(link.DestinationUrl, UriKind.Absolute, out var destination) ? destination.Host : "(url inválida)");
 
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var userAgent = Request.Headers.UserAgent.ToString();

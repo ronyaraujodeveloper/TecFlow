@@ -768,6 +768,13 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Validações:** dono da loja, ID de afiliado normalizado (aceita link), bloqueio de ID duplicado; campo de ID vazio mantém o atual.
 - [ ] **Homologar:** editar o apelido e o ID de uma loja em `https://dev.ofertio.com.br/minhas-lojas` e conferir que continua um único card.
 
+## 🔗 Link de rastreio com slug numérico (`ShortLinkNumericSlug`)
+
+- [x] **Causa do 404:** a rota `/{storeSlug}/{code}` (API e proxy da WebUi) exigia slug começando com letra; loja com apelido numérico (ex.: `97303724`) gerava `/97303724/xh8pmzh`, que caía no "não encontrado" do Blazor.
+- [x] **Rota alinhada ao gerador:** slug aceita `^[A-Za-z0-9]{1,80}$` nos dois lados; `GenerateSlug` só produz letras/dígitos ASCII. O formato do link continua `{base}/{slug}/{code}` (sem prefixo `/p/`, que é a página do Conversor Público).
+- [x] **Tracing:** o redirect registra slug e código na entrada e o host de destino no 302 (ou "Código curto não encontrado").
+- [ ] **Homologar:** abrir `https://dev.ofertio.com.br/97303724/xh8pmzh` e conferir o redirect para o Mercado Livre.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

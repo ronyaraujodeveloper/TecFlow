@@ -11,7 +11,7 @@ namespace Ofertio.WebUi.Extensions;
 public static class ShortLinkProxyExtensions
 {
     public const string LegacyRedirectPattern = "/r/{code:length(6,8)}";
-    public const string StoreRedirectPattern = "/{storeSlug:regex(^[A-Za-z][A-Za-z0-9]{{0,79}}$)}/{code:length(6,8)}";
+    public const string StoreRedirectPattern = "/{storeSlug:regex(^[A-Za-z0-9]{{1,80}}$)}/{code:length(6,8)}";
 
     public static IEndpointRouteBuilder MapShortLinkProxy(this IEndpointRouteBuilder endpoints)
     {

@@ -1827,6 +1827,20 @@ flowchart TB
   DUP -->|não| SAVE["UPDATE MarketplaceAccount + IntegracaoLoja<br/>apelido e afiliado, mesma ShopId"]
 ```
 
+### Link de rastreio com slug numérico (`ShortLinkNumericSlug`)
+
+```mermaid
+flowchart LR
+  GEN["SlugHelper.GenerateSlug<br/>apelido 97303724 -> 97303724"] --> URL["https://dev.ofertio.com.br/97303724/xh8pmzh"]
+  URL --> PAGE{"Página Blazor literal?<br/>ex.: /p/{Slug}"}
+  PAGE -->|sim| BLZ[Blazor]
+  PAGE -->|não| PROXY["WebUi MapForwarder<br/>slug ^[A-Za-z0-9]{1,80}$"]
+  PROXY --> API["ShortLinkRedirectController<br/>log slug + code"]
+  API --> REPO["GetByShortCodeAsync(xh8pmzh)"]
+  REPO -->|achou| R302["302 para o marketplace + telemetria"]
+  REPO -->|não achou| R404["404 application/problem+json"]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

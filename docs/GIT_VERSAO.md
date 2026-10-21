@@ -140,3 +140,4 @@
 [2026-10-20 20:41:37] feat(busca): pilulas de categoria preservadas com selecao em azul e Outras categorias, selos clicaveis com modal de explicacao das notas
 [2026-10-20 21:51:01] feat(links): link de rastreio Ofertio com a URL base do ambiente (NavigationManager) e proxy do encurtador na WebUi
 [2026-10-20 22:50:12] feat(lojas): editar loja em Minhas Lojas via UPDATE (StoreEditModal) + fix(ml): preserva codigo MLB e remove ID ficticio MLB1234567890
+[2026-10-20 23:11:51] fix(shortlink): aceita slug numerico no link de rastreio (/97303724/xh8pmzh dava 404) + logs de redirect

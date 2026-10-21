@@ -26,22 +26,26 @@ public sealed class MercadoLivreController : ControllerBase
     private readonly ILogger<MercadoLivreController> _logger;
     private readonly IOAuthStateProtector? _stateProtector;
     private readonly IMemoryCache? _memoryCache;
+    private readonly IGlobalIntegrationService? _globalIntegrationService;
 
     public MercadoLivreController(
         IIntegracaoLojaService integracaoLojaService,
         ILogger<MercadoLivreController> logger,
         IOAuthStateProtector? stateProtector = null,
-        IMemoryCache? memoryCache = null)
+        IMemoryCache? memoryCache = null,
+        IGlobalIntegrationService? globalIntegrationService = null)
     {
         _integracaoLojaService = integracaoLojaService;
         _logger = logger;
         _stateProtector = stateProtector;
         _memoryCache = memoryCache;
+        _globalIntegrationService = globalIntegrationService;
     }
 
     /// <summary>
     /// Redirect URI do OAuth 2.0: recebe <c>code</c> + <c>state</c> selado, grava os tokens e devolve o
-    /// navegador para <c>/marketplace-accounts</c> da origem onde o OAuth começou.
+    /// navegador para a origem onde o OAuth começou (<c>/marketplace-accounts</c> ou, no OAuth Master,
+    /// <c>/master/integracoes-globais/mercado-livre</c>).
     /// </summary>
     [HttpGet("callback")]
     public async Task<IActionResult> CallbackAsync(
@@ -63,7 +67,8 @@ public sealed class MercadoLivreController : ControllerBase
             _memoryCache,
             _integracaoLojaService,
             _logger,
-            cancellationToken);
+            cancellationToken,
+            _globalIntegrationService);
 
         return MercadoLivreOAuthCallbackFlow.IsBrowserReturnUrl(outcome.Result.ReturnUrl)
             ? Redirect(outcome.Result.ReturnUrl)

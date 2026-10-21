@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -778,6 +779,180 @@ public class MercadoLivreApiServiceTests
             || request.Path.StartsWith("/categories/", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task SearchProductsAsync_WithMasterToken_ShouldUseItBeforeAccountTokenAndKeepClientAffiliate()
+    {
+        var handler = new RoutingHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "123", SecretKey = "secret" },
+            db =>
+            {
+                db.GlobalIntegrationTokens.Add(MasterToken("APP_USR-master", DateTime.UtcNow.AddHours(5)));
+                var account = MercadoLivreAccount(trackingId: "14343296");
+                account.AccessToken = "APP_USR-account";
+                account.ExpiresAt = DateTime.UtcNow.AddHours(4);
+                db.MarketplaceAccounts.Add(account);
+            });
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
+        Assert.Equal("Bearer APP_USR-master", search.Authorization);
+        Assert.Contains("matt_tool=14343296", Assert.Single(result.Items).SourceUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WhenMasterTokenRefused_ShouldRefreshPersistAndRetryTransparently()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var handler = new RoutingHandler
+        {
+            TokenBody = """{"access_token":"APP_USR-master-new","refresh_token":"TG-master-new","expires_in":21600}"""
+        };
+        handler.RefusedBearers.Add("APP_USR-master-old");
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "123", SecretKey = "secret" },
+            db => db.GlobalIntegrationTokens.Add(MasterToken("APP_USR-master-old", DateTime.UtcNow.AddHours(5), "TG-master-old")),
+            dbName);
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Single(result.Items);
+        Assert.Null(result.ErrorMessage);
+        var searches = handler.Requests.Where(request => request.Path == SearchPath).Select(request => request.Authorization).ToList();
+        Assert.Equal(["Bearer APP_USR-master-old", "Bearer APP_USR-master-new"], searches);
+        var tokenRequest = Assert.Single(handler.Requests, request => request.Path.Contains("oauth/token", StringComparison.Ordinal));
+        Assert.Contains("grant_type=refresh_token", tokenRequest.Body, StringComparison.Ordinal);
+        Assert.Contains("refresh_token=TG-master-old", tokenRequest.Body, StringComparison.Ordinal);
+        await using var verify = CreateDbContext(dbName);
+        var stored = await verify.GlobalIntegrationTokens.SingleAsync();
+        Assert.Equal("APP_USR-master-new", stored.AccessToken);
+        Assert.Equal("TG-master-new", stored.RefreshToken);
+        Assert.NotNull(stored.LastRefreshAt);
+        Assert.Null(stored.LastError);
+        Assert.True(stored.ExpiresAt > DateTime.UtcNow.AddHours(5));
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WhenMasterTokenExpired_ShouldRefreshBeforeSearching()
+    {
+        var handler = new RoutingHandler
+        {
+            TokenBody = """{"access_token":"APP_USR-master-new","refresh_token":"TG-master-new","expires_in":21600}"""
+        };
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "123", SecretKey = "secret" },
+            db => db.GlobalIntegrationTokens.Add(MasterToken("APP_USR-master-old", DateTime.UtcNow.AddHours(-1), "TG-master-old")));
+
+        await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
+        Assert.Equal("Bearer APP_USR-master-new", search.Authorization);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WhenMasterRefreshFails_ShouldRecordErrorAndFallBackToLegacyToken()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var handler = new RoutingHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AppId = "123", SecretKey = "secret", AccessToken = "static-token" },
+            db => db.GlobalIntegrationTokens.Add(MasterToken("APP_USR-master-old", DateTime.UtcNow.AddHours(-1), "TG-master-old")),
+            dbName);
+
+        var result = await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Single(result.Items);
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
+        Assert.Equal("Bearer static-token", search.Authorization);
+        await using var verify = CreateDbContext(dbName);
+        var stored = await verify.GlobalIntegrationTokens.SingleAsync();
+        Assert.False(string.IsNullOrWhiteSpace(stored.LastError));
+        Assert.Equal("APP_USR-master-old", stored.AccessToken);
+    }
+
+    [Fact]
+    public async Task GetItemAsync_WithMasterToken_ShouldUseMasterTokenEvenWithoutUser()
+    {
+        var handler = new RoutingHandler();
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions(),
+            db => db.GlobalIntegrationTokens.Add(MasterToken("APP_USR-master", DateTime.UtcNow.AddHours(5))));
+
+        var snapshot = await sut.GetItemAsync(0, "MLB123");
+
+        Assert.NotNull(snapshot);
+        var item = Assert.Single(handler.Requests, request => request.Path == "/items/MLB123");
+        Assert.Equal("Bearer APP_USR-master", item.Authorization);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WithSearchCache_ShouldServeIdenticalQueryWithoutCallingApi()
+    {
+        var handler = new RoutingHandler();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token", SearchCacheMinutes = "15" },
+            cache: cache);
+
+        var first = await sut.SearchProductsAsync(1, "Dell i7", 20, "111");
+        var apiCalls = handler.Requests.Count;
+        var second = await sut.SearchProductsAsync(2, "  dell   I7 ", 20, "222");
+
+        Assert.Equal(apiCalls, handler.Requests.Count);
+        Assert.Single(handler.Requests, request => request.Path == SearchPath);
+        Assert.Contains("matt_tool=111", Assert.Single(first.Items).SourceUrl, StringComparison.OrdinalIgnoreCase);
+        var cachedItem = Assert.Single(second.Items);
+        Assert.Contains("matt_tool=222", cachedItem.SourceUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("matt_tool=111", cachedItem.SourceUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_WithCacheDisabled_ShouldAlwaysCallApi()
+    {
+        var handler = new RoutingHandler();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AccessToken = "ml-app-token", SearchCacheMinutes = "0" },
+            cache: cache);
+
+        await sut.SearchProductsAsync(1, "dell i7", 20);
+        await sut.SearchProductsAsync(1, "dell i7", 20);
+
+        Assert.Equal(2, handler.Requests.Count(request => request.Path == SearchPath));
+    }
+
+    [Fact]
+    public async Task SearchProductsAsync_ShouldNotCacheRefusedSearches()
+    {
+        var handler = new RoutingHandler { SearchStatus = HttpStatusCode.Forbidden, SearchBody = """{"message":"forbidden"}""" };
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = CreateSut(
+            handler,
+            new MercadoLivreIntegrationOptions { AccessToken = "app-token", SearchCacheMinutes = "15" },
+            cache: cache);
+
+        await sut.SearchProductsAsync(1, "dell i7");
+        await sut.SearchProductsAsync(1, "dell i7");
+
+        Assert.Equal(2, handler.Requests.Count(request => request.Path == SearchPath));
+    }
+
+    private static GlobalIntegrationToken MasterToken(string accessToken, DateTime expiresAt, string? refreshToken = null) => new()
+    {
+        Provider = MarketplaceType.MercadoLivre,
+        AccessToken = accessToken,
+        RefreshToken = refreshToken,
+        ExpiresAt = expiresAt
+    };
+
     private static IReadOnlyList<string> Range(int offset, int count) =>
         Enumerable.Range(offset, count).Select(index => $"MLB{index}").ToList();
 
@@ -826,7 +1001,8 @@ public class MercadoLivreApiServiceTests
         HttpMessageHandler handler,
         MercadoLivreIntegrationOptions options,
         Action<AppDbContext>? seed = null,
-        string? dbName = null)
+        string? dbName = null,
+        IMemoryCache? cache = null)
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.mercadolibre.com/") };
         dbName ??= Guid.NewGuid().ToString();
@@ -846,7 +1022,8 @@ public class MercadoLivreApiServiceTests
             http,
             monitor.Object,
             factory.Object,
-            NullLogger<MercadoLivreApiService>.Instance);
+            NullLogger<MercadoLivreApiService>.Instance,
+            cache);
     }
 
     private static AppDbContext CreateDbContext(string? name = null)

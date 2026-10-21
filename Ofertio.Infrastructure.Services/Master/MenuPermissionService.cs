@@ -40,6 +40,9 @@ public sealed class MenuPermissionService : IMenuPermissionService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
         var lookup = permissions.ToDictionary(item => (item.PlanId, item.MenuItemId), item => item.IsVisible);
+        var byKey = items
+            .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
         return new MenuPermissionMatrixDto
         {
@@ -47,6 +50,14 @@ public sealed class MenuPermissionService : IMenuPermissionService
             Rows = MenuVisibilityRules.Flatten(items)
                 .Select(entry => new MenuPermissionRowDto
                 {
+                    IsFeatureToggle = DefaultMenuCatalog.FeatureDependencies.ContainsKey(entry.Item.Key),
+                    ControlledTitles = DefaultMenuCatalog.FeatureDependencies.TryGetValue(entry.Item.Key, out var dependents)
+                        ? dependents.Where(byKey.ContainsKey).Select(key => byKey[key].Title).ToList()
+                        : [],
+                    RequiresFeatureId = MenuVisibilityRules.FeatureFor(entry.Item.Key) is { } featureKey
+                        && byKey.TryGetValue(featureKey, out var feature) ? feature.Id : null,
+                    RequiresFeatureTitle = MenuVisibilityRules.FeatureFor(entry.Item.Key) is { } requiredKey
+                        && byKey.TryGetValue(requiredKey, out var required) ? required.Title : null,
                     MenuItemId = entry.Item.Id,
                     Key = entry.Item.Key,
                     Title = entry.Item.Title,
@@ -146,9 +157,11 @@ public sealed class MenuPermissionService : IMenuPermissionService
         var items = await LoadSourcesAsync(onlyActive: true, cancellationToken);
         var hidden = seesEverything
             ? new HashSet<int>()
-            : planId is int id
-                ? await HiddenForPlanAsync(id, cancellationToken)
-                : await HiddenForEveryPlanAsync(cancellationToken);
+            : MenuVisibilityRules.ApplyFeatureDependencies(
+                items,
+                planId is int id
+                    ? await HiddenForPlanAsync(id, cancellationToken)
+                    : await HiddenForEveryPlanAsync(cancellationToken));
 
         IReadOnlyList<ClientMenuNodeDto> tree = MenuVisibilityRules.BuildTree(items, hidden);
         _cache.Set(cacheKey, tree, CacheDuration);
@@ -168,6 +181,11 @@ public sealed class MenuPermissionService : IMenuPermissionService
         if (item.Id == target.Id)
         {
             return Fail("Solte o item em outra posição.");
+        }
+
+        if (DefaultMenuCatalog.FeatureDependencies.ContainsKey(item.Key) && request.Position == MenuDropPositions.Into)
+        {
+            return Fail("Chaves de permissão não podem ser movidas para dentro de pastas.");
         }
 
         int? newParentId;

@@ -510,6 +510,61 @@ namespace Ofertio.Data.Migrations
                     b.ToTable("ProdutosPropagandaGlobal");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.GlobalIntegrationToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AuthorizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AuthorizedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("AuthorizedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("LastRefreshAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RefreshExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider")
+                        .IsUnique();
+
+                    b.ToTable("GlobalIntegrationTokens", (string)null);
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.GlobalTrendingDeal", b =>
                 {
                     b.Property<int>("Id")

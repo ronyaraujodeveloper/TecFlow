@@ -85,6 +85,7 @@ public class AppDbContext : DbContext
     public DbSet<MenuItem> MenuItems { get; set; } = null!;
     public DbSet<PlanMenuPermission> PlanMenuPermissions { get; set; } = null!;
     public DbSet<SystemDeveloperAccount> SystemDeveloperAccounts { get; set; } = null!;
+    public DbSet<GlobalIntegrationToken> GlobalIntegrationTokens { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema Ofertio (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -754,6 +755,16 @@ public class AppDbContext : DbContext
             entity.HasOne(item => item.MenuItem).WithMany().HasForeignKey(item => item.MenuItemId);
         });
 
+        modelBuilder.Entity<GlobalIntegrationToken>(entity =>
+        {
+            entity.ToTable("GlobalIntegrationTokens");
+            entity.Property(item => item.AccessToken).HasColumnType("nvarchar(max)").IsRequired();
+            entity.Property(item => item.RefreshToken).HasColumnType("nvarchar(max)");
+            entity.Property(item => item.LastError).HasMaxLength(512);
+            entity.Property(item => item.AuthorizedBy).HasMaxLength(256);
+            entity.HasIndex(item => item.Provider).IsUnique();
+        });
+
         modelBuilder.Entity<SystemDeveloperAccount>(entity =>
         {
             entity.ToTable("SystemDeveloperAccounts");
@@ -930,5 +941,9 @@ public class AppDbContext : DbContext
         var developerAccount = modelBuilder.Entity<SystemDeveloperAccount>();
         developerAccount.Property(item => item.ClientSecret).HasConversion(encryptedNullableString);
         developerAccount.Property(item => item.TestPassword).HasConversion(encryptedNullableString);
+
+        var globalToken = modelBuilder.Entity<GlobalIntegrationToken>();
+        globalToken.Property(item => item.AccessToken).HasConversion(encryptedString);
+        globalToken.Property(item => item.RefreshToken).HasConversion(encryptedNullableString);
     }
 }

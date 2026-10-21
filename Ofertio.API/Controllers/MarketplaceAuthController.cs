@@ -31,6 +31,7 @@ public class MarketplaceAuthController : ControllerBase
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IOAuthStateProtector? _stateProtector;
     private readonly IMemoryCache? _memoryCache;
+    private readonly IGlobalIntegrationService? _globalIntegrationService;
 
     /// <summary>
     /// Não injeta AppDbContext/OfertioDbContext: o EF fica no serviço (DI scoped).
@@ -42,10 +43,12 @@ public class MarketplaceAuthController : ControllerBase
         ILogger<MarketplaceAuthController> logger,
         IHostEnvironment hostEnvironment,
         IOAuthStateProtector? stateProtector = null,
-        IMemoryCache? memoryCache = null)
+        IMemoryCache? memoryCache = null,
+        IGlobalIntegrationService? globalIntegrationService = null)
     {
         _stateProtector = stateProtector;
         _memoryCache = memoryCache;
+        _globalIntegrationService = globalIntegrationService;
         ArgumentNullException.ThrowIfNull(marketplaceAuthService);
         ArgumentNullException.ThrowIfNull(integracaoLojaService);
         ArgumentNullException.ThrowIfNull(logger);
@@ -117,7 +120,8 @@ public class MarketplaceAuthController : ControllerBase
             _memoryCache,
             _integracaoLojaService,
             _logger,
-            cancellationToken);
+            cancellationToken,
+            _globalIntegrationService);
         return outcome.StatusCode switch
         {
             StatusCodes.Status200OK => Ok(outcome.Result),

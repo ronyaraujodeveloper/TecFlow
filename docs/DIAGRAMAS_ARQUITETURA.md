@@ -1841,6 +1841,41 @@ flowchart LR
   REPO -->|não achou| R404["404 application/problem+json"]
 ```
 
+### Integrações Globais: API Mercado Livre no Painel Master (`GlobalIntegrationsMaster`)
+
+```mermaid
+flowchart LR
+  MASTER["MasterGlobalMercadoLivre.razor<br/>/master/integracoes-globais/mercado-livre"] --> CTRL["MasterGlobalIntegrationsController<br/>(ManageGlobalKeys)"]
+  CTRL --> GIS["GlobalIntegrationService"]
+  GIS --> SETTINGS["SystemSettingsService<br/>Integrations:MercadoLivre:SearchCacheMinutes"]
+  CTRL -->|"authorize-url (state IsMaster)"| ML["auth.mercadolivre.com.br"]
+  ML --> CB["MercadoLivreOAuthCallbackFlow"]
+  CB -->|"state.IsMaster"| GIS
+  GIS --> DB[("GlobalIntegrationTokens<br/>token criptografado")]
+```
+
+```mermaid
+flowchart TD
+  CLI["Busca Global / Radar (cliente)"] --> API["MercadoLivreApiService.SearchCatalogAsync"]
+  API --> CACHE{"IMemoryCache<br/>consulta + filtros dentro do TTL?"}
+  CACHE -->|sim| AFF["Clona e aplica matt_tool do cliente"]
+  CACHE -->|não| TOKEN["Token Master (GlobalIntegrationTokens)"]
+  TOKEN -->|"expirado"| REFRESH["refresh_token (SemaphoreSlim)<br/>persiste novo token"]
+  TOKEN --> CALL["API oficial do Mercado Livre"]
+  REFRESH --> CALL
+  CALL -->|"401/403"| REFRESH
+  CALL -->|ok| SET["Grava no cache (sem afiliado)"]
+  SET --> AFF
+  TOKEN -->|"ausente ou falhou"| LEGACY["Fallback: token do usuário / estático / app"]
+```
+
+```mermaid
+flowchart LR
+  MATRIX["Matriz de menus x planos<br/>permissão Integrações Globais"] --> RULES["MenuVisibilityRules.ApplyFeatureDependencies"]
+  RULES -->|"desligada no plano"| HIDE["Oculta Buscar Ofertas, Radar de Ofertas<br/>e Perfil de mineração"]
+  RULES -->|"ligada"| SHOW["Menus voltam a aparecer"]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

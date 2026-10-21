@@ -227,10 +227,11 @@ public static class IntegracoesEndpointExtensions
     private static string SafeReturnUrl(string? returnUrl, bool success, string? message)
     {
         if (!string.IsNullOrWhiteSpace(returnUrl)
-            && (returnUrl.StartsWith(MarketplaceOAuthStateRules.AccountsPath, StringComparison.Ordinal)
+            && ((returnUrl.StartsWith('/') && !returnUrl.StartsWith("//", StringComparison.Ordinal)
+                    && MarketplaceOAuthStateRules.IsAllowedReturnPath(returnUrl.Split('?', 2)[0]))
                 || (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absolute)
                     && (absolute.Scheme == Uri.UriSchemeHttps || absolute.Scheme == Uri.UriSchemeHttp)
-                    && absolute.AbsolutePath.Equals(MarketplaceOAuthStateRules.AccountsPath, StringComparison.OrdinalIgnoreCase))))
+                    && MarketplaceOAuthStateRules.IsAllowedReturnPath(absolute.AbsolutePath))))
         {
             return returnUrl;
         }

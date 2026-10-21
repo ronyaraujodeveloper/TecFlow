@@ -11,9 +11,11 @@ public sealed record MenuItemDefinition(
     int Order,
     IReadOnlyList<string>? HiddenForPlans = null,
     string? Badge = null,
-    bool HiddenForAllPlans = false)
+    bool HiddenForAllPlans = false,
+    bool IsFeatureToggle = false)
 {
-    public bool IsFolder => Route is null;
+    /// <summary>Chave de permissão (sem rota) que libera um conjunto de telas; nunca aparece na sidebar.</summary>
+    public bool IsFolder => Route is null && !IsFeatureToggle;
 }
 
 /// <summary>
@@ -25,8 +27,19 @@ public static class DefaultMenuCatalog
     public const string RadarOffers = "integracoes.radar";
     public const string RadarProfile = "integracoes.radar-perfil";
     public const string MarketplaceAccounts = "integracoes.lojas";
+    public const string OfferSearch = "integracoes.busca";
+
+    /// <summary>Permissão "Integrações Globais": libera as telas que consomem a API oficial conectada no Master.</summary>
+    public const string GlobalIntegrations = "integracoes-globais";
 
     private static readonly IReadOnlyList<string> RadarPlans = [SaasPlanCodes.Starter];
+
+    /// <summary>Telas ocultadas automaticamente quando a permissão (chave) está desligada para o plano.</summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> FeatureDependencies =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [GlobalIntegrations] = [OfferSearch, RadarOffers, RadarProfile]
+        };
 
     public static readonly IReadOnlyList<MenuItemDefinition> All =
     [
@@ -36,6 +49,8 @@ public static class DefaultMenuCatalog
         new("mensageria.conexoes", "Conexões (WA & Telegram)", "/integracoes/conexoes", "bi-qr-code", "mensageria", 10),
         new("mensageria.agendador", "Agendador de Grupos", "/integracoes/agendador", "bi-calendar-week", "mensageria", 20),
         new("mensageria.bot", "Bot de Conversão", "/integracoes/bot-conversor", "bi-robot", "mensageria", 30),
+
+        new(GlobalIntegrations, "Integrações Globais", null, "bi-globe-americas", null, 25, IsFeatureToggle: true),
 
         new("canais", "Canais", null, "bi-broadcast-pin", null, 30),
         new("whatsapp", "WhatsApp", null, "bi-whatsapp", "canais", 10),
@@ -49,7 +64,7 @@ public static class DefaultMenuCatalog
         new(MarketplaceAccounts, "Minhas Lojas / Integrações", "/marketplace-accounts", "bi-shop", "integracoes", 10),
         new("integracoes.links", "Links & Ofertas", null, "bi-link-45deg", "integracoes", 20),
         new("integracoes.gerador", "Gerador de Links", "/gerador-links", "bi-link-45deg", "integracoes.links", 10),
-        new("integracoes.busca", "Buscar Ofertas", "/busca", "bi-search", "integracoes.links", 20),
+        new(OfferSearch, "Buscar Ofertas", "/busca", "bi-search", "integracoes.links", 20),
         new(RadarOffers, "Radar de Ofertas", "/radar-ofertas", "bi-broadcast", "integracoes.links", 30, RadarPlans),
         new(RadarProfile, "Perfil de mineração", "/radar/perfil", "bi-sliders", "integracoes.links", 40, RadarPlans),
         new("integracoes.conteudo", "Conteúdo & Vitrines", null, "bi-collection", "integracoes", 30),
@@ -215,6 +230,41 @@ public static class MenuVisibilityRules
             return nodes;
         }
     }
+
+    /// <summary>
+    /// Acrescenta aos ocultos as telas dependentes de cada chave de permissão desligada para o plano
+    /// (chave inativa, ausente da lista ou marcada como oculta); religar a chave devolve as telas.
+    /// </summary>
+    public static HashSet<int> ApplyFeatureDependencies(IReadOnlyCollection<MenuNodeSource> items, IReadOnlySet<int> hiddenIds)
+    {
+        var result = hiddenIds.ToHashSet();
+        var byKey = items
+            .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        foreach (var (featureKey, dependents) in DefaultMenuCatalog.FeatureDependencies)
+        {
+            if (byKey.TryGetValue(featureKey, out var feature) && feature.IsActive && !hiddenIds.Contains(feature.Id))
+            {
+                continue;
+            }
+
+            foreach (var dependent in dependents)
+            {
+                if (byKey.TryGetValue(dependent, out var item))
+                {
+                    result.Add(item.Id);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Chave de permissão da qual a tela depende (null quando não depende de nenhuma).</summary>
+    public static string? FeatureFor(string key) =>
+        DefaultMenuCatalog.FeatureDependencies
+            .FirstOrDefault(pair => pair.Value.Contains(key, StringComparer.OrdinalIgnoreCase))
+            .Key;
 
     /// <summary>Ordena a árvore em lista plana (pai antes dos filhos) com a profundidade de cada item.</summary>
     public static List<(MenuNodeSource Item, int Depth)> Flatten(IReadOnlyCollection<MenuNodeSource> items)

@@ -183,7 +183,7 @@
 
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-outline-secondary" disabled="@_linking" @onclick="Close">
-                        Cancelar
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancelar
                     </button>
                     <button type="button"
                             class="btn btn-primary"
@@ -198,7 +198,7 @@
                     @if (SupportsOAuth && !IsEditMode)
                     {
                         <button type="button" class="btn btn-outline-primary" disabled="@_linking" @onclick="StartOAuthAsync">
-                            @(_linking ? "Redirecionando..." : "Conectar via OAuth")
+                            <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>@(_linking ? "Redirecionando..." : "Conectar via OAuth")
                         </button>
                     }
                 </div>
@@ -268,7 +268,8 @@
     private bool _trackingInvalid;
 
     private string? DisplayError => ErrorMessage ?? _formError;
-    private bool SupportsOAuth => !_platform.IsUniversalAffiliatePlatform() || _platform == MarketplaceType.MercadoLivre;
+    /// <summary>A API oficial do Mercado Livre é conectada pelo Master (Integrações Globais); lojas Universal Link só guardam o Tracking ID.</summary>
+    private bool SupportsOAuth => !_platform.IsUniversalAffiliatePlatform();
     private bool CanSaveAccount => !_linking && !_expanding && !_trackingInvalid;
     private bool IsEditMode => EditingStore is not null;
     private bool PlatformPickerDisabled => _linking || IsEditMode;

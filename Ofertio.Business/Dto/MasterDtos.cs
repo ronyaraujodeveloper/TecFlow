@@ -289,6 +289,13 @@ public class MenuPermissionRowDto
     /// <summary>Pasta criada no Master (pode ser excluída quando vazia).</summary>
     public bool IsCustomFolder { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>Chave de permissão (ex.: Integrações Globais) que libera outras telas; não vira link na sidebar.</summary>
+    public bool IsFeatureToggle { get; set; }
+    /// <summary>Títulos das telas controladas por esta chave de permissão.</summary>
+    public List<string> ControlledTitles { get; set; } = [];
+    /// <summary>MenuItemId da chave de permissão da qual esta tela depende (null quando independente).</summary>
+    public int? RequiresFeatureId { get; set; }
+    public string? RequiresFeatureTitle { get; set; }
     /// <summary>PlanId → visível.</summary>
     public Dictionary<int, bool> Visibility { get; set; } = [];
 }

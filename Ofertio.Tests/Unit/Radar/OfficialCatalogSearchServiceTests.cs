@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Radar;
 using Ofertio.Core.Enums;
 using Ofertio.Database;
 using Ofertio.Database.Filter;
@@ -126,7 +127,7 @@ public class OfficialCatalogSearchServiceTests
         var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter { Keyword = "dell i7" });
         var mlStatus = result.Channels.Single(c => c.Key == "MercadoLivre");
         Assert.Equal("missing", mlStatus.State);
-        Assert.Equal("Requer OAuth do Mercado Livre para buscar ofertas", mlStatus.Message);
+        Assert.Equal(OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage, mlStatus.Message);
     }
 
     [Fact]

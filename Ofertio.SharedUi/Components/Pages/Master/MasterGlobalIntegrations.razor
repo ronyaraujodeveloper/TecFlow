@@ -1,0 +1,89 @@
+﻿@page "/master/integracoes-globais"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@inject IMasterApiService Api
+
+<PageTitle>Integrações Globais — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Integrações Globais</h1>
+        <p class="text-muted small mb-0">
+            Conexões da plataforma com as APIs oficiais dos marketplaces, autorizadas uma única vez aqui e usadas de forma
+            transparente por todos os clientes (Buscar Ofertas, Radar de Ofertas e Perfil de mineração).
+            Os clientes só cadastram o ID de afiliado em Minhas Lojas.
+        </p>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    <div class="row g-3">
+        @foreach (var provider in GlobalIntegrationRules.Providers)
+        {
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong><i class="bi @provider.Icon me-1" aria-hidden="true"></i>@provider.Label</strong>
+                            @if (!provider.Available)
+                            {
+                                <span class="badge text-bg-secondary">Em breve</span>
+                            }
+                            else if (_mercadoLivre is not null && provider.Href == MasterRoutes.GlobalMercadoLivre)
+                            {
+                                <span class="badge @GlobalIntegrationRules.StatusBadgeClass(_mercadoLivre.Status)">@_mercadoLivre.Status</span>
+                            }
+                        </div>
+                        @if (provider.Href == MasterRoutes.GlobalMercadoLivre && _mercadoLivre is not null)
+                        {
+                            <div class="small text-muted">
+                                Token expira em @DateTimeText(_mercadoLivre.ExpiresAt) · cache de buscas: @CacheText(_mercadoLivre.SearchCacheMinutes)
+                            </div>
+                        }
+                        else if (!provider.Available)
+                        {
+                            <div class="small text-muted">Prevista: a conexão Master seguirá o mesmo modelo da API Mercado Livre.</div>
+                        }
+                        <div class="mt-auto">
+                            @if (provider.Available && provider.Href is not null)
+                            {
+                                <a class="btn btn-outline-primary btn-touch" href="@provider.Href">
+                                    <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Gerenciar
+                                </a>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-outline-secondary btn-touch" disabled>
+                                    <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Em breve
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private GlobalIntegrationStatusDto? _mercadoLivre;
+
+    protected override async Task LoadAsync()
+    {
+        if (!Can(MasterPermissions.ManageGlobalKeys))
+        {
+            Error = "Seu papel não tem acesso às Integrações Globais (chaves globais).";
+            return;
+        }
+
+        var result = await Api.GlobalMercadoLivreStatusAsync();
+        if (Accept(result))
+        {
+            _mercadoLivre = result.Data;
+        }
+    }
+
+    private static string CacheText(int minutes) => minutes == 0 ? "desligado" : $"{minutes} min";
+}

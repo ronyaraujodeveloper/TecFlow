@@ -43,10 +43,10 @@ public static class OfficialCatalogSearchRules
     public const string AmazonMissingPaApiMessage = "PA-API não configurada";
 
     public const string MercadoLivreMissingAccountMessage =
-        "Requer OAuth do Mercado Livre para buscar ofertas";
+        "API Mercado Livre ainda não autorizada pelo administrador da plataforma";
 
     public const string MercadoLivreSearchForbiddenMessage =
-        "A API oficial do Mercado Livre recusou a busca (HTTP 403). Conecte ou reconecte a conta Mercado Livre em Minhas Lojas (OAuth); a vitrine pública não é consultada para evitar o bloqueio anti-robô.";
+        "A API oficial do Mercado Livre recusou a busca (HTTP 403). A conexão é gerenciada pelo administrador da plataforma (Painel Master ➔ Integrações Globais); a vitrine pública não é consultada para evitar o bloqueio anti-robô.";
 
     /// <summary>401/403 ou erro de escopo de usuário na busca oficial (o token precisa ser renovado ou a conta reconectada).</summary>
     public static bool IsMercadoLivreSearchRefused(HttpStatusCode statusCode, string? body)

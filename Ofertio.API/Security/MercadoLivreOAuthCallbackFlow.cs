@@ -25,7 +25,8 @@ public static class MercadoLivreOAuthCallbackFlow
         IMemoryCache? memoryCache,
         IIntegracaoLojaService integracaoLojaService,
         Microsoft.Extensions.Logging.ILogger logger,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IGlobalIntegrationService? globalIntegrationService = null)
     {
         if (stateProtector is null
             || !stateProtector.TryUnprotect(request?.State, out var state)
@@ -36,19 +37,25 @@ public static class MercadoLivreOAuthCallbackFlow
             return Fail(StatusCodes.Status400BadRequest, null, MarketplaceOAuthStateRules.InvalidStateMessage);
         }
 
+        var returnPath = MarketplaceOAuthStateRules.ReturnPathFor(state);
         if (!string.IsNullOrWhiteSpace(request!.Error))
         {
-            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, $"Autorização recusada: {request.Error.Trim()}");
+            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, $"Autorização recusada: {request.Error.Trim()}", returnPath);
         }
 
         if (string.IsNullOrWhiteSpace(request.Code))
         {
-            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, "Callback OAuth incompleto (code).");
+            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, "Callback OAuth incompleto (code).", returnPath);
         }
 
         if (!TryConsumeStateNonce(memoryCache, state))
         {
-            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, MarketplaceOAuthStateRules.ReplayedStateMessage);
+            return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, MarketplaceOAuthStateRules.ReplayedStateMessage, returnPath);
+        }
+
+        if (state.IsMaster)
+        {
+            return await CompleteMasterAsync(state, request.Code.Trim(), globalIntegrationService, logger, cancellationToken);
         }
 
         httpContext.User = BuildStatePrincipal(state);
@@ -67,7 +74,7 @@ public static class MercadoLivreOAuthCallbackFlow
                 cancellationToken);
             if (!result.Status)
             {
-                return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, result.Descricao);
+                return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, result.Descricao, returnPath);
             }
 
             logger.LogInformation(
@@ -89,11 +96,53 @@ public static class MercadoLivreOAuthCallbackFlow
         }
     }
 
+    /// <summary>Token Master (Integrações Globais): grava o token global em vez de vincular uma loja do cliente.</summary>
+    private static async Task<MercadoLivreOAuthCallbackOutcome> CompleteMasterAsync(
+        MarketplaceOAuthState state,
+        string code,
+        IGlobalIntegrationService? globalIntegrationService,
+        Microsoft.Extensions.Logging.ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        const string path = MarketplaceOAuthStateRules.MasterMercadoLivrePath;
+        if (globalIntegrationService is null)
+        {
+            return Fail(StatusCodes.Status500InternalServerError, state.CallbackUri, "Serviço de Integrações Globais indisponível.", path);
+        }
+
+        try
+        {
+            var result = await globalIntegrationService.CompleteMercadoLivreAuthorizationAsync(
+                state.UserId,
+                code,
+                state.CallbackUri,
+                state.CodeVerifier,
+                cancellationToken);
+            if (!result.Success)
+            {
+                return Fail(StatusCodes.Status400BadRequest, state.CallbackUri, result.Message, path);
+            }
+
+            logger.LogInformation("Token Master ML gravado via callback. UserId={UserId}", state.UserId);
+            return new MercadoLivreOAuthCallbackOutcome(StatusCodes.Status200OK, new MarketplaceOAuthCallbackResultDto
+            {
+                Success = true,
+                Message = result.Message,
+                ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(state.CallbackUri, success: true, path: path)
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erro ao salvar o token Master do Mercado Livre no SQL Server");
+            return Fail(StatusCodes.Status500InternalServerError, state.CallbackUri, MarketplaceAuthService.FormatSqlError(ex), path);
+        }
+    }
+
     /// <summary>Só redireciona o navegador para a origem absoluta do painel; sem ela a API responde JSON.</summary>
     public static bool IsBrowserReturnUrl(string? returnUrl) =>
         Uri.TryCreate(returnUrl, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
-        && uri.AbsolutePath.Equals(MarketplaceOAuthStateRules.AccountsPath, StringComparison.OrdinalIgnoreCase);
+        && MarketplaceOAuthStateRules.IsAllowedReturnPath(uri.AbsolutePath);
 
     private static bool TryConsumeStateNonce(IMemoryCache? memoryCache, MarketplaceOAuthState state)
     {
@@ -126,14 +175,14 @@ public static class MercadoLivreOAuthCallbackFlow
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "OAuthState"));
     }
 
-    private static MercadoLivreOAuthCallbackOutcome Fail(int statusCode, string? callbackUri, string? message)
+    private static MercadoLivreOAuthCallbackOutcome Fail(int statusCode, string? callbackUri, string? message, string? path = null)
     {
         var text = string.IsNullOrWhiteSpace(message) ? "Não foi possível vincular a loja." : message.Trim();
         return new MercadoLivreOAuthCallbackOutcome(statusCode, new MarketplaceOAuthCallbackResultDto
         {
             Success = false,
             Message = text,
-            ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(callbackUri, success: false, text)
+            ReturnUrl = MarketplaceOAuthStateRules.BuildReturnUrl(callbackUri, success: false, text, path)
         });
     }
 }

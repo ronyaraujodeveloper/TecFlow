@@ -2648,6 +2648,13 @@ html, body {
     font-weight: 600;
 }
 
+@media (min-width: 992px) {
+    .master-nav-sublink {
+        padding-left: 2rem;
+        font-size: 0.86rem;
+    }
+}
+
 .master-sidebar-footer {
     display: none;
     color: #64748b;

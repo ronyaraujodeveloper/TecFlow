@@ -7,12 +7,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Integrations.Auth;
 using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.Radar;
 using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
@@ -37,28 +39,35 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private static readonly ConcurrentDictionary<int, DateTime> NotConnectedLoggedAt = new();
 
+    private static readonly SemaphoreSlim MasterRefreshLock = new(1, 1);
+
+    private const string ReauthorizeMasterHint = "autorize a API Mercado Livre no Painel Master ➔ Integrações Globais";
+
     private readonly HttpClient _httpClient;
     private readonly IOptionsMonitor<MercadoLivreIntegrationOptions> _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<MercadoLivreApiService> _logger;
+    private readonly IMemoryCache? _searchCache;
 
     public MercadoLivreApiService(
         HttpClient httpClient,
         IOptionsMonitor<MercadoLivreIntegrationOptions> options,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<MercadoLivreApiService> logger)
+        ILogger<MercadoLivreApiService> logger,
+        IMemoryCache? searchCache = null)
     {
         _httpClient = httpClient;
         _options = options;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
+        _searchCache = searchCache;
         EnsurePublicUserAgent(_httpClient);
     }
 
     /// <summary>
-    /// <c>GET https://api.mercadolibre.com/items/{id}</c> com <c>Authorization: Bearer</c>: token OAuth da conta
-    /// conectada no painel (renovado via refresh_token quando expira ou é recusado) ➔ token fixo ➔ token do app.
-    /// Sem usuário (<paramref name="userId"/> ≤ 0, rotinas em segundo plano) não usa conta de nenhum inquilino.
+    /// <c>GET https://api.mercadolibre.com/items/{id}</c> com <c>Authorization: Bearer</c>: token Master (Integrações
+    /// Globais, renovado via refresh_token quando expira ou é recusado) ➔ token OAuth legado da conta do cliente ➔
+    /// token fixo ➔ token do app. Sem usuário (<paramref name="userId"/> ≤ 0) não usa conta de nenhum inquilino.
     /// </summary>
     public async Task<OfficialOfferSnapshotDto?> GetItemAsync(
         int userId,
@@ -73,26 +82,47 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         itemId = itemId.Trim();
         try
         {
-            var account = userId > 0 ? await LoadMercadoLivreAccountAsync(userId, cancellationToken) : null;
-            var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
-            if (userId > 0)
+            var masterToken = await ResolveMasterAccessTokenAsync(cancellationToken);
+            MarketplaceAccount? account = null;
+            string? accountToken = null;
+            if (masterToken is null)
             {
-                LogItemAccountState(userId, itemId, account, accountToken);
+                account = userId > 0 ? await LoadMercadoLivreAccountAsync(userId, cancellationToken) : null;
+                accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
+                if (userId > 0)
+                {
+                    LogItemAccountState(userId, itemId, account, accountToken);
+                }
             }
 
-            var accessToken = accountToken
+            var accessToken = masterToken
+                ?? accountToken
                 ?? ResolveStaticAccessToken()
                 ?? await GetAppAccessTokenAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 _logger.LogWarning(
-                    "[ML Item] Sem access_token para consultar o item {ItemId}: conecte a conta Mercado Livre em Minhas Lojas ou configure Integrations:MercadoLivre:AppId/SecretKey.",
-                    itemId);
+                    "[ML Item] Sem access_token para consultar o item {ItemId}: {Hint} ou configure Integrations:MercadoLivre:AppId/SecretKey.",
+                    itemId,
+                    ReauthorizeMasterHint);
                 return null;
             }
 
             var (statusCode, body) = await SendItemAsync(itemId, accessToken, cancellationToken);
-            if ((statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) && accountToken is not null)
+            if ((statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) && masterToken is not null)
+            {
+                _logger.LogWarning(
+                    "[ML Item] API recusou o token Master para o item {ItemId} [{StatusCode}]; renovando via refresh_token.",
+                    itemId,
+                    (int)statusCode);
+                var renewedMaster = await RefreshMasterTokenAsync(masterToken, cancellationToken);
+                if (renewedMaster is not null)
+                {
+                    accessToken = renewedMaster;
+                    (statusCode, body) = await SendItemAsync(itemId, accessToken, cancellationToken);
+                }
+            }
+            else if ((statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) && accountToken is not null)
             {
                 _logger.LogWarning(
                     "[ML Item] API recusou o token da conta '{AccountName}' (Id={AccountId}) para o item {ItemId} [{StatusCode}]; renovando via refresh_token.",
@@ -140,18 +170,20 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
             NotConnectedLoggedAt[userId] = now;
             _logger.LogWarning(
-                "[ML Item] Nenhuma conta Mercado Livre conectada/autorizada no painel para o usuário {UserId}. Conecte em Minhas Lojas ➔ Mercado Livre (OAuth) para consultar o item {ItemId} com o token da loja.",
+                "[ML Item] Sem token Master da API Mercado Livre para consultar o item {ItemId} (usuário {UserId}): {Hint}.",
+                itemId,
                 userId,
-                itemId);
+                ReauthorizeMasterHint);
             return;
         }
 
         if (accountToken is null)
         {
             _logger.LogWarning(
-                "[ML Item] Token OAuth da conta '{AccountName}' (Id={AccountId}) expirado e o refresh_token não renovou o acesso. Reconecte a conta Mercado Livre em Minhas Lojas.",
+                "[ML Item] Token OAuth legado da conta '{AccountName}' (Id={AccountId}) expirado e o refresh_token não renovou o acesso: {Hint}.",
                 DescribeAccount(account),
-                account.Id);
+                account.Id,
+                ReauthorizeMasterHint);
         }
     }
 
@@ -269,6 +301,50 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         var affiliateId = OfficialCatalogSearchRules.ResolveMercadoLivreAffiliateId(
             FirstNonEmpty(request.TrackingId, account?.TrackingId, account?.AffiliateTrackingId),
             null);
+
+        var cacheMinutes = _searchCache is null ? 0 : _options.CurrentValue.ResolveSearchCacheMinutes();
+        var cacheKey = cacheMinutes > 0 ? MercadoLivreSearchCacheRules.BuildKey(query, request) : null;
+        if (cacheKey is not null
+            && _searchCache!.TryGetValue(cacheKey, out OfficialCatalogChannelResult? cached)
+            && cached is not null)
+        {
+            _logger.LogInformation(
+                "[ML Busca] '{Query}' servida do cache global ({Minutes} min): {OfferCount} ofertas, sem consumir a cota da API.",
+                query,
+                cacheMinutes,
+                cached.Items.Count);
+            return MercadoLivreSearchCacheRules.ForAffiliate(cached, affiliateId);
+        }
+
+        var result = await SearchCatalogFromApiAsync(account, request, query, cancellationToken);
+        if (cacheKey is not null && MercadoLivreSearchCacheRules.IsCacheable(result))
+        {
+            _searchCache!.Set(cacheKey, MercadoLivreSearchCacheRules.Clone(result), TimeSpan.FromMinutes(cacheMinutes));
+        }
+
+        return MercadoLivreSearchCacheRules.ApplyAffiliate(result, affiliateId);
+    }
+
+    /// <summary>
+    /// Busca na API sem afiliado (o <c>matt_tool</c> é aplicado por cliente depois, inclusive sobre o cache):
+    /// token Master ➔ (recusado: refresh_token + nova tentativa) ➔ token OAuth legado da conta ➔ token fixo ➔ token do app.
+    /// </summary>
+    private async Task<OfficialCatalogChannelResult> SearchCatalogFromApiAsync(
+        MarketplaceAccount? account,
+        MercadoLivreCatalogSearchRequest request,
+        string query,
+        CancellationToken cancellationToken)
+    {
+        var masterToken = await ResolveMasterAccessTokenAsync(cancellationToken);
+        if (masterToken is not null)
+        {
+            var masterResult = await SearchWithMasterTokenAsync(masterToken, request, query, cancellationToken);
+            if (masterResult is not null)
+            {
+                return masterResult;
+            }
+        }
+
         var accountToken = await ResolveAccountAccessTokenAsync(account, cancellationToken);
         var accessToken = accountToken
             ?? ResolveStaticAccessToken()
@@ -276,8 +352,9 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         if (string.IsNullOrWhiteSpace(accessToken))
         {
             _logger.LogWarning(
-                "[ML Busca] Sem access_token para buscar '{Query}': conecte a conta Mercado Livre em Minhas Lojas ou configure Integrations:MercadoLivre:AppId/SecretKey.",
-                query);
+                "[ML Busca] Sem access_token para buscar '{Query}': {Hint} ou configure Integrations:MercadoLivre:AppId/SecretKey.",
+                query,
+                ReauthorizeMasterHint);
             return OfficialCatalogChannelResult.Unconfigured();
         }
 
@@ -288,7 +365,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
         try
         {
-            return await ScanCatalogAsync(request, query, accessToken.Trim(), affiliateId, cancellationToken);
+            return await ScanCatalogAsync(request, query, accessToken.Trim(), affiliateId: null, cancellationToken);
         }
         catch (MercadoLivreSearchForbiddenException ex) when (accountToken is not null)
         {
@@ -298,48 +375,105 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 account!.Id,
                 query,
                 ex.Message);
-            return await RetryWithRenewedAccountTokenAsync(account, request, query, affiliateId, cancellationToken);
+            return await RetryWithRenewedAccountTokenAsync(account, request, query, cancellationToken);
         }
         catch (MercadoLivreSearchForbiddenException ex)
         {
             _logger.LogWarning(
-                "[ML Busca] API oficial recusou a busca de '{Query}' com o token do aplicativo ({Reason}); conecte a conta Mercado Livre em Minhas Lojas (OAuth).",
+                "[ML Busca] API oficial recusou a busca de '{Query}' com o token do aplicativo ({Reason}); {Hint}.",
                 query,
-                ex.Message);
+                ex.Message,
+                ReauthorizeMasterHint);
             EvictAppToken(accessToken);
             return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
         catch (Exception ex)
         {
-            var tracedError = string.IsNullOrWhiteSpace(ex.Message)
-                ? OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage
-                : ex.Message;
-            _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
-            return OfficialCatalogChannelResult.Failed(tracedError);
+            return TraceSearchError(ex, query);
         }
+    }
+
+    /// <summary>Null quando o token Master foi recusado e não renovou: a busca segue para os tokens legados.</summary>
+    private async Task<OfficialCatalogChannelResult?> SearchWithMasterTokenAsync(
+        string masterToken,
+        MercadoLivreCatalogSearchRequest request,
+        string query,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await ScanCatalogAsync(request, query, masterToken, affiliateId: null, cancellationToken);
+            _logger.LogInformation("[ML Busca] Busca '{Query}' realizada com o token Master (Integrações Globais).", query);
+            return result;
+        }
+        catch (MercadoLivreSearchForbiddenException ex)
+        {
+            _logger.LogWarning(
+                "[ML Busca] API recusou o token Master para '{Query}' ({Reason}); renovando via refresh_token e repetindo a busca.",
+                query,
+                ex.Message);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return TraceSearchError(ex, query);
+        }
+
+        var renewed = await RefreshMasterTokenAsync(masterToken, cancellationToken);
+        if (renewed is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var result = await ScanCatalogAsync(request, query, renewed, affiliateId: null, cancellationToken);
+            _logger.LogInformation("[ML Busca] Busca '{Query}' repetida com o token Master renovado.", query);
+            return result;
+        }
+        catch (MercadoLivreSearchForbiddenException ex)
+        {
+            _logger.LogWarning(
+                "[ML Busca] API recusou também o token Master renovado para '{Query}' ({Reason}).",
+                query,
+                ex.Message);
+            return null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return TraceSearchError(ex, query);
+        }
+    }
+
+    private OfficialCatalogChannelResult TraceSearchError(Exception ex, string query)
+    {
+        var tracedError = string.IsNullOrWhiteSpace(ex.Message)
+            ? OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage
+            : ex.Message;
+        _logger.LogError(ex, "Erro na busca API do Mercado Livre para '{Query}': {Error}", query, tracedError);
+        return OfficialCatalogChannelResult.Failed(tracedError);
     }
 
     private async Task<OfficialCatalogChannelResult> RetryWithRenewedAccountTokenAsync(
         MarketplaceAccount account,
         MercadoLivreCatalogSearchRequest request,
         string query,
-        string? affiliateId,
         CancellationToken cancellationToken)
     {
         var renewedToken = await RefreshAccountTokenAsync(account, cancellationToken);
         if (renewedToken is null)
         {
             _logger.LogWarning(
-                "[ML Busca] Não foi possível renovar o token da conta '{AccountName}' (Id={AccountId}). Reconecte a conta Mercado Livre em Minhas Lojas.",
+                "[ML Busca] Não foi possível renovar o token legado da conta '{AccountName}' (Id={AccountId}): {Hint}.",
                 DescribeAccount(account),
-                account.Id);
+                account.Id,
+                ReauthorizeMasterHint);
             return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage);
         }
 
         LogAccountTokenUsage(account, query, renewed: true);
         try
         {
-            return await ScanCatalogAsync(request, query, renewedToken, affiliateId, cancellationToken);
+            return await ScanCatalogAsync(request, query, renewedToken, affiliateId: null, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -979,6 +1113,137 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     private static string BuildAppTokenCacheKey(string appId, string secret) =>
         appId + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
+
+    /// <summary>
+    /// Token Master (Painel Master ➔ Integrações Globais): válido é usado direto; vencido é renovado via refresh_token.
+    /// Null quando não há autorização Master ou a última renovação falhou (exige reautorizar no Master).
+    /// </summary>
+    private async Task<string?> ResolveMasterAccessTokenAsync(CancellationToken cancellationToken)
+    {
+        var token = await LoadMasterTokenAsync(cancellationToken);
+        if (token is null)
+        {
+            return null;
+        }
+
+        if (GlobalIntegrationRules.IsAccessTokenFresh(token, DateTime.UtcNow))
+        {
+            return token.AccessToken.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(token.LastError)
+            ? await RefreshMasterTokenAsync(token.AccessToken, cancellationToken)
+            : null;
+    }
+
+    private async Task<GlobalIntegrationToken?> LoadMasterTokenAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var token = await dbContext.GlobalIntegrationTokens
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Provider == MarketplaceType.MercadoLivre, cancellationToken);
+            return token is null
+                   || string.IsNullOrWhiteSpace(token.AccessToken)
+                   || HomologMarketplaceAuth.IsStubToken(token.AccessToken)
+                ? null
+                : token;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "[ML Master] Não foi possível ler o token Master da API Mercado Livre.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Renova o token Master via refresh_token e grava no banco. Serializado: requisições simultâneas que
+    /// encontram o token já renovado por outra reutilizam o novo valor (o refresh_token do ML é de uso único).
+    /// </summary>
+    private async Task<string?> RefreshMasterTokenAsync(string staleAccessToken, CancellationToken cancellationToken)
+    {
+        await MasterRefreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var token = await dbContext.GlobalIntegrationTokens
+                .FirstOrDefaultAsync(item => item.Provider == MarketplaceType.MercadoLivre, cancellationToken);
+            if (token is null)
+            {
+                return null;
+            }
+
+            var now = DateTime.UtcNow;
+            if (!string.Equals(token.AccessToken, staleAccessToken, StringComparison.Ordinal)
+                && GlobalIntegrationRules.IsAccessTokenFresh(token, now))
+            {
+                return token.AccessToken.Trim();
+            }
+
+            var options = _options.CurrentValue;
+            if (!GlobalIntegrationRules.CanRefresh(token, now) || HomologMarketplaceAuth.IsStubToken(token.RefreshToken))
+            {
+                await RecordMasterErrorAsync(dbContext, token, "Token Master expirado sem refresh_token válido: reautorize no Painel Master.", cancellationToken);
+                return null;
+            }
+
+            if (!options.HasAppCredentials)
+            {
+                await RecordMasterErrorAsync(dbContext, token, "AppId/SecretKey do Mercado Livre ausentes no cofre: não é possível renovar o token Master.", cancellationToken);
+                return null;
+            }
+
+            var refreshed = await RequestOAuthTokenAsync(
+                "refresh_token",
+                options.AppId.Trim(),
+                options.SecretKey.Trim(),
+                token.RefreshToken,
+                cancellationToken);
+            if (string.IsNullOrWhiteSpace(refreshed?.AccessToken))
+            {
+                await RecordMasterErrorAsync(dbContext, token, "O Mercado Livre recusou o refresh_token Master: reautorize no Painel Master.", cancellationToken);
+                return null;
+            }
+
+            token.AccessToken = refreshed.AccessToken.Trim();
+            if (!string.IsNullOrWhiteSpace(refreshed.RefreshToken))
+            {
+                token.RefreshToken = refreshed.RefreshToken.Trim();
+            }
+
+            token.ExpiresAt = now.AddSeconds(refreshed.ExpiresIn is > 0 ? refreshed.ExpiresIn.Value : 21600);
+            token.LastRefreshAt = now;
+            token.LastError = null;
+            token.Touch();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "[ML Master] Token Master renovado automaticamente via refresh_token; válido até {ExpiresAt:u}.",
+                token.ExpiresAt);
+            return token.AccessToken;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "[ML Master] Falha ao renovar o token Master da API Mercado Livre.");
+            return null;
+        }
+        finally
+        {
+            MasterRefreshLock.Release();
+        }
+    }
+
+    private async Task RecordMasterErrorAsync(
+        AppDbContext dbContext,
+        GlobalIntegrationToken token,
+        string error,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogWarning("[ML Master] {Error}", error);
+        token.LastError = GlobalIntegrationRules.TruncateError(error);
+        token.Touch();
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 
     private async Task<string?> ResolveAccountAccessTokenAsync(
         MarketplaceAccount? account,

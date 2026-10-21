@@ -28,6 +28,14 @@ public sealed class MercadoLivreIntegrationOptions
     /// </summary>
     public string DefaultAffiliateTrackingId { get; set; } = OfficialAffiliateTrackingId;
 
+    /// <summary>
+    /// Tempo (minutos) em que uma busca idêntica é servida do cache global sem consumir a cota da API; 0 desliga.
+    /// Texto para que um valor inválido no cofre não quebre o binding das opções (cai no padrão).
+    /// </summary>
+    public string? SearchCacheMinutes { get; set; }
+
+    public int ResolveSearchCacheMinutes() => MercadoLivreSearchCacheRules.ResolveMinutes(SearchCacheMinutes);
+
     public bool HasAppCredentials =>
         !string.IsNullOrWhiteSpace(AppId) && !string.IsNullOrWhiteSpace(SecretKey);
 

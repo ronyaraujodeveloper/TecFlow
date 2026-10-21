@@ -12,12 +12,6 @@
                 <h3 class="h6 fw-semibold mb-1 text-truncate" title="@Store.FriendlyName">@Store.FriendlyName</h3>
                 <p class="text-muted small mb-0">Shop ID: <span class="font-monospace">@Store.ShopId</span></p>
                 <p class="text-muted small mb-0">Affiliate ID: <span class="font-monospace">@AffiliateIdDisplay</span></p>
-                @if (Store.PlatformType == MarketplaceType.MercadoLivre)
-                {
-                    <p class="small mb-0 mt-1 @(Store.HasOAuthToken ? "text-success" : "text-warning")">
-                        API de busca: @(Store.HasOAuthToken ? "autorizada (OAuth)" : "pendente — autorize via OAuth")
-                    </p>
-                }
                 @if (Store.RequiresTrackingIdCorrection)
                 {
                     <p class="text-danger small mb-0 mt-2">
@@ -32,10 +26,13 @@
                 <dt>Vinculada em</dt>
                 <dd>@Store.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
             </div>
-            <div>
-                <dt>Token expira em</dt>
-                <dd>@Store.ExpiresAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
-            </div>
+            @if (!Store.PlatformType.IsUniversalAffiliatePlatform())
+            {
+                <div>
+                    <dt>Token expira em</dt>
+                    <dd>@Store.ExpiresAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                </div>
+            }
         </dl>
 
         <div class="marketplace-store-actions mt-auto d-grid">
@@ -47,24 +44,15 @@
                             class="btn btn-danger btn-touch"
                             disabled="@IsBusy"
                             @onclick="() => ConfirmarDesconexaoAsync(Store)">
-                        Sim, desconectar
+                        <i class="bi bi-plug me-1" aria-hidden="true"></i>Sim, desconectar
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@IsBusy" @onclick="CancelDelete">
-                        Cancelar
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancelar
                     </button>
                 </div>
             }
             else
             {
-                @if (Store.PlatformType == MarketplaceType.MercadoLivre && OnAuthorizeOAuth.HasDelegate)
-                {
-                    <button type="button"
-                            class="btn btn-primary btn-touch mb-2"
-                            disabled="@IsBusy"
-                            @onclick="() => OnAuthorizeOAuth.InvokeAsync(Store)">
-                        @(Store.HasOAuthToken ? "Reautorizar Mercado Livre" : "Autorizar Mercado Livre (OAuth)")
-                    </button>
-                }
                 @if (OnEdit.HasDelegate)
                 {
                     <button type="button"
@@ -79,7 +67,7 @@
                         class="btn btn-outline-danger btn-touch"
                         disabled="@IsBusy"
                         @onclick="RequestDelete">
-                    Desconectar loja
+                    <i class="bi bi-plug me-1" aria-hidden="true"></i>Desconectar loja
                 </button>
             }
         </div>
@@ -90,7 +78,6 @@
     [Parameter, EditorRequired] public MarketplaceAccountDto Store { get; set; } = default!;
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnUnlink { get; set; }
-    [Parameter] public EventCallback<MarketplaceAccountDto> OnAuthorizeOAuth { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnEdit { get; set; }
 
     private bool _confirmDelete;
@@ -123,7 +110,13 @@
     private string GetPlatformBadgeClass() =>
         PlatformBadgeHelper.GetPlatformBadgeClass(Store.PlatformType);
 
-    private string GetStatusLabel() => Store.Status switch
+    /// <summary>Lojas Universal Link não dependem de token: validade de um OAuth antigo não as torna expiradas.</summary>
+    private MarketplaceIntegrationStatus EffectiveStatus =>
+        Store.Status == MarketplaceIntegrationStatus.Expired && Store.PlatformType.IsUniversalAffiliatePlatform()
+            ? MarketplaceIntegrationStatus.Active
+            : Store.Status;
+
+    private string GetStatusLabel() => EffectiveStatus switch
     {
         MarketplaceIntegrationStatus.Active => "Ativo",
         MarketplaceIntegrationStatus.Expired => "Expirado",
@@ -131,7 +124,7 @@
         _ => Store.Status.ToString()
     };
 
-    private string GetStatusBadgeClass() => Store.Status switch
+    private string GetStatusBadgeClass() => EffectiveStatus switch
     {
         MarketplaceIntegrationStatus.Active => "text-bg-success",
         MarketplaceIntegrationStatus.Expired => "text-bg-warning",

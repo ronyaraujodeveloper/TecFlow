@@ -42,6 +42,10 @@ public interface IMasterApiService
     Task<ApiResult<MasterOperationResultDto>> MoveMenuItemAsync(MenuMoveDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> CreateMenuFolderAsync(MenuFolderCreateDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> DeleteMenuFolderAsync(int folderId, CancellationToken cancellationToken = default);
+    Task<ApiResult<GlobalIntegrationStatusDto>> GlobalMercadoLivreStatusAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> SaveGlobalMercadoLivreSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalMercadoLivreAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalMercadoLivreAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default);
 }
 
 public sealed class MasterApiService : IMasterApiService
@@ -161,6 +165,20 @@ public sealed class MasterApiService : IMasterApiService
 
     public Task<ApiResult<MasterOperationResultDto>> DeleteMenuFolderAsync(int folderId, CancellationToken cancellationToken = default) =>
         _http.DeleteAsync<MasterOperationResultDto>($"api/master/menu-permissions/pastas/{folderId}", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<GlobalIntegrationStatusDto>> GlobalMercadoLivreStatusAsync(CancellationToken cancellationToken = default) =>
+        _http.GetAsync<GlobalIntegrationStatusDto>("api/master/integracoes-globais/mercado-livre", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<MasterOperationResultDto>> SaveGlobalMercadoLivreSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Salvando tempo de cache...", () => _http.PutAsync<GlobalIntegrationSettingsDto, MasterOperationResultDto>("api/master/integracoes-globais/mercado-livre/configuracoes", request, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalMercadoLivreAsync(CancellationToken cancellationToken = default) =>
+        WithLoading("Desconectando API Mercado Livre...", () => _http.PostAsync<object, MasterOperationResultDto>("api/master/integracoes-globais/mercado-livre/desconectar", new { }, cancellationToken));
+
+    public Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalMercadoLivreAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default) =>
+        WithLoading("Abrindo autorização do Mercado Livre...", () => _http.GetAsync<MarketplaceAuthorizeUrlResponseDto>(
+            $"api/master/integracoes-globais/mercado-livre/authorize-url?redirectUri={Uri.EscapeDataString(redirectUri)}",
+            cancellationToken: cancellationToken));
 
     private async Task<T> WithLoading<T>(string message, Func<Task<T>> action)
     {

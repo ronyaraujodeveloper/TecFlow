@@ -471,7 +471,7 @@ public class OfficialCatalogSearchRulesTests
             true,
             OfficialCatalogSearchRules.MercadoLivreMissingAccountMessage);
         Assert.Equal("missing", mlMissing.State);
-        Assert.Equal("Requer OAuth do Mercado Livre para buscar ofertas", mlMissing.Message);
+        Assert.Equal("API Mercado Livre ainda não autorizada pelo administrador da plataforma", mlMissing.Message);
 
         var error = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre",

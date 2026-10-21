@@ -494,7 +494,7 @@
                     <ul class="mb-3">
                         @if (_storeSummaries.Count == 0)
                         {
-                            <li>Nenhuma loja conectada em <strong>Minhas Lojas</strong>: o Mercado Livre exige a conta conectada (OAuth) para buscar.</li>
+                            <li>Nenhuma loja conectada em <strong>Minhas Lojas</strong>: a busca funciona normalmente (a API oficial é conectada pela plataforma), mas os links usam o ID de afiliado padrão do sistema.</li>
                         }
                         @foreach (var store in _storeSummaries)
                         {
@@ -1035,16 +1035,9 @@
     private static string DescribeStore(MarketplaceAccountDto store)
     {
         var name = string.IsNullOrWhiteSpace(store.FriendlyName) ? store.ShopName : store.FriendlyName;
-        var status = store.Status == MarketplaceIntegrationStatus.Expired ? "expirada" : "ativa";
-        var detail = string.IsNullOrWhiteSpace(name) ? $"loja {status}" : $"{name} ({status})";
-        if (store.PlatformType == MarketplaceType.MercadoLivre)
-        {
-            detail += store.HasOAuthToken
-                ? " · busca autorizada (OAuth)"
-                : " · sem OAuth: conecte a conta para buscar no Mercado Livre";
-        }
-
-        return detail;
+        var expired = store.Status == MarketplaceIntegrationStatus.Expired && !store.PlatformType.IsUniversalAffiliatePlatform();
+        var status = expired ? "expirada" : "ativa";
+        return string.IsNullOrWhiteSpace(name) ? $"loja {status}" : $"{name} ({status})";
     }
 
     private OfficialCatalogSearchFilter CurrentFilter() => new()

@@ -775,6 +775,17 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Tracing:** o redirect registra slug e código na entrada e o host de destino no 302 (ou "Código curto não encontrado").
 - [ ] **Homologar:** abrir `https://dev.ofertio.com.br/97303724/xh8pmzh` e conferir o redirect para o Mercado Livre.
 
+## 🌐 Integrações Globais no Painel Master (`GlobalIntegrationsMaster`)
+
+- [x] **Menu Master:** "Integrações Globais" com submenu "API Mercado Livre" (espaço para TikTok Shop e Shopee como "Em breve").
+- [x] **Tela API Mercado Livre:** status (`Ativo` / `Expirado` / `Desconectado`), data/hora de expiração do token, "Autorizar / Reautorizar Mercado Livre" (OAuth do administrador), desconectar e "Tempo de Cache de Buscas (minutos)" salvo nas configurações globais.
+- [x] **Token Master:** tabela `GlobalIntegrationTokens` (criptografada); as buscas usam o token Master primeiro e mantêm o token legado do usuário como fallback.
+- [x] **Refresh automático:** token expirado ou recusado (401/403) dispara o `refresh_token` no backend, grava o novo token e repete a busca de forma transparente.
+- [x] **Cache global de buscas:** a mesma consulta (texto + filtros) dentro do tempo configurado (padrão 15 min, 0 desliga) não consome cota da API; cada cliente recebe o próprio `matt_tool`.
+- [x] **Minhas Lojas:** removidos "API de busca: autorizada (OAuth)" e "Reautorizar Mercado Livre"; ficam ID de afiliado, Editar loja e Desconectar loja.
+- [x] **Matriz de menus:** permissão "Integrações Globais" por plano; desligada, oculta Buscar Ofertas, Radar de Ofertas e Perfil de mineração (somente menu).
+- [ ] **Homologar:** autorizar o Mercado Livre em Master ➔ Integrações Globais ➔ API Mercado Livre e fazer uma busca em `/busca` com um cliente sem OAuth próprio.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

@@ -23,4 +23,6 @@ public static class MasterAuditActions
     public const string DeveloperAccountDeleted = "conta-dev.excluida";
     public const string MenuPermissionsSaved = "menu.permissoes";
     public const string MenuStructureChanged = "menu.estrutura";
+    public const string GlobalIntegrationAuthorized = "integracao-global.autorizada";
+    public const string GlobalIntegrationDisconnected = "integracao-global.desconectada";
 }

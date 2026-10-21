@@ -21,7 +21,7 @@
         <div>
             <h1 class="h3 fw-bold mb-1">Minhas Lojas / Integrações</h1>
             <p class="text-muted small mb-0">
-                Gerencie suas contas de marketplace. Afiliados usam Universal Link; o Mercado Livre exige autorização OAuth para a busca de ofertas.
+                Gerencie suas lojas e IDs de afiliado (Tracking ID) usados nos links. A conexão com a API oficial de busca é feita pela plataforma — você não precisa autorizar nada.
             </p>
         </div>
         <div class="dashboard-toolbar d-grid d-sm-flex gap-2">
@@ -35,9 +35,9 @@
                     class="btn btn-outline-primary btn-touch"
                     disabled="@_isLoading"
                     @onclick="ReloadAsync">
-                @(_isLoading ? "Atualizando..." : "Atualizar")
+                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>@(_isLoading ? "Atualizando..." : "Atualizar")
             </button>
-            <a href="/dashboard" class="btn btn-outline-secondary btn-touch">Voltar ao painel</a>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-touch"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Voltar ao painel</a>
         </div>
     </div>
 
@@ -80,7 +80,6 @@
                 <MarketplaceStoreCard Store="store"
                                       IsBusy="@_isBusy"
                                       OnUnlink="ConfirmarDesconexaoAsync"
-                                      OnAuthorizeOAuth="AuthorizeStoreOAuthAsync"
                                       OnEdit="OpenEditModal" />
             }
         </section>
@@ -296,9 +295,6 @@
             await InvokeAsync(StateHasChanged);
         }
     }
-
-    private Task AuthorizeStoreOAuthAsync(MarketplaceAccountDto store) =>
-        StartOAuthAsync((store.PlatformType, store.FriendlyName));
 
     private async Task OnLojaVinculadaAsync()
     {

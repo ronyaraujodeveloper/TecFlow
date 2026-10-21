@@ -12,7 +12,8 @@ public sealed record MarketplaceOAuthState(
     string? CallbackUri,
     string Nonce,
     DateTimeOffset ExpiresAt,
-    string? CodeVerifier = null);
+    string? CodeVerifier = null,
+    bool IsMaster = false);
 
 /// <summary>Sela (criptografia autenticada) e abre o <c>state</c> do OAuth.</summary>
 public interface IOAuthStateProtector
@@ -28,6 +29,9 @@ public static class MarketplaceOAuthStateRules
     public const string Prefix = "tfs1.";
 
     public const string AccountsPath = "/marketplace-accounts";
+
+    /// <summary>Retorno do OAuth Master (token global da API Mercado Livre, Painel Master).</summary>
+    public const string MasterMercadoLivrePath = "/master/integracoes-globais/mercado-livre";
 
     public const string InvalidStateMessage =
         "Link de autorização inválido ou expirado. Clique em Conectar novamente.";
@@ -58,7 +62,7 @@ public static class MarketplaceOAuthStateRules
             platform == MarketplaceType.MercadoLivre ? MercadoLivrePkce.CreateCodeVerifier() : null);
 
     /// <summary>Retorno para a origem onde o OAuth começou (ex.: https://localhost:7002/marketplace-accounts?status=success).</summary>
-    public static string BuildReturnUrl(string? callbackUri, bool success, string? message = null)
+    public static string BuildReturnUrl(string? callbackUri, bool success, string? message = null, string? path = null)
     {
         var query = success
             ? "?status=success"
@@ -67,6 +71,14 @@ public static class MarketplaceOAuthStateRules
                      && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
             ? uri.GetLeftPart(UriPartial.Authority)
             : string.Empty;
-        return origin + AccountsPath + query;
+        return origin + (IsAllowedReturnPath(path) ? path : AccountsPath) + query;
     }
+
+    public static string ReturnPathFor(MarketplaceOAuthState? state) =>
+        state?.IsMaster == true ? MasterMercadoLivrePath : AccountsPath;
+
+    /// <summary>Únicos destinos aceitos para o retorno do OAuth (evita open redirect).</summary>
+    public static bool IsAllowedReturnPath(string? path) =>
+        string.Equals(path, AccountsPath, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(path, MasterMercadoLivrePath, StringComparison.OrdinalIgnoreCase);
 }

@@ -26,10 +26,17 @@
                 <Authorized>
                     @foreach (var link in MasterRoutes.Links.Where(item => item.Permission is null || MasterAccess.Has(context.User, item.Permission)))
                     {
-                        <NavLink class="master-nav-link" href="@link.Href" Match="@(link.Href == MasterRoutes.Dashboard ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                        <NavLink class="master-nav-link" href="@link.Href" Match="@(link.Href == MasterRoutes.Dashboard || link.Children is { Count: > 0 } ? NavLinkMatch.All : NavLinkMatch.Prefix)">
                             <i class="bi @link.Icon" aria-hidden="true"></i>
                             <span>@link.Label</span>
                         </NavLink>
+                        @foreach (var child in (link.Children ?? []).Where(item => item.Permission is null || MasterAccess.Has(context.User, item.Permission)))
+                        {
+                            <NavLink class="master-nav-link master-nav-sublink" href="@child.Href" Match="NavLinkMatch.Prefix">
+                                <i class="bi @child.Icon" aria-hidden="true"></i>
+                                <span>@child.Label</span>
+                            </NavLink>
+                        }
                     }
                     <div class="master-sidebar-footer small">
                         @MasterRoles.Label(MasterAccess.Role(context.User))

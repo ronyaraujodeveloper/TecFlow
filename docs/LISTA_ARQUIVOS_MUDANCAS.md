@@ -1838,6 +1838,34 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Util/Text/SlugHelper.cs** - `GenerateSlug` só mantém letras/dígitos ASCII, garantindo que todo slug gerado case com a rota.
 - [x] **Ofertio.Tests/Unit/Controllers/ShortLinkRedirectControllerTests.cs** e **Ofertio.Tests/Unit/Util/SlugHelperTests.cs** - template real da rota com slug numérico, redirect `/97303724/xh8pmzh` e slug ASCII.
 
+### GlobalIntegrationsMaster - Integrações Globais (API Mercado Livre no Painel Master, cache e refresh automático)
+
+- [x] **Ofertio.Core/Entities/GlobalIntegrationToken.cs** *(novo)* - token Master por provedor (`Provider` único): access/refresh token, expirações, último refresh, último erro e quem autorizou.
+- [x] **Ofertio.Database/AppDbContext.cs** - `DbSet<GlobalIntegrationToken>`, índice único em `Provider`, AccessToken/RefreshToken criptografados em `ConfigureSensitiveData`.
+- [x] **Ofertio.Data/Migrations/20261021222637_AddGlobalIntegrationTokens.cs** *(+ Designer e snapshot)* - tabela `GlobalIntegrationTokens`.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreSearchCacheRules.cs** *(novo)* - chave do cache (consulta normalizada + filtros, sem afiliado), minutos 0..1440 (padrão 15, 0 desliga), clone e aplicação do `matt_tool` por cliente.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `SearchCacheMinutes` (`Integrations:MercadoLivre:SearchCacheMinutes`) e `ResolveSearchCacheMinutes()`.
+- [x] **Ofertio.Business/Service/Master/SystemSettingCatalog.cs** - configuração global "Mercado Livre — Tempo de Cache de Buscas (minutos)".
+- [x] **Ofertio.Business/Service/Master/GlobalIntegrationRules.cs** *(novo)* - status `Ativo`/`Expirado`/`Desconectado`, provedores (Mercado Livre; TikTok Shop e Shopee "Em breve"), rotas do Master.
+- [x] **Ofertio.Business/Dto/GlobalIntegrationDtos.cs** e **Ofertio.Business/Interfaces/Services/IGlobalIntegrationService.cs** *(novos)* - contratos de status, configuração e autorização Master.
+- [x] **Ofertio.Business/Integrations/Auth/MarketplaceOAuthState.cs** - `IsMaster` no state selado, retorno permitido para `/master/integracoes-globais/mercado-livre` (`ReturnPathFor`, `IsAllowedReturnPath`).
+- [x] **Ofertio.Business/Service/Master/MenuCatalog.cs** - item-permissão `integracoes-globais` (`IsFeatureToggle`, nunca renderizado) e `FeatureDependencies` → Buscar Ofertas, Radar de Ofertas e Perfil de mineração; `MenuVisibilityRules.ApplyFeatureDependencies`.
+- [x] **Ofertio.Business/Dto/MasterDtos.cs** - linha da matriz com `IsFeatureToggle`, `ControlledTitles` e `RequiresFeature*`.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - mensagens apontam para o administrador / Painel Master ➔ Integrações Globais.
+- [x] **Ofertio.Infrastructure.Services/Master/GlobalIntegrationService.cs** *(novo)* - status, salvar tempo de cache (vault global), desconectar e concluir a autorização Master (exige `ManageGlobalKeys`), com auditoria.
+- [x] **Ofertio.Infrastructure.Services/Master/MasterAuditActions.cs** e **MasterBackofficeRegistrationExtensions.cs** - ações `integracao-global.*` e registro do serviço.
+- [x] **Ofertio.Infrastructure.Services/Master/MenuPermissionService.cs** - matriz com as dependências da permissão; menu do cliente oculta as telas dependentes quando a permissão está desligada no plano.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - token Master primeiro (refresh sob semáforo, persistência e nova tentativa transparente em 401/403), fallback para o token legado do usuário/estático/app; cache global de buscas via `IMemoryCache`.
+- [x] **Ofertio.API/Controllers/Master/MasterGlobalIntegrationsController.cs** *(novo)* - `api/master/integracoes-globais/mercado-livre` (status, configurações, desconectar, authorize-url) sob `ManageGlobalKeys`.
+- [x] **Ofertio.API/Security/MercadoLivreOAuthCallbackFlow.cs**, **MarketplaceAuthController.cs** e **MercadoLivreController.cs** - callback com state Master grava o token global e volta para a tela do Master.
+- [x] **Ofertio.WebUi/Extensions/IntegracoesEndpointExtensions.cs** - `SafeReturnUrl` aceita a rota do Master.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterGlobalIntegrations.razor** e **MasterGlobalMercadoLivre.razor** *(novos)* - visão geral dos provedores e tela "API Mercado Livre" (status, expiração, "Autorizar / Reautorizar Mercado Livre", desconectar, "Tempo de Cache de Buscas (minutos)").
+- [x] **Ofertio.SharedUi/Services/Navigation/MasterRoutes.cs**, **MasterMainLayout.razor** e **wwwroot/app.css** - menu "Integrações Globais" com submenu "API Mercado Livre".
+- [x] **Ofertio.SharedUi/Services/Master/MasterApiService.cs** - chamadas dos endpoints de Integrações Globais.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterMenuPermissions.razor** - linha "permissão" com "Libera: …" e células dependentes travadas (`bi-lock-fill`) quando a permissão está desligada.
+- [x] **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor**, **Integrations/MarketplaceStoreCard.razor**, **Integrations/ConnectStoreModal.razor** e **Pages/Busca/BuscaGlobal.razor** - removidos "API de busca: autorizada (OAuth)" e "Reautorizar Mercado Livre"; card mantém só ID de afiliado, Editar e Desconectar.
+- [x] **Ofertio.Tests/Unit/Integrations/GlobalIntegrationRulesTests.cs** e **GlobalIntegrationServiceTests.cs** *(novos)* + **Unit/Radar/MercadoLivreApiServiceTests.cs** - cache, status, rotas de retorno, dependências de menu, autorização Master e refresh automático.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

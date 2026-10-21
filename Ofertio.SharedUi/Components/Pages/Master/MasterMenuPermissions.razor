@@ -14,10 +14,11 @@
             <h1 class="h3 fw-bold mb-1">Matriz de menus por plano</h1>
             <p class="text-muted small mb-0">
                 Marque o que cada plano enxerga na sidebar. Desmarcar uma pasta esconde todos os itens dela; desativar um item o remove para todos.
+                Linhas <span class="badge text-bg-info">permissão</span> liberam um conjunto de telas: desligadas num plano, ocultam essas telas automaticamente.
             </p>
         </div>
         <button type="button" class="btn btn-primary btn-touch" disabled="@(!_canManage || PendingChanges == 0)" @onclick="SaveAsync">
-            Salvar @(PendingChanges > 0 ? $"({PendingChanges})" : string.Empty)
+            <i class="bi bi-save me-1" aria-hidden="true"></i>Salvar @(PendingChanges > 0 ? $"({PendingChanges})" : string.Empty)
         </button>
     </div>
 
@@ -79,6 +80,14 @@
                                 {
                                     <span class="badge text-bg-light ms-1">pasta</span>
                                 }
+                                @if (row.IsFeatureToggle)
+                                {
+                                    <span class="badge text-bg-info ms-1">permissão</span>
+                                    @if (row.ControlledTitles.Count > 0)
+                                    {
+                                        <div class="text-muted fw-normal">Libera: @string.Join(", ", row.ControlledTitles)</div>
+                                    }
+                                }
                                 @if (!string.IsNullOrWhiteSpace(row.Badge))
                                 {
                                     <span class="badge text-bg-primary ms-1">@row.Badge</span>
@@ -100,10 +109,15 @@
                             </td>
                             @foreach (var plan in _matrix.Plans)
                             {
-                                <td class="text-center">
-                                    <input type="checkbox" class="form-check-input" checked="@IsVisible(row, plan.Id)" disabled="@(!_canManage || !row.IsActive)"
+                                var blockedByFeature = !IsFeatureEnabled(row, plan.Id);
+                                <td class="text-center" title="@(blockedByFeature ? $"Oculto: {row.RequiresFeatureTitle} desligada neste plano" : null)">
+                                    <input type="checkbox" class="form-check-input" checked="@(IsVisible(row, plan.Id) && !blockedByFeature)" disabled="@(!_canManage || !row.IsActive || blockedByFeature)"
                                            aria-label="@($"{row.Title} no plano {plan.Name}")"
                                            @onchange="args => ToggleCell(row, plan.Id, (bool)args.Value!)" />
+                                    @if (blockedByFeature)
+                                    {
+                                        <i class="bi bi-lock-fill text-muted ms-1" aria-hidden="true"></i>
+                                    }
                                 </td>
                             }
                         </tr>
@@ -133,7 +147,7 @@
                            @ref="_folderInput" @bind="_folderDraft.Title" @bind:event="oninput" @onkeydown="FolderKeyDownAsync" />
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelFolder">Cancelar</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelFolder"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancelar</button>
                     <button type="button" class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(_folderDraft.Title)" @onclick="CreateFolderAsync">
                         <i class="bi bi-folder-plus" aria-hidden="true"></i> Criar pasta
                     </button>
@@ -275,6 +289,18 @@
         _cells.TryGetValue((planId, row.MenuItemId), out var pending)
             ? pending
             : row.Visibility.GetValueOrDefault(planId, true);
+
+    /// <summary>Falso quando a tela depende de uma chave de permissão inativa ou desmarcada para o plano.</summary>
+    private bool IsFeatureEnabled(MenuPermissionRowDto row, int planId)
+    {
+        if (row.RequiresFeatureId is not int featureId)
+        {
+            return true;
+        }
+
+        var feature = _matrix?.Rows.FirstOrDefault(item => item.MenuItemId == featureId);
+        return feature is not null && feature.IsActive && IsVisible(feature, planId);
+    }
 
     private void ToggleCell(MenuPermissionRowDto row, int planId, bool visible)
     {

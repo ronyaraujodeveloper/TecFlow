@@ -1,4 +1,6 @@
-﻿namespace Ofertio.Business.Service.Master;
+﻿using Ofertio.Business.Integrations.MercadoLivre;
+
+namespace Ofertio.Business.Service.Master;
 
 public sealed record SystemSettingDefinition(
     string Key,
@@ -28,6 +30,7 @@ public static class SystemSettingCatalog
         new("Integrations:MercadoLivre:AppId", CategoryMarketplaces, "Mercado Livre — App ID", false, "1234567890123456"),
         new("Integrations:MercadoLivre:SecretKey", CategoryMarketplaces, "Mercado Livre — Client Secret", true),
         new("Integrations:MercadoLivre:RedirectUri", CategoryMarketplaces, "Mercado Livre — Redirect URI", false, "https://dev.ofertio.com.br/api/mercadolivre/callback"),
+        new(MercadoLivreSearchCacheRules.SettingKey, CategoryMarketplaces, "Mercado Livre — Tempo de Cache de Buscas (minutos)", false, "15"),
         new("Integrations:Shopee:PartnerId", CategoryMarketplaces, "Shopee — Partner ID", false),
         new("Integrations:Shopee:PartnerKey", CategoryMarketplaces, "Shopee — Partner Key", true),
         new("Integrations:Shopee:AppKey", CategoryMarketplaces, "Shopee Afiliados — AppKey", false),

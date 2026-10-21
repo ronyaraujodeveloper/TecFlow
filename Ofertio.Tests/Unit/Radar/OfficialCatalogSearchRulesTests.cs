@@ -141,17 +141,47 @@ public class OfficialCatalogSearchRulesTests
     }
 
     [Fact]
-    public void VisibleCategoryChips_Collapsed_ShouldShowTopCategoriesPlusTheSelectedOne()
+    public void FilterLoadedResults_MultipleCategories_ShouldKeepMercadoLivreItemsOfAnySelectedDomainOnly()
     {
-        var all = Enumerable.Range(1, 9).Select(index => Category($"MLB-{index}")).ToList();
+        IReadOnlyList<OfficialCatalogProductDto> items =
+        [
+            new() { ProductId = "NB", PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-NOTEBOOKS" },
+            new() { ProductId = "PC", PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-DESKTOP_COMPUTERS" },
+            new() { ProductId = "TAB", PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-TABLETS" },
+            new() { ProductId = "SEM-DOMINIO", PlatformType = MarketplaceType.MercadoLivre },
+            new() { ProductId = "SHP", PlatformType = MarketplaceType.Shopee }
+        ];
 
-        var collapsed = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-8", expanded: false);
-        var expanded = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-8", expanded: true);
-        var withinTop = OfficialCatalogSearchRules.VisibleCategoryChips(all, "MLB-2", expanded: false);
+        var filtered = OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+        {
+            MercadoLivreCategories = ["mlb-notebooks", " MLB-TABLETS "]
+        });
+        var none = OfficialCatalogSearchRules.FilterLoadedResults(items, new OfficialCatalogSearchFilter
+        {
+            MercadoLivreCategories = []
+        });
 
-        Assert.Equal(["MLB-1", "MLB-2", "MLB-3", "MLB-4", "MLB-5", "MLB-6", "MLB-8"], collapsed.Select(category => category.Id));
-        Assert.Equal(9, expanded.Count);
-        Assert.Equal(OfficialCatalogSearchRules.MaxVisibleCategoryChips, withinTop.Count);
+        Assert.Equal(["NB", "TAB", "SEM-DOMINIO", "SHP"], filtered.Select(item => item.ProductId));
+        Assert.Equal(5, none.Count);
+    }
+
+    [Fact]
+    public void CountByCategory_ShouldCountOnlyMercadoLivreItemsByDomain()
+    {
+        IReadOnlyList<OfficialCatalogProductDto> items =
+        [
+            new() { PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-NOTEBOOKS" },
+            new() { PlatformType = MarketplaceType.MercadoLivre, DomainId = "mlb-notebooks" },
+            new() { PlatformType = MarketplaceType.MercadoLivre, DomainId = "MLB-TABLETS" },
+            new() { PlatformType = MarketplaceType.MercadoLivre },
+            new() { PlatformType = MarketplaceType.Shopee, DomainId = "MLB-NOTEBOOKS" }
+        ];
+
+        var counts = OfficialCatalogSearchRules.CountByCategory(items);
+
+        Assert.Equal(2, counts["MLB-NOTEBOOKS"]);
+        Assert.Equal(1, counts["MLB-TABLETS"]);
+        Assert.Equal(2, counts.Count);
     }
 
     [Fact]

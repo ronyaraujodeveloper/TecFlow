@@ -1876,6 +1876,24 @@ flowchart LR
   RULES -->|"ligada"| SHOW["Menus voltam a aparecer"]
 ```
 
+### Filtros compactos da Buscar Ofertas (`CompactSearchFilters`)
+
+```mermaid
+flowchart LR
+  BAR["BuscaGlobal.razor<br/>barra de filtros em uma linha"] --> PLAT["MultiSelectDropdown<br/>Plataformas (bi-shop)"]
+  BAR --> QUAL["MultiSelectDropdown<br/>Filtros e Qualificadores (bi-funnel)"]
+  BAR --> CAT["MultiSelectDropdown<br/>Categorias (bi-tags)"]
+  BAR --> MODAL["Modal Filtros avançados (bi-sliders)<br/>preço mínimo, preço máximo, ordenação"]
+  PLAT --> OPT["OfferSearchFilterOptions.ApplySelections"]
+  QUAL --> OPT
+  CAT --> OPT
+  MODAL -->|"Aplicar Filtros"| OPT
+  OPT --> MEM["OfficialCatalogSearchRules.FilterLoadedResults + ApplySort<br/>(memória, sem HTTP)"]
+  MEM --> GRID["Vitrine de cards"]
+  BAR -->|"Buscar"| API["IOfficialCatalogSearchApiService<br/>(nova consulta às lojas)"]
+  API --> MEM
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

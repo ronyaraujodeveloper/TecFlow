@@ -31,6 +31,9 @@ public class OfficialCatalogSearchFilter
     /// <summary>Domínio de catálogo do Mercado Livre (ex.: <c>MLB-NOTEBOOKS</c>).</summary>
     public string? MercadoLivreCategory { get; set; }
 
+    /// <summary>Filtro de tela: domínios do Mercado Livre marcados no combo "Categorias" (não consulta as lojas de novo).</summary>
+    public List<string>? MercadoLivreCategories { get; set; }
+
     /// <summary>Offset do <c>products/search</c> para "Carregar mais" (só Mercado Livre).</summary>
     public int MercadoLivreOffset { get; set; }
 

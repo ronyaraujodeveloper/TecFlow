@@ -786,6 +786,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Matriz de menus:** permissão "Integrações Globais" por plano; desligada, oculta Buscar Ofertas, Radar de Ofertas e Perfil de mineração (somente menu).
 - [ ] **Homologar:** autorizar o Mercado Livre em Master ➔ Integrações Globais ➔ API Mercado Livre e fazer uma busca em `/busca` com um cliente sem OAuth próprio.
 
+## 🎛️ Filtros compactos da Buscar Ofertas (`CompactSearchFilters`)
+
+- [x] **Barra única:** `[Plataformas] [Filtros e Qualificadores] [Categorias] [Filtros]` logo abaixo da busca; cabeçalho em uma linha, alertas e status das lojas compactos e métricas recolhidas no botão "Métricas", para a vitrine aparecer sem rolagem.
+- [x] **Combos multisseleção (`MultiSelectDropdown`):** checkboxes internos, campo de busca no topo que filtra a partir de 3 letras (sem diferenciar acentos) e resumo no botão, ex.: "Filtros e Qualificadores (2)".
+- [x] **Categorias:** substituem o select "Categoria" e as pílulas "Buscar só em"; mostram quantas ofertas carregadas há em cada uma e filtram **só em memória**, sem nova chamada HTTP.
+- [x] **Modal "Filtros" (`bi-sliders`):** preço mínimo, preço máximo e ordenação (Relevância como padrão), com "Aplicar Filtros" e "Limpar"; edita um rascunho (`OfferSearchAdvancedFilters`) que recebe novos campos sem mudar a tela.
+- [ ] **Validar no navegador:** buscar "notebook", marcar duas categorias, abrir "Filtros" com preço mínimo maior que o máximo (deve recusar) e conferir no celular.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

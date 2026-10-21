@@ -180,14 +180,14 @@ public static class OfficialCatalogSearchRules
 
     /// <summary>
     /// Filtros aplicados na tela sobre o que a última busca carregou (sem consultar as lojas):
-    /// lojas marcadas, preço, frete grátis, cupom e categoria do Mercado Livre.
+    /// lojas marcadas, preço, frete grátis, cupom e categorias do Mercado Livre.
     /// </summary>
     public static IReadOnlyList<OfficialCatalogProductDto> FilterLoadedResults(
         IReadOnlyList<OfficialCatalogProductDto> items,
         OfficialCatalogSearchFilter filter)
     {
         var anyStore = filter.MercadoLivre || filter.Shopee || filter.Amazon;
-        var category = filter.MercadoLivreCategory?.Trim();
+        var categories = SelectedCategories(filter);
         return items
             .Where(item => !anyStore || item.PlatformType switch
             {
@@ -196,16 +196,37 @@ public static class OfficialCatalogSearchRules
                 MarketplaceType.Amazon => filter.Amazon,
                 _ => true
             })
-            .Where(item => string.IsNullOrEmpty(category)
+            .Where(item => categories.Count == 0
                 || item.PlatformType != MarketplaceType.MercadoLivre
                 || string.IsNullOrWhiteSpace(item.DomainId)
-                || string.Equals(item.DomainId, category, StringComparison.OrdinalIgnoreCase))
+                || categories.Contains(item.DomainId.Trim()))
             .Where(item => filter.OfficialStoreOnly != true || item.IsOfficialStore)
             .Where(item => filter.TrustedSellersOnly != true || item.SafetyScore >= TrustedSafetyScore)
             .Where(item => filter.BestSellersOnly != true || item.BestSellerPosition is not null)
             .Where(item => PassesOptionalFilters(item, filter))
             .ToList();
     }
+
+    private static HashSet<string> SelectedCategories(OfficialCatalogSearchFilter filter)
+    {
+        var categories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var category in (filter.MercadoLivreCategories ?? []).Append(filter.MercadoLivreCategory))
+        {
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                categories.Add(category.Trim());
+            }
+        }
+
+        return categories;
+    }
+
+    /// <summary>Quantas ofertas carregadas do Mercado Livre pertencem a cada domínio (contador do combo "Categorias").</summary>
+    public static IReadOnlyDictionary<string, int> CountByCategory(IEnumerable<OfficialCatalogProductDto> items) =>
+        items
+            .Where(item => item.PlatformType == MarketplaceType.MercadoLivre && !string.IsNullOrWhiteSpace(item.DomainId))
+            .GroupBy(item => item.DomainId!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Faixa de preço e frete grátis: usados também durante a varredura do Mercado Livre.</summary>
     public static bool PassesPriceAndShipping(
@@ -531,13 +552,9 @@ public static class OfficialCatalogSearchRules
     private static int Percent(int part, int total) =>
         total == 0 ? 0 : (int)Math.Round(part * 100m / total, MidpointRounding.AwayFromZero);
 
-    /// <summary>Pílulas de categoria ("Buscar só em") exibidas antes de "Outras categorias".</summary>
-    public const int MaxVisibleCategoryChips = 6;
-
     /// <summary>
     /// Une as categorias já exibidas para o termo com as de uma nova busca do mesmo termo: a ordem original
-    /// (relevância do Mercado Livre) é mantida e só as novas entram no fim. Buscar numa categoria devolve só ela,
-    /// e as demais pílulas precisam continuar na tela.
+    /// (relevância do Mercado Livre) é mantida e só as novas entram no fim, para o combo "Categorias" não perder opções.
     /// </summary>
     public static List<OfficialCatalogCategoryDto> MergeCategoryChips(
         IEnumerable<OfficialCatalogCategoryDto> known,
@@ -554,32 +571,6 @@ public static class OfficialCatalogSearchRules
         }
 
         return merged;
-    }
-
-    /// <summary>
-    /// Pílulas visíveis: todas quando expandido; recolhido, as <paramref name="max"/> primeiras (mais relevantes)
-    /// e também a selecionada, se ela estiver entre as "outras".
-    /// </summary>
-    public static List<OfficialCatalogCategoryDto> VisibleCategoryChips(
-        IReadOnlyList<OfficialCatalogCategoryDto> all,
-        string? selectedId,
-        bool expanded,
-        int max = MaxVisibleCategoryChips)
-    {
-        if (expanded || all.Count <= max)
-        {
-            return [.. all];
-        }
-
-        var visible = all.Take(max).ToList();
-        var selected = all.Skip(max).FirstOrDefault(category =>
-            string.Equals(category.Id, selectedId, StringComparison.OrdinalIgnoreCase));
-        if (selected is not null)
-        {
-            visible.Add(selected);
-        }
-
-        return visible;
     }
 
     public static decimal DiscountPercent(OfficialCatalogProductDto item) =>

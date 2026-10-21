@@ -1,0 +1,126 @@
+﻿<div class="multiselect @(_open ? "multiselect--open" : null)" @onkeydown="OnKeyDown">
+    <button type="button"
+            class="btn btn-sm multiselect-toggle @(SelectedValues.Count > 0 ? "btn-primary" : "btn-outline-secondary")"
+            aria-haspopup="listbox"
+            aria-expanded="@(_open ? "true" : "false")"
+            disabled="@Disabled"
+            title="@(Disabled ? DisabledHint : Title)"
+            @onclick="ToggleOpen">
+        <i class="bi @Icon me-1" aria-hidden="true"></i><span>@MultiSelectRules.Summary(Title, SelectedValues.Count)</span><i class="bi bi-chevron-down ms-1 multiselect-caret" aria-hidden="true"></i>
+    </button>
+    @if (_open)
+    {
+        <div class="multiselect-backdrop" @onclick="Close"></div>
+        <div class="multiselect-menu shadow" role="listbox" aria-multiselectable="true" aria-label="@Title">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                <input class="form-control"
+                       type="search"
+                       placeholder="@($"Filtrar (mín. {MultiSelectRules.MinSearchLength} letras)")"
+                       aria-label="@($"Filtrar {Title}")"
+                       @bind="_term"
+                       @bind:event="oninput" />
+            </div>
+            @if (MultiSelectRules.IsSearchTooShort(_term))
+            {
+                <div class="multiselect-hint">Digite pelo menos @MultiSelectRules.MinSearchLength letras para filtrar.</div>
+            }
+            <div class="multiselect-options">
+                @if (Options.Count == 0)
+                {
+                    <div class="multiselect-hint">@EmptyText</div>
+                }
+                else if (Visible.Count == 0)
+                {
+                    <div class="multiselect-hint">Nenhuma opção contém "@_term".</div>
+                }
+                @foreach (var option in Visible)
+                {
+                    var value = option.Value;
+                    var selected = IsSelected(value);
+                    <label class="multiselect-option @(selected ? "is-selected" : null)" title="@option.Hint">
+                        <input class="form-check-input mt-0" type="checkbox" checked="@selected" @onchange="e => ToggleAsync(value, e.Value is true)" />
+                        <span class="multiselect-option-label">@option.Label</span>
+                        @if (option.Count is { } count)
+                        {
+                            <span class="badge rounded-pill text-bg-light border">@count</span>
+                        }
+                    </label>
+                }
+            </div>
+            @if (Visible.Count > 0)
+            {
+                <div class="multiselect-actions">
+                    <button type="button" class="btn btn-link btn-sm" @onclick="SelectAllAsync">
+                        <i class="bi bi-check2-all me-1" aria-hidden="true"></i>Marcar todos
+                    </button>
+                    <button type="button" class="btn btn-link btn-sm text-secondary" @onclick="ClearAsync">
+                        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Classe do Bootstrap Icons sem o prefixo <c>bi</c>, ex.: <c>bi-shop</c>.</summary>
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+
+    [Parameter] public IReadOnlyList<MultiSelectOption> Options { get; set; } = [];
+
+    [Parameter] public IReadOnlyCollection<string> SelectedValues { get; set; } = [];
+
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedValuesChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string DisabledHint { get; set; } = "Indisponível";
+
+    [Parameter] public string EmptyText { get; set; } = "Nenhuma opção disponível.";
+
+    private bool _open;
+    private string? _term;
+
+    private IReadOnlyList<MultiSelectOption> Visible => MultiSelectRules.Filter(Options, _term);
+
+    private bool IsSelected(string value) =>
+        SelectedValues.Contains(value, StringComparer.OrdinalIgnoreCase);
+
+    private void ToggleOpen()
+    {
+        _open = !_open;
+        _term = null;
+    }
+
+    private void Close()
+    {
+        _open = false;
+        _term = null;
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            Close();
+        }
+    }
+
+    private Task ToggleAsync(string value, bool isChecked) =>
+        NotifyAsync(MultiSelectRules.Toggle(SelectedValues, value, isChecked));
+
+    private Task SelectAllAsync() =>
+        NotifyAsync(MultiSelectRules.SelectAll(SelectedValues, Visible));
+
+    private Task ClearAsync() =>
+        NotifyAsync(MultiSelectRules.ClearVisible(SelectedValues, Visible));
+
+    private async Task NotifyAsync(IReadOnlyList<string> selected)
+    {
+        SelectedValues = selected;
+        await SelectedValuesChanged.InvokeAsync(selected);
+    }
+}

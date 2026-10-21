@@ -22,161 +22,78 @@
 
 <PageTitle>Buscar Ofertas — Ofertio</PageTitle>
 
-<div class="dashboard-page">
-    <div class="text-center mb-4">
-        <h1 class="h3 fw-bold mb-1">Buscar Ofertas</h1>
-        <p class="text-muted small mb-1">Consulta paralela nas APIs oficiais do Mercado Livre, Shopee e Amazon.</p>
-        <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => _showRules = true">
-            ⓘ Como funciona a busca e as regras
+<div class="dashboard-page busca-page">
+    <div class="busca-header">
+        <h1 class="h5 fw-bold mb-0"><i class="bi bi-search me-1" aria-hidden="true"></i>Buscar Ofertas</h1>
+        <span class="text-muted small d-none d-md-inline">APIs oficiais do Mercado Livre, Shopee e Amazon</span>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-auto" @onclick="() => _showRules = true">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Como funciona a busca e as regras
         </button>
     </div>
 
-    <form class="col-12 col-lg-8 mx-auto mb-4 px-0" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
-        <div class="input-group input-group-lg">
-            <input class="form-control" placeholder="Ex: notebook 16GB, fone bluetooth..." @bind="_keyword" />
+    <form class="busca-toolbar" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+            <input class="form-control" placeholder="Ex: notebook 16GB, fone bluetooth..." aria-label="Termo da busca" @bind="_keyword" />
             <button type="submit" class="btn btn-primary" disabled="@_busy">
                 @if (_searching)
                 {
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>
                 }
                 Buscar
             </button>
         </div>
-        <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
-            <div class="form-check">
-                <input id="busca-ml" class="form-check-input" type="checkbox" @bind="_ml" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-ml">Mercado Livre</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-shopee" class="form-check-input" type="checkbox" @bind="_shopee" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-shopee">Shopee</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-amazon" class="form-check-input" type="checkbox" @bind="_amazon" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-amazon">Amazon</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-cupom" class="form-check-input" type="checkbox" @bind="_couponOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-cupom">Apenas com cupom</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-frete" class="form-check-input" type="checkbox" @bind="_freeShippingOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-frete">Somente frete grátis</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-oficial" class="form-check-input" type="checkbox" @bind="_officialOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-oficial">Somente loja oficial</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-confiavel" class="form-check-input" type="checkbox" @bind="_trustedOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-confiavel">Somente vendedores confiáveis</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-mais-vendidos" class="form-check-input" type="checkbox" @bind="_bestSellersOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-mais-vendidos">Somente mais vendidos</label>
-            </div>
-            <div class="form-check">
-                <input id="busca-principais" class="form-check-input" type="checkbox" @bind="_mainProductsOnly" @bind:after="ApplyScreenFilters" />
-                <label class="form-check-label" for="busca-principais" title="Esconde capa, película, carregador, cabo, fonte e outros acessórios quando o termo buscado é o produto">
-                    Apenas produtos principais (ocultar acessórios)
-                </label>
-            </div>
+        <div class="busca-filter-bar" aria-label="Filtros da busca">
+            <MultiSelectDropdown Title="Plataformas"
+                                 Icon="bi-shop"
+                                 Options="OfferSearchFilterOptions.Platforms"
+                                 @bind-SelectedValues="_platforms"
+                                 @bind-SelectedValues:after="ApplyScreenFilters" />
+            <MultiSelectDropdown Title="Filtros e Qualificadores"
+                                 Icon="bi-funnel"
+                                 Options="OfferSearchFilterOptions.Qualifiers"
+                                 @bind-SelectedValues="_qualifiers"
+                                 @bind-SelectedValues:after="ApplyScreenFilters" />
+            <MultiSelectDropdown Title="Categorias"
+                                 Icon="bi-tags"
+                                 Options="CategoryOptions"
+                                 Disabled="@(_allCategories.Count == 0)"
+                                 DisabledHint="Busque um termo para listar as categorias do Mercado Livre"
+                                 EmptyText="Busque um termo para listar as categorias."
+                                 @bind-SelectedValues="_categories"
+                                 @bind-SelectedValues:after="ApplyScreenFilters" />
+            <button type="button"
+                    class="btn btn-sm @(_advanced.ActiveCount > 0 ? "btn-primary" : "btn-outline-secondary")"
+                    aria-haspopup="dialog"
+                    @onclick="OpenAdvancedFilters">
+                <i class="bi bi-sliders me-1" aria-hidden="true"></i>@MultiSelectRules.Summary("Filtros", _advanced.ActiveCount)
+            </button>
         </div>
-        <div class="row g-2 mt-2">
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-semibold" for="busca-min">Preço mín.</label>
-                <input id="busca-min" class="form-control" type="number" step="0.01" min="0" @bind="_minPrice" @bind:after="ApplyScreenFilters" />
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-semibold" for="busca-max">Preço máx.</label>
-                <input id="busca-max" class="form-control" type="number" step="0.01" min="0" @bind="_maxPrice" @bind:after="ApplyScreenFilters" />
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
-                <select id="busca-ordem" class="form-select" @bind="_sortBy" @bind:after="ApplyScreenFilters">
-                    <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância (Padrão Mercado Livre)</option>
-                    <option value="@OfficialCatalogSearchRules.SortBestOpportunity">Melhor vantagem + segurança</option>
-                    <option value="@OfficialCatalogSearchRules.SortBestSellers">Mais vendidos</option>
-                    <option value="@OfficialCatalogSearchRules.SortHighestCommission">Maior comissão</option>
-                    <option value="@OfficialCatalogSearchRules.SortBestRating">Melhor avaliação</option>
-                    <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
-                    <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-semibold" for="busca-categoria">Categoria (Mercado Livre)</label>
-                <select id="busca-categoria" class="form-select" @bind="_mlCategory" @bind:after="ApplyScreenFilters" disabled="@(_allCategories.Count == 0)">
-                    <option value="">@(_allCategories.Count == 0 ? "Busque para sugerir" : "Todas")</option>
-                    @foreach (var category in _allCategories)
-                    {
-                        <option value="@category.Id">@category.Name</option>
-                    }
-                </select>
-            </div>
-        </div>
-        @if (_allCategories.Count > 0)
-        {
-            <div class="d-flex flex-wrap align-items-center justify-content-center gap-1 mt-3" aria-label="Categorias sugeridas pelo Mercado Livre">
-                <span class="small text-muted me-1">Buscar só em:</span>
-                <button type="button"
-                        class="btn btn-sm rounded-pill @(string.IsNullOrEmpty(_mlCategory) ? "btn-primary" : "btn-outline-secondary")"
-                        aria-pressed="@(string.IsNullOrEmpty(_mlCategory) ? "true" : "false")"
-                        disabled="@_busy"
-                        @onclick="() => SearchInCategoryAsync(null)">
-                    <i class="bi bi-grid me-1" aria-hidden="true"></i>Todas
-                </button>
-                @foreach (var category in OfficialCatalogSearchRules.VisibleCategoryChips(_allCategories, _mlCategory, _showAllCategories))
-                {
-                    var categoryId = category.Id;
-                    var selected = IsSelectedCategory(categoryId);
-                    <button type="button"
-                            class="btn btn-sm rounded-pill @(selected ? "btn-primary" : "btn-outline-secondary")"
-                            aria-pressed="@(selected ? "true" : "false")"
-                            disabled="@_busy"
-                            title="Buscar de novo no Mercado Livre só em @category.Name"
-                            @onclick="() => SearchInCategoryAsync(categoryId)">
-                        <i class="bi @(selected ? "bi-check2-circle" : "bi-tag") me-1" aria-hidden="true"></i>@category.Name
-                    </button>
-                }
-                @if (_allCategories.Count > OfficialCatalogSearchRules.MaxVisibleCategoryChips)
-                {
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary ms-1"
-                            aria-expanded="@(_showAllCategories ? "true" : "false")"
-                            @onclick="() => _showAllCategories = !_showAllCategories">
-                        @if (_showAllCategories)
-                        {
-                            <i class="bi bi-funnel-fill" aria-hidden="true"></i><span> Menos categorias</span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-funnel" aria-hidden="true"></i><span> Outras categorias (@(_allCategories.Count - OfficialCatalogSearchRules.MaxVisibleCategoryChips))</span>
-                        }
-                    </button>
-                }
-            </div>
-        }
     </form>
 
     @if (!string.IsNullOrWhiteSpace(_error))
     {
-        <div class="alert alert-danger py-2 small">@_error</div>
+        <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
     }
     @if (!string.IsNullOrWhiteSpace(_info))
     {
-        <div class="alert alert-success py-2 small">@_info</div>
+        <div class="alert alert-success py-1 px-2 small mb-2">@_info</div>
     }
     @if (!string.IsNullOrWhiteSpace(_notice))
     {
-        <div class="alert alert-info py-2 small">@_notice</div>
+        <div class="alert alert-info py-1 px-2 small mb-2">@_notice</div>
     }
 
-    @if (_searched && _channels.Count > 0)
+    @if (_searched && (_channels.Count > 0 || _relevanceOrder.Count > 0))
     {
-        <div class="d-flex flex-wrap gap-2 justify-content-center mb-3" aria-label="Status da busca por loja">
+        <div class="busca-status-bar" aria-label="Status da busca por loja">
             @foreach (var channel in _channels.Where(item => item.Included))
             {
-                <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-3 py-2 d-inline-flex align-items-center gap-2">
+                <span class="badge rounded-pill @ChannelBadgeClass(channel.State) px-2 py-1 d-inline-flex align-items-center gap-1">
                     <span>
                         @ChannelGlyph(channel.State)
                         <span class="fw-semibold">@channel.Label:</span>
@@ -185,37 +102,45 @@
                     @if (NeedsMercadoLivreConnect(channel))
                     {
                         <button type="button"
-                                class="btn btn-sm btn-dark"
+                                class="btn btn-sm btn-dark py-0"
                                 @onclick="GoToMercadoLivreConnect">
-                            Conectar
+                            <i class="bi bi-plug me-1" aria-hidden="true"></i>Conectar
                         </button>
                     }
                 </span>
             }
+            @if (_relevanceOrder.Count > 0)
+            {
+                <span class="small text-muted ms-auto" title="Os filtros alterados valem só para o que está na tela; clique em Buscar para consultar as lojas de novo com eles.">
+                    @_items.Count de @_relevanceOrder.Count ofertas
+                </span>
+            }
+            @if (_items.Count > 0)
+            {
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary py-0 @(_relevanceOrder.Count > 0 ? null : "ms-auto")"
+                        aria-expanded="@(_showMetrics ? "true" : "false")"
+                        @onclick="() => _showMetrics = !_showMetrics">
+                    <i class="bi @(_showMetrics ? "bi-bar-chart-fill" : "bi-bar-chart") me-1" aria-hidden="true"></i>@(_showMetrics ? "Ocultar métricas" : "Métricas")
+                </button>
+            }
         </div>
     }
 
-    @if (_searched && _relevanceOrder.Count > 0 && _items.Count != _relevanceOrder.Count)
-    {
-        <p class="small text-muted text-center mb-3">
-            Mostrando @_items.Count de @_relevanceOrder.Count resultados carregados. Os filtros alterados valem só para o que está na tela;
-            clique em <strong>Buscar</strong> para consultar as lojas de novo com eles.
-        </p>
-    }
     @if (_searched && !_busy && _relevanceOrder.Count > 0 && _items.Count == 0)
     {
-        <div class="alert alert-light border">Nenhum resultado carregado atende aos filtros. Ajuste os filtros ou clique em Buscar para consultar as lojas de novo.</div>
+        <div class="alert alert-light border py-2 small">Nenhum resultado carregado atende aos filtros. Ajuste os filtros ou clique em Buscar para consultar as lojas de novo.</div>
     }
     else if (_searched && !_busy && _relevanceOrder.Count == 0)
     {
-        <div class="alert alert-light border">Nenhum produto retornado. Confira as lojas marcadas e as chaves da Amazon/Shopee.</div>
+        <div class="alert alert-light border py-2 small">Nenhum produto retornado. Confira as plataformas marcadas e as chaves da Amazon/Shopee.</div>
     }
-    @if (_items is { Count: > 0 })
+    @if (_items is { Count: > 0 } && _showMetrics)
     {
         var metrics = OfficialCatalogSearchRules.BuildMetrics(_items);
-        <section class="card border-0 shadow-sm mb-4" aria-label="Métricas da busca">
-            <div class="card-body">
-                <h2 class="h6 fw-bold mb-3">Métricas das @metrics.Count ofertas na tela</h2>
+        <section class="card border-0 shadow-sm mb-2" aria-label="Métricas da busca">
+            <div class="card-body py-2">
+                <h2 class="h6 fw-bold mb-2">Métricas das @metrics.Count ofertas na tela</h2>
                 <div class="row g-3 small">
                     <div class="col-6 col-lg-3">
                         <div class="text-muted">Faixa de preço</div>
@@ -238,7 +163,7 @@
                         <div class="text-muted">
                             @if (metrics.TopCommission is null)
                             {
-                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @onclick="() => _showRules = true">Ver tabela de comissão</button>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @onclick="() => _showRules = true"><i class="bi bi-table me-1" aria-hidden="true"></i>Ver tabela de comissão</button>
                             }
                             else
                             {
@@ -264,6 +189,9 @@
                 </div>
             </div>
         </section>
+    }
+    @if (_items is { Count: > 0 })
+    {
         <div class="row g-3">
             @foreach (var item in _items)
             {
@@ -454,13 +382,73 @@
     }
     @if (_searched && _mlNextOffset is not null)
     {
-        <div class="text-center mt-4">
+        <div class="text-center mt-3">
             <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="LoadMoreMercadoLivreAsync">
-                Carregar mais (Mercado Livre)
+                <i class="bi bi-arrow-down-circle me-1" aria-hidden="true"></i>Carregar mais (Mercado Livre)
             </button>
         </div>
     }
 </div>
+
+@if (_advancedDraft is { } draft)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="busca-filtros-title">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content border-0 shadow" @onsubmit="ApplyAdvancedFilters" @onsubmit:preventDefault="true">
+                <div class="modal-header py-2">
+                    <h2 id="busca-filtros-title" class="modal-title h6 fw-bold">
+                        <i class="bi bi-sliders me-1" aria-hidden="true"></i>Filtros avançados
+                    </h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseAdvancedFilters"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="busca-min">Preço Mínimo</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input id="busca-min" class="form-control" type="number" step="0.01" min="0" placeholder="0,00" @bind="draft.MinPrice" />
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="busca-max">Preço Máximo</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input id="busca-max" class="form-control" type="number" step="0.01" min="0" placeholder="sem limite" @bind="draft.MaxPrice" />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="busca-ordem">Ordenar por</label>
+                            <select id="busca-ordem" class="form-select form-select-sm" @bind="draft.SortBy">
+                                <option value="@OfficialCatalogSearchRules.SortRelevance">Relevância (Padrão Mercado Livre)</option>
+                                <option value="@OfficialCatalogSearchRules.SortBestOpportunity">Melhor vantagem + segurança</option>
+                                <option value="@OfficialCatalogSearchRules.SortBestSellers">Mais vendidos</option>
+                                <option value="@OfficialCatalogSearchRules.SortHighestCommission">Maior comissão</option>
+                                <option value="@OfficialCatalogSearchRules.SortBestRating">Melhor avaliação</option>
+                                <option value="@OfficialCatalogSearchRules.SortLowestPrice">Menor preço</option>
+                                <option value="@OfficialCatalogSearchRules.SortBiggestDiscount">Maior desconto</option>
+                            </select>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(_advancedError))
+                    {
+                        <div class="alert alert-danger py-1 px-2 small mt-2 mb-0">@_advancedError</div>
+                    }
+                    <p class="small text-muted mt-2 mb-0">Os filtros valem na hora para as ofertas na tela; clique em <strong>Buscar</strong> para consultar as lojas de novo com a faixa de preço.</p>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearAdvancedFilters">
+                        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Aplicar Filtros
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
 
 @if (_searching)
 {
@@ -574,15 +562,16 @@
                         <li>Produtos "família" (ex.: um modelo com várias configurações) trazem até @OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct variações com oferta.</li>
                         <li>Sem nenhuma oferta, a busca tenta sozinha um termo mais curto (remove as últimas palavras) e avisa o termo usado.</li>
                         <li><strong>Carregar mais</strong> continua a análise de onde parou, só no Mercado Livre.</li>
-                        <li><strong>Categoria</strong> é sugerida pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca e volta a "Todas" quando o termo muda. Os atalhos "Buscar só em" consultam o Mercado Livre de novo só naquela categoria, com 1 clique; todas as categorias encontradas para o termo continuam visíveis (a selecionada em azul) para trocar direto. Com mais de @OfficialCatalogSearchRules.MaxVisibleCategoryChips categorias, "Outras categorias" mostra o restante sem nova consulta.</li>
+                        <li><strong>Categorias</strong> são sugeridas pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca, com quantas ofertas carregadas há em cada uma. Marcar uma ou mais categorias filtra <strong>só o que já está na tela</strong>, sem nova consulta; a lista é limpa quando o termo muda.</li>
                         <li>A busca de catálogo do Mercado Livre já devolve os produtos na relevância do próprio Mercado Livre; essa ordem é mantida em "Relevância (Padrão Mercado Livre)".</li>
                         <li>A API do Mercado Livre não informa cupons: "Apenas com cupom" esconde os resultados do Mercado Livre.</li>
                     </ul>
 
                     <h3 class="h6 fw-bold">Filtros</h3>
                     <ul class="mb-3">
-                        <li><strong>Buscar</strong> consulta as lojas com o termo e todos os filtros marcados (preço, frete grátis, categoria).</li>
-                        <li>Mudar um filtro depois da busca (lojas, preço, frete grátis, cupom, loja oficial, vendedores confiáveis, mais vendidos, produtos principais, categoria ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
+                        <li>A barra de filtros tem quatro gatilhos: <strong>Plataformas</strong>, <strong>Filtros e Qualificadores</strong>, <strong>Categorias</strong> (seleção múltipla, com busca a partir de @MultiSelectRules.MinSearchLength letras) e <strong>Filtros</strong> (preço mínimo, preço máximo e ordenação). O número entre parênteses mostra quantas opções estão marcadas.</li>
+                        <li><strong>Buscar</strong> consulta as plataformas marcadas com o termo, a faixa de preço, frete grátis, cupom e produtos principais.</li>
+                        <li>Mudar um filtro depois da busca (plataformas, qualificadores, categorias, preço ou ordenação) filtra <strong>só o que já está na tela</strong>, sem nova consulta.</li>
                         <li><strong>Apenas produtos principais</strong> esconde ofertas cujo título começa por um acessório antes do termo buscado (capa, película, carregador, cabo, fonte, suporte...). Se o termo já for um acessório (ex.: "capa iphone"), nada é escondido.</li>
                         <li>Para trazer produtos que ainda não foram carregados com o novo filtro, clique em <strong>Buscar</strong> de novo.</li>
                         <li>Ordenação: relevância (padrão, ordem exata devolvida pelas lojas), melhor vantagem + segurança (score Ofertio), mais vendidos, maior comissão, melhor avaliação, menor preço ou maior desconto.</li>
@@ -595,7 +584,9 @@
                     </ul>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" @onclick="() => _showRules = false">Entendi</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => _showRules = false">
+                        <i class="bi bi-check2 me-1" aria-hidden="true"></i>Entendi
+                    </button>
                 </div>
             </div>
         </div>
@@ -710,7 +701,9 @@
                     <a class="btn btn-outline-secondary" href="@_galleryItem.SourceUrl" target="_blank" rel="noopener noreferrer">
                         <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir
                     </a>
-                    <button type="button" class="btn btn-primary" @onclick="CloseGallery">Fechar</button>
+                    <button type="button" class="btn btn-primary" @onclick="CloseGallery">
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Fechar
+                    </button>
                 </div>
             </div>
         </div>
@@ -720,26 +713,19 @@
 
 @code {
     private string _keyword = string.Empty;
-    private bool _ml = true;
-    private bool _shopee = true;
-    private bool _amazon = true;
-    private bool _couponOnly;
-    private bool _freeShippingOnly;
-    private decimal? _minPrice;
-    private decimal? _maxPrice;
-    private string _sortBy = OfficialCatalogSearchRules.SortRelevance;
-    private bool _mainProductsOnly;
-    private bool _officialOnly;
-    private bool _trustedOnly;
-    private bool _bestSellersOnly;
+    private IReadOnlyCollection<string> _platforms = OfferSearchFilterOptions.DefaultPlatforms;
+    private IReadOnlyCollection<string> _qualifiers = [];
+    private IReadOnlyCollection<string> _categories = [];
+    private OfferSearchAdvancedFilters _advanced = new();
+    private OfferSearchAdvancedFilters? _advancedDraft;
+    private string? _advancedError;
+    private bool _showMetrics;
     private decimal? _mlCommissionPercent;
     private decimal? _amazonCommissionPercent;
     private bool _savingRates;
     private string? _ratesMessage;
-    private string? _mlCategory;
     private List<OfficialCatalogCategoryDto> _allCategories = [];
     private string? _categoriesKeyword;
-    private bool _showAllCategories;
     private bool _busy;
     private bool _searching;
     private string _searchingStores = "as lojas";
@@ -1040,51 +1026,65 @@
         return string.IsNullOrWhiteSpace(name) ? $"loja {status}" : $"{name} ({status})";
     }
 
-    private OfficialCatalogSearchFilter CurrentFilter() => new()
-    {
-        Keyword = _keyword?.Trim() ?? string.Empty,
-        MinPrice = _minPrice,
-        MaxPrice = _maxPrice,
-        HasCoupon = _couponOnly ? true : null,
-        FreeShippingOnly = _freeShippingOnly ? true : null,
-        SortBy = _sortBy,
-        MercadoLivre = _ml,
-        MercadoLivreTrackingId = _mlTrackingId,
-        MercadoLivreCategory = string.IsNullOrWhiteSpace(_mlCategory) ? null : _mlCategory,
-        OfficialStoreOnly = _officialOnly ? true : null,
-        TrustedSellersOnly = _trustedOnly ? true : null,
-        BestSellersOnly = _bestSellersOnly ? true : null,
-        MainProductsOnly = _mainProductsOnly ? true : null,
-        Shopee = _shopee,
-        Amazon = _amazon
-    };
+    private OfficialCatalogSearchFilter CurrentFilter() => OfferSearchFilterOptions.ApplySelections(
+        new OfficialCatalogSearchFilter
+        {
+            Keyword = _keyword?.Trim() ?? string.Empty,
+            MinPrice = _advanced.MinPrice,
+            MaxPrice = _advanced.MaxPrice,
+            SortBy = _advanced.SortBy,
+            MercadoLivreTrackingId = _mlTrackingId
+        },
+        _platforms,
+        _qualifiers,
+        _categories);
+
+    private IReadOnlyList<MultiSelectOption> CategoryOptions =>
+        OfferSearchFilterOptions.Categories(_allCategories, _relevanceOrder);
 
     private void ApplyScreenFilters()
     {
         _items = [.. OfficialCatalogSearchRules.ApplySort(
             OfficialCatalogSearchRules.FilterLoadedResults(_relevanceOrder, CurrentFilter()),
-            _sortBy)];
+            _advanced.SortBy)];
         _refreshTooltips = true;
     }
 
-    private bool IsSelectedCategory(string? categoryId) =>
-        !string.IsNullOrEmpty(_mlCategory)
-        && string.Equals(_mlCategory, categoryId, StringComparison.OrdinalIgnoreCase);
-
-    private async Task SearchInCategoryAsync(string? categoryId)
+    private void OpenAdvancedFilters()
     {
-        var alreadyLoaded = _searched
-            && _error is null
-            && string.Equals(_lastFilter?.MercadoLivreCategory, categoryId, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(_lastFilter?.Keyword, _keyword?.Trim(), StringComparison.OrdinalIgnoreCase);
-        _mlCategory = categoryId;
-        if (alreadyLoaded)
+        _advancedDraft = _advanced.Copy();
+        _advancedError = null;
+    }
+
+    private void CloseAdvancedFilters()
+    {
+        _advancedDraft = null;
+        _advancedError = null;
+    }
+
+    private void ApplyAdvancedFilters()
+    {
+        if (_advancedDraft is null)
         {
-            ApplyScreenFilters();
             return;
         }
 
-        await SearchAsync();
+        _advancedError = _advancedDraft.Validate();
+        if (_advancedError is not null)
+        {
+            return;
+        }
+
+        _advanced = _advancedDraft;
+        CloseAdvancedFilters();
+        ApplyScreenFilters();
+    }
+
+    private void ClearAdvancedFilters()
+    {
+        _advanced = new OfferSearchAdvancedFilters();
+        CloseAdvancedFilters();
+        ApplyScreenFilters();
     }
 
     private static string ChannelGlyph(string? state) => state switch
@@ -1127,22 +1127,10 @@
 
     private string SelectedStoresLabel()
     {
-        var stores = new List<string>();
-        if (_ml)
-        {
-            stores.Add("Mercado Livre");
-        }
-
-        if (_shopee)
-        {
-            stores.Add("Shopee");
-        }
-
-        if (_amazon)
-        {
-            stores.Add("Amazon");
-        }
-
+        var stores = OfferSearchFilterOptions.Platforms
+            .Where(option => _platforms.Contains(option.Value, StringComparer.OrdinalIgnoreCase))
+            .Select(option => option.Label)
+            .ToList();
         return stores.Count switch
         {
             0 => "as lojas",
@@ -1161,9 +1149,8 @@
         var keyword = _keyword?.Trim() ?? string.Empty;
         if (!string.Equals(keyword, _categoriesKeyword, StringComparison.OrdinalIgnoreCase))
         {
-            _mlCategory = null;
+            _categories = [];
             _allCategories = [];
-            _showAllCategories = false;
         }
 
         _busy = true;
@@ -1199,6 +1186,8 @@
             {
                 _allCategories = OfficialCatalogSearchRules.MergeCategoryChips(_allCategories, result.Data.MercadoLivreCategories);
                 _categoriesKeyword = keyword;
+                _categories = OfferSearchFilterOptions.KeepKnownCategories(_categories, _allCategories);
+                ApplyScreenFilters();
             }
 
             if (_items.Count > 0)
@@ -1268,7 +1257,7 @@
                 HasCoupon = _lastFilter.HasCoupon,
                 FreeShippingOnly = _lastFilter.FreeShippingOnly,
                 MainProductsOnly = _lastFilter.MainProductsOnly,
-                SortBy = _sortBy,
+                SortBy = _advanced.SortBy,
                 MercadoLivre = true,
                 MercadoLivreTrackingId = _lastFilter.MercadoLivreTrackingId,
                 MercadoLivreCategory = _lastFilter.MercadoLivreCategory,

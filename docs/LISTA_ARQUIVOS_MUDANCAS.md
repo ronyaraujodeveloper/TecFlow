@@ -1866,6 +1866,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor**, **Integrations/MarketplaceStoreCard.razor**, **Integrations/ConnectStoreModal.razor** e **Pages/Busca/BuscaGlobal.razor** - removidos "API de busca: autorizada (OAuth)" e "Reautorizar Mercado Livre"; card mantém só ID de afiliado, Editar e Desconectar.
 - [x] **Ofertio.Tests/Unit/Integrations/GlobalIntegrationRulesTests.cs** e **GlobalIntegrationServiceTests.cs** *(novos)* + **Unit/Radar/MercadoLivreApiServiceTests.cs** - cache, status, rotas de retorno, dependências de menu, autorização Master e refresh automático.
 
+### CompactSearchFilters - Filtros compactos da Buscar Ofertas (combos multisseleção e modal "Filtros")
+
+- [x] **Ofertio.SharedUi/Components/Shared/MultiSelectDropdown.razor** *(novo)* - combo reutilizável: botão com ícone `bi-*` e resumo "Título (n)", busca no topo a partir de 3 letras, checkboxes, "Marcar todos"/"Limpar", fecha com clique fora ou Esc.
+- [x] **Ofertio.SharedUi/Helpers/MultiSelectRules.cs** *(novo)* - filtro das opções (≥ 3 caracteres, sem diferenciar acentos), resumo do botão, marcar/desmarcar/todos/limpar.
+- [x] **Ofertio.SharedUi/Helpers/OfferSearchFilterOptions.cs** *(novo)* - opções de Plataformas, Filtros e Qualificadores e Categorias (com contador de ofertas carregadas), mapeamento para `OfficialCatalogSearchFilter` e `OfferSearchAdvancedFilters` (preço mínimo, preço máximo e ordenação, editados como rascunho no modal).
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - cabeçalho em uma linha; barra `[Plataformas] [Filtros e Qualificadores] [Categorias] [Filtros]`; modal "Filtros avançados" ("Aplicar Filtros" `bi-check-lg`, "Limpar" `bi-x-circle`); removidos os checkboxes soltos, os campos de preço/ordenação/categoria e as pílulas "Buscar só em"; status das lojas e contador em uma linha; métricas recolhidas atrás do botão "Métricas"; ícones em Buscar, Carregar mais, Conectar, Entendi e Fechar.
+- [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - `MercadoLivreCategories` (filtro de tela com várias categorias).
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `FilterLoadedResults` aceita várias categorias em memória; `CountByCategory`; removidos `VisibleCategoryChips` e `MaxVisibleCategoryChips` (pílulas).
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.busca-header`, `.busca-filter-bar`, `.busca-status-bar` e `.multiselect-*` (menu em largura total no celular).
+- [x] **Ofertio.Tests/Unit/SharedUi/OfferSearchFilterOptionsTests.cs** *(novo)* + **Unit/Radar/OfficialCatalogSearchRulesTests.cs** - busca a partir de 3 letras, resumo, seleção, mapeamento do filtro, contadores, validação do modal e filtro de várias categorias.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

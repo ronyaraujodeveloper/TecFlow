@@ -2,7 +2,9 @@
 @using Ofertio.Business.Service.LinkStrategies
 @using Ofertio.SharedUi.Helpers
 @using Ofertio.SharedUi.Services.LinkGenerator
+@using Ofertio.Util.Text
 @inject IJSRuntime Js
+@inject NavigationManager NavigationManager
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject ILogger<LinkGeneratorResultPanel> Logger
 
@@ -194,7 +196,7 @@
                     </article>
                 }
 
-                @if (!string.IsNullOrWhiteSpace(response.ResolvedShortUrl))
+                @if (TrackingUrl is { Length: > 0 } trackingUrl)
                 {
                     <article class="link-row link-row--ofertio" role="listitem">
                         <div class="link-row-meta min-w-0">
@@ -202,8 +204,8 @@
                             <output id="generated-short-url"
                                     class="link-row-url font-monospace"
                                     for="product-url"
-                                    title="@response.ResolvedShortUrl">
-                                @response.ResolvedShortUrl
+                                    title="@trackingUrl">
+                                @trackingUrl
                             </output>
                         </div>
                         <div class="link-row-actions" role="group" aria-label="Ações do rastreio Ofertio">
@@ -212,11 +214,11 @@
                                     title="Copiar"
                                     aria-label="Copiar rastreio Ofertio"
                                     disabled="@_isCopying"
-                                    @onclick="() => CopyLinkAsync(response.ResolvedShortUrl, CopyTarget.Short)">
+                                    @onclick="() => CopyLinkAsync(trackingUrl, CopyTarget.Short)">
                                 <i class="bi @(_copiedShort ? "bi-clipboard-check" : "bi-clipboard")" aria-hidden="true"></i>
                             </button>
                             <a class="btn btn-sm btn-icon btn-success"
-                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               href="@AffiliateShareLinkBuilder.BuildWhatsAppUri(trackingUrl, response.PlatformDetected)"
                                target="_blank"
                                rel="noopener noreferrer"
                                title="WhatsApp"
@@ -224,7 +226,7 @@
                                 <i class="bi bi-whatsapp" aria-hidden="true"></i>
                             </a>
                             <a class="btn btn-sm btn-icon btn-info text-white"
-                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(response.ResolvedShortUrl, response.PlatformDetected)"
+                               href="@AffiliateShareLinkBuilder.BuildTelegramUri(trackingUrl, response.PlatformDetected)"
                                target="_blank"
                                rel="noopener noreferrer"
                                title="Telegram"
@@ -261,6 +263,13 @@
     private string PriceDraft { get; set; } = string.Empty;
     private string ImageDraft { get; set; } = string.Empty;
     private bool _isSavingMetadata;
+
+    private string TrackingUrl => ShortLinkPublicUrl.RebaseToCurrentHost(Response?.ResolvedShortUrl, GetBaseUrl());
+
+    private string GetBaseUrl()
+    {
+        return NavigationManager.BaseUri.TrimEnd('/');
+    }
 
     protected override void OnParametersSet()
     {

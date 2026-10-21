@@ -746,6 +746,13 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Selos clicáveis:** o selo inteiro de Oportunidade, Vantagem e Segurança tem tooltip (hover/foco), `cursor: pointer; user-select: none` e abre o modal de explicação controlado pelo componente, com os números daquela oferta.
 - [ ] **Validar no navegador:** buscar "chinelo", clicar em "Sandálias e tamancos", trocar direto para outra pílula e abrir o modal de cada selo (desktop e celular).
 
+## 🔗 Link de rastreio com a URL do ambiente (`DynamicTrackingLinkBaseUrl`)
+
+- [x] **URL dinâmica:** o "Link de rastreio Ofertio" (Gerador de Links, página pública, Buscar Ofertas e seletor de link dos agendadores) troca o `http://localhost:5001` por `NavigationManager.BaseUri` (`GetBaseUrl()`), ex.: `https://dev.ofertio.com.br/AchadinhoCerto/{code}`.
+- [x] **Redirect pela WebUi:** `ShortLinkProxyExtensions` encaminha `/{storeSlug}/{code}` e `/r/{code}` para a API, que registra o clique e redireciona.
+- [x] **Preservado:** domínio de encurtador configurado (ex.: `tflow.link`) não é trocado; botões Copiar, WhatsApp e Telegram mantêm os ícones `bi-*`.
+- [ ] **Disparos automáticos:** mensagens montadas no servidor (grupos monitorados, robôs) ainda usam `Ofertio:ShortLinks:PublicBaseUrl`; definir o domínio público por ambiente.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

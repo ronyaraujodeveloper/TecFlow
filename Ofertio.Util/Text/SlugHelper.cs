@@ -93,4 +93,32 @@ public static class ShortLinkPublicUrl
         var slug = SlugHelper.GenerateSlug(friendlyName);
         return $"{NormalizeHost(publicBaseUrl)}/{slug}/{code}";
     }
+
+    /// <summary>
+    /// Troca o host interno (loopback, ex.: http://localhost:5001) do link de rastreio pela URL base do ambiente
+    /// em que a tela está aberta ({base}/{storeSlug}/{code}). Um domínio de encurtador configurado
+    /// (ex.: https://tflow.link) é mantido, assim como bases sem endereço público (o WebView do app usa https://0.0.0.x).
+    /// </summary>
+    public static string RebaseToCurrentHost(string? shortUrl, string? currentBaseUrl)
+    {
+        var link = shortUrl?.Trim() ?? string.Empty;
+        if (!Uri.TryCreate(link, UriKind.Absolute, out var linkUri) || !linkUri.IsLoopback)
+        {
+            return link;
+        }
+
+        if (!Uri.TryCreate(currentBaseUrl?.Trim(), UriKind.Absolute, out var baseUri)
+            || (baseUri.Scheme != Uri.UriSchemeHttp && baseUri.Scheme != Uri.UriSchemeHttps)
+            || IsUnroutableHost(baseUri.Host))
+        {
+            return link;
+        }
+
+        return baseUri.GetLeftPart(UriPartial.Path).TrimEnd('/') + linkUri.PathAndQuery + linkUri.Fragment;
+    }
+
+    private static bool IsUnroutableHost(string host) =>
+        System.Net.IPAddress.TryParse(host, out var address)
+        && address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+        && address.GetAddressBytes()[0] == 0;
 }

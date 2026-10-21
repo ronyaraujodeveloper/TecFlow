@@ -6,8 +6,10 @@
 @using Ofertio.Core.Enums
 @using Ofertio.SharedUi.Helpers
 @using Ofertio.SharedUi.Services.LinkGenerator
+@using Ofertio.Util.Text
 @inject IPublicConverterApiService PublicPages
 @inject IJSRuntime Js
+@inject NavigationManager NavigationManager
 @inject ILogger<PublicConverter> Logger
 
 <PageTitle>Converter link — Ofertio</PageTitle>
@@ -158,7 +160,12 @@ else
 
     private string DirectCommissionUrl => _result?.AffiliateUrl?.Trim() ?? string.Empty;
 
-    private string OfertioTrackingUrl => _result?.ResolvedShortUrl?.Trim() ?? string.Empty;
+    private string OfertioTrackingUrl => ShortLinkPublicUrl.RebaseToCurrentHost(_result?.ResolvedShortUrl, GetBaseUrl());
+
+    private string GetBaseUrl()
+    {
+        return NavigationManager.BaseUri.TrimEnd('/');
+    }
 
     protected override async Task OnParametersSetAsync()
     {

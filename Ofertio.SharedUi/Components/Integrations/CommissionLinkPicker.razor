@@ -3,8 +3,10 @@
 @using Ofertio.Database.Filter
 @using Ofertio.Database.Pagin
 @using Ofertio.SharedUi.Services.LinkGenerator
+@using Ofertio.Util.Text
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject ILogger<CommissionLinkPicker> Logger
+@inject NavigationManager NavigationManager
 
 <div class="commission-link-picker mb-3">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -271,8 +273,16 @@
             ? (string.IsNullOrWhiteSpace(item.DisplayTitle) ? "Produto" : item.DisplayTitle)
             : item.ProductName;
 
-    private static string ResolveUrl(AffiliateLinkHistoryItemDto item) =>
-        FirstNonEmpty(item.ShortenedUrl, item.AffiliateUrl, item.OriginalUrl);
+    private string ResolveUrl(AffiliateLinkHistoryItemDto item) =>
+        FirstNonEmpty(
+            ShortLinkPublicUrl.RebaseToCurrentHost(item.ShortenedUrl, GetBaseUrl()),
+            item.AffiliateUrl,
+            item.OriginalUrl);
+
+    private string GetBaseUrl()
+    {
+        return NavigationManager.BaseUri.TrimEnd('/');
+    }
 
     private static string FirstNonEmpty(params string?[] values)
     {

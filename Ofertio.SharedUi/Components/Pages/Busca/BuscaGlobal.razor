@@ -10,6 +10,7 @@
 @using Ofertio.SharedUi.Services.Integrations
 @using Ofertio.SharedUi.Services.LinkGenerator
 @using Ofertio.SharedUi.Services.Radar
+@using Ofertio.Util.Text
 @inject IOfficialCatalogSearchApiService SearchApi
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IAffiliateLinkApiService AffiliateLinkApi
@@ -1126,6 +1127,11 @@
     private void GoToMercadoLivreConnect() =>
         Navigation.NavigateTo("/minhas-lojas?conectar=mercadolivre");
 
+    private string GetBaseUrl()
+    {
+        return Navigation.BaseUri.TrimEnd('/');
+    }
+
     private string SelectedStoresLabel()
     {
         var stores = new List<string>();
@@ -1351,7 +1357,7 @@
             {
                 var link = string.IsNullOrWhiteSpace(result.Data.ShortenedUrl)
                     ? result.Data.AffiliateUrl
-                    : result.Data.ShortenedUrl;
+                    : ShortLinkPublicUrl.RebaseToCurrentHost(result.Data.ShortenedUrl, GetBaseUrl());
                 _info = $"Link gerado: {link}";
             }
             else

@@ -1801,6 +1801,17 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - `.cursor-pointer` (`cursor: pointer; user-select: none`) e `.score-badge` no lugar de `.score-help-icon`.
 - [x] **Ofertio.Tests/Unit/Radar/OfficialCatalogSearchRulesTests.cs** - `MergeCategoryChips` e `VisibleCategoryChips`.
 
+### DynamicTrackingLinkBaseUrl - Link de rastreio Ofertio com a URL do ambiente atual
+
+- [x] **Ofertio.Util/Text/SlugHelper.cs** - `ShortLinkPublicUrl.RebaseToCurrentHost`: troca o host interno (loopback, ex.: `http://localhost:5001`) pela URL base da tela; mantém domínio de encurtador configurado e bases do WebView do app (`0.0.0.x`).
+- [x] **Ofertio.SharedUi/Components/LinkGenerator/LinkGeneratorResultPanel.razor** - `@inject NavigationManager NavigationManager`, `GetBaseUrl()` e `TrackingUrl` no "Link de rastreio Ofertio" (exibição, Copiar, WhatsApp e Telegram com os mesmos ícones `bi-*`).
+- [x] **Ofertio.SharedUi/Components/Pages/PublicConverter.razor** - `GetBaseUrl()` no rastreio da página pública do afiliado.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - `GetBaseUrl()` no aviso "Link gerado" de Converter & Gerar Link.
+- [x] **Ofertio.SharedUi/Components/Integrations/CommissionLinkPicker.razor** - `GetBaseUrl()` no link de comissão escolhido para os agendadores.
+- [x] **Ofertio.WebUi/Extensions/ShortLinkProxyExtensions.cs** - novo: YARP de `/{storeSlug}/{code}` e `/r/{code}` para o `ShortLinkRedirectController` da API (o link no host da WebUi redireciona com telemetria).
+- [x] **Ofertio.WebUi/Program.cs** - `app.MapShortLinkProxy()`.
+- [x] **Ofertio.Tests/Unit/Util/SlugHelperTests.cs** - `RebaseToCurrentHost` (dev, homologação, sub-caminho, domínio próprio, WebView, vazio).
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

@@ -55,6 +55,7 @@ app.UseAntiforgery();
 app.MapWebUiAuthEndpoints();
 app.MapIntegracoesEndpoints();
 app.MapMercadoLivreProxy();
+app.MapShortLinkProxy();
 app.MapMasterEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

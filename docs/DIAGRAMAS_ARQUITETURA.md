@@ -1779,6 +1779,19 @@ flowchart TB
   MODAL -->|Entendi ou X| CLOSE[CloseScoreHelp]
 ```
 
+### Link de rastreio com a URL do ambiente (`DynamicTrackingLinkBaseUrl`)
+
+```mermaid
+flowchart LR
+  API[ShortLinkService<br/>PublicBaseUrl http://localhost:5001] -->|ShortenedUrl| PANEL[LinkGeneratorResultPanel · PublicConverter<br/>BuscaGlobal · CommissionLinkPicker]
+  NAV[NavigationManager.BaseUri<br/>GetBaseUrl] --> REBASE[ShortLinkPublicUrl.RebaseToCurrentHost<br/>só troca host loopback]
+  PANEL --> REBASE
+  REBASE -->|"https://dev.ofertio.com.br/Loja/code"| SHARE[Copiar · WhatsApp · Telegram]
+  CLICK[Clique no link] --> WEBUI[Ofertio.WebUi<br/>ShortLinkProxyExtensions YARP]
+  WEBUI -->|"/storeSlug/code ou /r/code"| REDIR[ShortLinkRedirectController<br/>telemetria do clique]
+  REDIR -->|302| STORE[Marketplace com afiliado]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

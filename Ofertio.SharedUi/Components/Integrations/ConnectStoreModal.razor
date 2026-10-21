@@ -14,9 +14,11 @@
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-0">
                     <div>
-                        <h2 class="modal-title h5 fw-bold" id="connect-store-title">Conectar nova loja</h2>
+                        <h2 class="modal-title h5 fw-bold" id="connect-store-title">@ModalTitle</h2>
                         <p class="text-muted">
-                            Informe o apelido e o ID de afiliado/parceiro. Sem App Key / App Secret.
+                            @(IsEditMode
+                                ? "Altere o apelido ou o ID de afiliado/parceiro. A plataforma da loja não pode ser trocada."
+                                : "Informe o apelido e o ID de afiliado/parceiro. Sem App Key / App Secret.")
                         </p>
                     </div>
                     <button type="button" class="btn-close" aria-label="Fechar" disabled="@_linking" @onclick="Close"></button>
@@ -37,43 +39,43 @@
                         <div class="marketplace-platform-picker">
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.CasasBahia)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.CasasBahia)">
                                 <span class="marketplace-platform-badge badge-casasbahia">Casas Bahia</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Kabum)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.Kabum)">
                                 <span class="marketplace-platform-badge badge-kabum">Kabum!</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MagazineLuiza)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.MagazineLuiza)">
                                 <span class="marketplace-platform-badge badge-magalu">Magazine Luiza</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Amazon)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.Amazon)">
                                 <span class="marketplace-platform-badge badge-amazon">Amazon</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.MercadoLivre)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.MercadoLivre)">
                                 <span class="marketplace-platform-badge badge-mercadolivre">Mercado Livre</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.TikTokShop)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.TikTokShop)">
                                 <span class="marketplace-platform-badge badge-tiktok">TikTok Shop</span>
                             </button>
                             <button type="button"
                                     class="btn marketplace-platform-option @GetPlatformOptionClass(MarketplaceType.Shopee)"
-                                    disabled="@_linking"
+                                    disabled="@PlatformPickerDisabled"
                                     @onclick="() => SelectPlatform(MarketplaceType.Shopee)">
                                 <span class="marketplace-platform-badge badge-shopee">Shopee</span>
                             </button>
@@ -144,7 +146,7 @@
                         }
                     </div>
 
-                    @if (!_platform.IsUniversalAffiliatePlatform())
+                    @if (!IsEditMode && !_platform.IsUniversalAffiliatePlatform())
                     {
                         <details class="marketplace-manual-link small" open>
                             <summary class="text-muted mb-2">Vinculação manual (homologação / callback simulado)</summary>
@@ -187,9 +189,13 @@
                             class="btn btn-primary"
                             disabled="@(!CanSaveAccount)"
                             @onclick="VincularManualmenteDirect">
-                        @(_linking ? "Salvando..." : (_platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente"))
+                        @if (IsEditMode)
+                        {
+                            <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>
+                        }
+                        @SaveButtonLabel
                     </button>
-                    @if (SupportsOAuth)
+                    @if (SupportsOAuth && !IsEditMode)
                     {
                         <button type="button" class="btn btn-outline-primary" disabled="@_linking" @onclick="StartOAuthAsync">
                             @(_linking ? "Redirecionando..." : "Conectar via OAuth")
@@ -211,6 +217,9 @@
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
     [Parameter] public MarketplaceType? PreferredPlatform { get; set; }
+
+    /// <summary>Quando informado, o modal abre em modo edição e salva via UPDATE da loja existente.</summary>
+    [Parameter] public MarketplaceAccountDto? EditingStore { get; set; }
 
     private MarketplaceType _platform = MarketplaceType.Shopee;
     private bool _wasVisible;
@@ -261,6 +270,14 @@
     private string? DisplayError => ErrorMessage ?? _formError;
     private bool SupportsOAuth => !_platform.IsUniversalAffiliatePlatform() || _platform == MarketplaceType.MercadoLivre;
     private bool CanSaveAccount => !_linking && !_expanding && !_trackingInvalid;
+    private bool IsEditMode => EditingStore is not null;
+    private bool PlatformPickerDisabled => _linking || IsEditMode;
+    private string ModalTitle => IsEditMode ? "Editar loja" : "Conectar nova loja";
+    private string SaveButtonLabel => _linking
+        ? "Salvando..."
+        : IsEditMode
+            ? "Salvar alterações"
+            : _platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente";
 
     protected override void OnParametersSet()
     {
@@ -271,12 +288,34 @@
             return;
         }
 
-        if (!_wasVisible && PreferredPlatform is { } preferred)
+        if (!_wasVisible)
         {
-            SelectPlatform(preferred);
+            if (EditingStore is { } store)
+            {
+                LoadEditingStore(store);
+            }
+            else if (PreferredPlatform is { } preferred)
+            {
+                SelectPlatform(preferred);
+            }
         }
 
         _wasVisible = true;
+    }
+
+    private void LoadEditingStore(MarketplaceAccountDto store)
+    {
+        ResetForm();
+        _platform = store.PlatformType;
+        _friendlyName = string.IsNullOrWhiteSpace(store.FriendlyName) ? store.ShopName : store.FriendlyName;
+        var trackingId = string.IsNullOrWhiteSpace(store.AffiliateTrackingId) ? store.TrackingId : store.AffiliateTrackingId;
+        if (AffiliateTrackingIdSanitizer.LooksLikeUrl(trackingId))
+        {
+            ApplyTrackingId(trackingId);
+            return;
+        }
+
+        _trackingId = trackingId ?? string.Empty;
     }
 
     private void SelectPlatform(MarketplaceType platform)
@@ -384,6 +423,11 @@
 
     private void DetectSelectedPlatform(string? input)
     {
+        if (IsEditMode)
+        {
+            return;
+        }
+
         if (MarketplaceUrlDetector.Detect(input)?.IntegrationType is { } fromDetector)
         {
             SelectedPlatform = fromDetector;
@@ -483,6 +527,12 @@
                 return;
             }
 
+            if (EditingStore is { } editingStore)
+            {
+                await SaveEditAsync(editingStore, friendlyName, trackingId);
+                return;
+            }
+
             if (_platform.IsUniversalAffiliatePlatform())
             {
                 _friendlyName = friendlyName;
@@ -565,6 +615,33 @@
         {
             _linking = false;
         }
+    }
+
+    private async Task SaveEditAsync(MarketplaceAccountDto store, string friendlyName, string trackingId)
+    {
+        _friendlyName = friendlyName;
+        _trackingId = trackingId;
+        _formError = null;
+        _linking = true;
+
+        var response = await IntegracaoApi.UpdateAsync(store.Id, new IntegracaoLojaDto
+        {
+            PlatformType = store.PlatformType,
+            ShopId = store.ShopId,
+            FriendlyName = friendlyName,
+            TrackingId = string.IsNullOrWhiteSpace(trackingId) ? null : trackingId
+        });
+
+        if (response.Status)
+        {
+            await InvokeAsync(StateHasChanged);
+            await OnLojaVinculada.InvokeAsync();
+            return;
+        }
+
+        _formError = string.IsNullOrWhiteSpace(response.Descricao)
+            ? "Não foi possível atualizar a loja."
+            : response.Descricao;
     }
 
     private async Task<string> ReadInputAsync(string elementId, string boundValue)

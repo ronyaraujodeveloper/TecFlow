@@ -927,6 +927,185 @@ public class IntegracaoLojaServiceTests
         accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ShouldUpdateExistingStore_WithoutCreatingNewRecord()
+    {
+        var (service, stores, accounts, account, integration) = CreateUpdateMocks(userId: 7, accountUserId: "7");
+
+        var result = await service.UpdateAsync(7, account.Id, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = account.ShopId,
+            FriendlyName = "@Achadinhos de Aaz",
+            TrackingId = "18325850271"
+        });
+
+        Assert.True(result.Status, result.Descricao);
+        Assert.Equal("Loja atualizada com sucesso.", result.Descricao);
+        Assert.Equal("ul-7-loja-antiga", account.ShopId);
+        Assert.Equal("@Achadinhos de Aaz", account.FriendlyName);
+        Assert.Equal("18325850271", account.AffiliateTrackingId);
+        Assert.Equal("18325850271", account.TrackingId);
+        Assert.Equal("@Achadinhos de Aaz", integration.FriendlyName);
+        Assert.Equal("18325850271", integration.AffiliateTrackingId);
+        Assert.Equal(account.Id, result.Data!.Id);
+        accounts.Verify(repository => repository.UpsertAsync(account), Times.Once);
+        stores.Verify(repository => repository.UpdateAsync(integration, It.IsAny<CancellationToken>()), Times.Once);
+        stores.Verify(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldFail_WhenStoreBelongsToAnotherUser()
+    {
+        var (service, stores, accounts, account, _) = CreateUpdateMocks(userId: 7, accountUserId: "99", withIntegration: false);
+
+        var result = await service.UpdateAsync(7, account.Id, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = account.ShopId,
+            FriendlyName = "Invasor",
+            TrackingId = "18325850271"
+        });
+
+        Assert.False(result.Status);
+        Assert.Equal("Loja antiga", account.FriendlyName);
+        accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
+        stores.Verify(repository => repository.UpdateAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldFail_WhenIdDoesNotMatchStore()
+    {
+        var (service, _, accounts, account, _) = CreateUpdateMocks(userId: 7, accountUserId: "7");
+
+        var result = await service.UpdateAsync(7, 999, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = account.ShopId,
+            FriendlyName = "Outro nome",
+            TrackingId = "18325850271"
+        });
+
+        Assert.False(result.Status);
+        accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldFail_WhenTrackingIdAlreadyActiveOnAnotherStore()
+    {
+        var (service, _, accounts, account, _) = CreateUpdateMocks(userId: 7, accountUserId: "7");
+        accounts.Setup(repository => repository.ExistsActiveTrackingIdAsync(
+                MarketplaceType.Shopee,
+                "18325850271",
+                account.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await service.UpdateAsync(7, account.Id, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = account.ShopId,
+            FriendlyName = "Loja antiga",
+            TrackingId = "18325850271"
+        });
+
+        Assert.False(result.Status);
+        Assert.Equal(AffiliateTrackingIdValidator.DuplicateTrackingIdMessage(MarketplaceType.Shopee), result.Descricao);
+        accounts.Verify(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldKeepTrackingId_WhenFieldIsEmpty()
+    {
+        var (service, _, _, account, integration) = CreateUpdateMocks(userId: 7, accountUserId: "7");
+
+        var result = await service.UpdateAsync(7, account.Id, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = account.ShopId,
+            FriendlyName = "Novo apelido",
+            TrackingId = null
+        });
+
+        Assert.True(result.Status, result.Descricao);
+        Assert.Equal("Novo apelido", account.FriendlyName);
+        Assert.Equal("6512300000", account.AffiliateTrackingId);
+        Assert.Equal("6512300000", integration.AffiliateTrackingId);
+    }
+
+    private static (
+        IntegracaoLojaService Service,
+        Mock<IIntegracaoLojaRepository> Stores,
+        Mock<IMarketplaceAccountRepository> Accounts,
+        MarketplaceAccount Account,
+        IntegracaoLoja Integration)
+        CreateUpdateMocks(int userId, string accountUserId, bool withIntegration = true)
+    {
+        const string shopKey = "ul-7-loja-antiga";
+        var user = new UserAccount
+        {
+            Id = userId,
+            Name = "Demo",
+            Email = "demo@tecso.local",
+            PasswordHash = "hash",
+            TenantId = Guid.NewGuid()
+        };
+
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var account = new MarketplaceAccount
+        {
+            Id = 10,
+            UserId = accountUserId,
+            TenantId = user.TenantId,
+            ShopId = shopKey,
+            MarketplaceType = MarketplaceType.Shopee,
+            FriendlyName = "Loja antiga",
+            ShopName = "Loja antiga",
+            AffiliateTrackingId = "6512300000",
+            TrackingId = "6512300000",
+            IsActive = true,
+            ExpiresAt = DateTime.UtcNow.AddYears(1)
+        };
+
+        var integration = new IntegracaoLoja
+        {
+            Id = 3,
+            UserId = userId,
+            TenantId = user.TenantId,
+            PlatformType = MarketplaceType.Shopee,
+            ShopId = shopKey,
+            FriendlyName = "Loja antiga",
+            AffiliateTrackingId = "6512300000",
+            ExpiresAt = DateTime.UtcNow.AddYears(1),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.GetByShopAsync(shopKey, MarketplaceType.Shopee))
+            .ReturnsAsync(account);
+        accounts.Setup(repository => repository.UpsertAsync(It.IsAny<MarketplaceAccount>()))
+            .Returns(Task.CompletedTask);
+
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.GetByUserShopPlatformAsync(
+                userId, shopKey, MarketplaceType.Shopee, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(withIntegration ? integration : null);
+        stores.Setup(repository => repository.UpdateAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users, accounts),
+            Production());
+
+        return (service, stores, accounts, account, integration);
+    }
+
     private static MarketplaceAccountService AccountPrep(
         Mock<IUserAccountRepository> users,
         Mock<IMarketplaceAccountRepository>? accounts = null,

@@ -1812,6 +1812,25 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.WebUi/Program.cs** - `app.MapShortLinkProxy()`.
 - [x] **Ofertio.Tests/Unit/Util/SlugHelperTests.cs** - `RebaseToCurrentHost` (dev, homologação, sub-caminho, domínio próprio, WebView, vazio).
 
+### MercadoLivreProductIdPreservation - Código MLB preservado e fim do ID fictício MLB1234567890
+
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreProductUrlParser.cs** - regex `(?<![A-Za-z0-9])MLB-?\d{6,14}(?![0-9])` (catálogo `/p/MLB...`, anúncio `/MLB-...` e `/MLB...`, inclusive `_JM`); `HasProductIdInPath`; `ParseOrThrow` sem fallback de homologação (removido `HomologItemId`); `ShowcaseWithoutProductMessage`.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** - `BuildProductAffiliateUrl`: mantém domínio, path e código MLB; remove só `matt_*` de terceiros e o fragmento antes de aplicar `matt_tool`/`matt_word`.
+- [x] **Ofertio.Business/Service/LinkStrategies/MercadoLivreLinkStrategy.cs** - vitrine/perfil (`/social/...`) sem produto focado é recusada; URL com código no path é preservada; `/p/{id}` só quando o código vem na query; sem `IHostEnvironment`.
+- [x] **Ofertio.Business/Service/LinkStrategies/UniversalLinkResolverEngine.cs** - `ApplyTenantCredentials` do Mercado Livre preserva o path do produto.
+- [x] **Ofertio.Tests/Unit/LinkStrategies/** - extração nos dois formatos, links sem código, `HasProductIdInPath`, geração preservando catálogo e anúncio, vitrine recusada e reafiliação.
+
+### StoreEditModal - Edição de lojas em Minhas Lojas / Integrações
+
+- [x] **Ofertio.Business/Interfaces/Services/IIntegracaoLojaService.cs** - novo `UpdateAsync(userId, integrationId, dto)`.
+- [x] **Ofertio.Infrastructure.Services/Integrations/IntegracaoLojaService.cs** - `UpdateAsync`: localiza a loja por `ShopId` + plataforma, confere dono e ID, valida/normaliza o ID de afiliado (inclusive link do Mercado Livre), bloqueia ID duplicado e atualiza apelido e afiliado em `MarketplaceAccount` e `IntegracaoLoja` sem gerar nova `ShopId` (UPDATE, nunca INSERT). ID vazio mantém o atual.
+- [x] **Ofertio.API/Controllers/MarketplaceAuthController.cs** - `PUT api/marketplace-auth/lojas/{id}` e `POST api/marketplace-auth/lojas/{id}/editar` (equivalente para IIS/WebDAV).
+- [x] **Ofertio.SharedUi/Services/Integrations/IntegracaoLojaApiService.cs** - `UpdateAsync` chamando `lojas/{id}/editar`.
+- [x] **Ofertio.SharedUi/Components/Integrations/MarketplaceStoreCard.razor** - botão "Editar loja" (`bi-pencil-square`, `btn-outline-primary w-100 mb-2`) antes de "Desconectar loja"; parâmetro `OnEdit`.
+- [x] **Ofertio.SharedUi/Components/Integrations/ConnectStoreModal.razor** - parâmetro `EditingStore`: título "Editar loja", plataforma pré-selecionada e travada, apelido e ID preenchidos, OAuth/vinculação manual ocultos e "Salvar alterações" via `UpdateAsync`.
+- [x] **Ofertio.SharedUi/Components/Pages/MinhasLojas.razor** - `_editingStore`, `OpenEditModal`; "Conectar nova loja" (`bi-plus-lg`) zera o modo edição; mensagem "Loja atualizada com sucesso.".
+- [x] **Ofertio.Tests/Unit/Integrations/IntegracaoLojaServiceTests.cs** - UPDATE sem novo registro, loja de outro usuário, ID divergente, afiliado duplicado e ID vazio preservado.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

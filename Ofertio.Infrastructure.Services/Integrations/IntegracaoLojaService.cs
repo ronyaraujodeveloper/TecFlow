@@ -308,6 +308,120 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         };
     }
 
+    public async Task<IntegracaoLojaResponseDto> UpdateAsync(
+        int userId,
+        int integrationId,
+        IntegracaoLojaDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        if (dto is null || integrationId <= 0 || string.IsNullOrWhiteSpace(dto.ShopId))
+        {
+            return Fail("Payload de edição inválido.");
+        }
+
+        var friendlyName = dto.FriendlyName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(friendlyName))
+        {
+            return Fail("Informe um apelido / nome amigável para a loja.");
+        }
+
+        if (dto.PlatformType is MarketplaceType.MercadoLivre)
+        {
+            dto.TrackingId = await MarketplaceAccountService.ResolveMercadoLivreTrackingIdAsync(
+                dto.TrackingId,
+                _urlExpansionService,
+                cancellationToken);
+        }
+
+        if (!AffiliateTrackingIdValidator.TryNormalize(dto.PlatformType, dto.TrackingId, out var normalizedTracking))
+        {
+            return Fail(AffiliateTrackingIdValidator.InvalidMessage);
+        }
+
+        var trackingId = string.IsNullOrWhiteSpace(normalizedTracking) ? null : normalizedTracking.Trim();
+
+        var user = await ResolvePersistableUserAsync(userId);
+        if (user is null)
+        {
+            return Fail("Usuário não encontrado.");
+        }
+
+        var persistUserId = user.Id;
+        var userKey = persistUserId.ToString(CultureInfo.InvariantCulture);
+        var shopId = dto.ShopId.Trim();
+
+        var account = await _marketplaceAccountRepository.GetByShopAsync(shopId, dto.PlatformType);
+        if (account is not null && !AccountOwnedByUser(account, userKey))
+        {
+            account = null;
+        }
+
+        var integration = await _integracaoLojaRepository.GetByUserShopPlatformAsync(
+            persistUserId,
+            shopId,
+            dto.PlatformType,
+            cancellationToken);
+
+        if (account?.Id != integrationId && integration?.Id != integrationId)
+        {
+            return Fail("Loja não encontrada para o usuário autenticado.");
+        }
+
+        if (account is not null)
+        {
+            var duplicate = await EnsureUniqueTrackingIdAsync(
+                dto.PlatformType,
+                trackingId,
+                account.Id,
+                cancellationToken);
+            if (duplicate is not null)
+            {
+                return duplicate;
+            }
+
+            account.FriendlyName = friendlyName;
+            account.ShopName = friendlyName;
+            if (trackingId is not null)
+            {
+                account.AffiliateTrackingId = trackingId;
+                account.TrackingId = trackingId;
+            }
+
+            account.Touch();
+            await _marketplaceAccountService.PrepareForPersistAsync(account, user, cancellationToken);
+
+            try
+            {
+                await _marketplaceAccountRepository.UpsertAsync(account);
+            }
+            catch (Exception ex)
+            {
+                return Fail(MarketplaceAuthService.FormatSqlError(ex));
+            }
+        }
+
+        if (integration is not null)
+        {
+            integration.FriendlyName = friendlyName;
+            if (trackingId is not null)
+            {
+                integration.AffiliateTrackingId = trackingId;
+            }
+
+            integration.Touch();
+            await _integracaoLojaRepository.UpdateAsync(integration, cancellationToken);
+        }
+
+        return new IntegracaoLojaResponseDto
+        {
+            Status = true,
+            Descricao = "Loja atualizada com sucesso.",
+            Data = account is not null
+                ? MarketplaceAccountMapper.ToDto(account, integration)
+                : MarketplaceAccountMapper.ToDto(integration)
+        };
+    }
+
     public async Task<IntegracaoLojaResponseDto> UnlinkAsync(
         int userId,
         int integrationId,

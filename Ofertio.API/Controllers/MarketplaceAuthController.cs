@@ -266,6 +266,65 @@ public class MarketplaceAuthController : ControllerBase
         CancellationToken cancellationToken) =>
         UnlinkLojaCoreAsync(id, "POST", cancellationToken);
 
+    /// <summary>Atualiza apelido e ID de afiliado de uma loja existente (sem criar novo registro).</summary>
+    [HttpPut("lojas/{id:int}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public Task<ActionResult<IntegracaoLojaResponseDto>> UpdateLojaAsync(
+        int id,
+        [FromBody] IntegracaoLojaDto dto,
+        CancellationToken cancellationToken) =>
+        UpdateLojaCoreAsync(id, dto, "PUT", cancellationToken);
+
+    /// <summary>POST equivalente ao PUT (IIS/WebDAV costuma bloquear verbos PUT).</summary>
+    [HttpPost("lojas/{id:int}/editar")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public Task<ActionResult<IntegracaoLojaResponseDto>> EditarLojaAsync(
+        int id,
+        [FromBody] IntegracaoLojaDto dto,
+        CancellationToken cancellationToken) =>
+        UpdateLojaCoreAsync(id, dto, "POST", cancellationToken);
+
+    private async Task<ActionResult<IntegracaoLojaResponseDto>> UpdateLojaCoreAsync(
+        int id,
+        IntegracaoLojaDto dto,
+        string httpMethod,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return InvalidModelState();
+        }
+
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new IntegracaoLojaResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        try
+        {
+            Console.WriteLine($"[MarketplaceAuth] {httpMethod} lojas/{id} editar userId={userId.Value}");
+            var result = await _integracaoLojaService.UpdateAsync(userId.Value, id, dto, cancellationToken);
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao atualizar MarketplaceAccount {AccountId} no SQL Server", id);
+            _logger.LogError(ex, "Erro ao atualizar MarketplaceAccount {AccountId} no SQL Server", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new IntegracaoLojaResponseDto
+                {
+                    Status = false,
+                    Descricao = $"Erro do Servidor/SQL: {ex.Message}"
+                });
+        }
+    }
+
     private async Task<ActionResult<IntegracaoLojaResponseDto>> UnlinkLojaCoreAsync(
         int id,
         string httpMethod,

@@ -1792,6 +1792,41 @@ flowchart LR
   REDIR -->|302| STORE[Marketplace com afiliado]
 ```
 
+### Código MLB preservado no link de afiliado (`MercadoLivreProductIdPreservation`)
+
+```mermaid
+flowchart TB
+  IN[URL do Mercado Livre] --> SEC{"/sec/ encurtado?"}
+  SEC -->|sim| KEEP_SEC[ApplyMattParams na própria URL]
+  SEC -->|não| EXP[Expande se não houver código MLB]
+  EXP --> SHOW{"Vitrine /social/?"}
+  SHOW -->|com produto focado| FOCUS[TryExtractFocusedProductUrl]
+  SHOW -->|sem produto| ERR[AffiliateLinkGenerationException<br/>ShowcaseWithoutProductMessage]
+  SHOW -->|não| PARSE[MercadoLivreProductUrlParser.ParseOrThrow<br/>sem ID fictício]
+  FOCUS --> PARSE
+  PARSE --> PATH{HasProductIdInPath}
+  PATH -->|sim| PROD["BuildProductAffiliateUrl<br/>path e MLB intactos + matt_tool/matt_word"]
+  PATH -->|código só na query| CAT["BuildCatalogAffiliateUrl /p/MLB..."]
+```
+
+### Edição de loja em Minhas Lojas (`StoreEditModal`)
+
+```mermaid
+flowchart TB
+  CARD["MarketplaceStoreCard<br/>Editar loja"] -->|OnEdit| PAGE["MinhasLojas.OpenEditModal<br/>_editingStore"]
+  NEW["Conectar nova loja"] -->|_editingStore = null| MODAL
+  PAGE --> MODAL["ConnectStoreModal<br/>EditingStore"]
+  MODAL -->|criação| LINK["IntegracaoLojaApiService.LinkAsync<br/>POST vincular-manual"]
+  MODAL -->|edição| UPD["IntegracaoLojaApiService.UpdateAsync<br/>POST lojas/id/editar"]
+  UPD --> CTRL["MarketplaceAuthController<br/>UpdateLojaCoreAsync"]
+  CTRL --> SVC["IntegracaoLojaService.UpdateAsync"]
+  SVC --> CHECK{"ShopId + plataforma do usuário<br/>e ID confere?"}
+  CHECK -->|não| FAIL[Loja não encontrada]
+  CHECK -->|sim| DUP{"ID de afiliado já usado?"}
+  DUP -->|sim| FAIL2[DuplicateTrackingIdMessage]
+  DUP -->|não| SAVE["UPDATE MarketplaceAccount + IntegracaoLoja<br/>apelido e afiliado, mesma ShopId"]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

@@ -94,6 +94,18 @@ public class UniversalResolverTests
             UniversalLinkResolverEngine.ApplyTenantCredentials(expanded, "tecflow_kabum"));
     }
 
+    [Theory]
+    [InlineData(
+        "https://www.mercadolivre.com.br/p/MLB20621890?matt_tool=97303724&matt_word=97303724",
+        "https://www.mercadolivre.com.br/p/MLB20621890?matt_tool=55555555&matt_word=tecflow")]
+    [InlineData(
+        "https://produto.mercadolivre.com.br/MLB-2062189012-item-_JM",
+        "https://produto.mercadolivre.com.br/MLB-2062189012-item-_JM?matt_tool=55555555&matt_word=tecflow")]
+    public void ApplyTenantCredentials_MercadoLivre_ShouldKeepProductPathAndId(string storeUrl, string expected)
+    {
+        Assert.Equal(expected, UniversalLinkResolverEngine.ApplyTenantCredentials(storeUrl, "55555555"));
+    }
+
     [Fact]
     public async Task PlatformLinkResolver_ShouldUseUniversalEngineForAggregatorUrls()
     {

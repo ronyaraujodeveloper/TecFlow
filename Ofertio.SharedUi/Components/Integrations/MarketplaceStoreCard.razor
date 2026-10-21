@@ -65,6 +65,16 @@
                         @(Store.HasOAuthToken ? "Reautorizar Mercado Livre" : "Autorizar Mercado Livre (OAuth)")
                     </button>
                 }
+                @if (OnEdit.HasDelegate)
+                {
+                    <button type="button"
+                            class="btn btn-outline-primary btn-touch w-100 mb-2"
+                            disabled="@IsBusy"
+                            @onclick="() => OnEdit.InvokeAsync(Store)">
+                        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
+                        Editar loja
+                    </button>
+                }
                 <button type="button"
                         class="btn btn-outline-danger btn-touch"
                         disabled="@IsBusy"
@@ -81,6 +91,7 @@
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnUnlink { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnAuthorizeOAuth { get; set; }
+    [Parameter] public EventCallback<MarketplaceAccountDto> OnEdit { get; set; }
 
     private bool _confirmDelete;
 

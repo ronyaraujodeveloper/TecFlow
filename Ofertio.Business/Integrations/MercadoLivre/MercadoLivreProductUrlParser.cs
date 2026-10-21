@@ -9,14 +9,20 @@ public static class MercadoLivreProductUrlParser
     public const string UnrecognizedLinkMessage =
         "Não reconhecemos este link do Mercado Livre. Use a URL do produto (MLB) ou o encurtador mercadolivre.com/sec/.";
 
-    public const string HomologItemId = "MLB1234567890";
+    public const string ShowcaseWithoutProductMessage =
+        "Este link do Mercado Livre abre uma vitrine/perfil de divulgador, não um produto. Abra o produto e copie o link dele (/p/MLB... ou /MLB-...).";
 
+    /// <summary>Anúncio (<c>/MLB-1234567890-titulo</c>, <c>/MLB1234567890</c>) ou catálogo (<c>/p/MLB20621890</c>).</summary>
     private static readonly Regex MlbRegex = new(
-        @"MLB-?(?<digits>\d{8,14})",
+        @"(?<![A-Za-z0-9])MLB-?(?<digits>\d{6,14})(?![0-9])",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex CatalogPathRegex = new(
         @"/p/(?<itemId>MLB[A-Za-z0-9\-]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex PathIdRegex = new(
+        @"/(p/)?MLB-?\d{6,14}(?![0-9])",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static bool TryParse(string? url, out string itemId)
@@ -45,20 +51,21 @@ public static class MercadoLivreProductUrlParser
         return false;
     }
 
-    public static string ParseOrThrow(string? url, bool allowHomologFallback)
+    /// <summary>Sem código MLB a geração falha: nunca troca por um ID fictício (o link levaria a outro produto).</summary>
+    public static string ParseOrThrow(string? url)
     {
         if (TryParse(url, out var itemId))
         {
             return itemId;
         }
 
-        if (allowHomologFallback)
-        {
-            return HomologItemId;
-        }
-
         throw new AffiliateLinkGenerationException(UnrecognizedLinkMessage);
     }
+
+    /// <summary>O código MLB está no caminho da URL (catálogo <c>/p/MLB...</c> ou anúncio <c>/MLB-...</c>), não só na query.</summary>
+    public static bool HasProductIdInPath(string? url) =>
+        Uri.TryCreate(Sanitize(url), UriKind.Absolute, out var uri)
+        && PathIdRegex.IsMatch(uri.AbsolutePath);
 
     public static bool IsSecShortUrl(string? url)
     {

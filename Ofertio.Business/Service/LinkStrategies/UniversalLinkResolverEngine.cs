@@ -222,6 +222,8 @@ public sealed class UniversalLinkResolverEngine
                 MagazineLuizaCommissionUrlBuilder.BuildProductAffiliateUrl(magaluId, credential),
             MarketplaceType.CasasBahia when CasasBahiaProductUrlParser.TryParse(cleaned, out var casasId) =>
                 CasasBahiaCommissionUrlBuilder.BuildProductAffiliateUrl(casasId, credential, credential),
+            MarketplaceType.MercadoLivre when MercadoLivreProductUrlParser.HasProductIdInPath(cleaned) =>
+                MercadoLivreCommissionUrlBuilder.BuildProductAffiliateUrl(cleaned, credential, "tecflow"),
             MarketplaceType.MercadoLivre when MercadoLivreProductUrlParser.TryParse(cleaned, out var itemId) =>
                 MercadoLivreCommissionUrlBuilder.BuildCatalogAffiliateUrl(itemId, credential, "tecflow"),
             MarketplaceType.TikTokShop when TikTokShopProductUrlParser.TryParse(cleaned, out var tiktokId) =>

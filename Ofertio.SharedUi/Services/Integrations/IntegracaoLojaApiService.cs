@@ -26,6 +26,11 @@ public interface IIntegracaoLojaApiService
         IntegracaoLojaDto request,
         CancellationToken cancellationToken = default);
 
+    Task<IntegracaoLojaResponseDto> UpdateAsync(
+        int integrationId,
+        IntegracaoLojaDto request,
+        CancellationToken cancellationToken = default);
+
     Task<IntegracaoLojaResponseDto> UnlinkAsync(
         int integrationId,
         CancellationToken cancellationToken = default);
@@ -84,6 +89,19 @@ public class IntegracaoLojaApiService : IIntegracaoLojaApiService
     {
         using var _ = _loadingService.BeginScope("Vinculando nova loja...");
         return SendEnvelopeAsync(HttpMethod.Post, "api/marketplace-auth/vincular-manual", request, cancellationToken);
+    }
+
+    public Task<IntegracaoLojaResponseDto> UpdateAsync(
+        int integrationId,
+        IntegracaoLojaDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Atualizando loja...");
+        return SendEnvelopeAsync(
+            HttpMethod.Post,
+            $"api/marketplace-auth/lojas/{integrationId}/editar",
+            request,
+            cancellationToken);
     }
 
     public Task<IntegracaoLojaResponseDto> UnlinkAsync(

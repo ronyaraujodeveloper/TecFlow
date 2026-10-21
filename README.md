@@ -753,6 +753,21 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Preservado:** domínio de encurtador configurado (ex.: `tflow.link`) não é trocado; botões Copiar, WhatsApp e Telegram mantêm os ícones `bi-*`.
 - [ ] **Disparos automáticos:** mensagens montadas no servidor (grupos monitorados, robôs) ainda usam `Ofertio:ShortLinks:PublicBaseUrl`; definir o domínio público por ambiente.
 
+## 🛡️ Código MLB preservado no link de afiliado (`MercadoLivreProductIdPreservation`)
+
+- [x] **Sem ID fictício:** link do Mercado Livre sem código MLB (ex.: `meli.la` que abre uma vitrine `/social/...`) é recusado com mensagem clara, em vez de virar `MLB1234567890`.
+- [x] **URL preservada:** `/p/MLB20621890` continua `/p/MLB20621890` e `/MLB-2062189012-item` continua anúncio; só os `matt_*` de terceiros são trocados pelos da loja.
+- [x] **Extração:** catálogo e anúncio (com ou sem hífen, 6 a 14 dígitos), sem confundir `MLBU...` nem números maiores.
+- [ ] **Homologar:** publicar com EXECUCAO_HOMOLOGACAO e converter de novo `https://www.mercadolivre.com.br/p/MLB20621890?matt_tool=97303724&matt_word=97303724`; links já gerados com `MLB1234567890` precisam ser refeitos.
+
+## ✏️ Edição de lojas em Minhas Lojas / Integrações (`StoreEditModal`)
+
+- [x] **Botão no card:** "Editar loja" (`bi-pencil-square`) antes de "Desconectar loja".
+- [x] **Mesmo modal:** `ConnectStoreModal` abre como "Editar loja" com plataforma pré-selecionada (travada), apelido e ID de afiliado preenchidos; "Conectar nova loja" sempre abre limpo em modo criação.
+- [x] **UPDATE de verdade:** `POST/PUT api/marketplace-auth/lojas/{id}` atualiza a loja existente (mesma `ShopId`), sem criar registro duplicado, mesmo quando o apelido muda.
+- [x] **Validações:** dono da loja, ID de afiliado normalizado (aceita link), bloqueio de ID duplicado; campo de ID vazio mantém o atual.
+- [ ] **Homologar:** editar o apelido e o ID de uma loja em `https://dev.ofertio.com.br/minhas-lojas` e conferir que continua um único card.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

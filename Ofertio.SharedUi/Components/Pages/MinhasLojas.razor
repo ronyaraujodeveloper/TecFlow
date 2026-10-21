@@ -29,7 +29,7 @@
                     class="btn btn-primary btn-touch"
                     disabled="@_isBusy"
                     @onclick="OpenConnectModal">
-                + Conectar nova loja
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Conectar nova loja
             </button>
             <button type="button"
                     class="btn btn-outline-primary btn-touch"
@@ -68,7 +68,7 @@
                 Conecte sua primeira conta de marketplace para sincronizar campanhas, métricas e comissões.
             </p>
             <button type="button" class="btn btn-primary btn-touch" disabled="@_isBusy" @onclick="OpenConnectModal">
-                + Conectar nova loja
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Conectar nova loja
             </button>
         </section>
     }
@@ -80,7 +80,8 @@
                 <MarketplaceStoreCard Store="store"
                                       IsBusy="@_isBusy"
                                       OnUnlink="ConfirmarDesconexaoAsync"
-                                      OnAuthorizeOAuth="AuthorizeStoreOAuthAsync" />
+                                      OnAuthorizeOAuth="AuthorizeStoreOAuthAsync"
+                                      OnEdit="OpenEditModal" />
             }
         </section>
     }
@@ -90,6 +91,7 @@
                    IsBusy="@_isBusy"
                    ErrorMessage="@_connectModalError"
                    PreferredPlatform="_connectPreferredPlatform"
+                   EditingStore="_editingStore"
                    OnClose="CloseConnectModal"
                    OnStartOAuth="StartOAuthAsync"
                    OnLojaVinculada="OnLojaVinculadaAsync" />
@@ -104,6 +106,7 @@
     private bool _pageMessageIsError;
     private string? _connectModalError;
     private MarketplaceType? _connectPreferredPlatform;
+    private MarketplaceAccountDto? _editingStore;
 
     protected override async Task OnInitializedAsync()
     {
@@ -221,8 +224,18 @@
 
     private void OpenConnectModal()
     {
+        _editingStore = null;
         _connectPreferredPlatform = null;
         _connectModalError = null;
+        _connectModalVisible = true;
+    }
+
+    private void OpenEditModal(MarketplaceAccountDto store)
+    {
+        _editingStore = store;
+        _connectPreferredPlatform = null;
+        _connectModalError = null;
+        ClearPageMessage();
         _connectModalVisible = true;
     }
 
@@ -235,6 +248,7 @@
 
         _connectModalVisible = false;
         _connectModalError = null;
+        _editingStore = null;
         await InvokeAsync(StateHasChanged);
         await StoreScope.RefreshStoresAsync();
     }
@@ -288,9 +302,10 @@
 
     private async Task OnLojaVinculadaAsync()
     {
+        _pageMessage = _editingStore is null ? "Loja vinculada com sucesso." : "Loja atualizada com sucesso.";
         _connectModalVisible = false;
         _connectModalError = null;
-        _pageMessage = "Loja vinculada com sucesso.";
+        _editingStore = null;
         _pageMessageIsError = false;
         await InvokeAsync(StateHasChanged);
         await ObterLojasAsync();

@@ -21,6 +21,23 @@ public static class MercadoLivreCommissionUrlBuilder
         return ApplyMattParams($"{CatalogProductBase}{catalogId}", mattTool, mattWord);
     }
 
+    /// <summary>
+    /// Link de afiliado sobre a própria URL do produto: domínio, caminho e código MLB ficam exatamente como vieram
+    /// (catálogo <c>/p/MLB...</c> continua catálogo, anúncio <c>/MLB-...</c> continua anúncio). Só os <c>matt_*</c>
+    /// de terceiros e o fragmento de rastreio saem antes de aplicar o nosso <c>matt_tool</c>/<c>matt_word</c>.
+    /// </summary>
+    public static string BuildProductAffiliateUrl(string productUrl, string mattTool, string mattWord)
+    {
+        var cleaned = MercadoLivreShowcaseRules.RemoveThirdPartyTracking(MercadoLivreProductUrlParser.Sanitize(productUrl));
+        if (!Uri.TryCreate(cleaned, UriKind.Absolute, out var uri))
+        {
+            throw new ArgumentException("URL inválida.", nameof(productUrl));
+        }
+
+        var withoutFragment = new UriBuilder(uri) { Fragment = string.Empty }.Uri.ToString();
+        return ApplyMattParams(withoutFragment, mattTool, mattWord);
+    }
+
     public static string InjectMattTool(string? productUrl, string? trackingId)
     {
         if (string.IsNullOrWhiteSpace(productUrl))

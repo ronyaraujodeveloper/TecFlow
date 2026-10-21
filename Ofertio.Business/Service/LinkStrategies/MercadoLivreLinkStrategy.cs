@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Ofertio.Business.Integrations.Auth;
+﻿using Microsoft.Extensions.Logging;
 using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Core.Enums;
@@ -9,7 +7,8 @@ namespace Ofertio.Business.Service.LinkStrategies;
 
 /// <summary>
 /// Estratégia Mercado Livre: reconhece URLs MLB e /sec/, injeta matt_tool (TrackingId)
-/// e matt_word (apelido) sem descartar query string existente nos encurtadores.
+/// e matt_word (apelido) sem descartar query string existente nos encurtadores. A URL do produto
+/// (path e código MLB) é preservada; link sem produto (vitrine/perfil) é recusado.
 /// </summary>
 public sealed class MercadoLivreLinkStrategy : IPlatformLinkStrategy
 {
@@ -27,20 +26,17 @@ public sealed class MercadoLivreLinkStrategy : IPlatformLinkStrategy
     private readonly IUrlExpansionService _urlExpansionService;
     private readonly IIntegracaoLojaScopeResolver _storeResolver;
     private readonly IAffiliateLinkGenerationContext _generationContext;
-    private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger<MercadoLivreLinkStrategy> _logger;
 
     public MercadoLivreLinkStrategy(
         IUrlExpansionService urlExpansionService,
         IIntegracaoLojaScopeResolver storeResolver,
         IAffiliateLinkGenerationContext generationContext,
-        IHostEnvironment hostEnvironment,
         ILogger<MercadoLivreLinkStrategy> logger)
     {
         _urlExpansionService = urlExpansionService;
         _storeResolver = storeResolver;
         _generationContext = generationContext;
-        _hostEnvironment = hostEnvironment;
         _logger = logger;
     }
 
@@ -98,17 +94,25 @@ public sealed class MercadoLivreLinkStrategy : IPlatformLinkStrategy
                 await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken));
         }
 
-        var allowHomologFallback = HomologMarketplaceAuth.ShouldSkipRemoteOAuth(
-            _hostEnvironment.EnvironmentName,
-            authorizationCode: null);
-
-        if (!CanProcess(workingUrl) && !allowHomologFallback)
+        if (!CanProcess(workingUrl))
         {
             throw new AffiliateLinkGenerationException(MercadoLivreProductUrlParser.UnrecognizedLinkMessage);
         }
 
-        var itemId = MercadoLivreProductUrlParser.ParseOrThrow(workingUrl, allowHomologFallback);
-        var affiliateUrl = MercadoLivreCommissionUrlBuilder.BuildCatalogAffiliateUrl(itemId, mattTool, mattWord);
+        if (MercadoLivreShowcaseRules.IsAffiliateShowcaseUrl(workingUrl))
+        {
+            if (!MercadoLivreShowcaseRules.TryExtractFocusedProductUrl(workingUrl, out var focusedProductUrl))
+            {
+                throw new AffiliateLinkGenerationException(MercadoLivreProductUrlParser.ShowcaseWithoutProductMessage);
+            }
+
+            workingUrl = focusedProductUrl;
+        }
+
+        var itemId = MercadoLivreProductUrlParser.ParseOrThrow(workingUrl);
+        var affiliateUrl = MercadoLivreProductUrlParser.HasProductIdInPath(workingUrl)
+            ? MercadoLivreCommissionUrlBuilder.BuildProductAffiliateUrl(workingUrl, mattTool, mattWord)
+            : MercadoLivreCommissionUrlBuilder.BuildCatalogAffiliateUrl(itemId, mattTool, mattWord);
 
         _logger.LogInformation(
             "Mercado Livre affiliate URL gerada. ItemId={ItemId} MattTool={MattTool} StoreId={StoreId}",

@@ -44,9 +44,9 @@
 
 - **`matt_tool` do Mercado Livre:** sempre o `TrackingId` / `AffiliateTrackingId` da conta ML ativa do tenant ou, sem conta, o oficial `97303724` (`MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId`). `matt_tool`, `matt_tool_id`, `matt_word`, `matt_d2id` e `matt_tracing_id` de terceiros são removidos (`AffiliateUrlBuilderRules`), mantendo os demais parâmetros.
 - **Vitrines de terceiros:** URLs com `/social/`, `affiliate-profile` ou `reco_client=home_affiliate-profile` viram a página direta do produto focado (`item_id` / `product_id` / `wid`); sem produto focado, a oferta fica `VitrineGenerica`.
-- **Código MLB preservado:** `/p/MLB...` continua catálogo e `/MLB-...` continua anúncio; link sem código MLB é recusado com mensagem clara (nunca um ID fictício).
+- **Código MLB preservado:** o link gerado sai como `https://www.mercadolivre.com.br/MLB-{id}`, sem o diretório `/p/` (esse caminho responde “página não existe”). A leitura ainda aceita `/p/MLB...` e `/MLB-...` na URL de entrada. Link sem código MLB é recusado com mensagem clara (nunca um ID fictício).
 - **Encurtadores** (`meli.la`, `/sec/`, `amzn.to`, `a.co`, `kb.um`, `magalu.me`...) são expandidos só pelos cabeçalhos de redirect.
-- **Link de rastreio Ofertio:** `{base}/{storeSlug}/{code}` (slug `^[A-Za-z0-9]{1,80}$`) ou `/r/{code}`, com base `NavigationManager.BaseUri`; a WebUi repassa para a API, que registra o clique e redireciona.
+- **Link de rastreio Ofertio:** `{base}/{storeSlug}/{code}` (slug `^[A-Za-z0-9]{1,80}$`) ou `/r/{code}`, com base `NavigationManager.BaseUri`; a WebUi repassa para a API. A API consulta o código com `await` e devolve o 302 na hora; o clique entra numa fila limitada e um serviço em segundo plano grava no SQL Server.
 
 ## 6. Plataformas suportadas (Strategy Pattern)
 
@@ -54,7 +54,7 @@
 | :--- | :--- | :--- | :--- |
 | Shopee | `ShopeeLinkStrategy` | br.shp.ee / app | 🟢 Homologação |
 | TikTok Shop | `TikTokShopLinkStrategy` | `shop.tiktok.com/view/product/{id}?sub_id=` | 🟢 Homologação |
-| Mercado Livre | `MercadoLivreLinkStrategy` | `matt_tool` + `matt_word` em `/p/{MLB}` e `/sec/` | 🟢 Concluído |
+| Mercado Livre | `MercadoLivreLinkStrategy` | `matt_tool` + `matt_word` em `/MLB-{id}` e `/sec/` | 🟢 Concluído |
 | Amazon | `AmazonLinkStrategy` | `tag` em `/dp/{ASIN}` | 🟢 Concluído |
 | Kabum! | `KabumLinkStrategy` | `sub_id` + `utm_source=afiliado` | 🟢 Concluído |
 | Casas Bahia | `CasasBahiaLinkStrategy` | `parceiro` + `sub_id` em `/p/{id}` | 🟢 Concluído |

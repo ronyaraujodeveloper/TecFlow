@@ -1975,3 +1975,11 @@ API / Orquestrador / Worker / WebUi
 ---
 
 *Gerado por varredura automatizada dos arquivos `.cs` e `.csproj` (excluindo `bin/` e `obj/`). Revisar checkboxes conforme cada item for concluído.*
+
+### Rastreio assíncrono e link do Mercado Livre sem /p/
+
+- [x] **Ofertio.Infrastructure.Services/ShortLinks/ShortLinkService.cs** — `LinkClickTelemetryService` herda `BackgroundService`. O redirect só faz `TryWrite` numa fila limitada (256, descarta se cheia). Um consumidor grava o `LinkClickLog` com `await` no SQL Server, sem `.Result`, `.Wait()` nem tarefa solta no pool do Kestrel.
+- [x] **Ofertio.API/Controllers/ShortLinkRedirectController.cs** — `async Task<IActionResult>`: consulta o código com `await` e devolve o 302 sem esperar o insert do clique.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** — `BuildDirectProductUrl` e `RemoveCatalogDirectory`. `matt_tool`/`matt_word` saem em `https://www.mercadolivre.com.br/MLB-{id}`; `/p/MLB…` e `/slug/p/MLB…` deixam de ser gerados.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** — produto focado da vitrine no mesmo formato, sem `/p/`.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** — fallback sem permalink usa `/MLB-{id}`.

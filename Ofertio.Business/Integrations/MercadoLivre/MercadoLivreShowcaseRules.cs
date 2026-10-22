@@ -8,7 +8,7 @@ namespace Ofertio.Business.Integrations.MercadoLivre;
 /// </summary>
 public static class MercadoLivreShowcaseRules
 {
-    public const string CatalogProductBase = "https://www.mercadolivre.com.br/p/";
+    public const string DirectProductBase = "https://www.mercadolivre.com.br/MLB-";
 
     public static readonly string[] ThirdPartyTrackingParameters =
     [
@@ -47,8 +47,7 @@ public static class MercadoLivreShowcaseRules
     }
 
     /// <summary>
-    /// Página direta do produto focado numa vitrine de divulgador, sem query nem fragmento: IDs vindos dos
-    /// parâmetros viram <c>https://www.mercadolivre.com.br/p/{ITEM_ID}</c>.
+    /// Página direta do produto focado, sem <c>/p/</c>: <c>https://www.mercadolivre.com.br/MLB-{id}</c>.
     /// </summary>
     public static bool TryExtractFocusedProductUrl(string? url, out string productUrl)
     {
@@ -61,20 +60,20 @@ public static class MercadoLivreShowcaseRules
         var parameters = ParseParameters(uri.Query, uri.Fragment);
         if (TryReadId(parameters, CatalogIdKeys, out var catalogDigits))
         {
-            productUrl = CatalogProductBase + "MLB" + catalogDigits;
+            productUrl = DirectProductBase + catalogDigits;
             return true;
         }
 
         var catalog = CatalogPathRegex.Match(uri.AbsolutePath);
         if (catalog.Success)
         {
-            productUrl = CatalogProductBase + catalog.Groups["id"].Value.ToUpperInvariant();
+            productUrl = DirectProductBase + DigitsOf(catalog.Groups["id"].Value);
             return true;
         }
 
         if (TryReadId(parameters, ItemIdKeys, out var itemDigits))
         {
-            productUrl = CatalogProductBase + "MLB" + itemDigits;
+            productUrl = DirectProductBase + itemDigits;
             return true;
         }
 
@@ -111,8 +110,16 @@ public static class MercadoLivreShowcaseRules
             return false;
         }
 
-        productUrl = $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}";
+        productUrl = MercadoLivreCommissionUrlBuilder.RemoveCatalogDirectory($"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}");
         return true;
+    }
+
+    private static string DigitsOf(string itemId)
+    {
+        var normalized = itemId.Trim();
+        return normalized.StartsWith("MLB", StringComparison.OrdinalIgnoreCase)
+            ? normalized[3..].TrimStart('-')
+            : normalized;
     }
 
     public static string RemoveThirdPartyTracking(string url)

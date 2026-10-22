@@ -358,7 +358,7 @@ public static class MercadoLivreItemParser
             OriginalPrice = original > price ? original : null,
             ImageUrl = image?.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase),
             ImageUrls = ReadPictureUrls(product, MaxGalleryPictures),
-            SourceUrl = ReadString(product, "permalink") ?? "https://www.mercadolivre.com.br/p/" + id,
+            SourceUrl = ReadString(product, "permalink") ?? MercadoLivreCommissionUrlBuilder.BuildDirectProductUrl(id),
             Shipping = free ? "Frete grátis" : null,
             Source = "Api",
             DomainId = ReadString(product, "domain_id"),

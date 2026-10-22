@@ -185,7 +185,7 @@ public class MercadoLivreItemParserTests
             """{"id":"MLB7","name":"Notebook","buy_box_winner":null,"buy_box_winner_price_range":{"min":{"price":3500,"currency_id":"BRL"},"max":{"price":4200}}}""");
 
         Assert.Equal(3500m, item!.Price);
-        Assert.Equal("https://www.mercadolivre.com.br/p/MLB7", item.SourceUrl);
+        Assert.Equal("https://www.mercadolivre.com.br/MLB-7", item.SourceUrl);
     }
 
     [Fact]

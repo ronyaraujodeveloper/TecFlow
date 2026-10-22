@@ -1,4 +1,5 @@
-﻿using Ofertio.Business.Integrations.Shopee;
+﻿using System.Text.RegularExpressions;
+using Ofertio.Business.Integrations.Shopee;
 using Ofertio.Database.Entity;
 
 namespace Ofertio.Business.Integrations.MercadoLivre;
@@ -6,29 +7,73 @@ namespace Ofertio.Business.Integrations.MercadoLivre;
 /// <summary>Monta o link de afiliado do Mercado Livre com matt_tool e matt_word.</summary>
 public static class MercadoLivreCommissionUrlBuilder
 {
-    public const string CatalogProductBase = "https://www.mercadolivre.com.br/p/";
+    public const string DirectProductBase = "https://www.mercadolivre.com.br/MLB-";
     public const string MattToolQuery = "matt_tool";
     public const string MattWordQuery = "matt_word";
 
+    private static readonly Regex CatalogDirectoryRegex = new(
+        @"/p/MLB-?(?<digits>\d{1,14})(?!\d)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static string BuildCatalogAffiliateUrl(string itemId, string mattTool, string mattWord)
     {
-        var catalogId = MercadoLivreProductUrlParser.NormalizeItemId(itemId);
-        if (string.IsNullOrWhiteSpace(catalogId))
+        var directUrl = BuildDirectProductUrl(itemId);
+        if (string.IsNullOrWhiteSpace(directUrl))
         {
             throw new ArgumentException("itemId é obrigatório.", nameof(itemId));
         }
 
-        return ApplyMattParams($"{CatalogProductBase}{catalogId}", mattTool, mattWord);
+        return ApplyMattParams(directUrl, mattTool, mattWord);
     }
 
     /// <summary>
-    /// Link de afiliado sobre a própria URL do produto: domínio, caminho e código MLB ficam exatamente como vieram
-    /// (catálogo <c>/p/MLB...</c> continua catálogo, anúncio <c>/MLB-...</c> continua anúncio). Só os <c>matt_*</c>
-    /// de terceiros e o fragmento de rastreio saem antes de aplicar o nosso <c>matt_tool</c>/<c>matt_word</c>.
+    /// Página do produto sem o diretório <c>/p/</c>: <c>https://www.mercadolivre.com.br/MLB-{id}</c>.
+    /// </summary>
+    public static string BuildDirectProductUrl(string itemId)
+    {
+        var normalized = MercadoLivreProductUrlParser.NormalizeItemId(itemId);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return string.Empty;
+        }
+
+        var digits = normalized.StartsWith("MLB", StringComparison.OrdinalIgnoreCase)
+            ? normalized[3..].TrimStart('-')
+            : normalized;
+        return string.IsNullOrWhiteSpace(digits) ? string.Empty : DirectProductBase + digits;
+    }
+
+    /// <summary>Tira <c>/p/</c> do caminho. <c>/p/MLB123</c> e <c>/slug/p/MLB123</c> viram <c>/MLB-123</c>.</summary>
+    public static string RemoveCatalogDirectory(string url)
+    {
+        var sanitized = MercadoLivreProductUrlParser.Sanitize(url);
+        if (!Uri.TryCreate(sanitized, UriKind.Absolute, out var uri))
+        {
+            return sanitized;
+        }
+
+        var match = CatalogDirectoryRegex.Match(uri.AbsolutePath);
+        if (!match.Success)
+        {
+            return sanitized;
+        }
+
+        var builder = new UriBuilder(uri)
+        {
+            Path = "/MLB-" + match.Groups["digits"].Value,
+            Fragment = string.Empty
+        };
+        return builder.Uri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.UriEscaped);
+    }
+
+    /// <summary>
+    /// Link de afiliado do produto, sem o diretório <c>/p/</c>. Os <c>matt_*</c> de terceiros saem antes
+    /// de aplicar o <c>matt_tool</c> e o <c>matt_word</c> desta conta.
     /// </summary>
     public static string BuildProductAffiliateUrl(string productUrl, string mattTool, string mattWord)
     {
-        var cleaned = MercadoLivreShowcaseRules.RemoveThirdPartyTracking(MercadoLivreProductUrlParser.Sanitize(productUrl));
+        var cleaned = RemoveCatalogDirectory(
+            MercadoLivreShowcaseRules.RemoveThirdPartyTracking(MercadoLivreProductUrlParser.Sanitize(productUrl)));
         if (!Uri.TryCreate(cleaned, UriKind.Absolute, out var uri))
         {
             throw new ArgumentException("URL inválida.", nameof(productUrl));
@@ -62,7 +107,7 @@ public static class MercadoLivreCommissionUrlBuilder
 
     public static string ApplyMattParams(string url, string mattTool, string mattWord)
     {
-        var sanitized = MercadoLivreProductUrlParser.Sanitize(url);
+        var sanitized = RemoveCatalogDirectory(url);
         if (!Uri.TryCreate(sanitized, UriKind.Absolute, out var uri))
         {
             throw new ArgumentException("URL inválida.", nameof(url));

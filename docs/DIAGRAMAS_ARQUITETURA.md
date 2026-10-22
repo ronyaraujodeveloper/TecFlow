@@ -58,7 +58,7 @@ flowchart LR
   TTAFF --> SHORT
   ML[MercadoLivreLinkStrategy]
   MLB[MercadoLivreCommissionUrlBuilder]
-  ML -->|matt_tool TrackingId / matt_word FriendlyName| MLAFF[mercadolivre.com.br/p/MLB]
+  ML -->|matt_tool TrackingId / matt_word FriendlyName| MLAFF[mercadolivre.com.br/MLB-id]
   MLB --> MLAFF
   MLAFF --> SHORT
   AMZ[AmazonLinkStrategy]
@@ -279,7 +279,8 @@ flowchart LR
   CMPSVC -->|mesmo modelo nas lojas| CATAPI
   PERF[RadarPerfil] -->|nichos ticket comissao| PROF[(AffiliateMiningProfiles)]
   DISP[Disparo WA/TG] -->|StampMessage tf_src tf_grp| SHORT[ShortLinkRedirect]
-  SHORT -->|SubId SourceGroup| CLICK[(LinkClickLog)]
+  SHORT -->|enfileira clique| QUEUE[LinkClickTelemetryService]
+  QUEUE -->|grava em segundo plano| CLICK[(LinkClickLog)]
   HEALTH[OfferIntelligenceWorker] -->|pos-disparo ValidateAsync| ALERT[(OfferHealthAlerts)]
   EVER[EvergreenLibrary] -->|recicla intervalo vazio| CAMP[WhatsAppBroadcastCampaigns]
   MIDIA[EstudioMidia] -->|moldura ImageSharp + og:video| UP[wwwroot/uploads/frames videos]
@@ -1801,7 +1802,9 @@ flowchart LR
   PANEL --> REBASE
   REBASE -->|"https://dev.ofertio.com.br/Loja/code"| SHARE[Copiar · WhatsApp · Telegram]
   CLICK[Clique no link] --> WEBUI[Ofertio.WebUi<br/>ShortLinkProxyExtensions YARP]
-  WEBUI -->|"/storeSlug/code ou /r/code"| REDIR[ShortLinkRedirectController<br/>telemetria do clique]
+  WEBUI -->|"/storeSlug/code ou /r/code"| REDIR[ShortLinkRedirectController<br/>await do código e 302]
+  REDIR -->|fila limitada| QUEUE[LinkClickTelemetryService]
+  QUEUE -->|SQL Server| CLICK[(LinkClickLog)]
   REDIR -->|302| STORE[Marketplace com afiliado]
 ```
 
@@ -1818,8 +1821,8 @@ flowchart TB
   SHOW -->|não| PARSE[MercadoLivreProductUrlParser.ParseOrThrow<br/>sem ID fictício]
   FOCUS --> PARSE
   PARSE --> PATH{HasProductIdInPath}
-  PATH -->|sim| PROD["BuildProductAffiliateUrl<br/>path e MLB intactos + matt_tool/matt_word"]
-  PATH -->|código só na query| CAT["BuildCatalogAffiliateUrl /p/MLB..."]
+  PATH -->|sim| PROD["BuildProductAffiliateUrl<br/>sem /p/ + matt_tool/matt_word"]
+  PATH -->|código só na query| CAT["BuildCatalogAffiliateUrl /MLB-id"]
 ```
 
 ### Edição de loja em Minhas Lojas (`StoreEditModal`)
@@ -2060,6 +2063,21 @@ flowchart TD
   P -->|outro| RAW[Texto puro legado]
   UNP -->|CryptographicException| RAW2[Valor armazenado + log sem segredo]
   WRITE[SaveChanges] --> PROT[DP1: + IDataProtector.Protect]
+```
+
+---
+
+## Rastreio do clique e URL do Mercado Livre sem /p/
+
+```mermaid
+flowchart LR
+  CLICK[Clique /loja/codigo] --> API[ShortLinkRedirectController]
+  API -->|await GetByShortCodeAsync| SQL[(ShortAffiliateLinks)]
+  API -->|302 imediato| DEST[Destino do afiliado]
+  API -->|TryWrite| FILA[Fila limitada de cliques]
+  FILA --> BG[LinkClickTelemetryService]
+  BG -->|await AddAsync| LOG[(LinkClickLog)]
+  ML[Gerador Mercado Livre] -->|matt_tool + matt_word| URL["mercadolivre.com.br/MLB-id"]
 ```
 
 ---

@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Threading.Channels;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ofertio.Business.Configuration;
@@ -429,10 +431,19 @@ public sealed class ShortLinkService : IShortLinkService
     }
 }
 
-public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
+public sealed class LinkClickTelemetryService : BackgroundService, ILinkClickTelemetryService
 {
+    private const int ClickQueueCapacity = 256;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<LinkClickTelemetryService> _logger;
+    private readonly Channel<ClickLogWork> _clicks = Channel.CreateBounded<ClickLogWork>(
+        new BoundedChannelOptions(ClickQueueCapacity)
+        {
+            FullMode = BoundedChannelFullMode.DropWrite,
+            SingleReader = true,
+            SingleWriter = false
+        });
 
     public LinkClickTelemetryService(
         IServiceScopeFactory scopeFactory,
@@ -440,6 +451,14 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await foreach (var work in _clicks.Reader.ReadAllAsync(stoppingToken))
+        {
+            await PersistClickLogAsync(work, stoppingToken);
+        }
     }
 
     public async Task RecordGenerationAsync(
@@ -492,17 +511,23 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
         string? sourceGroup,
         string? subId)
     {
-        _ = PersistClickLogAsync(affiliateLinkId, ipAddress, userAgent, referrerUrl, sourceChannel, sourceGroup, subId);
+        var accepted = _clicks.Writer.TryWrite(new ClickLogWork(
+            affiliateLinkId,
+            ipAddress,
+            userAgent,
+            referrerUrl,
+            sourceChannel,
+            sourceGroup,
+            subId));
+        if (!accepted)
+        {
+            _logger.LogWarning(
+                "Fila de cliques cheia. Telemetria descartada para AffiliateLinkId={AffiliateLinkId}.",
+                affiliateLinkId);
+        }
     }
 
-    private async Task PersistClickLogAsync(
-        Guid affiliateLinkId,
-        string? ipAddress,
-        string? userAgent,
-        string? referrerUrl,
-        string? sourceChannel,
-        string? sourceGroup,
-        string? subId)
+    private async Task PersistClickLogAsync(ClickLogWork work, CancellationToken cancellationToken)
     {
         try
         {
@@ -511,12 +536,12 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
             var shortLinkRepository = scope.ServiceProvider.GetRequiredService<IShortAffiliateLinkRepository>();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var link = await shortLinkRepository.GetByAffiliateLinkIdAsync(affiliateLinkId);
+            var link = await shortLinkRepository.GetByAffiliateLinkIdAsync(work.AffiliateLinkId, cancellationToken);
             if (link is null)
             {
                 _logger.LogWarning(
                     "Telemetria de clique ignorada: ShortAffiliateLink {AffiliateLinkId} não encontrado.",
-                    affiliateLinkId);
+                    work.AffiliateLinkId);
                 return;
             }
 
@@ -528,33 +553,45 @@ public sealed class LinkClickTelemetryService : ILinkClickTelemetryService
                     .AsNoTracking()
                     .Where(loja => loja.Id == lojaId)
                     .Select(loja => loja.ShopId)
-                    .FirstOrDefaultAsync() ?? string.Empty;
+                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }
 
             var log = LinkClickLogFactory.CreateClick(
-                affiliateLinkId,
+                work.AffiliateLinkId,
                 link.TenantId,
                 shopId,
                 link.OriginalUrl,
                 link.DestinationUrl,
                 link.PlatformType,
-                ipAddress,
-                userAgent,
-                referrerUrl,
-                sourceChannel,
-                sourceGroup,
-                subId);
+                work.IpAddress,
+                work.UserAgent,
+                work.ReferrerUrl,
+                work.SourceChannel,
+                work.SourceGroup,
+                work.SubId);
 
-            await repository.AddAsync(log);
+            await repository.AddAsync(log, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
             _logger.LogError(
                 ex,
                 "Falha ao persistir telemetria de clique para AffiliateLinkId={AffiliateLinkId}.",
-                affiliateLinkId);
+                work.AffiliateLinkId);
         }
     }
+
+    private sealed record ClickLogWork(
+        Guid AffiliateLinkId,
+        string? IpAddress,
+        string? UserAgent,
+        string? ReferrerUrl,
+        string? SourceChannel,
+        string? SourceGroup,
+        string? SubId);
 }
 
 public static class ShortLinkServiceCollectionExtensions
@@ -568,7 +605,9 @@ public static class ShortLinkServiceCollectionExtensions
         services.AddScoped<ILinkClickLogRepository, LinkClickLogRepository>();
         services.AddScoped<IShortLinkService, ShortLinkService>();
         services.AddScoped<IAffiliateLinkHistoryService, AffiliateLinkHistoryService>();
-        services.AddSingleton<ILinkClickTelemetryService, LinkClickTelemetryService>();
+        services.AddSingleton<LinkClickTelemetryService>();
+        services.AddSingleton<ILinkClickTelemetryService>(provider => provider.GetRequiredService<LinkClickTelemetryService>());
+        services.AddHostedService(provider => provider.GetRequiredService<LinkClickTelemetryService>());
 
         return services;
     }

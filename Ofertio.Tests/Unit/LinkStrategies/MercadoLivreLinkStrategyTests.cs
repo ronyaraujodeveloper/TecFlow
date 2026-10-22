@@ -101,7 +101,7 @@ public class MercadoLivreLinkStrategyTests
             Guid.NewGuid(),
             "aff-10");
 
-        Assert.StartsWith("https://www.mercadolivre.com.br/p/MLB20621890?", link, StringComparison.Ordinal);
+        Assert.StartsWith("https://www.mercadolivre.com.br/MLB-20621890?", link, StringComparison.Ordinal);
         Assert.DoesNotContain("MLB1234567890", link, StringComparison.Ordinal);
         Assert.DoesNotContain("97303724", link, StringComparison.Ordinal);
         AssertMattParams(link);

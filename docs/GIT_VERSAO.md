@@ -150,3 +150,4 @@
 [2026-10-22 17:03:23] feat(auth): habilita Google OAuth em homologacao com aud e forwarded headers
 [2026-10-22 17:26:18] fix(auth): corrige o HTTP 400 do Entrar com Google e o vinculo em Minha Conta
 [2026-10-22 17:41:56] fix(auth): valida o id_token do Google e compara o aud com o ClientId da API
+[2026-10-22 19:33:34] fix(links): rastreio assincrono e link do Mercado Livre sem /p/

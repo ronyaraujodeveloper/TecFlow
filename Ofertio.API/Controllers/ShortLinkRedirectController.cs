@@ -30,7 +30,7 @@ public class ShortLinkRedirectController : ControllerBase
     public Task<IActionResult> RedirectLegacyAsync(string code, CancellationToken cancellationToken) =>
         RedirectByCodeAsync(null, code, cancellationToken);
 
-    /// <summary>Resolve código curto, registra telemetria e redireciona ao marketplace.</summary>
+    /// <summary>Resolve o código curto com await e devolve o 302 sem esperar a gravação do clique.</summary>
     /// <remarks>O slug vem de <c>SlugHelper.GenerateSlug</c> e pode começar com dígito (ex.: apelido "97303724").</remarks>
     [HttpGet(StoreRedirectTemplate)]
     public Task<IActionResult> RedirectAsync(string storeSlug, string code, CancellationToken cancellationToken) =>

@@ -25,28 +25,26 @@ public static class AuthEndpointExtensions
         return endpoints;
     }
 
-    private static IResult ChallengeExternalProvider(
+    private static async Task<IResult> ChallengeExternalProvider(
         string provider,
-        string platform,
-        bool link,
         HttpContext httpContext,
-        IOAuthProviderRegistry registry)
+        IOAuthProviderRegistry registry,
+        IAuthenticationSchemeProvider schemes,
+        string? platform = null,
+        bool link = false)
     {
-        if (!Enum.TryParse<LoginPlatform>(platform, ignoreCase: true, out var loginPlatform))
-        {
-            return Results.BadRequest("Plataforma inválida.");
-        }
-
         var authProvider = MapProviderKey(provider);
-        if (authProvider is null || !registry.IsEnabled(authProvider.Value))
-        {
-            return Results.Redirect(link ? "/minha-conta?link=not-configured" : "/?oauth=not-configured");
-        }
-
         var scheme = GetAuthenticationScheme(provider);
-        if (scheme is null)
+        var configured = authProvider is not null
+            && registry.IsEnabled(authProvider.Value)
+            && scheme is not null
+            && await schemes.GetSchemeAsync(scheme) is not null;
+
+        if (!configured)
         {
-            return Results.BadRequest("Provedor OAuth desconhecido.");
+            return Results.Redirect(link
+                ? "/minha-conta?link=not-configured"
+                : "/?oauth=not-configured");
         }
 
         if (link && httpContext.User.Identity?.IsAuthenticated != true)
@@ -54,9 +52,10 @@ public static class AuthEndpointExtensions
             return Results.Redirect("/?login=required");
         }
 
+        var loginPlatform = ResolvePortalPlatform(platform);
         var redirectUri = link
             ? $"/auth/finish-link-oauth?provider={provider.ToLowerInvariant()}"
-            : $"/auth/finish-oauth?platform={loginPlatform}&provider={authProvider}";
+            : $"/auth/finish-oauth?provider={authProvider}";
 
         var properties = new AuthenticationProperties
         {
@@ -69,29 +68,29 @@ public static class AuthEndpointExtensions
             }
         };
 
-        return Results.Challenge(properties, [scheme]);
+        return Results.Challenge(properties, [scheme!]);
     }
 
     private static async Task<IResult> FinishOAuthAsync(
         HttpContext httpContext,
-        string platform,
         string provider,
         IOrquestradorAuthBridge authBridge,
         IAuthCookieService authCookie,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        string? platform = null)
     {
         var logger = loggerFactory.CreateLogger("Ofertio.WebUi.Auth");
 
-        if (!Enum.TryParse<LoginPlatform>(platform, ignoreCase: true, out var loginPlatform)
-            || !Enum.TryParse<AuthProvider>(provider, ignoreCase: true, out var authProvider))
+        if (!Enum.TryParse<AuthProvider>(provider, ignoreCase: true, out var authProvider))
         {
             return Results.Redirect("/");
         }
 
+        var loginPlatform = ResolvePortalPlatform(platform);
+
         try
         {
-            var accessToken = await httpContext.GetTokenAsync("access_token");
-            var idToken = await httpContext.GetTokenAsync("id_token");
+            var (accessToken, idToken) = await TakeExternalTokensAsync(httpContext);
 
             if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(idToken))
             {
@@ -147,8 +146,7 @@ public static class AuthEndpointExtensions
             return Results.Redirect("/minha-conta?link=failed&message=" + Uri.EscapeDataString("Provedor inválido."));
         }
 
-        var accessToken = await httpContext.GetTokenAsync("access_token");
-        var idToken = await httpContext.GetTokenAsync("id_token");
+        var (accessToken, idToken) = await TakeExternalTokensAsync(httpContext);
 
         if (string.IsNullOrWhiteSpace(accessToken) && string.IsNullOrWhiteSpace(idToken))
         {
@@ -176,7 +174,6 @@ public static class AuthEndpointExtensions
             });
 
             using var response = await client.SendAsync(request, httpContext.RequestAborted);
-            var content = await response.Content.ReadAsStringAsync(httpContext.RequestAborted);
 
             if (response.IsSuccessStatusCode)
             {
@@ -184,10 +181,9 @@ public static class AuthEndpointExtensions
             }
 
             logger.LogWarning(
-                "Falha ao vincular provedor {Provider}. Status={StatusCode}. Body={Body}",
+                "Falha ao vincular provedor {Provider}. Status={StatusCode}",
                 provider,
-                (int)response.StatusCode,
-                content);
+                (int)response.StatusCode);
 
             return Results.Redirect("/minha-conta?link=failed&message=" + Uri.EscapeDataString("Não foi possível vincular a conta."));
         }
@@ -235,6 +231,26 @@ public static class AuthEndpointExtensions
     {
         await authCookie.SignOutAsync(httpContext.RequestAborted);
         return Results.Redirect("/");
+    }
+
+    private static LoginPlatform ResolvePortalPlatform(string? platform) =>
+        Enum.TryParse<LoginPlatform>(platform, ignoreCase: true, out var loginPlatform)
+            ? loginPlatform
+            : LoginPlatform.TikTok;
+
+    private static async Task<(string? AccessToken, string? IdToken)> TakeExternalTokensAsync(HttpContext httpContext)
+    {
+        var result = await httpContext.AuthenticateAsync(ExternalScheme);
+        string? accessToken = null;
+        string? idToken = null;
+        if (result.Succeeded)
+        {
+            accessToken = result.Properties?.GetTokenValue("access_token");
+            idToken = result.Properties?.GetTokenValue("id_token");
+        }
+
+        await httpContext.SignOutAsync(ExternalScheme);
+        return (accessToken, idToken);
     }
 
     private static AuthProvider? MapProviderKey(string provider) => provider.ToLowerInvariant() switch

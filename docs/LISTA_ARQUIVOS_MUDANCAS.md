@@ -1951,6 +1951,12 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.WebUi/Program.cs** - `UseForwardedHeaders` com `X-Forwarded-Proto` e `X-Forwarded-Host` para o callback `https://dev.ofertio.com.br/signin-google`.
 - [x] **Ofertio.Tests/Unit/Security/GoogleIdTokenRulesTests.cs** e **SocialAuthTokenValidatorTests.cs** *(novos)*.
 
+### Vínculo social em Minha Conta
+
+- [x] **Ofertio.SharedUi/Components/Account/IdentityProviderCard.razor** - badge `bg-success` / `bg-secondary`, "Vincular conta" (`bi-link-45deg`) e "Desvincular conta" (`bi-line-slash`).
+- [x] **Ofertio.SharedUi/Components/Pages/AccountSecurity.razor** - rotas `/minha-conta` e `/seguranca`; o vínculo abre `/auth/challenge/google?link=true` e a desvinculação exige outro método de acesso.
+- [x] **Ofertio.WebUi/Extensions/AuthenticationExtensions.cs** e **AuthEndpointExtensions.cs** - cookie `External` no retorno `/signin-google`; o desafio do Google é `/auth/challenge/google` (`link` opcional, sem `platform=TikTok`). Sem ClientId/ClientSecret o endpoint volta para a tela de login com aviso, em vez de HTTP 400.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

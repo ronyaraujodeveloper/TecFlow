@@ -148,3 +148,4 @@
 [2026-10-21 22:10:12] docs: modulariza regras em docs/rules, cria checklist ativo e enxuga README
 [2026-10-21 23:02:46] feat(radar): consulta a base local antes das APIs e compara precos do mesmo modelo entre lojas
 [2026-10-22 17:03:23] feat(auth): habilita Google OAuth em homologacao com aud e forwarded headers
+[2026-10-22 17:26:18] fix(auth): corrige o HTTP 400 do Entrar com Google e o vinculo em Minha Conta

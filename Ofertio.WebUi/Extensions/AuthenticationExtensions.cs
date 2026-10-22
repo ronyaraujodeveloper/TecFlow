@@ -12,6 +12,12 @@ public static class AuthenticationExtensions
 {
     public const string AppleScheme = "Apple";
 
+    /// <summary>
+    /// Cookie curto só do retorno OAuth. O cookie da sessão do Ofertio permanece,
+    /// para o vínculo em /minha-conta gravar o Google no usuário que já está logado.
+    /// </summary>
+    public const string ExternalScheme = "External";
+
     public static IServiceCollection AddWebUiAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -36,13 +42,19 @@ public static class AuthenticationExtensions
                 options.AccessDeniedPath = "/";
                 options.ExpireTimeSpan = TimeSpan.FromHours(authOptions.CookieExpireHours);
                 options.SlidingExpiration = true;
+            })
+            .AddCookie(ExternalScheme, options =>
+            {
+                options.Cookie.Name = ".Ofertio.External";
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+                options.SlidingExpiration = false;
             });
 
         if (IsGoogleConfigured(authOptions.Google))
         {
             authenticationBuilder.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
             {
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.SignInScheme = ExternalScheme;
                 options.ClientId = authOptions.Google.ClientId;
                 options.ClientSecret = authOptions.Google.ClientSecret;
                 options.SaveTokens = true;
@@ -55,7 +67,7 @@ public static class AuthenticationExtensions
         {
             authenticationBuilder.AddFacebook(FacebookDefaults.AuthenticationScheme, options =>
             {
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.SignInScheme = ExternalScheme;
                 options.ClientId = authOptions.Facebook.ClientId;
                 options.ClientSecret = authOptions.Facebook.ClientSecret;
                 options.SaveTokens = true;
@@ -68,7 +80,7 @@ public static class AuthenticationExtensions
         {
             authenticationBuilder.AddOpenIdConnect(AppleScheme, options =>
             {
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.SignInScheme = ExternalScheme;
                 options.Authority = "https://appleid.apple.com";
                 options.ClientId = authOptions.Apple.ClientId;
                 options.ClientSecret = AppleClientSecretGenerator.Generate(authOptions.Apple);

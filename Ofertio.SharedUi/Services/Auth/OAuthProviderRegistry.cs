@@ -40,7 +40,9 @@ public class OAuthProviderRegistry : IOAuthProviderRegistry
             _ => throw new ArgumentOutOfRangeException(nameof(provider))
         };
 
-        return $"/auth/challenge/{providerKey}?platform={platform}";
+        return platform == LoginPlatform.Shopee
+            ? $"/auth/challenge/{providerKey}?platform={platform}"
+            : $"/auth/challenge/{providerKey}";
     }
 
     public string GetLinkChallengePath(AuthProvider provider, LoginPlatform platform)
@@ -53,6 +55,9 @@ public class OAuthProviderRegistry : IOAuthProviderRegistry
             _ => throw new ArgumentOutOfRangeException(nameof(provider))
         };
 
-        return $"/auth/challenge/{providerKey}?platform={platform}&link=true";
+        var path = $"/auth/challenge/{providerKey}?link=true";
+        return platform == LoginPlatform.Shopee
+            ? path + $"&platform={platform}"
+            : path;
     }
 }

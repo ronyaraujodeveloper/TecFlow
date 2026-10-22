@@ -1,4 +1,5 @@
 ﻿@page "/minha-conta"
+@page "/seguranca"
 @page "/account/security"
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
@@ -6,6 +7,8 @@
 @using Ofertio.SharedUi.Models.Enums
 @inject IAccountSecurityApiService SecurityApi
 @inject IOAuthProviderRegistry OAuthRegistry
+@inject IModalService ModalService
+@inject IToastService ToastService
 @inject NavigationManager Navigation
 @inject ILogger<AccountSecurity> Logger
 
@@ -21,16 +24,20 @@
         </div>
         <div class="dashboard-toolbar">
             <button type="button" class="btn btn-outline-primary btn-touch" disabled="@_isLoading" @onclick="ReloadAsync">
-                @(_isLoading ? "Atualizando..." : "Atualizar")
+                <i class="bi bi-arrow-repeat me-1"></i>@(_isLoading ? "Atualizando..." : "Atualizar")
             </button>
-            <a href="/radar/perfil" class="btn btn-outline-primary btn-touch">Perfil de mineração</a>
-            <a href="/dashboard" class="btn btn-outline-secondary btn-touch">Voltar ao painel</a>
+            <a href="/radar/perfil" class="btn btn-outline-primary btn-touch">
+                <i class="bi bi-person-gear me-1"></i>Perfil de mineração
+            </a>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-touch">
+                <i class="bi bi-arrow-left me-1"></i>Voltar ao painel
+            </a>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_pageMessage))
     {
-        <div class="alert @(_pageMessageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">
+        <div class="alert @PageAlertClass py-2 small" role="alert">
             @_pageMessage
         </div>
     }
@@ -45,14 +52,14 @@
             <button type="button"
                     class="nav-link btn-touch @(_activeTab == SecurityTab.Providers ? "active" : "")"
                     @onclick="() => SelectTab(SecurityTab.Providers)">
-                Métodos de acesso
+                <i class="bi bi-shield-lock me-1"></i>Métodos de acesso
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button type="button"
                     class="nav-link btn-touch @(_activeTab == SecurityTab.Password ? "active" : "")"
                     @onclick="() => SelectTab(SecurityTab.Password)">
-                Alterar senha
+                <i class="bi bi-key me-1"></i>Alterar senha
             </button>
         </li>
     </ul>
@@ -193,7 +200,7 @@
                     <button type="submit"
                             class="btn btn-primary btn-lg btn-touch w-100 w-md-auto px-md-5"
                             disabled="@(_isSavingPassword || _passwordsMismatch || _passwordsIncomplete)">
-                        @(_isSavingPassword ? "Salvando..." : "Salvar nova senha")
+                        <i class="bi bi-check-circle me-1"></i>@(_isSavingPassword ? "Salvando..." : "Salvar nova senha")
                     </button>
                 </EditForm>
             </div>
@@ -225,6 +232,7 @@
     private string? _loadError;
     private string? _pageMessage;
     private bool _pageMessageIsError;
+    private bool _pageMessageIsWarning;
     private string? _passwordMessage;
     private bool _passwordMessageIsError;
     private readonly ChangePasswordFormModel _passwordModel = new();
@@ -243,6 +251,7 @@
         if (query.TryGetValue("link", out var linkStatus))
         {
             _pageMessageIsError = linkStatus.ToString() != "success";
+            _pageMessageIsWarning = false;
             _pageMessage = linkStatus.ToString() switch
             {
                 "success" => "Conta vinculada com sucesso.",
@@ -306,6 +315,20 @@
             ? "Abrir fluxo OAuth para vincular este provedor."
             : "OAuth não configurado para este provedor.";
 
+    private string PageAlertClass => _pageMessageIsWarning
+        ? "alert-warning"
+        : _pageMessageIsError ? "alert-danger" : "alert-success";
+
+    private const string LastAccessMethodMessage =
+        "Não é possível remover o único método de acesso. Defina uma senha de e-mail ou vincule outro provedor antes de desvincular.";
+
+    private void ShowPageMessage(string message, bool isError, bool isWarning = false)
+    {
+        _pageMessage = message;
+        _pageMessageIsError = isError;
+        _pageMessageIsWarning = isWarning;
+    }
+
     private void SelectTab(SecurityTab tab) => _activeTab = tab;
 
     private void ClearLoadError() => _loadError = null;
@@ -314,8 +337,8 @@
     {
         if (!OAuthRegistry.IsEnabled(provider))
         {
-            _pageMessageIsError = true;
-            _pageMessage = GetLinkTooltip(provider);
+            ShowPageMessage(GetLinkTooltip(provider), isError: false, isWarning: true);
+            ToastService.ShowWarning(_pageMessage);
             return Task.CompletedTask;
         }
 
@@ -326,10 +349,28 @@
 
     private async Task UnlinkProviderAsync(string provider)
     {
+        if (!IsProviderLinked(provider))
+        {
+            return;
+        }
+
         if (!CanUnlinkProvider(provider))
         {
-            _pageMessageIsError = true;
-            _pageMessage = GetUnlinkTooltip(provider);
+            ShowPageMessage(LastAccessMethodMessage, isError: false, isWarning: true);
+            ToastService.ShowWarning(LastAccessMethodMessage);
+            return;
+        }
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmDialogRequest
+        {
+            Title = "Desvincular conta",
+            Message = $"Remover o vínculo com {provider}? O acesso continua pelos outros métodos ativos.",
+            ConfirmText = "Desvincular conta",
+            CancelText = "Cancelar",
+            Kind = ConfirmDialogKind.Danger
+        });
+        if (!confirmed)
+        {
             return;
         }
 
@@ -339,8 +380,15 @@
         try
         {
             var response = await SecurityApi.UnlinkProviderAsync(provider);
-            _pageMessageIsError = !response.Status;
-            _pageMessage = response.Descricao;
+            ShowPageMessage(response.Descricao, isError: !response.Status);
+            if (response.Status)
+            {
+                ToastService.ShowSuccess(response.Descricao);
+            }
+            else
+            {
+                ToastService.ShowError(response.Descricao);
+            }
 
             if (response.Status && response.Data is not null)
             {
@@ -354,8 +402,8 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro ao desvincular provedor {Provider}.", provider);
-            _pageMessageIsError = true;
-            _pageMessage = "Erro inesperado ao desvincular provedor.";
+            ShowPageMessage("Erro inesperado ao desvincular provedor.", isError: true);
+            ToastService.ShowError(_pageMessage);
         }
         finally
         {

@@ -4,7 +4,6 @@
 
 <button type="button"
         class="btn @BtnClass btn-lg auth-provider-btn"
-        disabled="@(!_isEnabled)"
         title="@_tooltip"
         @onclick="StartOAuthAsync">
     <span class="provider-icon @IconClass">@((MarkupString)IconContent)</span>
@@ -29,7 +28,7 @@
         _isEnabled = OAuthRegistry.IsEnabled(Provider);
         _tooltip = _isEnabled
             ? $"Entrar com {Label}"
-            : $"Configure Authentication:OAuth:{GetConfigSectionName()} em appsettings";
+            : $"Defina Authentication:{GetConfigSectionName()}:ClientId e ClientSecret para entrar com {Label}.";
     }
 
     private Task StartOAuthAsync()
@@ -37,7 +36,7 @@
         if (!_isEnabled)
         {
             return OnError.InvokeAsync(
-                $"OAuth {Label} não configurado. Preencha ClientId/Secret em appsettings.");
+                $"O provedor {Label} não está configurado. Defina Authentication:{GetConfigSectionName()}:ClientId e ClientSecret.");
         }
 
         var path = OAuthRegistry.GetChallengePath(Provider, Platform);

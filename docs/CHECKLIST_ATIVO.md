@@ -24,6 +24,7 @@
 ## 🔐 Google OAuth em homologação
 
 - [ ] **Console do Google (`GoogleOAuthHomologacao`):** aplicativo Web; origens `https://dev.ofertio.com.br` e `https://localhost:7002`; URIs de redirecionamento `https://dev.ofertio.com.br/signin-google` e `https://localhost:7002/signin-google`; escopos `openid`, `email` e `profile`. Depois de publicado, entrar em `https://dev.ofertio.com.br/` com "Entrar com Google".
+- [ ] **Vincular na conta (`AccountSocialLink`):** em `/minha-conta`, "Vincular conta" no Google deve voltar com o badge Conectado. "Desvincular conta" sem senha e sem outro provedor deve mostrar o alerta e manter o vínculo.
 
 ## 📡 Radar híbrido e comparador multilojas
 

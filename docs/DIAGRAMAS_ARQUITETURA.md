@@ -574,6 +574,7 @@ Tecso.AutomacaoCusor/
 ├── Ofertio.SharedUi/            # RCL UI compartilhada (Fase 4.2) — AppRoutes.razor (MAUI)
 ├── Ofertio.WebUi/               # Host Blazor Server + OAuth (Fase 3/4) — Routes.razor único
 │                                # Google: UseForwardedHeaders (X-Forwarded-Proto/Host) → redirect_uri https://dev.ofertio.com.br/signin-google
+│                                # Vínculo em /minha-conta: challenge?link=true grava o id_token no cookie External e associa UserExternalLogins ao usuário logado
 │                                # API valida id_token em oauth2.googleapis.com/tokeninfo e exige aud = Authentication:Google:ClientId
 ├── Ofertio.Mobile/              # MAUI Blazor Hybrid (Fase 4.2) — TFM Windows `net9.0-windows*` (sem iOS/Mac Catalyst)
 │   ├── Components/, Services/, Extensions/, Models/, wwwroot/, …

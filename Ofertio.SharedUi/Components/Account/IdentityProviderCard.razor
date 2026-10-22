@@ -18,10 +18,10 @@
                 {
                     <button type="button"
                             class="btn btn-outline-danger btn-touch"
-                            disabled="@IsBusy || !CanUnlink"
+                            disabled="@IsBusy"
                             title="@UnlinkTooltip"
                             @onclick="OnUnlink">
-                        Desvincular
+                        <i class="bi bi-line-slash me-1"></i>Desvincular conta
                     </button>
                 }
                 else if (!string.IsNullOrWhiteSpace(ConnectedHint))
@@ -33,10 +33,10 @@
             {
                 <button type="button"
                         class="btn btn-outline-primary btn-touch"
-                        disabled="@IsBusy || !CanLink"
+                        disabled="@IsBusy"
                         title="@LinkTooltip"
                         @onclick="OnLink">
-                    Vincular conta
+                    <i class="bi bi-link-45deg me-1"></i>Vincular conta
                 </button>
             }
             else
@@ -66,5 +66,5 @@
     [Parameter] public EventCallback OnUnlink { get; set; }
 
     private string StatusLabel => IsConnected ? "Conectado" : "Não vinculado";
-    private string StatusBadgeClass => IsConnected ? "text-bg-success" : "text-bg-secondary";
+    private string StatusBadgeClass => IsConnected ? "bg-success" : "bg-secondary";
 }

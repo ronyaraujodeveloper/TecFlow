@@ -122,7 +122,7 @@
         {
             _errorMessage = oauthStatus.ToString() switch
             {
-                "not-configured" => "OAuth não configurado. Defina ClientId e ClientSecret em appsettings (Authentication:OAuth).",
+                "not-configured" => "O Google não está configurado neste ambiente. Defina Authentication:Google:ClientId e ClientSecret.",
                 "no-token" => "O provedor OAuth não devolveu token. Tente novamente.",
                 "failed" => query.TryGetValue("message", out var msg)
                     ? Uri.UnescapeDataString(msg.ToString())

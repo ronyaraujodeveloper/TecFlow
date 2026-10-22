@@ -1624,3 +1624,9 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **aud do id_token:** `SocialAuthTokenValidator` compara o `aud` devolvido por `https://oauth2.googleapis.com/tokeninfo` com `Authentication:Google:ClientId`. Token de outro app é recusado e o login responde `SOCIAL_TOKEN_INVALID`. Na API de homologação o ClientId vem da variável `Authentication__Google__ClientId` do pool `OfertioApiPool`.
 - [ ] **Console do Google:** aplicativo Web; origens `https://dev.ofertio.com.br` e `https://localhost:7002`; URIs `https://dev.ofertio.com.br/signin-google` e `https://localhost:7002/signin-google`; escopos `openid`, `email`, `profile`.
 
+## 🔐 Vínculo de provedores em Minha Conta (`AccountSocialLink`)
+
+- [x] **Tela:** `/minha-conta` e `/seguranca` mostram Conectado (`badge bg-success`) ou Não vinculado (`badge bg-secondary`) a partir de `UserExternalLogins`.
+- [x] **Vincular conta:** botão com `bi-link-45deg` abre `/auth/challenge/google?link=true`. O retorno em `/signin-google` fica num cookie separado e `POST api/auth/providers/vincular` grava o Google no usuário autenticado.
+- [x] **Desvincular conta:** botão `btn-outline-danger` com `bi-line-slash`. Sem senha e sem outro provedor, a tela alerta e a API recusa a remoção do único método.
+

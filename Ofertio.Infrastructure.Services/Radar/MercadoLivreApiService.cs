@@ -561,7 +561,6 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             : Task.FromResult<IReadOnlyList<OfficialCatalogCategoryDto>>([]);
 
         var items = new List<OfficialCatalogProductDto>();
-        var seenDomains = new List<string>();
         var scanned = 0;
         int? nextOffset = null;
         var effectiveQuery = query;
@@ -617,9 +616,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                     break;
                 }
 
-                seenDomains.AddRange(page.DomainIds);
                 var productIds = page.ProductIds.Take(cap - candidateScanned).ToList();
                 var offers = await ResolveCatalogOffersAsync(productIds, accessToken, cancellationToken);
+                foreach (var offer in offers.Where(item => string.IsNullOrWhiteSpace(item.DomainId) && item.ProductId is not null))
+                {
+                    offer.DomainId = page.DomainByProductId.GetValueOrDefault(offer.ProductId!);
+                }
+
                 items.AddRange(offers.Where(item =>
                     OfficialCatalogSearchRules.PassesPriceAndShipping(
                         item,
@@ -658,16 +661,23 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             .GroupBy(item => item.ProductId, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();
-        var categories = MergeCategories(await categoriesTask, seenDomains, request.DomainId);
         if (request.IncludeMetrics)
         {
             await EnrichCatalogMetricsAsync(finalItems, accessToken, cancellationToken);
         }
 
+        await ResolveCategoryNamesAsync(finalItems, accessToken, cancellationToken);
+        var categories = OfficialCatalogSearchRules.BuildMercadoLivreCategories(
+            await categoriesTask,
+            finalItems,
+            [request.DomainId],
+            DomainNameCache);
+
         _logger.LogInformation(
-            "[ML Busca] products/search '{Query}' (termo usado '{EffectiveQuery}', offset {Offset}): {Scanned} produtos de catálogo analisados, {OfferCount} ofertas após filtros, próximo offset {NextOffset}.",
+            "[ML Busca] products/search '{Query}' (termo usado '{EffectiveQuery}', categoria {DomainId}, offset {Offset}): {Scanned} produtos de catálogo analisados, {OfferCount} ofertas após filtros, próximo offset {NextOffset}.",
             query,
             effectiveQuery,
+            string.IsNullOrWhiteSpace(request.DomainId) ? "todas" : request.DomainId.Trim(),
             startOffset,
             scanned,
             finalItems.Count,
@@ -990,7 +1000,13 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                 cancellationToken);
             if (statusCode == HttpStatusCode.OK)
             {
-                return MercadoLivreItemParser.ParseDomainDiscovery(body);
+                var discovered = MercadoLivreItemParser.ParseDomainDiscovery(body);
+                foreach (var category in discovered.Where(category => !string.Equals(category.Name, category.Id, StringComparison.OrdinalIgnoreCase)))
+                {
+                    DomainNameCache[category.Id] = category.Name;
+                }
+
+                return discovered;
             }
 
             _logger.LogDebug("[ML Busca] domain_discovery [{StatusCode}] para '{Query}'.", (int)statusCode, query);
@@ -1003,34 +1019,42 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         return [];
     }
 
-    private static IReadOnlyList<OfficialCatalogCategoryDto> MergeCategories(
-        IReadOnlyList<OfficialCatalogCategoryDto> discovered,
-        IReadOnlyList<string> seenDomains,
-        string? selectedDomainId)
+    /// <summary>Nomes em português dos domínios já vistos no <c>domain_discovery</c>, reaproveitados nas buscas seguintes.</summary>
+    private static readonly ConcurrentDictionary<string, string> DomainNameCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Categoria real de cada oferta (<c>category_id</c> do anúncio ➔ <c>/categories/{id}</c>, em português) para nomear
+    /// o combo "Categorias" mesmo quando as métricas não foram pedidas; usa o cache de 12 h da árvore de categorias.
+    /// </summary>
+    private async Task ResolveCategoryNamesAsync(
+        IReadOnlyList<OfficialCatalogProductDto> items,
+        string accessToken,
+        CancellationToken cancellationToken)
     {
-        var categories = discovered.ToList();
-        foreach (var domainId in seenDomains
-                     .GroupBy(id => id, StringComparer.OrdinalIgnoreCase)
-                     .OrderByDescending(group => group.Count())
-                     .Select(group => group.Key)
-                     .Append(selectedDomainId ?? string.Empty))
+        var pending = items
+            .Where(item => string.IsNullOrWhiteSpace(item.CategoryName) && !string.IsNullOrWhiteSpace(item.CategoryId))
+            .ToList();
+        if (pending.Count == 0)
         {
-            if (!string.IsNullOrWhiteSpace(domainId)
-                && !categories.Any(item => string.Equals(item.Id, domainId, StringComparison.OrdinalIgnoreCase)))
-            {
-                categories.Add(new OfficialCatalogCategoryDto
-                {
-                    Id = domainId.Trim(),
-                    Name = OfficialCatalogSearchRules.HumanizeMercadoLivreDomain(domainId)
-                });
-            }
+            return;
         }
 
-        return categories.Take(MaxCategorySuggestions).ToList();
+        var paths = await FetchCategoryPathsAsync(
+            pending.Select(item => item.CategoryId!).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            accessToken,
+            cancellationToken);
+        foreach (var item in pending)
+        {
+            if (paths.TryGetValue(item.CategoryId!, out var path))
+            {
+                item.CategoryName ??= path.Name;
+                item.RootCategoryId ??= path.RootId;
+                item.RootCategoryName ??= path.RootName;
+            }
+        }
     }
 
     private const int CatalogLookupParallelism = 8;
-    private const int MaxCategorySuggestions = 8;
 
     /// <summary>
     /// Ofertas de um produto de catálogo, só pela API oficial: <c>buy_box_winner</c> ➔ faixa de preço da buy box ➔

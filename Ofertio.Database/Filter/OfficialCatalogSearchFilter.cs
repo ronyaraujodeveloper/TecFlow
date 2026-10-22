@@ -31,7 +31,10 @@ public class OfficialCatalogSearchFilter
     /// <summary>Domínio de catálogo do Mercado Livre (ex.: <c>MLB-NOTEBOOKS</c>).</summary>
     public string? MercadoLivreCategory { get; set; }
 
-    /// <summary>Filtro de tela: domínios do Mercado Livre marcados no combo "Categorias" (não consulta as lojas de novo).</summary>
+    /// <summary>
+    /// Domínios do Mercado Livre marcados no combo "Categorias": filtram em memória o que já foi carregado e, na busca,
+    /// viram uma varredura do <c>products/search</c> com <c>domain_id</c> por categoria (até 3).
+    /// </summary>
     public List<string>? MercadoLivreCategories { get; set; }
 
     /// <summary>Offset do <c>products/search</c> para "Carregar mais" (só Mercado Livre).</summary>

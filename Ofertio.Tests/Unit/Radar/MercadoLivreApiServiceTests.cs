@@ -585,6 +585,67 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
+    public async Task SearchCatalogAsync_ShouldNameCategoriesInPortugueseFromTheListingCategory()
+    {
+        const string categoryId = "MLB990001";
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath switch
+            {
+                SearchPath => (HttpStatusCode.OK,
+                    """{"paging":{"total":3},"results":[{"id":"MLB1","domain_id":"MLB-FLIP_FLOPS"},{"id":"MLB2","domain_id":"MLB-FLIP_FLOPS"},{"id":"MLB3","domain_id":"MLB-SHOE_CARE"}]}"""),
+                "/sites/MLB/domain_discovery/search" => (HttpStatusCode.OK,
+                    """[{"domain_id":"MLB-SANDALS_AND_CLOGS","domain_name":"Sandálias e tamancos"}]"""),
+                "/categories/" + categoryId => (HttpStatusCode.OK,
+                    $$"""{"id":"{{categoryId}}","name":"Chinelos","path_from_root":[{"id":"MLB1430","name":"Calçados, Roupas e Bolsas"},{"id":"{{categoryId}}","name":"Chinelos"}]}"""),
+                "/products/MLB1" or "/products/MLB2" => (HttpStatusCode.OK,
+                    $$$"""{"id":"{{{uri.Segments[^1]}}}","name":"Havaianas Top","buy_box_winner":{"item_id":"{{{uri.Segments[^1]}}}0","price":49.9,"category_id":"{{{categoryId}}}"}}"""),
+                _ => (HttpStatusCode.OK, """{"id":"MLB3","name":"Limpa tênis","buy_box_winner":null}""")
+            }
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "havaianas",
+            IncludeMetrics = false
+        });
+
+        Assert.All(result.Items, item =>
+        {
+            Assert.Equal("MLB-FLIP_FLOPS", item.DomainId);
+            Assert.Equal("Chinelos", item.CategoryName);
+        });
+        Assert.Equal(["MLB-SANDALS_AND_CLOGS", "MLB-FLIP_FLOPS"], result.Categories.Select(category => category.Id));
+        Assert.Equal(["Sandálias e tamancos", "Chinelos"], result.Categories.Select(category => category.Name));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WithCategory_ShouldSendDomainIdToProductsSearch()
+    {
+        var handler = new RoutingHandler
+        {
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage(["MLB7"], 1, "MLB-SANDALS_AND_CLOGS"))
+                : CatalogProduct(uri, _ => (79.9m, true))
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "havaianas",
+            DomainId = "MLB-SANDALS_AND_CLOGS",
+            IncludeCategories = false,
+            IncludeMetrics = false
+        });
+
+        var search = Assert.Single(handler.Requests, request => request.Path == SearchPath);
+        Assert.Equal("MLB-SANDALS_AND_CLOGS", QueryValue(new Uri(search.Url), "domain_id"));
+        Assert.Equal("MLB-SANDALS_AND_CLOGS", Assert.Single(result.Items).DomainId);
+        Assert.Contains(result.Categories, category => category.Id == "MLB-SANDALS_AND_CLOGS");
+    }
+
+    [Fact]
     public async Task SearchCatalogAsync_WhenOneProductTimesOut_ShouldReturnTheOtherOffers()
     {
         var handler = new RoutingHandler

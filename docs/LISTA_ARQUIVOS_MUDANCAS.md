@@ -1900,6 +1900,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - `await` nas tarefas da busca unificada e mensagem amigável quando o canal do ML estoura o tempo.
 - [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** + **OfficialCatalogSearchRulesTests.cs** - produto lento, primeira página lenta, página seguinte lenta, `IsHttpTimeout` e `ResolveHttpTimeout`.
 
+### RealCategoryFilter - Categorias reais em português e busca por categoria na Buscar Ofertas
+
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `MercadoLivreCatalogSearchPage.DomainByProductId` (domínio de cada produto do `products/search`).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - domínio da página para ofertas sem `domain_id`; `ResolveCategoryNamesAsync` (`/categories/{id}` mesmo sem métricas); `DomainNameCache` com os nomes do `domain_discovery`; `MergeCategories` substituído por `BuildMercadoLivreCategories`; log com a categoria da varredura.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `SelectedMercadoLivreDomains` (até 3), `BuildMercadoLivreCategories` (nomes em português, sem domínios vazios), `MergeMercadoLivreDomainResults` (ofertas intercaladas, menor offset pendente).
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - uma varredura por categoria marcada (`SearchMercadoLivreDomainSafeAsync`), `domain_discovery` só na primeira.
+- [x] **Ofertio.SharedUi/Extensions/FilterQueryStringExtensions.cs** - listas viram chave repetida na query string (antes `System.Collections.Generic.List...`).
+- [x] **Ofertio.SharedUi/Helpers/OfferSearchFilterOptions.cs** - `SelectedWithoutOffers` (categorias marcadas com 0 ofertas).
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - aviso de categoria zerada com "Buscar nesta categoria", "Carregar mais" com as categorias e texto das regras.
+- [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - documentação de `MercadoLivreCategories` (filtro de tela e `domain_id` na busca).
+- [x] **Ofertio.Tests** - nomes em português pelo `/categories`, `domain_id` no `products/search`, varredura por categoria na busca unificada, regras de domínios/categorias/junção, query string com listas e `SelectedWithoutOffers`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

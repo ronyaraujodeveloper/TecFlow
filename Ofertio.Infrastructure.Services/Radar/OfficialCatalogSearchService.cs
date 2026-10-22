@@ -163,11 +163,36 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         };
     }
 
+    /// <summary>
+    /// Sem categoria marcada, uma varredura geral; com categorias marcadas no combo, uma varredura por domínio
+    /// (<c>domain_id</c> do <c>products/search</c>, até <see cref="OfficialCatalogSearchRules.MercadoLivreMaxDomainsPerSearch"/>)
+    /// para trazer ofertas daquelas categorias mesmo quando a busca geral não trouxe nenhuma.
+    /// </summary>
     private async Task<OfficialCatalogChannelResult> SearchMercadoLivreSafeAsync(
         int userId,
         string keyword,
         int limit,
         OfficialCatalogSearchFilter filter,
+        CancellationToken cancellationToken)
+    {
+        var domains = OfficialCatalogSearchRules.SelectedMercadoLivreDomains(filter);
+        if (domains.Count <= 1)
+        {
+            return await SearchMercadoLivreDomainSafeAsync(userId, keyword, limit, filter, domains.FirstOrDefault(), includeCategories: true, cancellationToken);
+        }
+
+        var results = await Task.WhenAll(domains.Select((domainId, index) =>
+            SearchMercadoLivreDomainSafeAsync(userId, keyword, limit, filter, domainId, includeCategories: index == 0, cancellationToken)));
+        return OfficialCatalogSearchRules.MergeMercadoLivreDomainResults(results);
+    }
+
+    private async Task<OfficialCatalogChannelResult> SearchMercadoLivreDomainSafeAsync(
+        int userId,
+        string keyword,
+        int limit,
+        OfficialCatalogSearchFilter filter,
+        string? domainId,
+        bool includeCategories,
         CancellationToken cancellationToken)
     {
         try
@@ -179,13 +204,13 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     Query = keyword,
                     TargetOffers = limit,
                     Offset = Math.Max(0, filter.MercadoLivreOffset),
-                    DomainId = string.IsNullOrWhiteSpace(filter.MercadoLivreCategory) ? null : filter.MercadoLivreCategory.Trim(),
+                    DomainId = domainId,
                     MinPrice = filter.MinPrice,
                     MaxPrice = filter.MaxPrice,
                     FreeShippingOnly = filter.FreeShippingOnly == true,
                     MainProductsOnly = filter.MainProductsOnly == true,
                     AllowShorterQuery = filter.MercadoLivreOffset <= 0,
-                    IncludeCategories = filter.MercadoLivreOffset <= 0,
+                    IncludeCategories = includeCategories && filter.MercadoLivreOffset <= 0,
                     TrackingId = filter.MercadoLivreTrackingId
                 },
                 cancellationToken);

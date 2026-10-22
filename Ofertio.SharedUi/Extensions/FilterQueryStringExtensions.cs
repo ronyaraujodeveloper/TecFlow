@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections;
+using System.Globalization;
 using System.Reflection;
 
 namespace Ofertio.SharedUi.Extensions;
@@ -6,29 +7,29 @@ namespace Ofertio.SharedUi.Extensions;
 /// <summary>Converte objetos Filter em query string para chamadas GET da API.</summary>
 public static class FilterQueryStringExtensions
 {
+    /// <summary>Listas viram a chave repetida (<c>Categorias=a&amp;Categorias=b</c>), formato que o <c>[FromQuery]</c> do ASP.NET Core entende.</summary>
     public static string ToQueryString(this object filter)
     {
         var segments = filter.GetType()
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(property =>
+            .SelectMany(property =>
             {
                 var value = property.GetValue(filter);
-                if (value is null)
+                IEnumerable<object> values = value switch
                 {
-                    return null;
-                }
+                    null => [],
+                    string text => [text],
+                    IEnumerable sequence => sequence.Cast<object?>().OfType<object>(),
+                    _ => [value]
+                };
 
-                var formatted = FormatQueryValue(value);
-                if (string.IsNullOrEmpty(formatted))
-                {
-                    return null;
-                }
+                return values
+                    .Select(FormatQueryValue)
+                    .Where(formatted => !string.IsNullOrEmpty(formatted))
+                    .Select(formatted => $"{Uri.EscapeDataString(property.Name)}={Uri.EscapeDataString(formatted)}");
+            });
 
-                return $"{Uri.EscapeDataString(property.Name)}={Uri.EscapeDataString(formatted)}";
-            })
-            .Where(segment => segment is not null);
-
-        return string.Join('&', segments!);
+        return string.Join('&', segments);
     }
 
     public static string AppendQueryString(this string relativeUrl, object? filter)

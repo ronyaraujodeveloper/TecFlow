@@ -1930,6 +1930,23 @@ flowchart TD
   RULES -.-> OCS
 ```
 
+### Categorias reais e busca por categoria (`RealCategoryFilter`)
+
+```mermaid
+flowchart TD
+  COMBO["Combo Categorias (BuscaGlobal)"] -->|"marcar: filtro em memória"| SCREEN["FilterLoadedResults por DomainId"]
+  COMBO -->|"Buscar"| QS["ToQueryString<br/>MercadoLivreCategories repetida"]
+  QS --> API["GET api/busca"]
+  API --> OCS["OfficialCatalogSearchService<br/>SelectedMercadoLivreDomains (até 3)"]
+  OCS -->|"uma varredura por domain_id"| ML["MercadoLivreApiService.ScanCatalogAsync"]
+  ML --> PS["products/search?domain_id=..."]
+  ML --> CAT["/categories/id<br/>nome em português (cache 12 h)"]
+  ML --> DD["domain_discovery<br/>DomainNameCache"]
+  ML --> BUILD["BuildMercadoLivreCategories"]
+  OCS --> MERGE["MergeMercadoLivreDomainResults"]
+  MERGE --> COMBO
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

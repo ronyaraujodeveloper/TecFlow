@@ -142,6 +142,37 @@ public class OfferSearchFilterOptionsTests
     }
 
     [Fact]
+    public void SelectedWithoutOffers_ShouldListOnlyMarkedCategoriesWithZeroLoadedOffers()
+    {
+        MultiSelectOption[] options =
+        [
+            new("MLB-FLIP_FLOPS", "Chinelos", 8),
+            new("MLB-SANDALS_AND_CLOGS", "Sandálias e tamancos", 0),
+            new("MLB-BOOTS", "Botas", 0)
+        ];
+
+        var empty = OfferSearchFilterOptions.SelectedWithoutOffers(["MLB-FLIP_FLOPS", "mlb-sandals_and_clogs"], options);
+
+        Assert.Equal(["Sandálias e tamancos"], empty.Select(option => option.Label));
+    }
+
+    [Fact]
+    public void ApplySelections_ShouldSendSelectedCategoriesInTheQueryStringAsRepeatedKeys()
+    {
+        var filter = OfferSearchFilterOptions.ApplySelections(
+            new OfficialCatalogSearchFilter { Keyword = "havaianas" },
+            OfferSearchFilterOptions.DefaultPlatforms,
+            [],
+            ["MLB-FLIP_FLOPS", "MLB-SANDALS_AND_CLOGS"]);
+
+        var query = Ofertio.SharedUi.Extensions.FilterQueryStringExtensions.ToQueryString(filter);
+
+        Assert.Contains("MercadoLivreCategories=MLB-FLIP_FLOPS&MercadoLivreCategories=MLB-SANDALS_AND_CLOGS", query);
+        Assert.DoesNotContain("System.Collections", query);
+        Assert.Contains("Keyword=havaianas", query);
+    }
+
+    [Fact]
     public void AdvancedFilters_ShouldCountActiveFieldsValidateRangeAndCopyIndependently()
     {
         var filters = new OfferSearchAdvancedFilters();

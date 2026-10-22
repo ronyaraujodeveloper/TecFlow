@@ -87,6 +87,23 @@
     {
         <div class="alert alert-info py-1 px-2 small mb-2">@_notice</div>
     }
+    @if (_searched && !_busy && EmptySelectedCategories is { Count: > 0 } emptyCategories)
+    {
+        var pending = emptyCategories.Where(option => !WasSearchedInCategory(option.Value)).ToList();
+        <div class="alert alert-warning py-1 px-2 small mb-2 d-flex flex-wrap align-items-center gap-2" role="status">
+            @if (pending.Count > 0)
+            {
+                <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Nenhuma oferta carregada em <strong>@JoinLabels(pending)</strong>. Clique em Buscar para trazer ofertas dessa categoria do Mercado Livre.</span>
+                <button type="button" class="btn btn-sm btn-warning py-0" disabled="@_searching" @onclick="SearchAsync">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>Buscar nesta categoria
+                </button>
+            }
+            else
+            {
+                <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>O Mercado Livre não retornou ofertas ativas em <strong>@JoinLabels(emptyCategories)</strong> para este termo.</span>
+            }
+        </div>
+    }
 
     @if (_searched && (_channels.Count > 0 || _relevanceOrder.Count > 0))
     {
@@ -127,7 +144,7 @@
         </div>
     }
 
-    @if (_searched && !_busy && _relevanceOrder.Count > 0 && _items.Count == 0)
+    @if (_searched && !_busy && _relevanceOrder.Count > 0 && _items.Count == 0 && EmptySelectedCategories.Count == 0)
     {
         <div class="alert alert-light border py-2 small">Nenhum resultado carregado atende aos filtros. Ajuste os filtros ou clique em Buscar para consultar as lojas de novo.</div>
     }
@@ -562,7 +579,7 @@
                         <li>Produtos "família" (ex.: um modelo com várias configurações) trazem até @OfficialCatalogSearchRules.MercadoLivreMaxChildrenPerProduct variações com oferta.</li>
                         <li>Sem nenhuma oferta, a busca tenta sozinha um termo mais curto (remove as últimas palavras) e avisa o termo usado.</li>
                         <li><strong>Carregar mais</strong> continua a análise de onde parou, só no Mercado Livre.</li>
-                        <li><strong>Categorias</strong> são sugeridas pelo Mercado Livre a partir do termo (domínios de catálogo, ex.: Notebooks, Tablets, Chinelos) depois da primeira busca, com quantas ofertas carregadas há em cada uma. Marcar uma ou mais categorias filtra <strong>só o que já está na tela</strong>, sem nova consulta; a lista é limpa quando o termo muda.</li>
+                        <li><strong>Categorias</strong> aparecem depois da primeira busca: as sugeridas pelo Mercado Livre para o termo e as das ofertas carregadas, com o nome em português da categoria real do anúncio e quantas ofertas carregadas há em cada uma. Marcar categorias filtra <strong>na hora o que já está na tela</strong>; clicar em <strong>Buscar</strong> consulta o Mercado Livre só nelas (até @OfficialCatalogSearchRules.MercadoLivreMaxDomainsPerSearch por busca), útil quando a categoria mostra 0. A lista é limpa quando o termo muda.</li>
                         <li>A busca de catálogo do Mercado Livre já devolve os produtos na relevância do próprio Mercado Livre; essa ordem é mantida em "Relevância (Padrão Mercado Livre)".</li>
                         <li>A API do Mercado Livre não informa cupons: "Apenas com cupom" esconde os resultados do Mercado Livre.</li>
                     </ul>
@@ -1042,6 +1059,20 @@
     private IReadOnlyList<MultiSelectOption> CategoryOptions =>
         OfferSearchFilterOptions.Categories(_allCategories, _relevanceOrder);
 
+    private IReadOnlyList<MultiSelectOption> EmptySelectedCategories =>
+        _categories.Count == 0 ? [] : OfferSearchFilterOptions.SelectedWithoutOffers(_categories, CategoryOptions);
+
+    /// <summary>A última busca já consultou o Mercado Livre nesta categoria (só as primeiras vão para a API).</summary>
+    private bool WasSearchedInCategory(string domainId) =>
+        _lastFilter is not null
+        && OfficialCatalogSearchRules.SelectedMercadoLivreDomains(_lastFilter)
+            .Contains(domainId, StringComparer.OrdinalIgnoreCase);
+
+    private static string JoinLabels(IReadOnlyList<MultiSelectOption> options) =>
+        options.Count == 1
+            ? options[0].Label
+            : string.Join(", ", options.Take(options.Count - 1).Select(option => option.Label)) + " e " + options[^1].Label;
+
     private void ApplyScreenFilters()
     {
         _items = [.. OfficialCatalogSearchRules.ApplySort(
@@ -1261,6 +1292,7 @@
                 MercadoLivre = true,
                 MercadoLivreTrackingId = _lastFilter.MercadoLivreTrackingId,
                 MercadoLivreCategory = _lastFilter.MercadoLivreCategory,
+                MercadoLivreCategories = _lastFilter.MercadoLivreCategories,
                 MercadoLivreOffset = offset,
                 Shopee = false,
                 Amazon = false

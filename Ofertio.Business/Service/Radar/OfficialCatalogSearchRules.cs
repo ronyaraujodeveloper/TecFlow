@@ -200,7 +200,7 @@ public static class OfficialCatalogSearchRules
         OfficialCatalogSearchFilter filter)
     {
         var anyStore = filter.MercadoLivre || filter.Shopee || filter.Amazon;
-        var categories = SelectedCategories(filter);
+        var categories = SelectedMercadoLivreDomains(filter, int.MaxValue).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return items
             .Where(item => !anyStore || item.PlatformType switch
             {
@@ -220,18 +220,168 @@ public static class OfficialCatalogSearchRules
             .ToList();
     }
 
-    private static HashSet<string> SelectedCategories(OfficialCatalogSearchFilter filter)
+    /// <summary>Máximo de categorias do Mercado Livre consultadas numa busca (uma varredura de <c>products/search</c> por domínio).</summary>
+    public const int MercadoLivreMaxDomainsPerSearch = 3;
+
+    /// <summary>Máximo de opções no combo "Categorias" vindas de uma busca (as marcadas sempre ficam).</summary>
+    public const int MercadoLivreMaxCategorySuggestions = 8;
+
+    /// <summary>
+    /// Domínios do Mercado Livre marcados no combo "Categorias" (e o legado <c>MercadoLivreCategory</c>), sem repetição e na
+    /// ordem escolhida; na busca vão como <c>domain_id</c> do <c>products/search</c>.
+    /// </summary>
+    public static IReadOnlyList<string> SelectedMercadoLivreDomains(
+        OfficialCatalogSearchFilter filter,
+        int max = MercadoLivreMaxDomainsPerSearch) =>
+        (filter.MercadoLivreCategories ?? [])
+            .Append(filter.MercadoLivreCategory)
+            .Where(category => !string.IsNullOrWhiteSpace(category))
+            .Select(category => category!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Max(0, max))
+            .ToList();
+
+    /// <summary>
+    /// Opções do combo "Categorias": domínios das ofertas carregadas nomeados pela categoria real do anúncio
+    /// (<c>category_id</c> ➔ <c>/categories/{id}</c>, em português), sugestões do <c>domain_discovery</c> e os domínios
+    /// marcados. O nome derivado do id (em inglês) é só o último recurso; domínios sem oferta nem sugestão não entram.
+    /// </summary>
+    public static IReadOnlyList<OfficialCatalogCategoryDto> BuildMercadoLivreCategories(
+        IEnumerable<OfficialCatalogCategoryDto> discovered,
+        IEnumerable<OfficialCatalogProductDto> items,
+        IEnumerable<string?> selectedDomainIds,
+        IReadOnlyDictionary<string, string>? knownDomainNames = null,
+        int max = MercadoLivreMaxCategorySuggestions)
     {
-        var categories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var category in (filter.MercadoLivreCategories ?? []).Append(filter.MercadoLivreCategory))
+        var names = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var order = new List<string>();
+        var pinned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void Add(string? id, string? name, bool pin)
         {
-            if (!string.IsNullOrWhiteSpace(category))
+            if (string.IsNullOrWhiteSpace(id))
             {
-                categories.Add(category.Trim());
+                return;
+            }
+
+            var key = id.Trim();
+            if (!names.ContainsKey(key))
+            {
+                order.Add(key);
+                names[key] = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(names[key]) && !string.IsNullOrWhiteSpace(name))
+            {
+                names[key] = name.Trim();
+            }
+
+            if (pin)
+            {
+                pinned.Add(key);
             }
         }
 
-        return categories;
+        string? Known(string id) =>
+            knownDomainNames is not null && knownDomainNames.TryGetValue(id, out var known) && !string.IsNullOrWhiteSpace(known)
+                ? known
+                : null;
+
+        foreach (var category in discovered)
+        {
+            Add(category.Id, category.Name, pin: false);
+        }
+
+        foreach (var domain in items
+                     .Where(item => item.PlatformType == MarketplaceType.MercadoLivre && !string.IsNullOrWhiteSpace(item.DomainId))
+                     .GroupBy(item => item.DomainId!.Trim(), StringComparer.OrdinalIgnoreCase)
+                     .OrderByDescending(group => group.Count()))
+        {
+            var categoryName = domain
+                .Select(item => item.CategoryName?.Trim())
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .GroupBy(name => name!, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.Key)
+                .FirstOrDefault();
+            Add(domain.Key, Known(domain.Key) ?? categoryName, pin: true);
+        }
+
+        foreach (var selected in selectedDomainIds)
+        {
+            if (!string.IsNullOrWhiteSpace(selected))
+            {
+                Add(selected, Known(selected.Trim()), pin: true);
+            }
+        }
+
+        for (var index = order.Count - 1; index >= 0 && order.Count > max; index--)
+        {
+            if (!pinned.Contains(order[index]))
+            {
+                order.RemoveAt(index);
+            }
+        }
+
+        return order
+            .Select(id => new OfficialCatalogCategoryDto
+            {
+                Id = id,
+                Name = names[id] ?? Known(id) ?? HumanizeMercadoLivreDomain(id)
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Junta as varreduras de cada categoria marcada: ofertas intercaladas (mantém a relevância de cada categoria) e
+    /// sem repetição; "Carregar mais" retoma do menor offset pendente (repetidas são descartadas na tela).
+    /// </summary>
+    public static OfficialCatalogChannelResult MergeMercadoLivreDomainResults(IReadOnlyList<OfficialCatalogChannelResult> results)
+    {
+        if (results.Count == 0)
+        {
+            return OfficialCatalogChannelResult.Empty;
+        }
+
+        if (results.Count == 1)
+        {
+            return results[0];
+        }
+
+        var succeeded = results
+            .Where(result => !result.MissingCredentials && string.IsNullOrWhiteSpace(result.ErrorMessage))
+            .ToList();
+        if (succeeded.Count == 0)
+        {
+            return results.FirstOrDefault(result => result.MissingCredentials) ?? results[0];
+        }
+
+        var items = new List<OfficialCatalogProductDto>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var longest = succeeded.Max(result => result.Items.Count);
+        for (var position = 0; position < longest; position++)
+        {
+            foreach (var result in succeeded.Where(result => position < result.Items.Count))
+            {
+                var item = result.Items[position];
+                if (seen.Add(item.ProductId ?? item.SourceUrl))
+                {
+                    items.Add(item);
+                }
+            }
+        }
+
+        var pendingOffsets = succeeded.Select(result => result.NextOffset).OfType<int>().ToList();
+        return new OfficialCatalogChannelResult
+        {
+            Items = items,
+            ScannedCount = succeeded.Sum(result => result.ScannedCount),
+            NextOffset = pendingOffsets.Count == 0 ? null : pendingOffsets.Min(),
+            EffectiveQuery = succeeded.Select(result => result.EffectiveQuery).FirstOrDefault(query => !string.IsNullOrWhiteSpace(query)),
+            Categories = succeeded.Aggregate(
+                new List<OfficialCatalogCategoryDto>(),
+                (merged, result) => MergeCategoryChips(merged, result.Categories))
+        };
     }
 
     /// <summary>Quantas ofertas carregadas do Mercado Livre pertencem a cada domínio (contador do combo "Categorias").</summary>

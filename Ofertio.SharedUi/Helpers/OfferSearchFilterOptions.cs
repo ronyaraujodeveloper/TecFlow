@@ -62,7 +62,21 @@ public static class OfferSearchFilterOptions
         return selected.Where(known.Contains).ToList();
     }
 
-    /// <summary>Copia as seleções dos combos para o filtro (lojas e qualificadores consultam as lojas; categorias filtram só a tela).</summary>
+    /// <summary>
+    /// Categorias marcadas sem nenhuma oferta carregada (contador 0): a tela avisa que "Buscar" consulta o Mercado Livre
+    /// só nelas, em vez de deixar a vitrine vazia sem explicação.
+    /// </summary>
+    public static IReadOnlyList<MultiSelectOption> SelectedWithoutOffers(
+        IReadOnlyCollection<string> selected,
+        IEnumerable<MultiSelectOption> options) =>
+        options
+            .Where(option => option.Count is 0 && selected.Contains(option.Value, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+    /// <summary>
+    /// Copia as seleções dos combos para o filtro. Lojas e qualificadores consultam as lojas; as categorias filtram a tela
+    /// na hora (em memória) e, ao clicar em "Buscar", vão para a API como <c>domain_id</c> do Mercado Livre.
+    /// </summary>
     public static OfficialCatalogSearchFilter ApplySelections(
         OfficialCatalogSearchFilter filter,
         IReadOnlyCollection<string> platforms,

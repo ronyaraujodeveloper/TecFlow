@@ -827,6 +827,14 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Assíncrono ponta a ponta:** `.Result` removidos da busca unificada e do enriquecimento de métricas do ML (tudo com `await`).
 - [ ] **Validar no navegador:** Ctrl+F5 na `/busca`, conferir os três combos centralizados, clicar fora para fechar e testar no celular.
 
+## 🏷️ Categorias reais na Buscar Ofertas (`RealCategoryFilter`)
+
+- [x] **Categoria real do item:** cada oferta do Mercado Livre usa o `domain_id` do produto de catálogo (ou da página do `products/search`, quando o produto não informa) e o `category_id` do anúncio, traduzido para português por `/categories/{id}` (cache de 12 h).
+- [x] **Combo sem nomes em inglês:** opções = domínios das ofertas carregadas (nome da categoria real), sugestões do `domain_discovery` (nome em português, lembrado para as próximas buscas) e as marcadas; o nome derivado do id ("Flip flops") é só o último recurso, e domínios vistos sem nenhuma oferta não entram.
+- [x] **Buscar com categoria:** as categorias marcadas vão para a API (a query string agora repete a chave `MercadoLivreCategories`, antes ia `System.Collections.Generic.List...`) e viram uma varredura do `products/search` com `domain_id` por categoria (até 3), intercalando as ofertas sem repetição; "Carregar mais" mantém as categorias.
+- [x] **Contador e categoria zerada:** o contador continua em memória e em tempo real; categoria marcada com 0 ofertas mostra o aviso "Nenhuma oferta carregada em …" com o botão "Buscar nesta categoria" (`bi-search`) ou, se já foi consultada, "O Mercado Livre não retornou ofertas ativas em …".
+- [ ] **Validar no navegador:** buscar "havaianas", conferir os nomes em português no combo, marcar uma categoria com 0 e clicar em Buscar.
+
 ---
 
 *Nota para a IA: Siga o checklist ativo passo a passo. Não pule etapas. Preserve o código de validação existente. Consulte o histórico em `docs/HISTORICO_FASES_CONCLUIDAS.md` para contexto das Fases 1 a 31.*

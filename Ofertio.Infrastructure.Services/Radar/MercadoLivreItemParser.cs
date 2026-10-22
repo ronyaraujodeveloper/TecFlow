@@ -9,7 +9,8 @@ namespace Ofertio.Infrastructure.Services.Radar;
 public sealed record MercadoLivreCatalogSearchPage(
     IReadOnlyList<string> ProductIds,
     int? Total,
-    IReadOnlyList<string> DomainIds);
+    IReadOnlyList<string> DomainIds,
+    IReadOnlyDictionary<string, string> DomainByProductId);
 
 public sealed record MercadoLivreListingMetrics(
     int? SoldQuantity,
@@ -146,6 +147,7 @@ public static class MercadoLivreItemParser
     {
         var ids = new List<string>();
         var domains = new List<string>();
+        var domainByProduct = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         int? total = null;
         try
         {
@@ -153,7 +155,7 @@ public static class MercadoLivreItemParser
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
             {
-                return new MercadoLivreCatalogSearchPage(ids, total, domains);
+                return new MercadoLivreCatalogSearchPage(ids, total, domains, domainByProduct);
             }
 
             if (root.TryGetProperty("paging", out var paging)
@@ -178,6 +180,10 @@ public static class MercadoLivreItemParser
                     if (domain is not null)
                     {
                         domains.Add(domain);
+                        if (id is not null)
+                        {
+                            domainByProduct.TryAdd(id, domain);
+                        }
                     }
                 }
             }
@@ -186,7 +192,7 @@ public static class MercadoLivreItemParser
         {
         }
 
-        return new MercadoLivreCatalogSearchPage(ids, total, domains);
+        return new MercadoLivreCatalogSearchPage(ids, total, domains, domainByProduct);
     }
 
     /// <summary><c>/sites/MLB/domain_discovery/search</c>: domínios de catálogo prováveis para o termo, com nome.</summary>

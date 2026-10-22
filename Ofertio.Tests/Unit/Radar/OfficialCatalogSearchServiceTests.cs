@@ -282,6 +282,46 @@ public class OfficialCatalogSearchServiceTests
         SourceUrl = $"https://www.mercadolivre.com.br/p/{id}"
     };
 
+    [Fact]
+    public async Task SearchAsync_WithSelectedCategories_ShouldScanEachDomainAndMergeTheOffers()
+    {
+        var requests = new System.Collections.Concurrent.ConcurrentBag<MercadoLivreCatalogSearchRequest>();
+        var ml = new Mock<IMercadoLivreApiService>();
+        ml.Setup(x => x.SearchCatalogAsync(It.IsAny<int>(), It.IsAny<MercadoLivreCatalogSearchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, MercadoLivreCatalogSearchRequest request, CancellationToken _) =>
+            {
+                requests.Add(request);
+                return new OfficialCatalogChannelResult
+                {
+                    Items = [new OfficialCatalogProductDto
+                    {
+                        Platform = "MercadoLivre",
+                        PlatformType = MarketplaceType.MercadoLivre,
+                        ProductId = request.DomainId,
+                        ProductName = "Havaianas " + request.DomainId,
+                        DomainId = request.DomainId,
+                        Price = 50m,
+                        SourceUrl = "https://www.mercadolivre.com.br/p/" + request.DomainId
+                    }],
+                    Categories = [new OfficialCatalogCategoryDto { Id = request.DomainId!, Name = request.DomainId! }]
+                };
+            });
+        var sut = CreateSut(ml);
+
+        var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter
+        {
+            Keyword = "havaianas",
+            MercadoLivreCategories = ["MLB-FLIP_FLOPS", "MLB-SANDALS_AND_CLOGS"]
+        });
+
+        Assert.Equal(
+            ["MLB-FLIP_FLOPS", "MLB-SANDALS_AND_CLOGS"],
+            requests.Select(request => request.DomainId).Order());
+        Assert.Single(requests, request => request.IncludeCategories);
+        Assert.Equal(2, result.DataList!.Count(item => item.PlatformType == MarketplaceType.MercadoLivre));
+        Assert.Equal(["MLB-FLIP_FLOPS", "MLB-SANDALS_AND_CLOGS"], result.MercadoLivreCategories.Select(category => category.Id).Order());
+    }
+
     private static OfficialCatalogSearchService CreateSut(
         Mock<IMercadoLivreApiService> ml,
         Mock<IDbContextFactory<AppDbContext>>? factory = null)

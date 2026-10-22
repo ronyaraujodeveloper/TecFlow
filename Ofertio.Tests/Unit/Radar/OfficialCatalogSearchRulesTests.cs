@@ -562,6 +562,100 @@ public class OfficialCatalogSearchRulesTests
     }
 
     [Fact]
+    public void SelectedMercadoLivreDomains_ShouldJoinLegacyAndMultiSelectWithoutDuplicatesUpToTheLimit()
+    {
+        var filter = new OfficialCatalogSearchFilter
+        {
+            MercadoLivreCategories = ["MLB-FLIP_FLOPS", " mlb-flip_flops ", "MLB-SANDALS", "MLB-SNEAKERS", "MLB-BOOTS"],
+            MercadoLivreCategory = "MLB-LEGACY"
+        };
+
+        Assert.Equal(
+            ["MLB-FLIP_FLOPS", "MLB-SANDALS", "MLB-SNEAKERS"],
+            OfficialCatalogSearchRules.SelectedMercadoLivreDomains(filter));
+        Assert.Equal(5, OfficialCatalogSearchRules.SelectedMercadoLivreDomains(filter, int.MaxValue).Count);
+        Assert.Empty(OfficialCatalogSearchRules.SelectedMercadoLivreDomains(new OfficialCatalogSearchFilter()));
+    }
+
+    [Fact]
+    public void BuildMercadoLivreCategories_ShouldUsePortugueseNamesAndKeepDomainsWithOffersAndSelections()
+    {
+        OfficialCatalogProductDto Offer(string domain, string? categoryName) => new()
+        {
+            PlatformType = MarketplaceType.MercadoLivre,
+            DomainId = domain,
+            CategoryName = categoryName,
+            SourceUrl = "https://www.mercadolivre.com.br/p/" + Guid.NewGuid().ToString("N")
+        };
+
+        var categories = OfficialCatalogSearchRules.BuildMercadoLivreCategories(
+            [new OfficialCatalogCategoryDto { Id = "MLB-SANDALS_AND_CLOGS", Name = "Sandálias e tamancos" }],
+            [Offer("MLB-FLIP_FLOPS", "Chinelos"), Offer("MLB-FLIP_FLOPS", "Chinelos"), Offer("MLB-FLIP_FLOPS", "Rasteirinhas"), Offer("MLB-SLIPPERS", null)],
+            ["MLB-BOOTS", null],
+            new Dictionary<string, string> { ["MLB-BOOTS"] = "Botas" });
+
+        Assert.Equal(
+            ["MLB-SANDALS_AND_CLOGS", "MLB-FLIP_FLOPS", "MLB-SLIPPERS", "MLB-BOOTS"],
+            categories.Select(category => category.Id));
+        Assert.Equal(
+            ["Sandálias e tamancos", "Chinelos", "Slippers", "Botas"],
+            categories.Select(category => category.Name));
+    }
+
+    [Fact]
+    public void BuildMercadoLivreCategories_WhenOverTheLimit_ShouldDropSuggestionsBeforeDomainsWithOffers()
+    {
+        var discovered = Enumerable.Range(1, 6)
+            .Select(index => new OfficialCatalogCategoryDto { Id = $"MLB-D{index}", Name = $"Sugestão {index}" })
+            .ToList();
+        var offer = new OfficialCatalogProductDto
+        {
+            PlatformType = MarketplaceType.MercadoLivre,
+            DomainId = "MLB-REAL",
+            CategoryName = "Categoria real"
+        };
+
+        var categories = OfficialCatalogSearchRules.BuildMercadoLivreCategories(discovered, [offer], ["MLB-PICKED"], max: 4);
+
+        Assert.Equal(["MLB-D1", "MLB-D2", "MLB-REAL", "MLB-PICKED"], categories.Select(category => category.Id));
+    }
+
+    [Fact]
+    public void MergeMercadoLivreDomainResults_ShouldInterleaveOffersSkipFailuresAndResumeFromTheSmallestOffset()
+    {
+        OfficialCatalogProductDto Offer(string id) => new() { ProductId = id, SourceUrl = "https://www.mercadolivre.com.br/p/" + id };
+        var sandals = new OfficialCatalogChannelResult
+        {
+            Items = [Offer("MLB1"), Offer("MLB2"), Offer("MLB3")],
+            ScannedCount = 20,
+            NextOffset = 40,
+            EffectiveQuery = "havaianas",
+            Categories = [new OfficialCatalogCategoryDto { Id = "MLB-SANDALS", Name = "Sandálias" }]
+        };
+        var flipFlops = new OfficialCatalogChannelResult
+        {
+            Items = [Offer("MLB9"), Offer("MLB2")],
+            ScannedCount = 10,
+            NextOffset = 20,
+            Categories = [new OfficialCatalogCategoryDto { Id = "MLB-FLIP_FLOPS", Name = "Chinelos" }]
+        };
+
+        var merged = OfficialCatalogSearchRules.MergeMercadoLivreDomainResults(
+            [sandals, OfficialCatalogChannelResult.Failed("ML HTTP 500"), flipFlops]);
+
+        Assert.Null(merged.ErrorMessage);
+        Assert.Equal(["MLB1", "MLB9", "MLB2", "MLB3"], merged.Items.Select(item => item.ProductId));
+        Assert.Equal(30, merged.ScannedCount);
+        Assert.Equal(20, merged.NextOffset);
+        Assert.Equal("havaianas", merged.EffectiveQuery);
+        Assert.Equal(["MLB-SANDALS", "MLB-FLIP_FLOPS"], merged.Categories.Select(category => category.Id));
+
+        var allFailed = OfficialCatalogSearchRules.MergeMercadoLivreDomainResults(
+            [OfficialCatalogChannelResult.Failed("ML HTTP 500"), OfficialCatalogChannelResult.Unconfigured()]);
+        Assert.True(allFailed.MissingCredentials);
+    }
+
+    [Fact]
     public void IsHttpTimeout_ShouldRecognizeHttpClientTimeoutButNotCallerCancellation()
     {
         var timeout = new TaskCanceledException("HttpClient.Timeout", new TimeoutException());

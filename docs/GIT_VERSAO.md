@@ -147,3 +147,4 @@
 [2026-10-21 21:40:03] fix(busca): categorias reais em portugues, envio das categorias na query string e busca por domain_id no Mercado Livre
 [2026-10-21 22:10:12] docs: modulariza regras em docs/rules, cria checklist ativo e enxuga README
 [2026-10-21 23:02:46] feat(radar): consulta a base local antes das APIs e compara precos do mesmo modelo entre lojas
+[2026-10-22 17:03:23] feat(auth): habilita Google OAuth em homologacao com aud e forwarded headers

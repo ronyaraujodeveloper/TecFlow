@@ -1,9 +1,11 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Security;
+using Ofertio.Business.Service.Security;
 using Ofertio.Util.Validation;
 
 namespace Ofertio.Infrastructure.Services.Security;
@@ -17,13 +19,16 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SocialAuthTokenValidator> _logger;
+    private readonly string? _googleClientId;
 
     public SocialAuthTokenValidator(
         IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
         ILogger<SocialAuthTokenValidator> logger)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _googleClientId = configuration["Authentication:Google:ClientId"];
     }
 
     public async Task<SocialAuthTokenPayload?> ValidateAsync(
@@ -75,6 +80,12 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
                 || string.IsNullOrWhiteSpace(payload.Email)
                 || !ValidationHelper.IsValidEmail(payload.Email))
             {
+                return null;
+            }
+
+            if (!GoogleIdTokenRules.AudienceMatches(payload.Aud, _googleClientId))
+            {
+                _logger.LogWarning("Token Google recusado: aud não corresponde ao ClientId da aplicação.");
                 return null;
             }
 
@@ -175,6 +186,7 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
     private sealed class GoogleTokenInfoResponse
     {
         public string? Sub { get; set; }
+        public string? Aud { get; set; }
         public string? Email { get; set; }
         public string? Name { get; set; }
     }

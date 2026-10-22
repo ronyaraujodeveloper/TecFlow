@@ -21,6 +21,10 @@
 - [ ] **Combos centralizados (`CompactCombosAndMlTimeout`):** Ctrl+F5 na `/busca`, clicar fora para fechar e testar no celular.
 - [ ] **Categorias reais (`RealCategoryFilter`):** "havaianas" com nomes em português; marcar uma categoria com 0 e clicar em Buscar.
 
+## 🔐 Google OAuth em homologação
+
+- [ ] **Console do Google (`GoogleOAuthHomologacao`):** aplicativo Web; origens `https://dev.ofertio.com.br` e `https://localhost:7002`; URIs de redirecionamento `https://dev.ofertio.com.br/signin-google` e `https://localhost:7002/signin-google`; escopos `openid`, `email` e `profile`. Depois de publicado, entrar em `https://dev.ofertio.com.br/` com "Entrar com Google".
+
 ## 📡 Radar híbrido e comparador multilojas
 
 - [ ] **Homologar (`RadarHybridAndCompare`):** a migration `AddIndexedCatalogOffers` já foi aplicada em `localhost\SQLEXPRESS` / `Ofertio`. Depois de publicar, em `/busca` abrir "Comparar em outras lojas" num produto com código de modelo e conferir a linha de menor preço. No Radar, um termo do perfil sem oferta recente deve consultar as lojas oficiais.

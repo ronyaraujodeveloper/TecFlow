@@ -1942,6 +1942,15 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor**, **Pages/Busca/BuscaGlobal.razor**, **Pages/Radar/RadarOfertas.razor** e **Pages/Integracoes/GruposMonitorados.razor** - botão "Comparar em outras lojas" (`bi-diagram-3`).
 - [x] **Ofertio.Tests/Unit/Radar/ProductModelRulesTests.cs** e **CatalogOfferIndexServiceTests.cs** *(novos)* + **OfficialCatalogSearchServiceTests.cs** - modelo, cache, índice, worker/tela e menor preço.
 
+### Google OAuth em homologação
+
+- [x] **Ofertio.WebUi/appsettings.Homologacao.json** - `Authentication:Google` habilitado. ClientId e ClientSecret ficam nas variáveis do pool `OfertioWebUiPool` (o GitHub recusa o segredo no repositório).
+- [x] **Ofertio.API/appsettings.Homologacao.json** - seção do ClientId do Google; o valor usado na comparação do `aud` fica na variável `Authentication__Google__ClientId` do pool `OfertioApiPool`.
+- [x] **Ofertio.Business/Service/Security/GoogleIdTokenRules.cs** *(novo)* - `AudienceMatches` exige o ClientId da aplicação.
+- [x] **Ofertio.Infrastructure.Services/Security/SocialAuthTokenValidator.cs** - `tokeninfo` recusa token cujo `aud` não é o ClientId; `PlatformAuthService` já devolve `SOCIAL_TOKEN_INVALID`.
+- [x] **Ofertio.WebUi/Program.cs** - `UseForwardedHeaders` com `X-Forwarded-Proto` e `X-Forwarded-Host` para o callback `https://dev.ofertio.com.br/signin-google`.
+- [x] **Ofertio.Tests/Unit/Security/GoogleIdTokenRulesTests.cs** e **SocialAuthTokenValidatorTests.cs** *(novos)*.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

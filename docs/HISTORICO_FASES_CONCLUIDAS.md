@@ -1617,3 +1617,10 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Comparar em outras lojas:** botão com `bi-diagram-3` no card da Busca, do Radar e das ofertas monitoradas. O modal identifica o modelo (`ExtractProductModel`), mostra o produto de referência, um spinner enquanto busca as outras lojas e a tabela Plataforma, Título, Preço à Vista, Frete, Comissão e Gerar Link. A loja de menor preço fica destacada.
 - [ ] **Homologar:** a migration `AddIndexedCatalogOffers` já foi aplicada em `localhost\SQLEXPRESS` / `Ofertio`. Depois de publicar, buscar um produto com código de modelo em `/busca`, abrir "Comparar em outras lojas" e conferir o menor preço; no Radar, um termo do perfil sem oferta recente deve consultar as lojas.
 
+## 🔐 Google OAuth em homologação (`GoogleOAuthHomologacao`)
+
+- [x] **WebUi:** `Authentication:Google:Enabled` em `appsettings.Homologacao.json`. ClientId e ClientSecret ficam nas variáveis de ambiente do pool `OfertioWebUiPool` (`Authentication__Google__ClientId` e `Authentication__Google__ClientSecret`), porque o GitHub bloqueia esses segredos no push. O botão "Entrar com Google" usa `/auth/challenge/google` e o callback padrão `/signin-google`.
+- [x] **redirect_uri em HTTPS:** `UseForwardedHeaders` lê `X-Forwarded-Proto` e `X-Forwarded-Host` antes da autenticação, para o Google receber `https://dev.ofertio.com.br/signin-google`.
+- [x] **aud do id_token:** `SocialAuthTokenValidator` compara o `aud` devolvido por `https://oauth2.googleapis.com/tokeninfo` com `Authentication:Google:ClientId`. Token de outro app é recusado e o login responde `SOCIAL_TOKEN_INVALID`. Na API de homologação o ClientId vem da variável `Authentication__Google__ClientId` do pool `OfertioApiPool`.
+- [ ] **Console do Google:** aplicativo Web; origens `https://dev.ofertio.com.br` e `https://localhost:7002`; URIs `https://dev.ofertio.com.br/signin-google` e `https://localhost:7002/signin-google`; escopos `openid`, `email`, `profile`.
+

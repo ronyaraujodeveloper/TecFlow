@@ -267,6 +267,16 @@ flowchart LR
   ARB -->|Task.WhenAll converter + cupom| RADAR[(OfferRadarItems)]
   MINE[OfferMiningWorker] -->|quedas movers trends 10min| RADAR
   RADUI[RadarOfertas] -->|score + agendar/piloto| AGEND[WhatsApp/Telegram Agendador]
+  BUSCAIDX[Busca de Ofertas] -->|grava ofertas consultadas| IDXCAT[(IndexedCatalogOffers)]
+  RADUI -->|termos do perfil| HYBRID[OfferRadarHybridQuery]
+  HYBRID -->|resultado dentro do cache do Master| IDXCAT
+  HYBRID -->|sem resultado recente| CATAPI[OfficialCatalogSearchService]
+  CATAPI -->|MercadoLivreApiService + Shopee + Amazon| IDXCAT
+  MINE -->|termos ativos no ciclo| HYBRID
+  HYBRID -->|promove fonte Busca local| RADAR
+  CMPBTN[Comparar em outras lojas] -->|ExtractProductModel| CMPMOD[ComparePricesModal]
+  CMPMOD -->|POST api/radar/comparar-precos| CMPSVC[StorePriceComparisonService]
+  CMPSVC -->|mesmo modelo nas lojas| CATAPI
   PERF[RadarPerfil] -->|nichos ticket comissao| PROF[(AffiliateMiningProfiles)]
   DISP[Disparo WA/TG] -->|StampMessage tf_src tf_grp| SHORT[ShortLinkRedirect]
   SHORT -->|SubId SourceGroup| CLICK[(LinkClickLog)]

@@ -322,9 +322,40 @@ public class OfficialCatalogSearchServiceTests
         Assert.Equal(["MLB-FLIP_FLOPS", "MLB-SANDALS_AND_CLOGS"], result.MercadoLivreCategories.Select(category => category.Id).Order());
     }
 
+    [Fact]
+    public async Task SearchAsync_ShouldIndexOffersWrittenByTheSearch()
+    {
+        var ml = new Mock<IMercadoLivreApiService>();
+        ml.Setup(x => x.SearchCatalogAsync(It.IsAny<int>(), It.IsAny<MercadoLivreCatalogSearchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OfficialCatalogChannelResult.From(
+            [
+                new OfficialCatalogProductDto
+                {
+                    Platform = "Mercado Livre",
+                    PlatformType = MarketplaceType.MercadoLivre,
+                    ProductName = "Smart TV Philips 43 43PFG6825/78",
+                    Price = 1599m,
+                    SourceUrl = "https://www.mercadolivre.com.br/p/MLB1"
+                }
+            ]));
+        IReadOnlyCollection<OfficialCatalogProductDto>? indexed = null;
+        var index = new Mock<ICatalogOfferIndex>();
+        index.Setup(x => x.UpsertAsync(1, "philips", It.IsAny<IReadOnlyCollection<OfficialCatalogProductDto>>(), It.IsAny<CancellationToken>()))
+            .Callback<int, string, IReadOnlyCollection<OfficialCatalogProductDto>, CancellationToken>((_, _, offers, _) => indexed = offers)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut(ml, index: index.Object);
+        var result = await sut.SearchAsync(1, new OfficialCatalogSearchFilter { Keyword = "philips" });
+
+        Assert.True(result.Status);
+        Assert.NotNull(indexed);
+        Assert.Contains(indexed!, item => item.SourceUrl == "https://www.mercadolivre.com.br/p/MLB1");
+    }
+
     private static OfficialCatalogSearchService CreateSut(
         Mock<IMercadoLivreApiService> ml,
-        Mock<IDbContextFactory<AppDbContext>>? factory = null)
+        Mock<IDbContextFactory<AppDbContext>>? factory = null,
+        ICatalogOfferIndex? index = null)
     {
         var shopee = new Mock<IShopeeAffiliateOfferService>();
         shopee.Setup(x => x.SearchProductsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -344,7 +375,8 @@ public class OfficialCatalogSearchServiceTests
             shopee.Object,
             amazon.Object,
             factory.Object,
-            NullLogger<OfficialCatalogSearchService>.Instance);
+            NullLogger<OfficialCatalogSearchService>.Instance,
+            index);
     }
 
     private static AppDbContext CreateDbContext() => CreateNamedDbContext(Guid.NewGuid().ToString());

@@ -111,6 +111,65 @@ public class OfferRadarItemDto
     public DateTime ReceivedAt { get; set; }
 }
 
+public class StorePriceComparisonRequestDto
+{
+    public string? ProductName { get; set; }
+
+    public string? ImageUrl { get; set; }
+
+    public string SourceUrl { get; set; } = string.Empty;
+
+    public MarketplaceType? PlatformType { get; set; }
+
+    public string? PlatformName { get; set; }
+
+    public decimal? Price { get; set; }
+
+    public string? Shipping { get; set; }
+
+    public decimal? CommissionPercent { get; set; }
+
+    public decimal? EstimatedCommission { get; set; }
+}
+
+public class StorePriceComparisonRowDto
+{
+    public string ProductName { get; set; } = string.Empty;
+
+    public string? ImageUrl { get; set; }
+
+    public string SourceUrl { get; set; } = string.Empty;
+
+    public MarketplaceType? PlatformType { get; set; }
+
+    public string? PlatformName { get; set; }
+
+    public decimal? Price { get; set; }
+
+    public string? Shipping { get; set; }
+
+    public decimal? CommissionPercent { get; set; }
+
+    public decimal? EstimatedCommission { get; set; }
+
+    public bool IsReference { get; set; }
+
+    public bool IsLowestPrice { get; set; }
+}
+
+public class StorePriceComparisonResponseDto
+{
+    public bool Status { get; set; } = true;
+
+    public string Descricao { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public bool ExactModel { get; set; }
+
+    public List<StorePriceComparisonRowDto> Rows { get; set; } = [];
+}
+
 public class OfferRadarResponseDto
 {
     public bool Status { get; set; } = true;

@@ -18,19 +18,22 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     private readonly IAmazonPaApiService _amazon;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<OfficialCatalogSearchService> _logger;
+    private readonly ICatalogOfferIndex? _catalogIndex;
 
     public OfficialCatalogSearchService(
         IMercadoLivreApiService mercadoLivre,
         IShopeeAffiliateOfferService shopee,
         IAmazonPaApiService amazon,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<OfficialCatalogSearchService> logger)
+        ILogger<OfficialCatalogSearchService> logger,
+        ICatalogOfferIndex? catalogIndex = null)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
         _amazon = amazon;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
+        _catalogIndex = catalogIndex;
     }
 
     public async Task<OfficialCatalogSearchResponseDto> SearchAsync(
@@ -107,6 +110,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         }
 
         var merged = OfficialCatalogSearchRules.ApplySort(deduplicated, filter.SortBy).ToList();
+        await PersistIndexSafeAsync(userId, keyword, merged, cancellationToken);
 
         var mlStatus = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre",
@@ -249,6 +253,31 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         {
             _logger.LogWarning(ex, "Não foi possível carregar as taxas de comissão do usuário {UserId}.", userId);
             return (null, null);
+        }
+    }
+
+    private async Task PersistIndexSafeAsync(
+        int userId,
+        string keyword,
+        IReadOnlyList<OfficialCatalogProductDto> offers,
+        CancellationToken cancellationToken)
+    {
+        if (_catalogIndex is null || offers.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await _catalogIndex.UpsertAsync(userId, keyword, offers, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Não foi possível indexar as ofertas da busca '{Query}'.", keyword);
         }
     }
 

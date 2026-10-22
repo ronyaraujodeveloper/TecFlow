@@ -1608,3 +1608,12 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Buscar com categoria:** as categorias marcadas vão para a API (a query string agora repete a chave `MercadoLivreCategories`, antes ia `System.Collections.Generic.List...`) e viram uma varredura do `products/search` com `domain_id` por categoria (até 3), intercalando as ofertas sem repetição; "Carregar mais" mantém as categorias.
 - [x] **Contador e categoria zerada:** o contador continua em memória e em tempo real; categoria marcada com 0 ofertas mostra o aviso "Nenhuma oferta carregada em …" com o botão "Buscar nesta categoria" (`bi-search`) ou, se já foi consultada, "O Mercado Livre não retornou ofertas ativas em …".
 - [ ] **Validar no navegador:** buscar "havaianas", conferir os nomes em português no combo, marcar uma categoria com 0 e clicar em Buscar.
+
+## 📡 Radar híbrido e comparador multilojas (`RadarHybridAndCompare`)
+
+- [x] **Índice da Busca:** cada busca em `/busca` grava as ofertas em `IndexedCatalogOffers` (termo, modelo, preço à vista, frete e comissão).
+- [x] **Consulta híbrida do Radar:** a listagem e o worker olham primeiro essa base. O termo do perfil sem resultado dentro da janela de cache do Painel Master (0 desliga o cache) é consultado nas APIs oficiais pelo `MercadoLivreApiService` e pelos conectores de Shopee e Amazon. O cache do Mercado Livre continua valendo nessa chamada.
+- [x] **Worker:** a cada ciclo usa os termos ativos do perfil (até 20). A tela do radar refresca no máximo 2 termos por abertura, para não travar a página; o restante fica com o worker.
+- [x] **Comparar em outras lojas:** botão com `bi-diagram-3` no card da Busca, do Radar e das ofertas monitoradas. O modal identifica o modelo (`ExtractProductModel`), mostra o produto de referência, um spinner enquanto busca as outras lojas e a tabela Plataforma, Título, Preço à Vista, Frete, Comissão e Gerar Link. A loja de menor preço fica destacada.
+- [ ] **Homologar:** a migration `AddIndexedCatalogOffers` já foi aplicada em `localhost\SQLEXPRESS` / `Ofertio`. Depois de publicar, buscar um produto com código de modelo em `/busca`, abrir "Comparar em outras lojas" e conferir o menor preço; no Radar, um termo do perfil sem oferta recente deve consultar as lojas.
+

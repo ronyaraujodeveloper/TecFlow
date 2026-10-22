@@ -34,7 +34,7 @@
     @if (_items.Count == 0)
     {
         <div class="alert alert-light border">
-            Nenhuma oferta no radar ainda. Converta um link no Gerador ou aguarde o worker de mineração.
+            Nenhuma oferta no radar ainda. A busca grava as ofertas na base local; se o termo do perfil não tiver resultado recente, o radar consulta as lojas oficiais.
         </div>
     }
     else
@@ -81,6 +81,9 @@
                                 }
                             </div>
                             <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => OpenCompare(item)">
+                                    <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Comparar em outras lojas
+                                </button>
                                 <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="() => ScheduleWhatsAppAsync(item.Id)">
                                     Enviar ao Agendador WhatsApp
                                 </button>
@@ -99,8 +102,11 @@
     }
 </div>
 
+<ComparePricesModal Product="_compareProduct" Visible="_compareProduct is not null" OnClose="CloseCompare" />
+
 @code {
     private readonly List<OfferRadarItemDto> _items = [];
+    private StorePriceComparisonRequestDto? _compareProduct;
     private bool _busy;
     private string? _error;
     private string? _info;
@@ -117,9 +123,14 @@
             {
                 _items.AddRange(result.Data.Items);
             }
-            else if (result.Data is { Status: false })
+
+            if (result.Data is { Status: false })
             {
                 _error = result.Data.Descricao;
+            }
+            else if (!string.IsNullOrWhiteSpace(result.Data?.Descricao))
+            {
+                _info = result.Data.Descricao;
             }
         }
         catch (Exception ex)
@@ -128,6 +139,11 @@
             _error = "Não foi possível carregar o radar.";
         }
     }
+
+    private void OpenCompare(OfferRadarItemDto item) =>
+        _compareProduct = StorePriceComparisonRequests.FromRadar(item);
+
+    private void CloseCompare() => _compareProduct = null;
 
     private Task ScheduleWhatsAppAsync(int id) => ScheduleAsync(id, "WhatsApp");
 

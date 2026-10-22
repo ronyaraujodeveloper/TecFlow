@@ -17,6 +17,10 @@ public interface IOfferRadarApiService
         OfferArbitrageRequestDto request,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResult<StorePriceComparisonResponseDto>> ComparePricesAsync(
+        StorePriceComparisonRequestDto request,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResult<OfferRadarResponseDto>> ListAsync(
         int skip = 0,
         int take = 30,
@@ -67,6 +71,14 @@ public sealed class OfferRadarApiService : IOfferRadarApiService
             request,
             cancellationToken);
     }
+
+    public Task<ApiResult<StorePriceComparisonResponseDto>> ComparePricesAsync(
+        StorePriceComparisonRequestDto request,
+        CancellationToken cancellationToken = default) =>
+        _http.PostAsync<StorePriceComparisonRequestDto, StorePriceComparisonResponseDto>(
+            "api/radar/comparar-precos",
+            request,
+            cancellationToken);
 
     public Task<ApiResult<OfferRadarResponseDto>> ListAsync(
         int skip = 0,

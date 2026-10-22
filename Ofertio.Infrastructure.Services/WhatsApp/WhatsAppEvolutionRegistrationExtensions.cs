@@ -56,6 +56,9 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.AddScoped<IMonitoredGroupService, Ofertio.Infrastructure.Services.Groups.MonitoredGroupService>();
         services.AddScoped<IAffiliateMiningProfileService, Ofertio.Infrastructure.Services.Radar.AffiliateMiningProfileService>();
         services.AddScoped<IProductArbitrageService, Ofertio.Infrastructure.Services.Radar.ProductArbitrageService>();
+        services.AddScoped<ICatalogOfferIndex, Ofertio.Infrastructure.Services.Radar.CatalogOfferIndexService>();
+        services.AddScoped<IOfferRadarHybridQuery, Ofertio.Infrastructure.Services.Radar.OfferRadarHybridQuery>();
+        services.AddScoped<IStorePriceComparisonService, Ofertio.Infrastructure.Services.Radar.StorePriceComparisonService>();
         services.AddScoped<IOfferRadarService, Ofertio.Infrastructure.Services.Radar.OfferRadarService>();
         services.AddScoped<IOfferMiningEngine, Ofertio.Infrastructure.Services.Radar.OfferMiningEngine>();
         services.AddSingleton<Ofertio.Infrastructure.Services.Radar.OfferMiningHost>();

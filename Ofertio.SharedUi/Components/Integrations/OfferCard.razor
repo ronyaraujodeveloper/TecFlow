@@ -58,6 +58,10 @@
             <span class="badge badge-sm rounded-pill @StatusBadgeClass">@StatusLabel</span>
         </div>
 
+        <button type="button" class="btn btn-outline-primary w-100" title="Comparar preços deste produto em outras lojas" @onclick="() => OnCompare.InvokeAsync(Item)">
+            <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Comparar em outras lojas
+        </button>
+
         <div class="monitored-offer-actions mt-auto">
             <a class="btn btn-outline-secondary" href="@OpenUrl" target="_blank" rel="noopener noreferrer" title="Abrir Link Original">
                 <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
@@ -130,6 +134,9 @@
 
     [Parameter]
     public EventCallback<int> OnRestore { get; set; }
+
+    [Parameter]
+    public EventCallback<GroupCapturedOfferDto> OnCompare { get; set; }
 
     private bool IsLocked => IsBusy || PendingAction is not null;
 

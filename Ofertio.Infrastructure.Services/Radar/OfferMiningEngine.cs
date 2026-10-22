@@ -13,17 +13,20 @@ public sealed class OfferMiningEngine : IOfferMiningEngine
     private readonly AppDbContext _context;
     private readonly IAffiliateMiningProfileService _profiles;
     private readonly IGroupCapturedMessagesService _captured;
+    private readonly IOfferRadarHybridQuery _hybrid;
     private readonly ILogger<OfferMiningEngine> _logger;
 
     public OfferMiningEngine(
         AppDbContext context,
         IAffiliateMiningProfileService profiles,
         IGroupCapturedMessagesService captured,
+        IOfferRadarHybridQuery hybrid,
         ILogger<OfferMiningEngine> logger)
     {
         _context = context;
         _profiles = profiles;
         _captured = captured;
+        _hybrid = hybrid;
         _logger = logger;
     }
 
@@ -31,6 +34,23 @@ public sealed class OfferMiningEngine : IOfferMiningEngine
     {
         var profile = (await _profiles.GetAsync(userId, cancellationToken)).Profile
             ?? new Ofertio.Business.Dto.AffiliateMiningProfileDto();
+        try
+        {
+            await _hybrid.RefreshProfileTermsAsync(
+                userId,
+                profile,
+                OfferIndexRules.WorkerRefreshTermCap,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Varredura oficial do radar falhou. UserId={UserId}", userId);
+        }
+
         var niches = profile.Niches;
         var active = await _captured.ListActivePlatformsAsync(userId, cancellationToken);
         var platforms = AffiliateMiningRules.ResolveSearchPlatforms(active, profile.RestrictToActiveStores);

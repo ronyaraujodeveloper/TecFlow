@@ -44,3 +44,39 @@ public interface IOfferMiningEngine
 {
     Task<int> MineUserAsync(int userId, CancellationToken cancellationToken = default);
 }
+
+public interface ICatalogOfferIndex
+{
+    Task UpsertAsync(
+        int userId,
+        string searchTerm,
+        IReadOnlyCollection<OfficialCatalogProductDto> offers,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasFreshTermAsync(
+        int userId,
+        string term,
+        DateTime freshnessCutoffUtc,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IOfferRadarHybridQuery
+{
+    /// <summary>
+    /// Consulta o índice local dos termos do perfil. Sem resultado dentro da janela de cache do Master,
+    /// dispara a busca oficial (que respeita o cache do Mercado Livre) e promove ofertas ao radar.
+    /// </summary>
+    Task<string?> RefreshProfileTermsAsync(
+        int userId,
+        AffiliateMiningProfileDto profile,
+        int maxApiTerms,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IStorePriceComparisonService
+{
+    Task<StorePriceComparisonResponseDto> CompareAsync(
+        int userId,
+        StorePriceComparisonRequestDto request,
+        CancellationToken cancellationToken = default);
+}

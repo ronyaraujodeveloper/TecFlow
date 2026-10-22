@@ -1924,6 +1924,24 @@ API / Orquestrador / Worker / WebUi
 - [x] **docs/rules/marketplaces-oauth.md** - rota do token Master e cliente final só com o ID de afiliado no card da loja, sem OAuth próprio.
 - [ ] **.cursorignore** - bloqueado pelas permissões do Cursor para o agente; conteúdo a colar manualmente (build, mídias, `App_Data`, `*.log`, `*.pfx` e os docs analíticos, sem DIAGRAMAS e HISTORICO).
 
+### Radar híbrido e comparador multilojas
+
+- [x] **Ofertio.Core/Entities/IndexedCatalogOffer.cs** *(novo)* - ofertas gravadas pela Busca (`IndexedCatalogOffers`: termo, modelo, preço à vista, frete e comissão).
+- [x] **Ofertio.Data/Migrations/20261022014444_AddIndexedCatalogOffers.cs** *(novo)* - cria a tabela e os índices por usuário/termo.
+- [x] **Ofertio.Business/Service/Radar/ProductModelRules.cs** *(novo)* - `ExtractProductModel` (marca + código; "Smart TV Philips 43 43PFG6825/78" → "Philips 43PFG6825").
+- [x] **Ofertio.Business/Service/Radar/OfferIndexRules.cs** *(novo)* - frescor pela janela de cache do Master, promoção ao radar e tabela do comparador com menor preço.
+- [x] **Ofertio.Business/Dto/OfferRadarDtos.cs** - pedidos e linhas de `StorePriceComparison`.
+- [x] **Ofertio.Business/Interfaces/Services/IOfferRadarServices.cs** - `ICatalogOfferIndex`, `IOfferRadarHybridQuery` e `IStorePriceComparisonService`.
+- [x] **Ofertio.Infrastructure.Services/Radar/CatalogOfferIndexService.cs** *(novo)* - upsert das ofertas da busca.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - ao fim da busca, grava o índice local.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfferRadarHybridQuery.cs** *(novo)* - termo do perfil na base local; sem resultado recente, consulta ML/Shopee/Amazon respeitando o cache do Master e promove ao radar.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfferRadarService.cs** e **OfferMiningEngine.cs** - listagem e worker usam a consulta híbrida (tela: até 2 termos; worker: termos ativos).
+- [x] **Ofertio.Infrastructure.Services/Radar/StorePriceComparisonService.cs** *(novo)* - busca o modelo nas APIs e na base local.
+- [x] **Ofertio.API/Controllers/OfferRadarController.cs** - `POST api/radar/comparar-precos`.
+- [x] **Ofertio.SharedUi/Components/Integrations/ComparePricesModal.razor** *(novo)* - referência, spinner, tabela (plataforma, título, preço à vista, frete, comissão, gerar link) e destaque do menor preço.
+- [x] **Ofertio.SharedUi/Components/Integrations/OfferCard.razor**, **Pages/Busca/BuscaGlobal.razor**, **Pages/Radar/RadarOfertas.razor** e **Pages/Integracoes/GruposMonitorados.razor** - botão "Comparar em outras lojas" (`bi-diagram-3`).
+- [x] **Ofertio.Tests/Unit/Radar/ProductModelRulesTests.cs** e **CatalogOfferIndexServiceTests.cs** *(novos)* + **OfficialCatalogSearchServiceTests.cs** - modelo, cache, índice, worker/tela e menor preço.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

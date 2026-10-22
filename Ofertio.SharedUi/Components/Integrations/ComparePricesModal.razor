@@ -1,0 +1,318 @@
+﻿@using Ofertio.Business.Service.LinkStrategies
+@using Ofertio.Core.Enums
+@using Ofertio.SharedUi.Services.Radar
+@inject IOfferRadarApiService RadarApi
+@inject IAffiliateLinkApiService AffiliateLinkApi
+@inject IToastService ToastService
+@inject ILogger<ComparePricesModal> Logger
+
+@if (Visible && Product is not null)
+{
+    <div class="modal fade show d-block"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="compare-prices-title"
+         @ref="_dialog"
+         @onkeydown="OnKeyDown">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 id="compare-prices-title" class="modal-title h5 fw-bold">
+                        <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Comparar preços entre lojas
+                    </h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="product-image-preview-box product-image-preview-box--sm flex-shrink-0">
+                            @if (!string.IsNullOrWhiteSpace(Product.ImageUrl))
+                            {
+                                <img src="@Product.ImageUrl" alt="" class="product-image-preview-img" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="product-image-preview-placeholder">Sem imagem</span>
+                            }
+                        </div>
+                        <div class="min-w-0">
+                            <p class="small text-muted mb-1">Produto de referência</p>
+                            <h3 class="h6 fw-semibold text-break mb-1">@(Product.ProductName ?? "Produto")</h3>
+                            <p class="fw-bold mb-1">@ProductMetadataHtmlParser.FormatBrl(Product.Price)</p>
+                            @if (!string.IsNullOrWhiteSpace(Product.PlatformName))
+                            {
+                                <span class="badge rounded-pill @PlatformBadgeHelper.GetPlatformBadgeClass(Product.PlatformName)"
+                                      style="background-color: @PlatformBadgeHelper.GetPlatformColor(Product.PlatformName); color: @(Product.PlatformType == MarketplaceType.MercadoLivre ? "#000000" : "#FFFFFF");">
+                                    @PlatformBadgeHelper.GetPlatformLabel(Product.PlatformName, Product.PlatformType)
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(_result?.Model))
+                            {
+                                <span class="badge text-bg-light ms-1">Modelo @_result.Model</span>
+                            }
+                        </div>
+                    </div>
+
+                    @if (_loading)
+                    {
+                        <div class="d-flex align-items-center gap-2 py-4" role="status" aria-live="polite">
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <span>Buscando o modelo nas plataformas concorrentes...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <div class="alert alert-danger py-2 small mb-0">@_error</div>
+                    }
+                    else if (_result is not null)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(_result.Descricao))
+                        {
+                            <p class="small text-muted">@_result.Descricao</p>
+                        }
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Plataforma</th>
+                                        <th>Título</th>
+                                        <th>Preço à Vista</th>
+                                        <th>Frete</th>
+                                        <th>Comissão</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in _result.Rows)
+                                    {
+                                        var current = row;
+                                        <tr class="@(current.IsLowestPrice ? "table-success" : null)">
+                                            <td>
+                                                <span class="badge rounded-pill @PlatformBadgeHelper.GetPlatformBadgeClass(current.PlatformName)"
+                                                      style="background-color: @PlatformBadgeHelper.GetPlatformColor(current.PlatformName); color: @(current.PlatformType == MarketplaceType.MercadoLivre ? "#000000" : "#FFFFFF");">
+                                                    @PlatformBadgeHelper.GetPlatformLabel(current.PlatformName, current.PlatformType)
+                                                </span>
+                                                @if (current.IsLowestPrice)
+                                                {
+                                                    <span class="badge text-bg-success ms-1">Menor preço</span>
+                                                }
+                                            </td>
+                                            <td class="text-break">
+                                                @current.ProductName
+                                                @if (current.IsReference)
+                                                {
+                                                    <span class="badge text-bg-light ms-1">Referência</span>
+                                                }
+                                            </td>
+                                            <td class="fw-semibold text-nowrap">@ProductMetadataHtmlParser.FormatBrl(current.Price)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(current.Shipping) ? "—" : current.Shipping)</td>
+                                            <td class="text-nowrap">
+                                                @if (current.CommissionPercent is { } percent)
+                                                {
+                                                    <span>@($"{percent:0.##}")%</span>
+                                                    @if (current.EstimatedCommission is > 0)
+                                                    {
+                                                        <div class="small text-muted">@ProductMetadataHtmlParser.FormatBrl(current.EstimatedCommission)</div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                        class="btn btn-primary btn-sm"
+                                                        disabled="@(_generatingUrl == current.SourceUrl || string.IsNullOrWhiteSpace(current.SourceUrl))"
+                                                        @onclick="() => GenerateAsync(current)">
+                                                    @if (_generatingUrl == current.SourceUrl)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>
+                                                    }
+                                                    Gerar Link
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseAsync">
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseAsync"></div>
+}
+
+@code {
+    private ElementReference _dialog;
+    private StorePriceComparisonRequestDto? _loadedFor;
+    private StorePriceComparisonResponseDto? _result;
+    private bool _loading;
+    private bool _focused;
+    private string? _error;
+    private string? _generatingUrl;
+    private int _requestId;
+
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public StorePriceComparisonRequestDto? Product { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Visible || Product is null)
+        {
+            _loadedFor = null;
+            _focused = false;
+            return;
+        }
+
+        if (ReferenceEquals(Product, _loadedFor))
+        {
+            return;
+        }
+
+        _loadedFor = Product;
+        await LoadAsync(Product);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Visible && !_focused)
+        {
+            _focused = true;
+            try
+            {
+                await _dialog.FocusAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Não foi possível focar o modal de comparação.");
+            }
+        }
+    }
+
+    private async Task LoadAsync(StorePriceComparisonRequestDto product)
+    {
+        var requestId = ++_requestId;
+        _loading = true;
+        _error = null;
+        _result = null;
+        StateHasChanged();
+        try
+        {
+            var result = await RadarApi.ComparePricesAsync(product);
+            if (requestId != _requestId)
+            {
+                return;
+            }
+
+            if (!result.Success || result.Data is null)
+            {
+                _error = result.ErrorMessage ?? "Não foi possível comparar os preços.";
+                return;
+            }
+
+            if (!result.Data.Status)
+            {
+                _error = string.IsNullOrWhiteSpace(result.Data.Descricao)
+                    ? "Não foi possível comparar os preços."
+                    : result.Data.Descricao;
+                return;
+            }
+
+            _result = result.Data;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao comparar preços entre lojas.");
+            if (requestId == _requestId)
+            {
+                _error = "Não foi possível comparar os preços nas outras lojas.";
+            }
+        }
+        finally
+        {
+            if (requestId == _requestId)
+            {
+                _loading = false;
+            }
+        }
+    }
+
+    private async Task GenerateAsync(StorePriceComparisonRowDto row)
+    {
+        if (string.IsNullOrWhiteSpace(row.SourceUrl))
+        {
+            return;
+        }
+
+        _generatingUrl = row.SourceUrl;
+        try
+        {
+            var result = await AffiliateLinkApi.GenerateAsync(new GerarLinkAfiliadoDto
+            {
+                OriginalUrl = row.SourceUrl,
+                Source = "Gerador",
+                SourceGroup = "Comparador multilojas",
+                CustomNickname = row.ProductName
+            });
+            if (result.Success && result.Data is not null)
+            {
+                result.Data.NormalizeHttp200();
+            }
+
+            if (result.Success && result.Data is { HasConvertedLink: true })
+            {
+                var link = string.IsNullOrWhiteSpace(result.Data.ShortenedUrl)
+                    ? result.Data.AffiliateUrl
+                    : result.Data.ShortenedUrl;
+                ToastService.ShowSuccess(string.IsNullOrWhiteSpace(link) ? "Link de afiliado gerado." : $"Link gerado: {link}");
+            }
+            else
+            {
+                ToastService.ShowError(result.Data?.Descricao
+                    ?? result.ErrorMessage
+                    ?? "Não foi possível gerar o link. Cadastre a loja da plataforma em Minhas Lojas.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao gerar link na comparação. Url={Url}", row.SourceUrl);
+            ToastService.ShowError("Falha ao gerar o link de afiliado.");
+        }
+        finally
+        {
+            _generatingUrl = null;
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            await CloseAsync();
+        }
+    }
+
+    private Task CloseAsync()
+    {
+        _requestId++;
+        return OnClose.InvokeAsync();
+    }
+}

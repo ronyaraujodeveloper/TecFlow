@@ -21,6 +21,11 @@
 - [ ] **Combos centralizados (`CompactCombosAndMlTimeout`):** Ctrl+F5 na `/busca`, clicar fora para fechar e testar no celular.
 - [ ] **Categorias reais (`RealCategoryFilter`):** "havaianas" com nomes em português; marcar uma categoria com 0 e clicar em Buscar.
 
+## 📡 Radar híbrido e comparador multilojas
+
+- [ ] **Homologar (`RadarHybridAndCompare`):** a migration `AddIndexedCatalogOffers` já foi aplicada em `localhost\SQLEXPRESS` / `Ofertio`. Depois de publicar, em `/busca` abrir "Comparar em outras lojas" num produto com código de modelo e conferir a linha de menor preço. No Radar, um termo do perfil sem oferta recente deve consultar as lojas oficiais.
+
+
 ## 🔗 Links, lojas e disparos
 
 - [ ] **Slug numérico (`ShortLinkNumericSlug`):** abrir `https://dev.ofertio.com.br/97303724/xh8pmzh` e conferir o redirect para o Mercado Livre.

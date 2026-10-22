@@ -190,7 +190,8 @@
                                        OnValidate="ValidateAsync"
                                        OnClone="CloneAsync"
                                        OnIgnore="MarkAsUninterested"
-                                       OnRestore="RestoreAsync" />
+                                       OnRestore="RestoreAsync"
+                                       OnCompare="OpenCompare" />
                         }
                     </div>
                 }
@@ -200,6 +201,8 @@
     </div>
 </div>
 
+<ComparePricesModal Product="_compareProduct" Visible="_compareProduct is not null" OnClose="CloseCompare" />
+
 @code {
     private const string WhatsAppPath = "/integracoes/whatsapp/grupos/monitorados";
     private const string TelegramPath = "/integracoes/telegram/grupos/monitorados";
@@ -207,6 +210,7 @@
     private const string OffersContainerId = "ofertas-container";
     private readonly List<MonitoredGroupDto> _groups = [];
     private readonly List<GroupCapturedOfferDto> _offers = [];
+    private StorePriceComparisonRequestDto? _compareProduct;
     private readonly List<ProductTagDto> _tags = [];
     private readonly List<PlatformFilterOptionDto> _platforms = [];
     private int _tagId;
@@ -720,6 +724,11 @@
         _pendingCardActions.Remove(offerId);
         StateHasChanged();
     }
+
+    private void OpenCompare(GroupCapturedOfferDto item) =>
+        _compareProduct = StorePriceComparisonRequests.FromCaptured(item);
+
+    private void CloseCompare() => _compareProduct = null;
 
     private async Task ValidateAsync(int offerId)
     {

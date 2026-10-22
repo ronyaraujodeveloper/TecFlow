@@ -55,11 +55,14 @@ public static class OfferRadarSources
     public const string Trend = "Trend";
     public const string Mining = "Mining";
 
+    public const string Catalog = "Catalog";
+
     public static string ToUiLabel(string? source) => source switch
     {
         Arbitrage => "Menor preço",
         PriceDrop => "Queda de preço",
         Trend => "Em tendência",
+        Catalog => "Busca local",
         _ => "Mineração"
     };
 }

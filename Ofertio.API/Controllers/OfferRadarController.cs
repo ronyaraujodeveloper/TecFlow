@@ -18,6 +18,7 @@ public sealed class OfferRadarController : ControllerBase
 
     private readonly IAffiliateMiningProfileService _profiles;
     private readonly IProductArbitrageService _arbitrage;
+    private readonly IStorePriceComparisonService _comparison;
     private readonly IOfferRadarService _radar;
     private readonly IUserContextProvider _userContext;
     private readonly ILogger<OfferRadarController> _logger;
@@ -25,12 +26,14 @@ public sealed class OfferRadarController : ControllerBase
     public OfferRadarController(
         IAffiliateMiningProfileService profiles,
         IProductArbitrageService arbitrage,
+        IStorePriceComparisonService comparison,
         IOfferRadarService radar,
         IUserContextProvider userContext,
         ILogger<OfferRadarController> logger)
     {
         _profiles = profiles;
         _arbitrage = arbitrage;
+        _comparison = comparison;
         _radar = radar;
         _userContext = userContext;
         _logger = logger;
@@ -83,6 +86,29 @@ public sealed class OfferRadarController : ControllerBase
         {
             _logger.LogError(ex, "Falha na busca de arbitragem.");
             return Ok(new OfferArbitrageResponseDto { Status = false, Descricao = "Não foi possível buscar preços menores." });
+        }
+    }
+
+    [HttpPost("comparar-precos")]
+    public async Task<ActionResult<StorePriceComparisonResponseDto>> ComparePricesAsync(
+        [FromBody] StorePriceComparisonRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _comparison.CompareAsync(
+                ResolveUserId(),
+                request ?? new StorePriceComparisonRequestDto(),
+                cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha na comparação de preços entre lojas.");
+            return Ok(new StorePriceComparisonResponseDto
+            {
+                Status = false,
+                Descricao = "Não foi possível comparar os preços nas outras lojas."
+            });
         }
     }
 

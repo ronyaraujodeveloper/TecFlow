@@ -67,6 +67,7 @@ public class AppDbContext : DbContext
     public DbSet<AffiliateMiningProfile> AffiliateMiningProfiles { get; set; } = null!;
     public DbSet<ProductPriceSnapshot> ProductPriceSnapshots { get; set; } = null!;
     public DbSet<OfferRadarItem> OfferRadarItems { get; set; } = null!;
+    public DbSet<IndexedCatalogOffer> IndexedCatalogOffers { get; set; } = null!;
     public DbSet<OfferHealthAlert> OfferHealthAlerts { get; set; } = null!;
     public DbSet<EvergreenOffer> EvergreenOffers { get; set; } = null!;
     public DbSet<PreFlightNotification> PreFlightNotifications { get; set; } = null!;
@@ -511,6 +512,23 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Source).HasMaxLength(32).IsRequired();
             entity.HasIndex(item => new { item.UserId, item.AttractivenessScore, item.ReceivedAt });
             entity.HasIndex(item => new { item.UserId, item.OriginalUrl, item.ReceivedAt });
+        });
+
+        modelBuilder.Entity<IndexedCatalogOffer>(entity =>
+        {
+            entity.ToTable("IndexedCatalogOffers");
+            entity.Property(item => item.SearchTerm).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.ProductModel).HasMaxLength(80);
+            entity.Property(item => item.ProductName).HasMaxLength(255).IsRequired();
+            entity.Property(item => item.ProductImageUrl).HasMaxLength(500);
+            entity.Property(item => item.SourceUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(item => item.PlatformName).HasMaxLength(64);
+            entity.Property(item => item.Shipping).HasMaxLength(120);
+            entity.Property(item => item.Price).HasColumnType("decimal(18,2)");
+            entity.Property(item => item.CommissionPercent).HasColumnType("decimal(5,2)");
+            entity.Property(item => item.EstimatedCommission).HasColumnType("decimal(18,2)");
+            entity.HasIndex(item => new { item.UserId, item.SearchTerm, item.IndexedAt });
+            entity.HasIndex(item => new { item.UserId, item.IndexedAt });
         });
 
         modelBuilder.Entity<OfferHealthAlert>(entity =>

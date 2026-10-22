@@ -11,11 +11,16 @@ public sealed class OfferRadarService : IOfferRadarService
 {
     private readonly AppDbContext _context;
     private readonly IAffiliateMiningProfileService _profiles;
+    private readonly IOfferRadarHybridQuery _hybrid;
 
-    public OfferRadarService(AppDbContext context, IAffiliateMiningProfileService profiles)
+    public OfferRadarService(
+        AppDbContext context,
+        IAffiliateMiningProfileService profiles,
+        IOfferRadarHybridQuery hybrid)
     {
         _context = context;
         _profiles = profiles;
+        _hybrid = hybrid;
     }
 
     public async Task<OfferRadarResponseDto> ListAsync(
@@ -28,6 +33,11 @@ public sealed class OfferRadarService : IOfferRadarService
         var resolvedTake = AffiliateMiningRules.ResolveTake(take);
         var profile = (await _profiles.GetAsync(userId, cancellationToken)).Profile
             ?? new AffiliateMiningProfileDto();
+        var refreshNote = await _hybrid.RefreshProfileTermsAsync(
+            userId,
+            profile,
+            OfferIndexRules.InteractiveRefreshTermCap,
+            cancellationToken);
         var query = _context.OfferRadarItems
             .AsNoTracking()
             .Where(item => item.UserId == userId);
@@ -46,7 +56,8 @@ public sealed class OfferRadarService : IOfferRadarService
             Total = total,
             Skip = resolvedSkip,
             Take = resolvedTake,
-            AutoPilotEnabled = profile.AutoPilotEnabled
+            AutoPilotEnabled = profile.AutoPilotEnabled,
+            Descricao = refreshNote ?? string.Empty
         };
     }
 

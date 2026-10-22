@@ -1912,6 +1912,18 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Database/Filter/OfficialCatalogSearchFilter.cs** - documentação de `MercadoLivreCategories` (filtro de tela e `domain_id` na busca).
 - [x] **Ofertio.Tests** - nomes em português pelo `/categories`, `domain_id` no `products/search`, varredura por categoria na busca unificada, regras de domínios/categorias/junção, query string com listas e `SelectedWithoutOffers`.
 
+### DocsModularRules - Regras modulares em `docs/rules/` e README enxuto
+
+- [x] **docs/rules/backend-architecture.md** (novo) - C#/.NET 8, camadas, Padrão 3 Objetos, controllers/consultas, SQL Server, Data Protection/LGPD, menus, uploads/IIS e testes.
+- [x] **docs/rules/frontend-ui.md** (novo) - ícones `bi bi-*`, padrão de combos, Mobile First, modais, toasts, badges, sidebar/accordion, agendamentos, imagens e assets.
+- [x] **docs/rules/marketplaces-oauth.md** (novo) - limites do Mercado Livre, OAuth (PKCE, `state` selado, Ngrok), token Master, busca oficial, sanitização de links, plataformas e Telegram UserBot.
+- [x] **docs/rules/encoding-standards.md** (novo) - UTF-8 com BOM, cultura pt-BR, idioma, nomenclatura e identificadores legados.
+- [x] **docs/CHECKLIST_ATIVO.md** (novo) - só os itens `[ ]` que estavam no README, agrupados por tema.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** - recebeu, sem edição, os blocos detalhados de `MLBOAuthSearchTokenFix` a `RealCategoryFilter` que estavam no README.
+- [x] **README.md** - reduzido a objetivo, stack, índice de `docs/rules/` com regras de ouro, comandos principais e homologação (PowerShell como Administrador).
+- [x] **docs/rules/marketplaces-oauth.md** - rota do token Master e cliente final só com o ID de afiliado no card da loja, sem OAuth próprio.
+- [ ] **.cursorignore** - bloqueado pelas permissões do Cursor para o agente; conteúdo a colar manualmente (build, mídias, `App_Data`, `*.log`, `*.pfx` e os docs analíticos, sem DIAGRAMAS e HISTORICO).
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

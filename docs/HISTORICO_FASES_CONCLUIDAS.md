@@ -951,6 +951,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Padrão global de combos e dropdowns (`ComboDropdownStandard`):** o README ganhou a seção 2 das diretrizes de UI, com busca interna só acima de 6 itens, confirmação entre seleção múltipla e única, lista vertical, fechamento ao clicar fora, foco automático e teclado. O `MultiSelectDropdown` da Buscar Ofertas já segue o padrão.
 - [x] **Combos centralizados e timeout do Mercado Livre (`CompactCombosAndMlTimeout`):** a barra de filtros da Buscar Ofertas ficou centralizada e responsiva; os combos fecham ao clicar ou focar fora, destacam o item por setas ou hover e marcam com Espaço ou Enter; os assets ganharam versão no link contra cache antigo. O `HttpClient` do Mercado Livre passou de 12 s fixos para 30 s configuráveis, e timeouts viram degradação amigável (produto ignorado, ofertas mantidas ou mensagem clara), sem `.Result` na busca.
 - [x] **Categorias reais na Buscar Ofertas (`RealCategoryFilter`):** o combo "Categorias" deixou de usar nomes genéricos em inglês e passou a nomear cada domínio pela categoria real do anúncio (`/categories/{id}`, em português); a query string enviava a lista de categorias como texto (`System.Collections.Generic.List...`) e agora repete a chave, então "Buscar" consulta o Mercado Livre com `domain_id` em cada categoria marcada (até 3). Categoria marcada com 0 ofertas ganhou aviso e o botão "Buscar nesta categoria".
+- [x] **Regras modulares e README enxuto (`DocsModularRules`):** as regras do README foram divididas em quatro arquivos em `docs/rules/` (backend, UI, marketplaces/OAuth e encoding), as pendências foram para `docs/CHECKLIST_ATIVO.md` e os blocos detalhados das entregas recentes vieram para o fim deste histórico. O README ficou com objetivo, stack, índice das regras, comandos e homologação, para o Cursor carregar menos contexto por tarefa. O `.cursorignore` exclui os docs analíticos (ANALISE, INDICE, RESUMO), mas não DIAGRAMAS nem HISTORICO, que o agente precisa editar.
 
 
  ## 🛠️ Busca MLB autenticada (`MLBOauthSearch`)
@@ -1116,3 +1117,494 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
   - Valor idêntico à máscara (`••••1234`) é ignorado e o segredo do banco é mantido; valor diferente é gravado com AES e a configuração da API é recarregada; máscara editada (contém "•") é rejeitada sem gravar nada.
 - [x] **47.3. Ícone de olho nos segredos do Vault:**
   - Botão `bi-eye` / `bi-eye-slash` por campo secreto (`_showSecretMap`, `ToggleVisibility`, `IsSecretVisible`) alterna `password` ↔ `text`; o servidor continua enviando apenas a máscara, então só a chave recém-digitada fica legível; tudo volta a ficar oculto após salvar/recarregar.
+
+---
+
+# 📦 Checklist detalhado migrado do README (21/10/2026)
+
+> Blocos que estavam no `README.md` até a modularização das regras em `docs/rules/`, mantidos sem edição como registro. Pendências abertas: [`CHECKLIST_ATIVO.md`](./CHECKLIST_ATIVO.md).
+
+## 🔑 Resolução da Injeção de Token OAuth na Busca (`MLBOAuthSearchTokenFix`)
+
+- [x] **Injeção Obrigatória do Access Token por Tenant:**
+  - Garantir que o `MercadoLivreApiService` recupere o `AccessToken` válido da tabela `MarketplaceAccounts` correspondente ao `TenantId` logado e inclua o cabeçalho `Authorization: Bearer {AccessToken}` em todas as chamadas para a API `/sites/MLB/search`.
+  - Conta ML ativa filtrada pelo `TenantId` do usuário (`Usuarios`), priorizando a do próprio usuário e com token OAuth real; Bearer aplicado por requisição (`HttpRequestMessage.Headers`), sem alterar `DefaultRequestHeaders` do `HttpClient` compartilhado entre tenants.
+  - Log no console (`[ML Busca] ... token OAuth armazenado|renovado da conta '@Achadinhos de Aaz' (Id, Tenant)`), sem expor o token.
+- [x] **Refresh Token Automático antes da Expiração:**
+  - Caso o token esteja expirado ou receba HTTP 401/403, executar o fluxo automático de renovação (`refresh_token`) usando as credenciais do Vault Master antes de registrar falha de busca.
+  - Em 401/403: `POST oauth/token` (`grant_type=refresh_token`, `AppId`/`SecretKey` do Vault), grava o novo `AccessToken`/`RefreshToken` em `MarketplaceAccounts` e repete a busca uma vez; só então cai na vitrine `lista.mercadolivre.com.br`.
+
+## 🔑 Injeção Transparente do Token OAuth na API de Busca (`MLBOAuthSearchBinding`)
+
+- [x] **Vinculação Obrigatória do Access Token por Tenant:**
+  - Todo consumo do endpoint de busca do Mercado Livre (`/sites/MLB/search`) deve obrigatoriamente resgatar o `AccessToken` ativo da conta vinculada ao tenant atual e adicioná-lo ao cabeçalho HTTP `Authorization: Bearer {AccessToken}`.
+  - Entregue em `MLBOAuthSearchTokenFix` (conta do tenant + Bearer por requisição); desde `MercadoLivreNoScraping` é o único caminho da busca.
+- [x] **Auto-Refresh de Token em Chamadas de Busca:**
+  - Ao receber status HTTP 401 ou HTTP 403 da API oficial, o serviço de busca deve acionar o fluxo de renovação via `refresh_token` utilizando as credenciais do Vault Master antes de registrar falha.
+  - Entregue em `MLBOAuthSearchTokenFix`; em produção o ML respondeu `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` também ao token renovado (app aguardando homologação no portal).
+
+## 🕸️ Vitrine Pública como Motor Primário da Busca ML (`MLBScraperPrimary`)
+
+> **Substituído por `MercadoLivreNoScraping`:** a raspagem da vitrine, a busca anônima e a opção `UseOfficialSearchApi` foram removidas; o histórico abaixo fica só como registro.
+
+- [x] **API oficial desligada até a homologação do app:**
+  - `Integrations:MercadoLivre:UseOfficialSearchApi` (padrão `false`): `SearchProductsAsync` não chama `/sites/MLB/search`; com `true` volta o fluxo OAuth + refresh.
+- [x] **Scraper `lista.mercadolivre.com.br/{query}`:**
+  - Headers de Chrome 129 (`User-Agent`, `Accept`, `Accept-Language`, `sec-ch-ua` `"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"`, `sec-ch-ua-mobile`, `sec-ch-ua-platform`, `Sec-Fetch-*`) e `HttpClientHandler` com `AutomaticDecompression = GZip | Deflate | Brotli`; `MercadoLivreHtmlParser` lê título, preço atual (com centavos), preço original (`andes-money-amount--previous`), imagem (`data-src` em lazy-load) e link de `.ui-search-layout__item` / `.poly-card`.
+  - `matt_tool` do tenant injetado em cada oferta (conta ativa `AchadinhoCerto` com `TrackingId` `97303724`; a antiga `@Achadinhos de Aaz` / `14343296` está desconectada).
+- [x] **Sem banner de 403 na `/busca`:**
+  - Com ofertas, nenhum alerta; sem ofertas por desafio anti-robô (`bot_challenge` / `account-verification`), o badge mostra "vitrine pediu verificação anti-robô" em vez do erro HTTP 403 da API.
+- [ ] **Fallback pelo autocomplete do ML (não implementado):**
+  - `http2.mlstatic.com/resources/sites/MLB/suggest?q=` responde 404 e `.../autosuggest?q=` responde 403 a chamadas do servidor; além disso só devolve termos de busca (sem preço, imagem ou link), então não gera ofertas. O desafio anti-robô da vitrine não é contornado por código: a saída é a homologação do app (`UseOfficialSearchApi = true`) ou a busca executada no navegador do usuário.
+
+## 🌐 Busca Pública Leve do Mercado Livre (`MLBPublicSearch`)
+
+> **Substituído por `MercadoLivreNoScraping`:** a busca anônima foi removida; toda busca usa `Authorization: Bearer`.
+
+- [x] **API pública anônima como primeira tentativa:**
+  - Com `UseOfficialSearchApi = false`, `SearchProductsAsync` chama `GET https://api.mercadolibre.com/sites/MLB/search?q={query}&limit=20` sem token nem escopos; mapeia `id`, `title`, `price`, `thumbnail` e `permalink`.
+  - HTTP 403 (ou qualquer falha) cai na vitrine `lista.mercadolivre.com.br` e, se ela também estiver bloqueada, na mensagem amigável do badge — nenhuma exceção chega à `/busca`.
+- [x] **Afiliado oficial `matt_tool=97303724`:**
+  - Vem do `TrackingId` da conta ML ativa do tenant (`AchadinhoCerto`, Id 13), sem constante no código; injetado em todas as URLs da API pública e da vitrine.
+- [x] **Banner da `/busca`:**
+  - Com ofertas retornadas, o alerta de erro é limpo (comportamento de `BuscaGlobal.razor` mantido).
+- [x] **Reautorização OAuth verificada:**
+  - `14/10/2026 20:53:11`: `oauth/token` 200 e "Tokens ML gravados via callback anônimo" (UserId 1, tenant `a1000000-…`); conta 13 com `AccessToken`/`RefreshToken` criptografados no banco.
+
+## 🔒 Criptografia em Repouso dos Tokens de Marketplace (`MarketplaceTokensDataProtection`)
+
+- [x] **ASP.NET Core Data Protection:**
+  - `AddOfertioDataProtection` com `SetApplicationName("TecFlow")` (nome legado mantido para os payloads existentes), chaves em `App_Data/OfertioDataProtectionKeys` da API (configurável em `DataProtection:KeysPath`) e protegidas por DPAPI da máquina; a pasta fica restrita a SYSTEM, Administradores, `IIS APPPOOL\OfertioApiPool` e ao usuário de desenvolvimento.
+  - Registrado no `Program.cs` da API e em `AddOfertioInfrastructureData` (API, Worker e Orquestrador compartilham o mesmo anel de chaves).
+- [x] **`ISecurityEncryptionService` / `SecurityEncryptionService` (Singleton):**
+  - `Protect` grava `DP1:` + payload do `IDataProtector` (purpose `TecFlow.MarketplaceTokens.v1`), sem cifrar duas vezes.
+  - `Unprotect` lê `DP1:`, depois o AES legado `ENC1:` e, por fim, devolve o texto puro; falha criptográfica é registrada sem o valor e retorna a string armazenada.
+- [x] **`ValueConverter<string, string>` no `AppDbContext`:**
+  - `EncryptedStringConverter.CreateProtected` aplicado a `MarketplaceAccount.AccessToken`, `RefreshToken` e `AppSecret` (o "ClientSecret" da entidade); contextos sem o serviço (design-time, testes) seguem no AES.
+  - Sem migration: o tipo da coluna não muda; os tokens `ENC1:` existentes são lidos normalmente e regravados como `DP1:` na próxima atualização (ex.: refresh do token).
+
+## 🖼️ Gravação Confiável das Fotos do Telegram (`TelegramMediaPersistenceFix`)
+
+- [x] **Banco só depois do arquivo físico:**
+  - `ImageOptimizationService` codifica o WebP em `.tmp`, faz `Flush(flushToDisk: true)` e só então move para o nome final; `OfferProductMediaStore` devolve a URL apenas com `File.Exists` verdadeiro, e `UpdateImageUrlAsync` / `OfferPipelineProcessor` recusam caminhos sem arquivo no disco.
+  - O `UPDATE` cru por `ExternalMessageId` saiu de `TelegramUserMonitorHost.PersistTelegramPhotoAsync` (rodava antes de a mensagem existir); o reprocessamento grava filtrando `UserId` + `GroupKey`, porque o id da mensagem do Telegram se repete entre grupos.
+  - Sem fire-and-forget: `OnUpdates`, captura histórica e fila de fotos aguardam cada download.
+- [x] **Caminho físico via `IWebHostEnvironment.WebRootPath`:**
+  - `wwwroot/uploads/products/{tenantId}/{yyyy}/{MM}/{arquivo}` com ano e mês em segmentos invariantes (`BuildRelativeDirectory`) e `Directory.CreateDirectory` automático com log.
+- [x] **Falhas com log e URL nula:**
+  - Download e conversão WebP em `try/catch` separados com `LogWarning` (tenant, chat, mensagem, bytes, caminho); sem arquivo confirmado a mensagem fica com `ProductImageUrl` nulo (placeholder "Processando mídia..." na tela) e `ClearMissingImageUrlAsync` limpa URLs que apontam para arquivos inexistentes quando o novo download falha.
+- [x] **Causa raiz no deploy:**
+  - A limpeza `Remove-Item C:\inetpub\ofertio\api\*` apagava `wwwroot\uploads` a cada publicação (198 de 300 mensagens recentes apontavam para arquivos removidos); a homologação passou a preservar `wwwroot\uploads`.
+
+## 📁 Uploads em Pasta Externa ao Deploy (`ExternalUploadsFolder`)
+
+- [x] **Gravação em `C:\inetpub\ofertio\uploads\products\{tenantId}\{year}\{month}`:**
+  - `UploadStorage:RootPath` (`appsettings.json` da API e da WebUi) define a pasta servida em `/uploads`; `IUploadStorage` (Singleton) expõe `UploadsRoot` e `MediaRoot` para `ImageOptimizationService`, `OfferProductMediaStore`, `GroupCapturedMessagesService`, `ProductImageCleanupService`, `TenantAdminService`, `OfferMediaStudio` (vídeos/molduras) e `TelegramUserMonitorWorker`.
+  - Sem configuração (testes, outra máquina) volta para `{WebRootPath}/uploads`; a pasta precisa se chamar `uploads`, porque as URLs no banco começam com `/uploads/`.
+- [x] **Servimento estático:**
+  - API: `app.UseStaticFiles` com `PhysicalFileProvider(C:\inetpub\ofertio\uploads)` e `RequestPath = "/uploads"` (antes do `wwwroot`); WebUi: `UseOfertioProductUploads` usa a mesma pasta configurada.
+- [x] **Deploy sem perda de mídia:**
+  - As 581 fotos existentes foram copiadas de `api\wwwroot\uploads` para `C:\inetpub\ofertio\uploads`; a limpeza literal `Remove-Item C:\inetpub\ofertio\api\*` voltou a ser segura.
+
+## 🧹 Filtros de Integridade e Revalidação de Ofertas (`OfferIntegrityFilters`)
+
+- [x] **Validação prévia na entrada (Telegram/WhatsApp → `OfferPipelineProcessor`):**
+  - `OfferIntegrityRules.IsGenericStorefrontUrl` rejeita links cujo caminho contém `/social/`, `/lists/`, `/perfil/` ou `/perfil-vendedor/`, antes da validação HTTP e de novo depois de resolver a URL final (`OfferValidationService`), com o status `VitrineGenerica` e log `Ingestão rejeitada`.
+- [x] **Trava de sanidade de preço:**
+  - Preço abaixo de R$ 5,00 em produto de alto valor (TV, notebook, smartphone, monitor, console, geladeira etc., ignorando acessórios como capa, película ou cabo) grava `PrecoSuspeito` em vez de `Ativo`; a clonagem fica bloqueada com aviso.
+- [x] **"Verificar anúncio" em tempo real:**
+  - `LiveCheckSearchService.CheckUrlAsync` faz primeiro o GET da página (seguindo redirecionamentos); vitrine genérica ou marcas de anúncio encerrado/pausado (`Publicação finalizada`, `Anúncio pausado`...) gravam na hora `VitrineGenerica` / `Inativo` com `IsAvailable = false`, e a oferta sai do feed.
+- [x] **Revalidação periódica (`OfferRevalidationWorker`):**
+  - A cada `OfferRevalidation:IntervalHours` (padrão 2h, `appsettings.json` da API) revalida em lote (`BatchSize`, pausa `DelayBetweenChecksMs`) as ofertas `Ativo` / `PrecoAlterado` / `Verificando` dos últimos 7 dias ainda não verificadas no intervalo; encerradas, pausadas ou redirecionadas para vitrine viram inativas no banco, com resumo no log.
+
+## 🔗 "Abrir Link Original" com Credencial de Afiliado (`AffiliateOpenLink`)
+
+- [x] **`AffiliateUrl` calculado no servidor:**
+  - `MonitoredGroupService.ListAsync` resolve uma vez por página o `matt_tool` via `IAffiliateUrlBuilderService` e preenche `GroupCapturedOfferDto.AffiliateUrl` em cada card.
+- [x] **`matt_tool` do Mercado Livre:**
+  - Vem do `TrackingId` / `AffiliateTrackingId` da conta Mercado Livre ativa do tenant (ex.: `97303724` da `AchadinhoCerto`); sem conta, usa `Integrations:MercadoLivre:DefaultAffiliateTrackingId` (`97303724`). `AffiliateUrlBuilderRules` anexa ou substitui `matt_tool`/`matt_word` mantendo os demais parâmetros, e troca link curto (`meli.la`, `/sec/`) pela URL direta do produto quando ela existe; outros marketplaces abrem a URL original.
+- [x] **Nova aba:**
+  - O botão continua um `<a target="_blank" rel="noopener noreferrer">` apontando para o link formatado, então o navegador não bloqueia como pop-up.
+
+## 💲 Preço à Vista, Divergência e Esgotado na Shopee (`ShopeePriceIntegrity`)
+
+- [x] **Preço do Telegram sem parcelamento:**
+  - `OfferPriceTextRules.TryExtractCashPrice` ignora valores precedidos de multiplicador (`12x R$ 604,92`, `12 x de`, `parcelas de`) ou seguidos de `/mês`, descarta o "De R$ X" quando há "por R$ Y" e devolve o valor à vista (`R$ 6.678,28`); usado por `StructuredOfferParserService`, `GroupOfferCaptureRules.TryExtractTelegramPrice` (que também pula o `12` de `12x`) e pelo fallback `R$` do `ProductMetadataHtmlParser`, que agora descarta preços implausíveis (ex.: `price_min` bruto da Shopee sem escala).
+- [x] **Preço real da página e correção no banco:**
+  - `ShopeeProductPageRules.TryExtractActivePrice` lê `product:price:amount` / JSON-LD da página da Shopee no `OfferValidationService`; diferença de 30% ou mais para o preço salvo (`IsSignificantDivergence`, ex.: R$ 667,00 × R$ 6.678,28) atualiza `ExtractedPrice` no `LiveCheckSearchService` (botão e worker) e no `OfferPipelineProcessor` (entrada), com log `Divergência de preço corrigida`.
+- [x] **Esgotado na Shopee:**
+  - `ShopeeProductPageRules.IsSoldOut` detecta "Produto esgotado" e afins, `is_sold_out: true`, `item_status: sold_out` e classes `sold-out`; a oferta vira `Esgotado` com `IsAvailable = false`, a clonagem é recusada no servidor e o botão "Clonar" fica desabilitado no card.
+
+## 🎟️ Aba de Cupons & Promoções (`CouponsTab`)
+
+- [x] **Classificação `OfferType`:**
+  - `GroupCapturedMessage.Type` (`Product`/`Coupon`, migration `AddGroupCapturedMessageOfferType`). `CouponMessageRules.Classify` marca `Coupon` quando a mensagem tem `CUPOM`, `CÓDIGO`, `USAR CUPOM`, `R$ N OFF` ou `N% OFF` e não traz link de produto, ou quando nenhum preço à vista sobra após remover os valores do próprio cupom; oferta de produto com cupom continua `Product`.
+  - O `OfferPipelineProcessor` grava cupons sem validação de página nem pacote atômico (nome, preço, foto), com plataforma pela URL ou pelo texto; o Feed de Ofertas lista só `Product` e a revalidação periódica ignora cupons.
+- [x] **Abas da tela:**
+  - `GruposMonitorados.razor` ganhou `[Cupons & Promoções]` ao lado de `[Feed de Ofertas]` e `[Ocultos / Descartados]`, com pills `Todos`, `Mercado Livre`, `Shopee`, `Amazon` e `Outros` (`couponPlatform` na API).
+- [x] **`CouponCard.razor`:**
+  - Código em destaque com botão copiar (`ofertioClipboard`), desconto, validade e regras extraídas do texto (`CouponMessageRules`), e "Ir para a loja" em nova aba com o `AffiliateUrl` (`matt_tool` no Mercado Livre).
+
+## 🧩 Layout Compacto de Grupos Monitorados (`CompactOffersUi`)
+
+- [x] **Densidade visual:**
+  - Cabeçalho com título `h5`, botões `btn-sm` e sem o texto explicativo; o selo "Sincronizando" virou um pill ao lado do título.
+- [x] **Toast de status:**
+  - Mensagens como "Status atualizado: Ativo." viram toast flutuante com fechar e auto-dismiss em 5 segundos (`ShowToastAsync` versionado, sem um toast antigo apagar o novo); erros continuam em alerta compacto.
+- [x] **Busca compacta + Filtros Avançados ⚙️:**
+  - Na tela ficam só a busca rápida e o seletor de grupo; Período, Preço mín./máx., Loja e Ofertas por página foram para `AdvancedOfferFiltersModal` (contador de filtros ativos no botão, "Limpar filtros"); o checkbox "Só com cupom" saiu.
+- [x] **Auto-scroll ao paginar:**
+  - `SetPageAsync` chama `ofertioAppInterop.scrollIntoViewById("ofertas-container", "start")` com rolagem suave.
+- [x] **`OfferCard.razor`:**
+  - Card extraído da página, com botões em grade 2x2 de linha única (`padding: 4px 8px; font-size: 0.82rem`, ícones, sem quebra de texto) e badges de marketplace/status em pill sutil (`badge-sm`, cores `*-subtle`); `CouponCard` segue o mesmo padrão.
+
+## 🔔 Notificações Toast Globais (`GlobalToasts`)
+
+- [x] **`IToastService` / `ToastService`:**
+  - `ShowSuccess`, `ShowError`, `ShowWarning`, `ShowInfo`; cada `ToastMessage` tem ID único (`Guid`), mensagem, tipo e duração (padrão 10 segundos); no máximo 5 visíveis, mensagem repetida do mesmo tipo substitui a anterior. Registrado como Scoped (um por circuito Blazor).
+- [x] **`ToastContainer.razor`:**
+  - No `MainLayout` e no `MasterMainLayout`, fixo no canto superior direito (`top: 20px; right: 20px; z-index: 9999`), cores #198754 / #dc3545 / #ffc107 / #0d6efd, botão fechar "X", barra de progresso e fechamento automático. Usa `InteractiveServer` próprio porque o layout é SSR estático.
+- [x] **Grupos Monitorados migrado:**
+  - O banner/toast local de status ("Status atualizado: Ativo.") e os alertas fixos de erro da página viraram `ToastService.ShowSuccess` / `ShowError` / `ShowInfo`; o `CouponCard` avisa a cópia do código pelo serviço global.
+
+## 🎟️ Cupons Fora do Feed de Produtos (`CouponFeedCleanup`)
+
+- [x] **Classificador mais rigoroso (`CouponMessageRules`):**
+  - Vira cupom: título de anúncio ("NOVO CUPOM ...", "NOVOS CUPONS ...", "CUPONS ...", "CUPOM SHOPEE/MERCADO LIVRE/AMAZON ...") ou mensagem com 2+ códigos; "Limite de R$ X" e "OFF em R$ X" deixam de contar como preço à vista.
+  - Produto com um único cupom ("R$ 391,42 no Pix — Use o cupom OFFHOJE") continua no feed; tokens dentro de URLs (ASIN da Amazon) e pedaços de palavras acentuadas ("RELÂMPAGO") não contam como código; "a partir de R$ X" volta a ser preço do produto.
+- [x] **Reclassificação do legado (`CouponReclassificationService` + `CouponReclassificationWorker`):**
+  - Roda uma vez a cada inicialização da API (15 s após subir), em lotes de 500, só sobre itens `Product` com sinal de cupom; itens sem link direto só viram cupom se forem anúncio de cupons. Medição no banco atual: ~607 de 9.634 itens migram para a aba Cupons.
+- [x] **Filtro explícito `Type == Product`:**
+  - Feed (já existia em `MonitoredGroupService.ListAsync`) e agora também mineração, arbitragem, tendências globais e busca local de catálogo.
+
+## 👤 Cabeçalho com Menu de Perfil (`UserProfileMenu`)
+
+- [x] **Elementos obsoletos removidos:**
+  - Dropdown "Todas as lojas" (`ActiveStoreScopeSelector`), botão azul "Painel" e badge "Sessão ativa (plataforma)" (`SessionStatusBadge`).
+- [x] **Menu de perfil:**
+  - Pílula com ícone + nome do usuário; dropdown `dropdown-menu-end` só com Minha Conta (`/minha-conta`), Super Admin (só master) e Sair (`/auth/logout`). Usa `<details>` nativo porque o layout é SSR estático (sem bootstrap.js); fecha ao clicar fora ou com Esc.
+- [x] **Header compacto (`HeaderRestore`):**
+  - Grupo [Painel Master] [Visão Cliente] e badge de papel do usuário (`MasterProfileSwitcher`) restaurados no formato original, seguidos do menu de perfil, com `d-flex align-items-center gap-2`.
+  - `.portal-header` / `.master-header` com `position: relative; z-index: 1050`: o `backdrop-filter` do cabeçalho criava um contexto de empilhamento e o dropdown ficava sob o conteúdo da página.
+
+## 🔗 Vitrines de Terceiros e Afiliado Forçado no Mercado Livre (`ShowcaseBypass`)
+
+- [x] **Bypass de vitrine (`MercadoLivreShowcaseRules`):**
+  - URLs com `/social/`, `affiliate-profile` ou `reco_client=home_affiliate-profile` viram a página direta do produto focado (`item_id` ➔ `produto.mercadolivre.com.br/MLB-…`, `product_id` / `/p/MLB…` ➔ `www.mercadolivre.com.br/p/MLB…`); vitrine sem produto focado continua `VitrineGenerica`.
+  - Aplicado na validação (link inicial, canônico e redirect final), na ingestão e no "Verificar anúncio", que grava a página direta em `PrimaryProductUrl` (inclusive de itens antigos com `meli.la`).
+- [x] **Sanitização do afiliado (`AffiliateUrlBuilderRules`):**
+  - Remove `matt_tool_id`, `matt_tool`, `matt_d2id`, `matt_tracing_id` e `matt_word` de terceiros e aplica sempre o `matt_tool` do tenant ou o oficial `97303724` (`MercadoLivreIntegrationOptions.OfficialAffiliateTrackingId`).
+- [x] **Botões do `OfferCard`:**
+  - "Abrir Link Original" usa o `AffiliateUrl` higienizado; "Clonar Oferta" do Mercado Livre usa a mesma URL (via conversor da loja ML ou direto, quando não houver loja ML conectada).
+
+## 📄 100 Ofertas por Página (`OffersPageSize100`)
+
+- [x] **Padrão de paginação:**
+  - `GroupOfferCaptureRules.OffersPageSize = 100` alimenta a tela de Grupos Monitorados, o Modal de Filtros Avançados, a API (`take`) e o cliente HTTP; opções 10 / 25 / 50 / 100 mantidas.
+- [x] **Seleção pré-marcada:**
+  - "Ofertas por página" abre com `100` selecionado; valor fora da lista volta para 100.
+- [x] **Consulta sem teto oculto:**
+  - A pré-busca para deduplicação deixou de parar em 80 linhas (agora `take + 20`, até 200), então a página de 100 vem completa.
+
+## 🧭 Vitrines Meli Social, Card Compacto e Reset Limpo (`MeliSocialCardReset`)
+
+- [x] **Bypass obrigatório de `/social/` (ex.: Master Tech Jr):**
+  - Links do Telegram/WhatsApp com `mercadolivre.com.br/social/` seguem os redirects HTTP (`UrlResolverService` + GET da validação) até `/p/MLB...` ou `produto.mercadolivre.com.br`.
+  - Se a URL final continuar no perfil social, o ID dos parâmetros (`item_id`, `product_id`, `wid`, inclusive no fragmento) vira `https://www.mercadolivre.com.br/p/{ITEM_ID}?matt_tool=97303724`; sem ID, a oferta segue como `VitrineGenerica`.
+  - Qualquer `matt_tool` de terceiros é trocado pelo `97303724` (ou pelo TrackingId da conta ML do tenant).
+- [x] **Data e hora da captura no cabeçalho do card:**
+  - Pílula `🕒 18/10/2026 09:20` (`ReceivedAt` em horário local) no topo do `OfferCard`, com o nome do grupo ao lado.
+- [x] **Botões enxutos:**
+  - "Abrir", "Verificar", "Clonar" e "Ocultar" (ícones originais, rótulos completos no tooltip) em uma única linha com padding reduzido.
+- [x] **Reset limpo do ambiente (`ResetarOfertasLegadas.ps1`):**
+  - Zera `GroupCapturedMessages` e `uploads\products` (todos os usuários ou `-UserId`), preservando conexões, grupos e lojas; `-WhatIf` para simular, `-PararIis` para pausar os pools e `-IncluirHistoricoPrecos` para zerar `ProductPriceHistory`.
+
+## 🕒 Feed em Ordem Cronológica da Mensagem (`FeedChronologicalOrder`)
+
+- [x] **Ordenação decrescente pela hora da mensagem:**
+  - `OrderByCapturedAtDescending()` (`ReceivedAt` desc, desempate por `Id` desc) no Feed, nos Cupons, nos Ignorados, na busca local de catálogo e no backfill de mídia; antes o feed usava `CreatedAt` (hora da gravação), e a sincronização de histórico jogava mensagens antigas (ex.: 00:23) para o topo.
+- [x] **Fuso horário padronizado:**
+  - `ReceivedAt` é `datetime2` gravado sempre em UTC com o horário de envio da mensagem (UserBot `message.Date`, Bot API `message.date`, Evolution `messageTimestamp`); a interface converte para o horário de Brasília.
+- [x] **Verificação:**
+  - Teste com as ofertas reais do banco garante a ordem 09:44 ➔ 09:20 ➔ 09:14 ➔ 08:44 ➔ 08:14 ➔ 00:23.
+
+## 🚫 Remoção Imediata de Produtos Esgotados (`SoldOutFeedRemoval`)
+
+- [x] **Detecção de anúncio encerrado no Mercado Livre (`MercadoLivreAvailabilityRules`):**
+  - "Anúncio pausado" / "Publicação finalizada" ➔ `Inativo`; "Sem estoque", `schema.org/OutOfStock`, página só com "Produtos relacionados" (sem "Comprar agora" / "Adicionar ao carrinho") ou produto redirecionado para `lista.mercadolivre.com.br` ➔ `Esgotado`; em ambos `IsAvailable = false`.
+  - API `/items/{id}`: `paused`/`closed` ➔ `Inativo` e `available_quantity = 0` ➔ `Esgotado`.
+  - Página de verificação anti-robô (`/gz/account-verification`) é inconclusiva e não derruba a oferta.
+- [x] **Atualização em tempo real no botão Verificar:**
+  - A API devolve a própria oferta revalidada (`ValidatedOffer` + `OfferRemoved`) em vez de recarregar o feed do grupo; o card esgotado sai da lista em memória, o contador é ajustado e aparece o toast "Produto esgotado. Oferta removida do feed.".
+- [x] **Filtro estrito no feed de Ofertas:**
+  - Produtos só aparecem com `IsAvailable` e status na lista branca `Ativo` / `PrecoAlterado` / `PrecoSuspeito` / `Verificando` (`GroupOfferStatuses.FeedVisibleStatuses`); cupons seguem filtrados só por `IsAvailable`. O Worker de lote (`OfferRevalidationService`) usa a mesma regra, então o que ele desativa some do feed na próxima carga.
+
+## 🏷️ Filtro por Características de Produtos (`ProductTagsFilter`)
+
+- [x] **Estrutura no banco:**
+  - Entidade `ProductTag` (`Id`, `Name`, `Slug`, `IsActive`) e N:N com `GroupCapturedMessage` pela tabela `OfferTags` (cascata nos dois lados); migração `AddProductTags` com seed Gamer, Eletrônicos, Informática, Casa & Cozinha, Smartphones e Moda/Beleza.
+  - "Todas as Características" é a opção sem filtro do combo, não uma linha do banco.
+- [x] **Combo na interface:**
+  - `form-select-sm` à direita de "Ocultos / Descartados", carregado de `ProductTags` ativas pela resposta do feed; destacado quando há filtro e desabilitado na aba de Cupons.
+- [x] **Filtro LINQ:**
+  - `MonitoredGroupService.ListAsync` aplica `.Where(o => o.Tags.Any(t => t.Id == selectedTagId))` nos produtos quando `tagId` > 0.
+- [x] **Classificador automático:**
+  - `ProductTagClassifierRules` (palavras-chave sem acento, por palavra inteira, ignorando URLs) vincula as tags na gravação de cada oferta nova do Telegram/WhatsApp; `ProductTagBackfillWorker` classifica uma vez as ofertas já capturadas na subida da API.
+
+## 💰 Preço Total da Amazon sem Valor por Unidade (`AmazonUnitPriceFix`)
+
+- [x] **Parser ignora preço unitário:**
+  - `OfferPriceTextRules.IsUnitPriceContext` descarta valores como "R$ 16,60 / unidade", "por frasco" e "unidade R$ X" tanto no texto da mensagem quanto no HTML genérico (`ProductMetadataHtmlParser`); kits com "R$ 159,90 por 3 unidades" mantêm o total.
+- [x] **Caixa de compra da Amazon:**
+  - `AmazonProductPageRules` lê estritamente o total da buy box (`.apexPriceToPay` / `.priceToPay` / `#corePrice_feature_div` com `a-offscreen` ou `a-price-whole` + `a-price-fraction`), pulando preço riscado e unitário; sem buy box usa `og:price:amount`. `OfferValidationService` aplica essa leitura nas páginas da Amazon.
+- [x] **Verificar atualiza o preço na tela:**
+  - Quando o preço real difere do salvo, `MonitoredGroupService.ValidateAsync` devolve `PriceUpdated`; o card é substituído em memória, `StateHasChanged()` redesenha e aparece o toast "Preço atualizado para R$ 55,00".
+
+## 🚀 Migração de Marca TecFlow → Ofertio (`RebrandOfertio`)
+
+- [x] **Solução, projetos e namespaces:**
+  - `Ofertio.sln` e projetos `Ofertio.*` (API, WebUi, SharedUi, Core, Business, Data, Database, Infrastructure, Infrastructure.Services, Util, Observability, Orquestrador, Worker, Mobile, Application, Tests); namespaces, assemblies (`Ofertio.API.dll` no `web.config`) e classes `Ofertio*` renomeados.
+- [x] **Interface Blazor:**
+  - Marca "Ofertio" no cabeçalho, no Master Console e nos títulos das páginas; título padrão "Ofertio — Inteligência em Ofertas" nos layouts, na tela inicial e no `index.html` do Mobile.
+- [x] **Banco de dados (SQL Server):**
+  - Banco `AutomacaoSociais` renomeado para `Ofertio` (dados preservados) e connection strings atualizadas; migração `RebrandOfertioSettings` renomeia a chave `TecFlow:ShortLinks:PublicBaseUrl` do cofre para `Ofertio:ShortLinks:PublicBaseUrl`.
+- [x] **Pastas, uploads e Data Protection:**
+  - Uploads em `C:\inetpub\ofertio\uploads` (produção) e `C:\inetpub\ofertio_dev\uploads` (Development); chaves em `App_Data/OfertioDataProtectionKeys`, preservado pela limpeza do deploy; sessão do Telegram em `C:\ProgramData\Ofertio\telegram-sessions`.
+- [x] **IIS:**
+  - Sites `Ofertio.API` / `Ofertio.WebUi`, pools `OfertioApiPool` / `OfertioWebUiPool` com login no SQL Server e pastas `C:\inetpub\ofertio\{api,webui,uploads}`.
+- [x] **Identificadores legados mantidos:**
+  - Nome de aplicação/purpose do Data Protection, ID da migração `InitialTecFlow`, prefixo `tecflow-u` das instâncias do WhatsApp, `demo@TecFlow.local` e IDs de rastreio/afiliado (`tecflow_kabum`, `tecflow_cb`, `tecflow_sandbox_subid`, `tecflow_test`, `utm_source=tecflow`), além das credenciais sandbox; credenciais do Mercado Livre (`matt_tool=97303724`, conta `ronyfaria`) intactas.
+
+## 🎨 Identidade Visual Ofertio (`OfertioVisualIdentity`)
+
+- [x] **Ativos de imagem:**
+  - Logotipo recortado e redimensionado (490x160, fundo azul-marinho original) em `wwwroot/images/logo-ofertio.png` do WebUi e do Mobile.
+  - Ícone das setas laranja com fundo transparente em `wwwroot/favicon.png` (192x192) e `wwwroot/favicon.ico` (16/32/48).
+- [x] **Layouts Blazor:**
+  - Cabeçalho do portal (`MainLayout`) e do Master Console (`MasterMainLayout`) exibem o logotipo (`height: 40px; width: auto; object-fit: contain;`) com alt "Ofertio — Inteligência em Ofertas"; a tela de login (`Home`) usa o logotipo em 72px no lugar do selo de texto.
+  - O `NavMenu` não tem marca (só itens de menu), por isso não mudou.
+- [x] **Tags do `<head>`:**
+  - `App.razor` (WebUi), `AppShell.razor` e `index.html` (Mobile) apontam o favicon para `favicon.png`/`favicon.ico`.
+  - Título padrão "Ofertio - Inteligência em Ofertas" via `<PageTitle>` nos layouts e na tela de login (um `<title>` fixo no `App.razor` sobrescreveria os títulos de cada página) e via `<title>` no `index.html` do Mobile.
+
+## 🔘 Botões de Grupos Monitorados (`GruposMonitoradosButtonsFix`)
+
+- [x] **Botão "Limpar" (Telegram):**
+  - Corrigido: o modal de confirmação nunca abria porque o `ConfirmDialogHost` era renderizado de forma estática no `MainLayout`; agora usa `InteractiveServer` (como o `ToastContainer`), e o clique deixa de ficar travado esperando.
+  - Após confirmar, apaga ofertas capturadas e imagens (como antes), redefine todos os filtros (busca, grupo "Todos os grupos", característica "Todas", aba Feed de Ofertas, plataforma de cupom, filtros avançados e página 1) e recarrega a lista padrão, com o toast "Filtros redefinidos com sucesso.".
+- [x] **Estados de carregamento:**
+  - `_isRefreshing`, `_isClearing` e `_isSyncing` com spinner Bootstrap e botão desabilitado ("Atualizando...", "Limpando...", "Sincronizando..."), sempre redefinidos no `finally`.
+  - Sincronização em segundo plano do Telegram mantém o badge e o botão travados até o status da execução atual concluir (status antigo é ignorado; falha não repete o toast a cada 20s).
+- [x] **Toasts de conclusão:** "Sincronização concluída! X novos grupos e Y novas mensagens atualizadas." (`MonitoredGroupSyncRules.BuildCompletionMessage`).
+- [x] **Cards (Verificar, Clonar, Ocultar, Restaurar, Sem interesse):** só o card clicado mostra o mini-spinner no próprio botão (`OfferCardAction` por oferta); os demais cards seguem utilizáveis.
+
+## 🏬 Filtro por Plataforma em Grupos Monitorados (`MonitoredPlatformFilter`)
+
+- [x] **Select "Todas as Plataformas":**
+  - Ao lado direito do select de características; ao trocar a plataforma, volta para a página 1 e recarrega o feed.
+  - Filtro único para as três abas (Feed de Ofertas, Cupons & Promoções e Ocultos / Descartados); a plataforma escolhida é mantida ao trocar de aba. As pílulas de marketplace da aba de cupons foram removidas.
+- [x] **Lista dinâmica de plataformas (`MonitoredGroupsResponseDto.Platforms`):**
+  - Mostra só as plataformas com conta de marketplace ativa do usuário (`MarketplaceAccounts`, as mesmas que liberam produtos no feed).
+  - Sem conta conectada, usa as plataformas detectadas nas ofertas capturadas no período; sem nenhuma, exibe Mercado Livre e Shopee.
+  - Se a plataforma selecionada sair da lista (conta desativada), ela continua visível no select até o usuário trocar ou clicar em "Limpar".
+- [x] **Filtro no backend:**
+  - `GET api/integracoes/grupos/monitorados?platform=` ➔ `LiveSearchFilterDto.Platform` ➔ `OfferPlatformFilterRules.Apply` (`PlatformType` no SQL), no feed de ofertas e nos ocultos; aceita apelidos como `Magalu` e `Ponto`.
+- [x] **Botão "Limpar":** também volta a plataforma para "Todas as Plataformas".
+
+## 🔐 Certificado HTTPS no Kestrel (`KestrelDevCertificate`)
+
+- [x] **Endpoint `https://localhost:7002` do WebUi em Development:**
+  - `Ofertio.WebUi/appsettings.Development.json` carrega `C:/Programacao/certificado/dev.ofertio.com.br.pfx` (gerado no win-acme) em `Kestrel:Endpoints:Https`, com `"Protocols": "Http1AndHttp2"` (HTTP/2 via ALPN e fallback HTTP/1.1; equivale a `listenOptions.Protocols` sem duplicar o bind da porta no `Program.cs`).
+  - A senha do `.pfx` fica fora do repositório, em User Secrets do WebUi: `dotnet user-secrets set "Kestrel:Endpoints:Https:Certificate:Password" "<senha>" --project .\Ofertio.WebUi\Ofertio.WebUi.csproj` (ou variável de ambiente `Kestrel__Endpoints__Https__Certificate__Password`).
+  - Vale só para `dotnet run`/F5: no IIS o WebUi roda `inprocess` e o HTTPS da porta 7002 é o binding do site `Ofertio.WebUi`. Com o IIS ativo na 7002, pare o site antes de subir o Kestrel nessa porta.
+  - `.gitignore` ignora `*.pfx`.
+
+## 🛒 Rotas do app Mercado Livre (`MercadoLivreEndpoints`)
+
+- [x] **`MercadoLivreController` (`api/mercadolivre`, anônimo):**
+  - `GET api/mercadolivre/callback?code=&state=`: Redirect URI do OAuth 2.0. Abre o `state` selado, bloqueia reuso, grava os tokens em `MarketplaceAccounts` e redireciona para `/marketplace-accounts?status=success|error` da origem onde o OAuth começou (sem origem válida, responde JSON).
+  - `POST api/mercadolivre/notifications`: lê o JSON (`topic`, `resource`, `user_id`, `application_id`, `attempts`) e responde `200 OK` imediatamente, inclusive com payload vazio ou inválido, para o ML não reenviar nem desativar o tópico.
+- [x] **Fluxo compartilhado:** `MercadoLivreOAuthCallbackFlow` atende tanto o novo `GET` quanto o `POST api/marketplace-auth/mercadolivre/callback` usado pela WebUi.
+- [x] **`Program.cs` da API:** `builder.Services.AddControllers()` e `app.MapControllers()` já presentes.
+- [x] **Host público pela WebUi (`MercadoLivreWebUiProxy`, YARP):** `MercadoLivreProxyExtensions` (`AddHttpForwarder` + `MapForwarder`) repassa `/api/mercadolivre/callback` e `/api/mercadolivre/notifications` para `OrquestradorApi:BaseUrl` (`http://localhost:5001` no IIS), preservando método, query, corpo e o redirect 302 da API.
+  - O `EXECUCAO_HOMOLOGACAO.md` remove a subaplicação `/api` do site `Ofertio.WebUi` se ela existir.
+  - ⚠️ Não criar aplicação `/api` dentro do site `Ofertio.WebUi` no IIS: no mesmo `OfertioApiPool` ela derruba a API com **HTTP 500.35** (dois apps in-process no mesmo pool) e, com pool próprio, duplica os workers da API.
+- [ ] **Cadastro no app do ML:** Redirect URI do app e `Integrations:MercadoLivre:RedirectUri` = `https://<host público da WebUi>/api/mercadolivre/callback`; URL de notificações = `https://<host público da WebUi>/api/mercadolivre/notifications`.
+
+## 🛡️ Anúncios do Mercado Livre pela API oficial (`MercadoLivreOfficialItems`)
+
+- [x] **`MercadoLivreApiService.GetItemAsync(userId, itemId)`:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` sempre com `Authorization: Bearer`.
+  - Ordem do token: OAuth da conta Mercado Livre conectada no painel (tenant do usuário) ➔ `Integrations:MercadoLivre:AccessToken` ➔ token do aplicativo (`client_credentials`).
+  - Token expirado é renovado pelo `refresh_token` antes da consulta (e gravado na conta); se a API responder 401/403, renova e tenta mais uma vez.
+  - Logs `[ML Item]` claros quando a conta não foi conectada/autorizada (no máximo um aviso a cada 30 min por usuário) e quando o refresh falha (pede para reconectar em Minhas Lojas).
+- [x] **`LiveCheckSearchService` (Verificar anúncio e revalidação):** link direto do ML (`MLB...`) consulta a API oficial antes de qualquer GET na página pública; se a API responder, a página nem é baixada.
+- [x] **Trava anti-robô (`MercadoLivreAntiBotGuard`, singleton):**
+  - Ao receber o desafio (`account-verification`, `bot_challenge`...) na página do anúncio ou na vitrine `lista.mercadolivre.com.br`, o HTML é descartado e os GETs nas páginas públicas do ML ficam suspensos por 15 min.
+  - Nesse período a oferta fica "Verificando" com o preço capturado (`Source = AntiBot`) e a busca não raspa a vitrine.
+
+## 🚫 Resolvedor de links do Mercado Livre sem scraping (`MercadoLivreNoScraping`)
+
+- [x] **Página pública do ML nunca é baixada** na validação de ofertas (captura dos grupos, pré-validação, saúde das ofertas, Verificar anúncio), nos metadados do Gerador de Links nem na expansão de encurtadores.
+- [x] **Código do item:** extraído da URL (`produto.mercadolivre.com.br/MLB-12345678...` ➔ `MLB12345678`); encurtadores e vitrines seguem redirects só pelos cabeçalhos até achar o MLB.
+- [x] **Dados pela API oficial:** `GET https://api.mercadolibre.com/items/{ITEM_ID}` com `Authorization: Bearer` (refresh automático do token da conta); links de catálogo `/p/MLB...` usam `/products/{id}` ➔ anúncio ganhador.
+  - Gerador de Links usa o token OAuth da conta do usuário logado; rotinas em segundo plano (sem usuário) usam `Integrations:MercadoLivre:AccessToken` ou o token do aplicativo, nunca a conta de outro tenant.
+  - Sem MLB ou sem resposta da API: oferta "Verificando" e nome pelo slug da URL.
+- [x] **Busca por palavra-chave (Buscar Ofertas):** só API oficial com `Authorization: Bearer` (desde `MercadoLivreCatalogSearch` via `/products/search`; antes `GET /sites/MLB/search`) (conta OAuth do tenant com refresh ➔ `AccessToken` fixo ➔ token do app); o token não vai mais na URL (`access_token=` aparecia no log de requisições).
+  - Removidos a busca anônima, a raspagem de `lista.mercadolivre.com.br`, o `MercadoLivreHtmlParser` e a opção `UseOfficialSearchApi`.
+  - Recusa da API mostra "A API oficial do Mercado Livre recusou a busca (HTTP 403)..." pedindo para reconectar a conta, no lugar do aviso de verificação anti-robô.
+
+## 🔁 Callback público do OAuth do Mercado Livre (`MercadoLivreOAuthPublicCallback`)
+
+- [x] **`redirect_uri` fixo no domínio público:** `Integrations:MercadoLivre:RedirectUri` = `https://dev.ofertio.com.br/api/mercadolivre/callback` em `appsettings.json` e `appsettings.Homologacao.json` da API; o botão "Autorizar Mercado Livre (OAuth)" e a troca do `code` usam exatamente esse valor (prevalece sobre o host da requisição; o cofre do Master não tem a chave gravada).
+- [ ] **App do ML:** a Redirect URI cadastrada em developers.mercadolivre.com.br precisa ser idêntica (`https://dev.ofertio.com.br/api/mercadolivre/callback`).
+- [x] **Troca do code com diagnóstico (`MercadoLivreOAuthExchangeDiagnostics`):** `POST https://api.mercadolibre.com/oauth/token` com `grant_type=authorization_code`, `client_id`, `client_secret`, `code` e o `redirect_uri` acima; em HTTP 400 o log `[ML OAuth]` grava `error`, `message` e o corpo da resposta do ML (`invalid_grant`, `invalid_client`, `redirect_uri_mismatch`...) com `redirect_uri` e `client_id` enviados, sem `client_secret` nem `code`, e a tela mostra o código do erro.
+
+## 🔐 PKCE no OAuth do Mercado Livre (`MercadoLivreOAuthPkce`)
+
+- [x] **Causa:** o app do ML exige PKCE; a troca do `code` voltava `invalid_request — code_verifier is a required parameter`.
+- [x] **`code_verifier` no state selado:** gerado por autorização (64 caracteres, `MercadoLivrePkce`) e guardado criptografado no `state` (AES-GCM), sem sessão nem banco.
+- [x] **URL de autorização:** `code_challenge` (SHA-256 do verifier em base64url) + `code_challenge_method=S256`.
+- [x] **Troca do code:** o callback abre o state e envia `code_verifier` no `POST oauth/token`; o verifier nunca vai para log nem para a URL.
+- [x] **Reautorizar:** links de autorização gerados antes do deploy não têm verifier; clicar de novo em "Autorizar Mercado Livre (OAuth)" (conta 'AchadinhoCerto' reautorizada com sucesso).
+
+## 🔎 Busca ML pelo catálogo oficial (`MercadoLivreCatalogSearch`)
+
+- [x] **Causa do 403 com conta autorizada:** o Mercado Livre descontinuou `GET /sites/MLB/search` para apps de terceiros (abril/2025); ele responde `403 forbidden` mesmo com token OAuth válido e renovado.
+- [x] **Nova busca:** `GET /products/search?status=active&site_id=MLB&q={termo}&limit={n}` (buscador de produtos de catálogo, documentado) com `Authorization: Bearer` da conta ➔ `GET /products/{id}` para cada resultado (até 4 em paralelo) ➔ preço, preço original e frete do `buy_box_winner`, link da página do produto (`/p/MLB...`) com `matt_tool`.
+- [x] **Sem oferta ativa:** produto de catálogo sem `buy_box_winner` (ou recusado) é ignorado e registrado no log `[ML Busca]`.
+- [x] **Limpeza:** removidos `MercadoLivreSearchDtos.cs` e `MercadoLivreItemParser.ParseSearch` (formato da busca descontinuada).
+- [ ] **Limite conhecido:** só aparecem produtos de catálogo com oferta e preço; anúncios fora do catálogo não são listados pela API oficial.
+
+## 🧭 Ofertas sem buy box + modal de carregamento (`MercadoLivreCatalogOfferFallback`)
+
+- [x] **Causa da busca vazia:** "dell i7" trouxe 20 produtos de catálogo, nenhum com `buy_box_winner` (produtos "pai" sem configuração definida ou sem disputa de anúncios).
+- [x] **Cadeia de preço (só API oficial):** `buy_box_winner` ➔ `buy_box_winner_price_range.min` ➔ menor preço em `/products/{id}/items` ➔ primeiro produto filho (`children_ids`); o log `[ML Busca]` registra por que cada produto ficou sem oferta.
+- [x] **Modal de carregamento:** a Buscar Ofertas abre "Buscando ofertas..." com spinner ao clicar em Buscar e fecha quando o retorno chega (o `LoadingOverlay` do layout é estático e não aparecia nas páginas interativas).
+- [x] **Validar com a conta real:** "Dell Inspiron" passou a trazer ofertas (3 de 20 produtos de catálogo); o volume baixo motivou a varredura abaixo.
+
+## 🔎 Varredura, filtros e ordenação na Buscar Ofertas (`MercadoLivreCatalogSearchScan`)
+
+- [x] **Paginação:** a busca do ML varre `products/search` em páginas de 20 até juntar ~20 ofertas ou analisar 100 produtos; botão "Carregar mais (Mercado Livre)" continua do próximo offset.
+- [x] **Filtros durante a varredura:** preço mín./máx. e "Somente frete grátis" são aplicados antes de contar a meta, para não descartar tudo depois.
+- [x] **Transparência:** selo do Mercado Livre mostra "N ofertas · M produtos analisados" (e "sem anúncio ativo" quando nenhum tinha oferta).
+- [x] **Termo mais curto:** sem nenhuma oferta, tenta automaticamente removendo as últimas palavras ("Dell Inspiron i7 16GB" ➔ "Dell Inspiron i7" ➔ "Dell Inspiron") e avisa o termo usado.
+- [x] **Ordenação:** relevância, menor preço ou maior desconto (reordena na tela sem nova consulta).
+- [x] **Categoria:** domínios sugeridos pelo `domain_discovery` e pelos resultados; ao escolher, a busca envia `domain_id`.
+- [x] **Validar com a conta real:** o log mostrou "dell inspiron" + Notebooks parando em 40 produtos analisados com 1 oferta, corrigido abaixo.
+
+## 🧮 Teto da varredura, filtros na tela e regras (`MercadoLivreScanBudgetAndScreenFilters`)
+
+- [x] **Teto de 100 de fato:** quando o termo já trouxe alguma oferta, a varredura segue até 100 produtos (o limite de 40 só reserva espaço para tentar termos mais curtos quando nada foi encontrado).
+- [x] **Variações:** produto "pai" do catálogo (ex.: modelo com várias configurações) traz até 4 variações com oferta, cada uma em um card.
+- [x] **Filtros na tela:** depois da busca, mudar lojas, preço, frete grátis, cupom, categoria ou ordenação filtra só os resultados carregados; Buscar consulta as plataformas de novo.
+- [x] **Modal de regras:** "Como funciona a busca e as regras" mostra as lojas conectadas do usuário, o `matt_tool` usado e os limites/regras da busca.
+- [ ] **Validar com a conta real:** repetir "dell inspiron" + Notebooks e conferir o selo "N ofertas · 100 produtos analisados".
+
+## 📊 Métricas de afiliado na Buscar Ofertas (`AffiliateOfferMetrics`)
+
+- [x] **Comissão:** Shopee pela API (`commissionRate`/`commission`); Mercado Livre e Amazon pela taxa do usuário (modal de regras ou Radar → Perfil), pois as APIs não expõem a comissão de afiliado.
+- [x] **Vendidos, avaliações e mais vendidos:** ML via `/items` em lote, `/reviews/item` e `/highlights` da categoria; Shopee via `sales` e `ratingStar`. Sem dado, o card mostra "não informado".
+- [x] **Vantagem e segurança:** notas 0–100 por oferta (desconto, frete, comissão, avaliação, ranking, vendas × loja oficial, reputação, MercadoLíder, Full, garantia, condição) e "Oportunidade" como ordenação padrão.
+- [x] **Painel de métricas:** faixa/mediana de preço, % vendedores confiáveis, % loja oficial e frete grátis, nota média, maior comissão, melhor oportunidade, mais vendido e menor preço.
+- [x] **Filtros de tela:** somente loja oficial, vendedores confiáveis e mais vendidos.
+- [ ] **Informar sua taxa do ML:** salvar a taxa média do painel de afiliados no modal de regras para ver a comissão estimada.
+- [ ] **Validar com a conta real:** conferir no log `[ML Busca] Métricas:` quantos vendedores, avaliações, ranking e vendas a API devolveu (o ML pode omitir `sold_quantity` para quem não é o vendedor).
+
+## 💰 Comissão do Mercado Livre por categoria (`MercadoLivreCategoryCommission`)
+
+- [x] **Categoria do anúncio:** `category_id` do `/items` ➔ `/categories/{id}` (`path_from_root`) ➔ categoria raiz, com cache de 12 h.
+- [x] **Regras de comissão:** `AffiliateCommissionRules` com a tabela do afiliado generalista do ML (venda direta): 16% Beleza/Moda/Esportes, 12% Casa/Ferramentas/Games/Brinquedos e outras, 5% Eletrônicos/Informática/Celulares/Câmeras/Eletrodomésticos, 0% Alimentos e Bebidas; fora da tabela vale a taxa do perfil.
+- [x] **Card:** "💰 Comissão estimada: 5% (Informática) · R$ …" no lugar de "informe sua taxa nas regras"; a tabela aparece no modal de regras.
+- [x] **Imagem:** clique abre modal ampliado com anterior/próxima e miniaturas (ML: todas as fotos do produto; Amazon: variantes; Shopee: foto principal).
+- [x] **Botões:** "Converter & Gerar Link" e "Abrir" lado a lado, com ícones no padrão dos Grupos monitorados.
+- [ ] **Conferir as taxas:** comparar a tabela com o painel de afiliado do ML (o ML pode mudar as taxas; a venda indireta paga a metade).
+
+## ❔ Tooltips nos selos da oferta (`OfferScoreTooltips`)
+
+- [x] **Ícone (?):** `bi-question-circle` à direita de Oportunidade, Vantagem e Segurança nos cards da Buscar Ofertas.
+- [x] **Bootstrap Tooltip:** `bootstrap.bundle.min.js` carregado no WebUi e no Mobile; `ofertioTooltips.init` no `OnAfterRenderAsync` (hover/foco e toque/clique).
+- [x] **Conteúdo:** faixas da Oportunidade (0–39 baixa, 40–69 boa, 70–100 super oferta), composição da Vantagem (desconto real, frete, comissão, avaliação, ranking, vendas) e níveis de Segurança.
+
+## 🎯 Relevância e precisão da busca ML (`MercadoLivreRelevanceAndMainProducts`)
+
+- [x] **Relevância nativa:** "Relevância (Padrão Mercado Livre)" é a ordenação padrão e mantém a ordem exata da API; o score Ofertio só reordena em "Melhor vantagem + segurança". O `/products/search` não aceita `sort` (o `/sites/MLB/search`, que aceita, responde 403 para apps de terceiros) e já devolve na relevância do ML.
+- [x] **Categorias em 1 clique:** atalhos "Buscar só em" com os domínios sugeridos (`domain_discovery` + `domain_id` dos resultados), pois o `/products/search` não devolve `available_filters`.
+- [x] **Anti-acessórios:** "Apenas produtos principais (ocultar acessórios)" na tela e na varredura do ML.
+- [x] **Tooltips:** ícone (?) com `data-bs-toggle="tooltip"`, `data-bs-placement="top"` e `title`; `window.initTooltips` (`hover focus click`) no primeiro render e após cada atualização da lista.
+- [ ] **Validar com a conta real:** buscar "iphone 15" com e sem "Apenas produtos principais" e conferir os atalhos de categoria.
+
+## 🏷️ Pílulas de categoria e selos clicáveis (`CategoryChipsAndScoreBadgeModal`)
+
+- [x] **Categorias preservadas:** todas as categorias encontradas para o termo ficam na tela (`MergeCategoryChips`); a selecionada fica azul e as demais outline; troca direta com 1 clique, sem passar por "Todas".
+- [x] **Outras categorias:** acima de 6, o botão `bi-funnel` alterna o restante sem nova chamada à API (a selecionada sempre aparece).
+- [x] **Selos clicáveis:** o selo inteiro de Oportunidade, Vantagem e Segurança tem tooltip (hover/foco), `cursor: pointer; user-select: none` e abre o modal de explicação controlado pelo componente, com os números daquela oferta.
+- [ ] **Validar no navegador:** buscar "chinelo", clicar em "Sandálias e tamancos", trocar direto para outra pílula e abrir o modal de cada selo (desktop e celular).
+
+## 🔗 Link de rastreio com a URL do ambiente (`DynamicTrackingLinkBaseUrl`)
+
+- [x] **URL dinâmica:** o "Link de rastreio Ofertio" (Gerador de Links, página pública, Buscar Ofertas e seletor de link dos agendadores) troca o `http://localhost:5001` por `NavigationManager.BaseUri` (`GetBaseUrl()`), ex.: `https://dev.ofertio.com.br/AchadinhoCerto/{code}`.
+- [x] **Redirect pela WebUi:** `ShortLinkProxyExtensions` encaminha `/{storeSlug}/{code}` e `/r/{code}` para a API, que registra o clique e redireciona.
+- [x] **Preservado:** domínio de encurtador configurado (ex.: `tflow.link`) não é trocado; botões Copiar, WhatsApp e Telegram mantêm os ícones `bi-*`.
+- [ ] **Disparos automáticos:** mensagens montadas no servidor (grupos monitorados, robôs) ainda usam `Ofertio:ShortLinks:PublicBaseUrl`; definir o domínio público por ambiente.
+
+## 🛡️ Código MLB preservado no link de afiliado (`MercadoLivreProductIdPreservation`)
+
+- [x] **Sem ID fictício:** link do Mercado Livre sem código MLB (ex.: `meli.la` que abre uma vitrine `/social/...`) é recusado com mensagem clara, em vez de virar `MLB1234567890`.
+- [x] **URL preservada:** `/p/MLB20621890` continua `/p/MLB20621890` e `/MLB-2062189012-item` continua anúncio; só os `matt_*` de terceiros são trocados pelos da loja.
+- [x] **Extração:** catálogo e anúncio (com ou sem hífen, 6 a 14 dígitos), sem confundir `MLBU...` nem números maiores.
+- [ ] **Homologar:** publicar com EXECUCAO_HOMOLOGACAO e converter de novo `https://www.mercadolivre.com.br/p/MLB20621890?matt_tool=97303724&matt_word=97303724`; links já gerados com `MLB1234567890` precisam ser refeitos.
+
+## ✏️ Edição de lojas em Minhas Lojas / Integrações (`StoreEditModal`)
+
+- [x] **Botão no card:** "Editar loja" (`bi-pencil-square`) antes de "Desconectar loja".
+- [x] **Mesmo modal:** `ConnectStoreModal` abre como "Editar loja" com plataforma pré-selecionada (travada), apelido e ID de afiliado preenchidos; "Conectar nova loja" sempre abre limpo em modo criação.
+- [x] **UPDATE de verdade:** `POST/PUT api/marketplace-auth/lojas/{id}` atualiza a loja existente (mesma `ShopId`), sem criar registro duplicado, mesmo quando o apelido muda.
+- [x] **Validações:** dono da loja, ID de afiliado normalizado (aceita link), bloqueio de ID duplicado; campo de ID vazio mantém o atual.
+- [ ] **Homologar:** editar o apelido e o ID de uma loja em `https://dev.ofertio.com.br/minhas-lojas` e conferir que continua um único card.
+
+## 🔗 Link de rastreio com slug numérico (`ShortLinkNumericSlug`)
+
+- [x] **Causa do 404:** a rota `/{storeSlug}/{code}` (API e proxy da WebUi) exigia slug começando com letra; loja com apelido numérico (ex.: `97303724`) gerava `/97303724/xh8pmzh`, que caía no "não encontrado" do Blazor.
+- [x] **Rota alinhada ao gerador:** slug aceita `^[A-Za-z0-9]{1,80}$` nos dois lados; `GenerateSlug` só produz letras/dígitos ASCII. O formato do link continua `{base}/{slug}/{code}` (sem prefixo `/p/`, que é a página do Conversor Público).
+- [x] **Tracing:** o redirect registra slug e código na entrada e o host de destino no 302 (ou "Código curto não encontrado").
+- [ ] **Homologar:** abrir `https://dev.ofertio.com.br/97303724/xh8pmzh` e conferir o redirect para o Mercado Livre.
+
+## 🌐 Integrações Globais no Painel Master (`GlobalIntegrationsMaster`)
+
+- [x] **Menu Master:** "Integrações Globais" com submenu "API Mercado Livre" (espaço para TikTok Shop e Shopee como "Em breve").
+- [x] **Tela API Mercado Livre:** status (`Ativo` / `Expirado` / `Desconectado`), data/hora de expiração do token, "Autorizar / Reautorizar Mercado Livre" (OAuth do administrador), desconectar e "Tempo de Cache de Buscas (minutos)" salvo nas configurações globais.
+- [x] **Token Master:** tabela `GlobalIntegrationTokens` (criptografada); as buscas usam o token Master primeiro e mantêm o token legado do usuário como fallback.
+- [x] **Refresh automático:** token expirado ou recusado (401/403) dispara o `refresh_token` no backend, grava o novo token e repete a busca de forma transparente.
+- [x] **Cache global de buscas:** a mesma consulta (texto + filtros) dentro do tempo configurado (padrão 15 min, 0 desliga) não consome cota da API; cada cliente recebe o próprio `matt_tool`.
+- [x] **Minhas Lojas:** removidos "API de busca: autorizada (OAuth)" e "Reautorizar Mercado Livre"; ficam ID de afiliado, Editar loja e Desconectar loja.
+- [x] **Matriz de menus:** permissão "Integrações Globais" por plano; desligada, oculta Buscar Ofertas, Radar de Ofertas e Perfil de mineração (somente menu).
+- [ ] **Homologar:** autorizar o Mercado Livre em Master ➔ Integrações Globais ➔ API Mercado Livre e fazer uma busca em `/busca` com um cliente sem OAuth próprio.
+
+## 🎛️ Filtros compactos da Buscar Ofertas (`CompactSearchFilters`)
+
+- [x] **Barra única:** `[Plataformas] [Filtros e Qualificadores] [Categorias] [Filtros]` logo abaixo da busca; cabeçalho em uma linha, alertas e status das lojas compactos e métricas recolhidas no botão "Métricas", para a vitrine aparecer sem rolagem.
+- [x] **Combos multisseleção (`MultiSelectDropdown`):** checkboxes internos, campo de busca no topo que filtra a partir de 3 letras (sem diferenciar acentos) e resumo no botão, ex.: "Filtros e Qualificadores (2)".
+- [x] **Categorias:** substituem o select "Categoria" e as pílulas "Buscar só em"; mostram quantas ofertas carregadas há em cada uma e filtram **só em memória**, sem nova chamada HTTP.
+- [x] **Modal "Filtros" (`bi-sliders`):** preço mínimo, preço máximo e ordenação (Relevância como padrão), com "Aplicar Filtros" e "Limpar"; edita um rascunho (`OfferSearchAdvancedFilters`) que recebe novos campos sem mudar a tela.
+- [ ] **Validar no navegador:** buscar "notebook", marcar duas categorias, abrir "Filtros" com preço mínimo maior que o máximo (deve recusar) e conferir no celular.
+- [x] **Padrão de combos (seção 2 das diretrizes de UI):** `MultiSelectDropdown` mostra a busca só com mais de 6 opções (Plataformas e Filtros e Qualificadores ficam sem busca), foca a busca ou a lista ao abrir e navega por setas, Espaço, Enter e Esc.
+- [ ] **Validar o teclado:** abrir "Categorias" com mais de 6 opções, descer com as setas, marcar com Espaço ou Enter e fechar com Esc sem disparar a busca.
+
+## 🧭 Combos centralizados e timeout do Mercado Livre (`CompactCombosAndMlTimeout`)
+
+- [x] **Barra de filtros centralizada:** `.busca-filter-bar` com `display:flex`, `flex-wrap:wrap`, `justify-content:center`, `align-items:center`, `gap:8px` e `width:100%`; no tablet e no celular o menu ancora na barra e nunca vaza na horizontal.
+- [x] **Lista vertical blindada:** opções em coluna, uma por linha, com o checkbox à esquerda do texto; o `app.css` e o `app-interop.js` agora levam `?v=` (versão do build) para o navegador não reaproveitar o CSS antigo do cache.
+- [x] **Fechar ao clicar fora:** `ofertioMultiSelect.watch/unwatch` observa `pointerdown` e `focusin` fora do combo aberto e chama `CloseFromOutside`; abrir outro combo fecha o anterior. O `dropdown-menu` do Bootstrap não foi usado porque o atalho de teclado nativo dele exige `data-bs-toggle` e disputaria o estado com o Blazor.
+- [x] **Teclado e mouse:** foco automático na busca "Filtrar (mín. 3 letras)" (ou na lista, quando há até 6 opções); setas ou hover destacam o item; Espaço marca/desmarca; Enter marca/desmarca o item destacado ou fecha sem item destacado; Esc fecha e devolve o foco ao botão.
+- [x] **Timeout do Mercado Livre:** `HttpClient` do ML com `Integrations:MercadoLivre:HttpTimeoutSeconds` (padrão 30 s, aceito de 15 a 120 s); Shopee e Amazon seguem em 12 s.
+- [x] **Degradação amigável:** produto lento é ignorado e os demais aparecem; página seguinte lenta mantém as ofertas já achadas e o "Carregar mais" retoma dela; timeout na primeira página mostra "O Mercado Livre demorou para responder. Tente buscar de novo em instantes." no lugar da mensagem crua do .NET.
+- [x] **Assíncrono ponta a ponta:** `.Result` removidos da busca unificada e do enriquecimento de métricas do ML (tudo com `await`).
+- [ ] **Validar no navegador:** Ctrl+F5 na `/busca`, conferir os três combos centralizados, clicar fora para fechar e testar no celular.
+
+## 🏷️ Categorias reais na Buscar Ofertas (`RealCategoryFilter`)
+
+- [x] **Categoria real do item:** cada oferta do Mercado Livre usa o `domain_id` do produto de catálogo (ou da página do `products/search`, quando o produto não informa) e o `category_id` do anúncio, traduzido para português por `/categories/{id}` (cache de 12 h).
+- [x] **Combo sem nomes em inglês:** opções = domínios das ofertas carregadas (nome da categoria real), sugestões do `domain_discovery` (nome em português, lembrado para as próximas buscas) e as marcadas; o nome derivado do id ("Flip flops") é só o último recurso, e domínios vistos sem nenhuma oferta não entram.
+- [x] **Buscar com categoria:** as categorias marcadas vão para a API (a query string agora repete a chave `MercadoLivreCategories`, antes ia `System.Collections.Generic.List...`) e viram uma varredura do `products/search` com `domain_id` por categoria (até 3), intercalando as ofertas sem repetição; "Carregar mais" mantém as categorias.
+- [x] **Contador e categoria zerada:** o contador continua em memória e em tempo real; categoria marcada com 0 ofertas mostra o aviso "Nenhuma oferta carregada em …" com o botão "Buscar nesta categoria" (`bi-search`) ou, se já foi consultada, "O Mercado Livre não retornou ofertas ativas em …".
+- [ ] **Validar no navegador:** buscar "havaianas", conferir os nomes em português no combo, marcar uma categoria com 0 e clicar em Buscar.

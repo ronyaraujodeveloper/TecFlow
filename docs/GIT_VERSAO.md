@@ -145,3 +145,4 @@
 [2026-10-21 20:18:44] feat(busca): filtros compactos com combos multisselecao e modal de filtros avancados
 [2026-10-21 21:13:35] fix(busca): combos centralizados com clique fora e teclado; timeout do Mercado Livre em 30s com degradacao amigavel
 [2026-10-21 21:40:03] fix(busca): categorias reais em portugues, envio das categorias na query string e busca por domain_id no Mercado Livre
+[2026-10-21 22:10:12] docs: modulariza regras em docs/rules, cria checklist ativo e enxuga README

@@ -1947,6 +1947,23 @@ flowchart TD
   MERGE --> COMBO
 ```
 
+### Mapa da documentação (`DocsModularRules`)
+
+O `README.md` é só o ponto de entrada; o agente abre o arquivo de regras da camada em que trabalha e o checklist ativo. O histórico fica como arquivo de consulta.
+
+```mermaid
+flowchart LR
+  README["README.md<br/>objetivo, stack, comandos"] --> BACK["docs/rules/backend-architecture.md"]
+  README --> UI["docs/rules/frontend-ui.md"]
+  README --> MKT["docs/rules/marketplaces-oauth.md"]
+  README --> ENC["docs/rules/encoding-standards.md"]
+  README --> CHK["docs/CHECKLIST_ATIVO.md<br/>pendências"]
+  README --> HOM["docs/EXECUCAO_HOMOLOGACAO.md"]
+  CHK -->|"item concluído"| HIST["docs/HISTORICO_FASES_CONCLUIDAS.md"]
+  RULES[".cursorrules"] --> LISTA["docs/LISTA_ARQUIVOS_MUDANCAS.md"]
+  RULES --> DIAG["docs/DIAGRAMAS_ARQUITETURA.md"]
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

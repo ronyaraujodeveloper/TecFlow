@@ -143,3 +143,4 @@
 [2026-10-20 23:11:51] fix(shortlink): aceita slug numerico no link de rastreio (/97303724/xh8pmzh dava 404) + logs de redirect
 [2026-10-21 19:40:25] feat(integracoes): centraliza API Mercado Livre no Painel Master com cache global e refresh automatico
 [2026-10-21 20:18:44] feat(busca): filtros compactos com combos multisselecao e modal de filtros avancados
+[2026-10-21 21:13:35] fix(busca): combos centralizados com clique fora e teclado; timeout do Mercado Livre em 30s com degradacao amigavel

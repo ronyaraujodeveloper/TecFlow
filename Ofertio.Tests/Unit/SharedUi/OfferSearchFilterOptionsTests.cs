@@ -28,6 +28,30 @@ public class OfferSearchFilterOptionsTests
         Assert.Equal(expected, MultiSelectRules.Filter(Options, term).Count);
     }
 
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(3, false)]
+    [InlineData(6, false)]
+    [InlineData(7, true)]
+    public void ShowSearch_ShouldOnlyShowInnerSearchWithMoreThanSixOptions(int count, bool expected)
+    {
+        Assert.Equal(expected, MultiSelectRules.ShowSearch(count));
+        Assert.False(MultiSelectRules.ShowSearch(OfferSearchFilterOptions.Platforms.Count));
+        Assert.False(MultiSelectRules.ShowSearch(OfferSearchFilterOptions.Qualifiers.Count));
+    }
+
+    [Theory]
+    [InlineData(-1, 5, 1, 0)]
+    [InlineData(0, 5, 1, 1)]
+    [InlineData(4, 5, 1, 4)]
+    [InlineData(2, 5, -1, 1)]
+    [InlineData(0, 5, -1, 0)]
+    [InlineData(-1, 0, 1, -1)]
+    public void MoveActive_ShouldClampKeyboardNavigationToTheVisibleOptions(int current, int count, int step, int expected)
+    {
+        Assert.Equal(expected, MultiSelectRules.MoveActive(current, count, step));
+    }
+
     [Fact]
     public void IsSearchTooShort_ShouldFlagOneOrTwoTypedCharacters()
     {

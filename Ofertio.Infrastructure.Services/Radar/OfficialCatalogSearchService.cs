@@ -74,12 +74,15 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
             : SearchLocalProductsAsync(keyword, limit, cancellationToken);
         var ratesTask = LoadCommissionRatesAsync(userId, cancellationToken);
         await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask, ratesTask);
-        var (mercadoLivreRate, amazonRate) = ratesTask.Result;
+        var (mercadoLivreRate, amazonRate) = await ratesTask;
 
-        var mlItems = mlTask.Result.Items;
-        var shopeeItems = shopeeTask.Result.Items;
-        var amazonItems = amazonTask.Result.Items;
-        var localItems = internalTask.Result;
+        var ml = await mlTask;
+        var shopee = await shopeeTask;
+        var amazon = await amazonTask;
+        var mlItems = ml.Items;
+        var shopeeItems = shopee.Items;
+        var amazonItems = amazon.Items;
+        var localItems = await internalTask;
 
         _logger.LogInformation(
             "Busca concluída para '{query}': ML={mlCount}, Shopee={shopeeCount}, Amazon={amazonCount}, Local={localCount}",
@@ -105,7 +108,6 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
 
         var merged = OfficialCatalogSearchRules.ApplySort(deduplicated, filter.SortBy).ToList();
 
-        var ml = mlTask.Result;
         var mlStatus = OfficialCatalogSearchRules.BuildChannelStatus(
             "MercadoLivre",
             "Mercado Livre",
@@ -141,14 +143,14 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     "Shopee",
                     includeShopee,
                     shopeeItems.Count,
-                    shopeeTask.Result.MissingCredentials,
+                    shopee.MissingCredentials,
                     OfficialCatalogSearchRules.ShopeeMissingApiKeyMessage),
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Amazon",
                     "Amazon",
                     includeAmazon,
                     amazonItems.Count,
-                    amazonTask.Result.MissingCredentials,
+                    amazon.MissingCredentials,
                     OfficialCatalogSearchRules.AmazonMissingPaApiMessage),
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Local",
@@ -191,6 +193,11 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         catch (JsonException)
         {
             return OfficialCatalogChannelResult.Failed("Erro de Desserialização");
+        }
+        catch (Exception ex) when (OfficialCatalogSearchRules.IsHttpTimeout(ex, cancellationToken))
+        {
+            _logger.LogWarning("[ML Busca] A busca '{Query}' excedeu o tempo limite da API do Mercado Livre.", keyword);
+            return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreTimeoutMessage);
         }
         catch (Exception ex)
         {

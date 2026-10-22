@@ -10,6 +10,15 @@ public static class MultiSelectRules
     /// <summary>A lista de opções só é filtrada a partir desta quantidade de caracteres digitados.</summary>
     public const int MinSearchLength = 3;
 
+    /// <summary>O campo de busca interno só aparece com mais opções do que isto (padrão de combos do README).</summary>
+    public const int SearchThreshold = 6;
+
+    public static bool ShowSearch(int optionCount) => optionCount > SearchThreshold;
+
+    /// <summary>Próximo item ativo ao navegar com as setas: sem item ativo (-1) a seta para baixo vai ao primeiro; para nos extremos.</summary>
+    public static int MoveActive(int current, int count, int step) =>
+        count == 0 ? -1 : Math.Clamp(current + step, 0, count - 1);
+
     public static bool IsSearchActive(string? term) =>
         (term?.Trim().Length ?? 0) >= MinSearchLength;
 

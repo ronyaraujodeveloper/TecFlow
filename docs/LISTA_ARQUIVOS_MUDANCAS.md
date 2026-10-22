@@ -1877,6 +1877,29 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/wwwroot/app.css** - `.busca-header`, `.busca-filter-bar`, `.busca-status-bar` e `.multiselect-*` (menu em largura total no celular).
 - [x] **Ofertio.Tests/Unit/SharedUi/OfferSearchFilterOptionsTests.cs** *(novo)* + **Unit/Radar/OfficialCatalogSearchRulesTests.cs** - busca a partir de 3 letras, resumo, seleção, mapeamento do filtro, contadores, validação do modal e filtro de várias categorias.
 
+### ComboDropdownStandard - Padrão global de combos e dropdowns (README, seção 2)
+
+- [x] **README.md** - nova seção "2. Padrão Global para Combos e Dropdowns" e fechamento do bloco de código do exemplo de botões, que estava aberto.
+- [x] **Ofertio.SharedUi/Components/Shared/MultiSelectDropdown.razor** - busca interna só com mais de 6 opções; foco automático na busca (ou na lista, sem busca) ao abrir; setas movem o item ativo (`aria-activedescendant`), Espaço marca/desmarca, Enter confirma e fecha, Esc fecha e devolve o foco ao botão.
+- [x] **Ofertio.SharedUi/Helpers/MultiSelectRules.cs** - `SearchThreshold` (6), `ShowSearch` e `MoveActive`.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - `ofertioMultiSelect`: setas, Espaço e Enter na busca/lista não rolam a página nem enviam o formulário; `reveal` rola até o item ativo.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - lista em coluna (`flex-direction: column`) e destaque do item ativo.
+- [x] **Ofertio.SharedUi/Components/Pages/Busca/BuscaGlobal.razor** - texto das regras com o novo comportamento dos combos.
+- [x] **Ofertio.Tests/Unit/SharedUi/OfferSearchFilterOptionsTests.cs** - `ShowSearch` (Plataformas e Qualificadores sem busca) e `MoveActive`.
+
+### CompactCombosAndMlTimeout - Combos centralizados, clique fora/teclado e timeout do Mercado Livre
+
+- [x] **Ofertio.SharedUi/Components/Shared/MultiSelectDropdown.razor** - sem backdrop; `IAsyncDisposable` com `DotNetObjectReference` e `[JSInvokable] CloseFromOutside`; hover destaca o item; Enter marca/desmarca o item destacado ou fecha; Esc fecha e devolve o foco ao botão.
+- [x] **Ofertio.SharedUi/wwwroot/app-interop.js** - `ofertioMultiSelect.watch/unwatch` (clique ou foco fora fecha o combo) e bloqueio de Espaço/Enter também no checkbox focado.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** - `.busca-filter-bar` centralizada (`justify-content:center`, `gap:8px`, `width:100%`), lista em coluna com checkbox à esquerda, destaque por hover e menu ancorado na barra no tablet/celular.
+- [x] **Ofertio.WebUi/Components/App.razor** - `?v=` com o MVID do SharedUi no `app.css` e no `app-interop.js` (cache-busting).
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreIntegrationOptions.cs** - `HttpTimeoutSeconds` (padrão 30, 15 a 120) e `ResolveHttpTimeout`.
+- [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - `MercadoLivreTimeoutMessage` e `IsHttpTimeout` (timeout do `HttpClient`, nunca cancelamento do chamador).
+- [x] **Ofertio.Infrastructure.Services/WhatsApp/WhatsAppEvolutionRegistrationExtensions.cs** - `HttpClient` do ML com o timeout das opções (antes fixo em 12 s).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - timeout por produto ignora só o produto; timeout de página seguinte mantém as ofertas e o próximo offset; mensagem amigável; `.Result` trocados por `await`.
+- [x] **Ofertio.Infrastructure.Services/Radar/OfficialCatalogSearchService.cs** - `await` nas tarefas da busca unificada e mensagem amigável quando o canal do ML estoura o tempo.
+- [x] **Ofertio.Tests/Unit/Radar/MercadoLivreApiServiceTests.cs** + **OfficialCatalogSearchRulesTests.cs** - produto lento, primeira página lenta, página seguinte lenta, `IsHttpTimeout` e `ResolveHttpTimeout`.
+
 ---
 
 ## 📌 Prioridade sugerida (ordem de execução)

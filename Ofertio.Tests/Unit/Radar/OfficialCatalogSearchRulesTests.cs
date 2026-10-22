@@ -560,4 +560,32 @@ public class OfficialCatalogSearchRulesTests
             item,
             new OfficialCatalogSearchFilter { MinPrice = 50 }));
     }
+
+    [Fact]
+    public void IsHttpTimeout_ShouldRecognizeHttpClientTimeoutButNotCallerCancellation()
+    {
+        var timeout = new TaskCanceledException("HttpClient.Timeout", new TimeoutException());
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+
+        Assert.True(OfficialCatalogSearchRules.IsHttpTimeout(timeout, CancellationToken.None));
+        Assert.True(OfficialCatalogSearchRules.IsHttpTimeout(new TimeoutException(), CancellationToken.None));
+        Assert.False(OfficialCatalogSearchRules.IsHttpTimeout(timeout, cancelled.Token));
+        Assert.False(OfficialCatalogSearchRules.IsHttpTimeout(new HttpRequestException("ML HTTP 500"), CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(0, 30)]
+    [InlineData(12, 30)]
+    [InlineData(500, 30)]
+    [InlineData(15, 15)]
+    [InlineData(60, 60)]
+    [InlineData(120, 120)]
+    public void MercadoLivreOptions_ResolveHttpTimeout_ShouldDefaultTo30SecondsOutsideTheAllowedRange(int configured, int expected)
+    {
+        var options = new Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions { HttpTimeoutSeconds = configured };
+
+        Assert.Equal(TimeSpan.FromSeconds(expected), options.ResolveHttpTimeout());
+        Assert.Equal(30, new Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions().ResolveHttpTimeout().TotalSeconds);
+    }
 }

@@ -2966,8 +2966,11 @@ html, body {
 .busca-page .busca-filter-bar {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
-    gap: 0.375rem;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
     margin-top: 0.375rem;
 }
 
@@ -2994,13 +2997,7 @@ html, body {
     font-size: 0.7rem;
 }
 
-.multiselect-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1040;
-}
-
-.multiselect-menu {
+.multiselect .multiselect-menu {
     position: absolute;
     top: calc(100% + 0.25rem);
     left: 0;
@@ -3014,15 +3011,31 @@ html, body {
     border-radius: 0.625rem;
 }
 
-.multiselect-options {
+.multiselect .multiselect-options {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
     max-height: 16rem;
-    margin-top: 0.375rem;
     overflow-y: auto;
+    border-radius: 0.375rem;
 }
 
-.multiselect-option {
+.multiselect-options:focus {
+    outline: none;
+}
+
+.multiselect-options:focus-visible {
+    box-shadow: 0 0 0 0.15rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.multiselect .multiselect-option {
     display: flex;
+    flex: 0 0 auto;
+    flex-direction: row;
     align-items: center;
+    width: 100%;
+    margin: 0;
     gap: 0.5rem;
     padding: 0.3rem 0.4rem;
     border-radius: 0.375rem;
@@ -3035,12 +3048,28 @@ html, body {
     background: var(--bs-tertiary-bg, #f1f5f9);
 }
 
+.multiselect-option .form-check-input {
+    flex: 0 0 auto;
+    float: none;
+    margin: 0;
+}
+
+.multiselect-option.is-active {
+    background: rgba(var(--bs-primary-rgb), 0.12);
+}
+
+.multiselect-options:focus .multiselect-option.is-active {
+    box-shadow: inset 2px 0 0 var(--bs-primary);
+}
+
 .multiselect-option.is-selected {
     font-weight: 600;
 }
 
 .multiselect-option-label {
     flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .multiselect-hint {
@@ -3062,7 +3091,8 @@ html, body {
     font-size: 0.8rem;
     text-decoration: none;
 }
-@media (max-width: 575.98px) {
+/* Tablet e celular: o menu ancora na barra de filtros (centralizada) para não vazar na horizontal */
+@media (max-width: 991.98px) {
     .busca-page .busca-filter-bar {
         position: relative;
     }
@@ -3071,9 +3101,20 @@ html, body {
         position: static;
     }
 
-    .busca-page .multiselect-menu {
+    .busca-page .multiselect .multiselect-menu {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: min(24rem, 100%);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .busca-page .multiselect .multiselect-menu {
+        left: 0;
         right: 0;
+        transform: none;
         width: auto;
+        min-width: 0;
         max-width: none;
     }
 }

@@ -48,6 +48,19 @@ public static class OfficialCatalogSearchRules
     public const string MercadoLivreSearchForbiddenMessage =
         "A API oficial do Mercado Livre recusou a busca (HTTP 403). A conexão é gerenciada pelo administrador da plataforma (Painel Master ➔ Integrações Globais); a vitrine pública não é consultada para evitar o bloqueio anti-robô.";
 
+    public const string MercadoLivreTimeoutMessage =
+        "O Mercado Livre demorou para responder. Tente buscar de novo em instantes.";
+
+    /// <summary>
+    /// Timeout do HttpClient (não o cancelamento pedido por quem chamou): o <see cref="TaskCanceledException"/> do
+    /// timeout traz um <see cref="TimeoutException"/> interno e o token do chamador continua sem cancelamento.
+    /// </summary>
+    public static bool IsHttpTimeout(Exception exception, CancellationToken callerToken) =>
+        !callerToken.IsCancellationRequested
+        && (exception is TimeoutException
+            || exception is OperationCanceledException
+            || exception.InnerException is TimeoutException);
+
     /// <summary>401/403 ou erro de escopo de usuário na busca oficial (o token precisa ser renovado ou a conta reconectada).</summary>
     public static bool IsMercadoLivreSearchRefused(HttpStatusCode statusCode, string? body)
     {

@@ -77,10 +77,12 @@ public static class WhatsAppEvolutionRegistrationExtensions
         services.Configure<Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions>(
             configuration.GetSection(Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions.SectionName));
         services.AddSingleton(_ => new Ofertio.Business.Integrations.MercadoLivre.MercadoLivreAntiBotGuard());
-        services.AddHttpClient<IMercadoLivreApiService, Ofertio.Infrastructure.Services.Radar.MercadoLivreApiService>(client =>
+        services.AddHttpClient<IMercadoLivreApiService, Ofertio.Infrastructure.Services.Radar.MercadoLivreApiService>((sp, client) =>
         {
             client.BaseAddress = new Uri("https://api.mercadolibre.com/");
-            client.Timeout = TimeSpan.FromSeconds(12);
+            client.Timeout = sp.GetRequiredService<IOptions<Ofertio.Business.Integrations.MercadoLivre.MercadoLivreIntegrationOptions>>()
+                .Value
+                .ResolveHttpTimeout();
             Ofertio.Infrastructure.Services.Radar.MercadoLivreApiService.EnsurePublicUserAgent(client);
         }).ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
         {

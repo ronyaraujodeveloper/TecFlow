@@ -1894,6 +1894,42 @@ flowchart LR
   API --> MEM
 ```
 
+### Padrão de combos e dropdowns (`ComboDropdownStandard`)
+
+```mermaid
+flowchart TD
+  OPEN["Abrir o combo (botão com bi-*)"] --> COUNT{"Mais de 6 opções?"}
+  COUNT -->|sim| SEARCH["Mostra a busca e foca o input<br/>filtra a partir de 3 letras"]
+  COUNT -->|não| LIST["Sem busca; foca a lista"]
+  SEARCH -->|"ArrowDown"| LIST
+  LIST -->|"ArrowUp no 1º item"| SEARCH
+  LIST -->|"Espaço"| TOGGLE["Marca ou desmarca o item ativo"]
+  LIST -->|"Enter ou Esc"| CLOSE["Fecha e devolve o foco ao botão"]
+  OPEN -->|"clique fora"| CLOSE
+  JS["app-interop.js ofertioMultiSelect<br/>bloqueia rolagem e envio do formulário"] -.-> LIST
+```
+
+### Combos centralizados e timeout do Mercado Livre (`CompactCombosAndMlTimeout`)
+
+```mermaid
+flowchart TD
+  subgraph UI["Buscar Ofertas (SharedUi)"]
+    BAR["busca-filter-bar<br/>flex centralizado, gap 8px"] --> MS["MultiSelectDropdown"]
+    MS -->|"abrir: watch(root, DotNetRef)"| WATCH["app-interop.js<br/>pointerdown e focusin fora"]
+    WATCH -->|"CloseFromOutside()"| MS
+    MS -->|"fechar: unwatch(root)"| WATCH
+  end
+  subgraph API["Busca unificada (Infrastructure)"]
+    OCS["OfficialCatalogSearchService<br/>await em cada canal"] --> ML["MercadoLivreApiService"]
+    ML --> HTTP["HttpClient do ML<br/>Integrations:MercadoLivre:HttpTimeoutSeconds = 30"]
+    HTTP -->|"timeout em /products/id"| SKIP["Ignora só o produto"]
+    HTTP -->|"timeout em página seguinte"| KEEP["Mantém ofertas e NextOffset"]
+    HTTP -->|"timeout na 1ª página"| MSG["MercadoLivreTimeoutMessage"]
+  end
+  RULES["OfficialCatalogSearchRules.IsHttpTimeout<br/>ignora cancelamento do chamador"] -.-> ML
+  RULES -.-> OCS
+```
+
 ### RedirectUri do OAuth Mercado Livre em túneis Ngrok
 
 ```mermaid

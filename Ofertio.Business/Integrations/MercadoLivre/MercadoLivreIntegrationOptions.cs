@@ -36,6 +36,18 @@ public sealed class MercadoLivreIntegrationOptions
 
     public int ResolveSearchCacheMinutes() => MercadoLivreSearchCacheRules.ResolveMinutes(SearchCacheMinutes);
 
+    public const int DefaultHttpTimeoutSeconds = 30;
+    public const int MinHttpTimeoutSeconds = 15;
+    public const int MaxHttpTimeoutSeconds = 120;
+
+    /// <summary>Tempo máximo de cada chamada HTTP à API do Mercado Livre (fora da faixa 15..120 vira 30).</summary>
+    public int HttpTimeoutSeconds { get; set; } = DefaultHttpTimeoutSeconds;
+
+    public TimeSpan ResolveHttpTimeout() => TimeSpan.FromSeconds(
+        HttpTimeoutSeconds is >= MinHttpTimeoutSeconds and <= MaxHttpTimeoutSeconds
+            ? HttpTimeoutSeconds
+            : DefaultHttpTimeoutSeconds);
+
     public bool HasAppCredentials =>
         !string.IsNullOrWhiteSpace(AppId) && !string.IsNullOrWhiteSpace(SecretKey);
 

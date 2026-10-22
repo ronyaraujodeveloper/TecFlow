@@ -55,6 +55,26 @@ Todos os botões da aplicação (`<button>`, `<a>` estilizados como botão ou el
 <button class="btn btn-primary">
     <i class="bi bi-copy me-1"></i> Clonar
 </button>
+```
+
+### 2. Padrão Global para Combos e Dropdowns
+
+Sempre que criar ou refatorar combos/dropdowns em qualquer tela da aplicação, siga estritamente estas diretrizes:
+
+1. **Busca Digitável Condicional:**
+   - O campo de pesquisa/filtro interno no topo do combo só deve ser exibido quando o combo possuir **mais de 6 itens** (`count > 6`). Para 6 itens ou menos, não exiba o input de busca.
+
+2. **Confirmação de Seleção Múltipla vs. Única:**
+   - Sempre valide e confirme para cada novo combo criado se o comportamento esperado é **múltipla seleção (multiselect com checkboxes)** ou **seleção única**.
+
+3. **Exibição Estritamente Vertical:**
+   - Os itens internos da lista do dropdown DEVEM ser exibidos obrigatoriamente **um abaixo do outro (disposição vertical em coluna)**, garantindo alinhamento e leitura limpa.
+
+4. **Comportamento e Navegação:**
+   - **Click Outside / Blur:** O combo fecha automaticamente ao clicar fora.
+   - **Auto-Focus:** Quando a busca interna existir (> 6 itens), o cursor ganha foco automático no input ao abrir.
+   - **Teclado:** Suporte nativo para navegação via Setas (`ArrowUp`/`ArrowDown`), Seleção/Check (`Espaço`), Confirmação (`Enter`) e Fechamento (`Esc`).
+   - **Ícone:** Todo botão gatilho deve conter o ícone do Bootstrap Icons (`bi bi-*`).
 
 ---
 
@@ -793,6 +813,19 @@ O checklist abaixo contém **apenas as fases ativas e pendentes**.
 - [x] **Categorias:** substituem o select "Categoria" e as pílulas "Buscar só em"; mostram quantas ofertas carregadas há em cada uma e filtram **só em memória**, sem nova chamada HTTP.
 - [x] **Modal "Filtros" (`bi-sliders`):** preço mínimo, preço máximo e ordenação (Relevância como padrão), com "Aplicar Filtros" e "Limpar"; edita um rascunho (`OfferSearchAdvancedFilters`) que recebe novos campos sem mudar a tela.
 - [ ] **Validar no navegador:** buscar "notebook", marcar duas categorias, abrir "Filtros" com preço mínimo maior que o máximo (deve recusar) e conferir no celular.
+- [x] **Padrão de combos (seção 2 das diretrizes de UI):** `MultiSelectDropdown` mostra a busca só com mais de 6 opções (Plataformas e Filtros e Qualificadores ficam sem busca), foca a busca ou a lista ao abrir e navega por setas, Espaço, Enter e Esc.
+- [ ] **Validar o teclado:** abrir "Categorias" com mais de 6 opções, descer com as setas, marcar com Espaço ou Enter e fechar com Esc sem disparar a busca.
+
+## 🧭 Combos centralizados e timeout do Mercado Livre (`CompactCombosAndMlTimeout`)
+
+- [x] **Barra de filtros centralizada:** `.busca-filter-bar` com `display:flex`, `flex-wrap:wrap`, `justify-content:center`, `align-items:center`, `gap:8px` e `width:100%`; no tablet e no celular o menu ancora na barra e nunca vaza na horizontal.
+- [x] **Lista vertical blindada:** opções em coluna, uma por linha, com o checkbox à esquerda do texto; o `app.css` e o `app-interop.js` agora levam `?v=` (versão do build) para o navegador não reaproveitar o CSS antigo do cache.
+- [x] **Fechar ao clicar fora:** `ofertioMultiSelect.watch/unwatch` observa `pointerdown` e `focusin` fora do combo aberto e chama `CloseFromOutside`; abrir outro combo fecha o anterior. O `dropdown-menu` do Bootstrap não foi usado porque o atalho de teclado nativo dele exige `data-bs-toggle` e disputaria o estado com o Blazor.
+- [x] **Teclado e mouse:** foco automático na busca "Filtrar (mín. 3 letras)" (ou na lista, quando há até 6 opções); setas ou hover destacam o item; Espaço marca/desmarca; Enter marca/desmarca o item destacado ou fecha sem item destacado; Esc fecha e devolve o foco ao botão.
+- [x] **Timeout do Mercado Livre:** `HttpClient` do ML com `Integrations:MercadoLivre:HttpTimeoutSeconds` (padrão 30 s, aceito de 15 a 120 s); Shopee e Amazon seguem em 12 s.
+- [x] **Degradação amigável:** produto lento é ignorado e os demais aparecem; página seguinte lenta mantém as ofertas já achadas e o "Carregar mais" retoma dela; timeout na primeira página mostra "O Mercado Livre demorou para responder. Tente buscar de novo em instantes." no lugar da mensagem crua do .NET.
+- [x] **Assíncrono ponta a ponta:** `.Result` removidos da busca unificada e do enriquecimento de métricas do ML (tudo com `await`).
+- [ ] **Validar no navegador:** Ctrl+F5 na `/busca`, conferir os três combos centralizados, clicar fora para fechar e testar no celular.
 
 ---
 

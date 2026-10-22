@@ -329,3 +329,69 @@ window.ofertioMenuDnd = (function () {
         document.addEventListener("DOMContentLoaded", attach);
     }
 })();
+
+/* Combos multisseleção (MultiSelectDropdown): setas, Espaço e Enter na busca ou na lista não rolam a página
+   nem enviam o formulário da tela (Espaço continua digitando na busca); clique ou foco fora fecha o combo aberto. */
+window.ofertioMultiSelect = (function () {
+    const watched = new Map();
+
+    const closeOutside = function (target) {
+        watched.forEach(function (dotNetRef, root) {
+            if (!root.isConnected) {
+                watched.delete(root);
+                return;
+            }
+
+            if (target instanceof Node && root.contains(target)) {
+                return;
+            }
+
+            watched.delete(root);
+            dotNetRef.invokeMethodAsync("CloseFromOutside").catch(function () {
+                /* circuito encerrado: nada a fechar */
+            });
+        });
+    };
+
+    document.addEventListener("pointerdown", function (event) {
+        closeOutside(event.target);
+    }, true);
+
+    document.addEventListener("focusin", function (event) {
+        closeOutside(event.target);
+    });
+
+    document.addEventListener("keydown", function (event) {
+        const target = event.target;
+        if (!target || typeof target.closest !== "function" || !target.closest(".multiselect-menu")) {
+            return;
+        }
+
+        const isSearch = target.tagName === "INPUT" && target.type === "search";
+        const isList = target.closest(".multiselect-options") !== null;
+        if (!isSearch && !isList) {
+            return;
+        }
+
+        if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || (isList && event.key === " ")) {
+            event.preventDefault();
+        }
+    });
+
+    return {
+        watch: function (root, dotNetRef) {
+            if (root && dotNetRef) {
+                watched.set(root, dotNetRef);
+            }
+        },
+        unwatch: function (root) {
+            watched.delete(root);
+        },
+        reveal: function (list) {
+            const active = list && typeof list.querySelector === "function" ? list.querySelector(".is-active") : null;
+            if (active) {
+                active.scrollIntoView({ block: "nearest" });
+            }
+        }
+    };
+})();

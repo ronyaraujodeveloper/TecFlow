@@ -151,6 +151,14 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
             return MercadoLivreItemParser.Parse(body);
         }
+        catch (Exception ex) when (OfficialCatalogSearchRules.IsHttpTimeout(ex, cancellationToken))
+        {
+            _logger.LogWarning(
+                "[ML Item] A API do Mercado Livre excedeu o tempo limite ({Timeout}s) ao consultar o item '{Item}'.",
+                _httpClient.Timeout.TotalSeconds,
+                itemId);
+            return null;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "[ML Item] Exceção ao consultar item Mercado Livre '{Item}'", itemId);
@@ -389,7 +397,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
         catch (Exception ex)
         {
-            return TraceSearchError(ex, query);
+            return TraceSearchError(ex, query, cancellationToken);
         }
     }
 
@@ -415,7 +423,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            return TraceSearchError(ex, query);
+            return TraceSearchError(ex, query, cancellationToken);
         }
 
         var renewed = await RefreshMasterTokenAsync(masterToken, cancellationToken);
@@ -440,12 +448,21 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            return TraceSearchError(ex, query);
+            return TraceSearchError(ex, query, cancellationToken);
         }
     }
 
-    private OfficialCatalogChannelResult TraceSearchError(Exception ex, string query)
+    private OfficialCatalogChannelResult TraceSearchError(Exception ex, string query, CancellationToken cancellationToken)
     {
+        if (OfficialCatalogSearchRules.IsHttpTimeout(ex, cancellationToken))
+        {
+            _logger.LogWarning(
+                "[ML Busca] A API do Mercado Livre excedeu o tempo limite ({Timeout}s) na busca '{Query}'.",
+                _httpClient.Timeout.TotalSeconds,
+                query);
+            return OfficialCatalogChannelResult.Failed(OfficialCatalogSearchRules.MercadoLivreTimeoutMessage);
+        }
+
         var tracedError = string.IsNullOrWhiteSpace(ex.Message)
             ? OfficialCatalogSearchRules.MercadoLivreSearchForbiddenMessage
             : ex.Message;
@@ -474,6 +491,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
         try
         {
             return await ScanCatalogAsync(request, query, renewedToken, affiliateId: null, cancellationToken);
+        }
+        catch (Exception ex) when (OfficialCatalogSearchRules.IsHttpTimeout(ex, cancellationToken))
+        {
+            return TraceSearchError(ex, query, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -568,13 +589,28 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
                     break;
                 }
 
-                var page = await FetchCatalogPageAsync(
-                    candidate,
-                    request.DomainId,
-                    offset,
-                    accessToken,
-                    throwWhenRefused: scanned + candidateScanned == 0,
-                    cancellationToken);
+                MercadoLivreCatalogSearchPage? page;
+                try
+                {
+                    page = await FetchCatalogPageAsync(
+                        candidate,
+                        request.DomainId,
+                        offset,
+                        accessToken,
+                        throwWhenRefused: scanned + candidateScanned == 0,
+                        cancellationToken);
+                }
+                catch (Exception ex) when (items.Count > 0 && OfficialCatalogSearchRules.IsHttpTimeout(ex, cancellationToken))
+                {
+                    _logger.LogWarning(
+                        "[ML Busca] products/search '{Query}' (offset {Offset}) excedeu o tempo limite; mantendo as {OfferCount} ofertas já encontradas.",
+                        candidate,
+                        offset,
+                        items.Count);
+                    nextOffset = offset;
+                    break;
+                }
+
                 if (page is null || page.ProductIds.Count == 0)
                 {
                     nextOffset = null;
@@ -697,7 +733,18 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             Enumerable.Range(0, productIds.Count),
             new ParallelOptions { MaxDegreeOfParallelism = CatalogLookupParallelism, CancellationToken = cancellationToken },
             async (index, token) =>
-                offers[index] = await ResolveCatalogOffersAsync(productIds[index], accessToken, followChildren: true, token));
+            {
+                try
+                {
+                    offers[index] = await ResolveCatalogOffersAsync(productIds[index], accessToken, followChildren: true, token);
+                }
+                catch (Exception ex) when (OfficialCatalogSearchRules.IsHttpTimeout(ex, token))
+                {
+                    _logger.LogWarning(
+                        "[ML Busca] Produto de catálogo {ProductId} ignorado: a API do Mercado Livre excedeu o tempo limite.",
+                        productIds[index]);
+                }
+            });
         return offers.SelectMany(productOffers => productOffers ?? []).ToList();
     }
 
@@ -782,10 +829,10 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             cancellationToken);
         await Task.WhenAll(sellersTask, reviewsTask, rankingTask, categoryPathsTask);
 
-        var sellers = sellersTask.Result;
-        var reviews = reviewsTask.Result;
-        var rankings = rankingTask.Result.Values.ToList();
-        var categoryPaths = categoryPathsTask.Result;
+        var sellers = await sellersTask;
+        var reviews = await reviewsTask;
+        var rankings = (await rankingTask).Values.ToList();
+        var categoryPaths = await categoryPathsTask;
         foreach (var item in items)
         {
             if (item.CategoryId is not null && categoryPaths.TryGetValue(item.CategoryId, out var categoryPath))

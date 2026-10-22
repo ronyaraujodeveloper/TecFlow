@@ -585,6 +585,65 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
+    public async Task SearchCatalogAsync_WhenOneProductTimesOut_ShouldReturnTheOtherOffers()
+    {
+        var handler = new RoutingHandler
+        {
+            TimeoutWhen = uri => uri.AbsolutePath.StartsWith("/products/MLB2", StringComparison.Ordinal),
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage(["MLB1", "MLB2", "MLB3"], 3))
+                : CatalogProduct(uri, _ => (100m, false))
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest { Query = "fone", IncludeCategories = false });
+
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(["MLB1", "MLB3"], result.Items.Select(item => item.ProductId));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WhenFirstPageTimesOut_ShouldReturnFriendlyTimeoutMessage()
+    {
+        var handler = new RoutingHandler
+        {
+            TimeoutWhen = uri => uri.AbsolutePath == SearchPath,
+            Responder = uri => CatalogProduct(uri, _ => (100m, false))
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest { Query = "fone", IncludeCategories = false });
+
+        Assert.Empty(result.Items);
+        Assert.Equal(OfficialCatalogSearchRules.MercadoLivreTimeoutMessage, result.ErrorMessage);
+        Assert.DoesNotContain("HttpClient.Timeout", result.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_WhenLaterPageTimesOut_ShouldKeepFoundOffersAndResumeFromThatPage()
+    {
+        var handler = new RoutingHandler
+        {
+            TimeoutWhen = uri => uri.AbsolutePath == SearchPath && QueryValue(uri, "offset") == "20",
+            Responder = uri => uri.AbsolutePath == SearchPath
+                ? (HttpStatusCode.OK, SearchPage(Range(0, 20), 200))
+                : CatalogProduct(uri, id => id == "MLB0" ? (100m, false) : null)
+        };
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var result = await sut.SearchCatalogAsync(1, new MercadoLivreCatalogSearchRequest
+        {
+            Query = "fone",
+            TargetOffers = 5,
+            IncludeCategories = false
+        });
+
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal("MLB0", Assert.Single(result.Items).ProductId);
+        Assert.Equal(20, result.NextOffset);
+    }
+
+    [Fact]
     public async Task SearchCatalogAsync_WhenTermHasFewOffers_ShouldKeepScanningUpToTheFullBudget()
     {
         var handler = new RoutingHandler
@@ -1062,6 +1121,9 @@ public class MercadoLivreApiServiceTests
 
         public Func<Uri, (HttpStatusCode Status, string Body)?>? Responder { get; set; }
 
+        /// <summary>Simula o <c>HttpClient.Timeout</c> estourando nas URLs indicadas.</summary>
+        public Func<Uri, bool>? TimeoutWhen { get; set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -1076,6 +1138,13 @@ public class MercadoLivreApiServiceTests
                     uri.AbsolutePath,
                     request.Headers.Authorization?.ToString(),
                     body));
+            }
+
+            if (TimeoutWhen?.Invoke(uri) == true)
+            {
+                throw new TaskCanceledException(
+                    "The request was canceled due to the configured HttpClient.Timeout of 30 seconds elapsing.",
+                    new TimeoutException("The operation was canceled."));
             }
 
             var (status, content) = Responder?.Invoke(uri) is { } answered

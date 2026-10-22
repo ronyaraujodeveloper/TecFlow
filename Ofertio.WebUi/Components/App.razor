@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-    <link href="_content/Ofertio.SharedUi/app.css" rel="stylesheet" />
+    <link href="_content/Ofertio.SharedUi/app.css?v=@AssetVersion" rel="stylesheet" />
     <link rel="stylesheet" href="Ofertio.WebUi.styles.css" />
     <HeadOutlet />
 </head>
@@ -21,9 +21,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="_content/Ofertio.SharedUi/ofertio-clipboard.js"></script>
-    <script src="_content/Ofertio.SharedUi/app-interop.js"></script>
+    <script src="_content/Ofertio.SharedUi/app-interop.js?v=@AssetVersion"></script>
     <script src="_content/Ofertio.SharedUi/activeStoreScope.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    /// <summary>Muda a cada build do SharedUi para o navegador não reaproveitar CSS/JS antigos do cache.</summary>
+    private static readonly string AssetVersion =
+        typeof(Ofertio.SharedUi.Helpers.MultiSelectRules).Assembly.ManifestModule.ModuleVersionId.ToString("N")[..8];
+}

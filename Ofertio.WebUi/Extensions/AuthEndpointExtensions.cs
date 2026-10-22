@@ -98,6 +98,18 @@ public static class AuthEndpointExtensions
                 return Results.Redirect("/?oauth=no-token");
             }
 
+            logger.LogInformation(
+                "Retorno OAuth {Provider}. IdTokenPresente={HasIdToken} AccessTokenPresente={HasAccessToken}",
+                provider,
+                !string.IsNullOrWhiteSpace(idToken),
+                !string.IsNullOrWhiteSpace(accessToken));
+
+            if (authProvider == AuthProvider.Google && string.IsNullOrWhiteSpace(idToken))
+            {
+                logger.LogWarning("Google não devolveu id_token. O access_token não é enviado para a validação.");
+                return Results.Redirect("/?oauth=failed&message=" + Uri.EscapeDataString("O Google não devolveu o id_token."));
+            }
+
             var request = new PlatformAuthRequest
             {
                 Provider = authProvider.ToString(),
@@ -247,6 +259,11 @@ public static class AuthEndpointExtensions
         {
             accessToken = result.Properties?.GetTokenValue("access_token");
             idToken = result.Properties?.GetTokenValue("id_token");
+            if (string.IsNullOrWhiteSpace(idToken)
+                && result.Properties?.Items.TryGetValue("id_token", out var storedIdToken) == true)
+            {
+                idToken = storedIdToken;
+            }
         }
 
         await httpContext.SignOutAsync(ExternalScheme);

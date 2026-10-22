@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -58,8 +59,33 @@ public static class AuthenticationExtensions
                 options.ClientId = authOptions.Google.ClientId;
                 options.ClientSecret = authOptions.Google.ClientSecret;
                 options.SaveTokens = true;
+                if (!options.Scope.Contains("openid"))
+                {
+                    options.Scope.Add("openid");
+                }
+
                 options.Scope.Add("email");
                 options.Scope.Add("profile");
+                options.Events.OnCreatingTicket = context =>
+                {
+                    if (context.TokenResponse.Response?.RootElement.TryGetProperty("id_token", out var idTokenElement) != true)
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    var idToken = idTokenElement.GetString();
+                    if (string.IsNullOrWhiteSpace(idToken))
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    context.Properties.Items["id_token"] = idToken;
+                    var tokens = context.Properties.GetTokens().ToList();
+                    tokens.RemoveAll(token => string.Equals(token.Name, "id_token", StringComparison.Ordinal));
+                    tokens.Add(new AuthenticationToken { Name = "id_token", Value = idToken });
+                    context.Properties.StoreTokens(tokens);
+                    return Task.CompletedTask;
+                };
             });
         }
 

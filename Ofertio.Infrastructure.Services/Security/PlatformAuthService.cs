@@ -368,6 +368,9 @@ public class PlatformAuthService : IPlatformAuthService
 
         if (payload is null)
         {
+            _logger.LogWarning(
+                "Token social recusado para {Provider}. Motivo registrado pelo validador (id_token ausente, HTTP do Google ou aud divergente).",
+                provider);
             return (false, null, "Token social inválido ou expirado.", "SOCIAL_TOKEN_INVALID");
         }
 

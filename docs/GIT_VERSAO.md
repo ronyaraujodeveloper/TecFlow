@@ -149,3 +149,4 @@
 [2026-10-21 23:02:46] feat(radar): consulta a base local antes das APIs e compara precos do mesmo modelo entre lojas
 [2026-10-22 17:03:23] feat(auth): habilita Google OAuth em homologacao com aud e forwarded headers
 [2026-10-22 17:26:18] fix(auth): corrige o HTTP 400 do Entrar com Google e o vinculo em Minha Conta
+[2026-10-22 17:41:56] fix(auth): valida o id_token do Google e compara o aud com o ClientId da API

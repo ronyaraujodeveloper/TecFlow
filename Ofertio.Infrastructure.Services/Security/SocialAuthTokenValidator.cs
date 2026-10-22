@@ -45,7 +45,7 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
 
         return normalizedProvider switch
         {
-            AuthProviderNames.Google => await ValidateGoogleAsync(idToken ?? accessToken, cancellationToken),
+            AuthProviderNames.Google => await ValidateGoogleAsync(idToken, cancellationToken),
             AuthProviderNames.Facebook => await ValidateFacebookAsync(accessToken, cancellationToken),
             AuthProviderNames.Apple => ValidateAppleIdToken(idToken ?? accessToken),
             _ => null
@@ -58,6 +58,7 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
     {
         if (string.IsNullOrWhiteSpace(token))
         {
+            _logger.LogWarning("Token Google recusado: id_token ausente. O access_token não é aceito em tokeninfo.");
             return null;
         }
 
@@ -68,9 +69,13 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
                 $"https://oauth2.googleapis.com/tokeninfo?id_token={Uri.EscapeDataString(token)}",
                 cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (response.StatusCode != System.Net.HttpStatusCode.OK)
             {
-                _logger.LogWarning("Token Google inválido. Status={StatusCode}", response.StatusCode);
+                var detail = await DescribeGoogleErrorAsync(response, cancellationToken);
+                _logger.LogWarning(
+                    "Token Google recusado pelo tokeninfo. Status={StatusCode}. {Detail}",
+                    (int)response.StatusCode,
+                    detail);
                 return null;
             }
 
@@ -80,12 +85,24 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
                 || string.IsNullOrWhiteSpace(payload.Email)
                 || !ValidationHelper.IsValidEmail(payload.Email))
             {
+                _logger.LogWarning(
+                    "Token Google recusado: tokeninfo sem sub ou e-mail válido. TemSub={HasSub} TemEmail={HasEmail}",
+                    !string.IsNullOrWhiteSpace(payload?.Sub),
+                    !string.IsNullOrWhiteSpace(payload?.Email));
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(_googleClientId))
+            {
+                _logger.LogWarning("Token Google recusado: Authentication:Google:ClientId não está configurado na API.");
                 return null;
             }
 
             if (!GoogleIdTokenRules.AudienceMatches(payload.Aud, _googleClientId))
             {
-                _logger.LogWarning("Token Google recusado: aud não corresponde ao ClientId da aplicação.");
+                _logger.LogWarning(
+                    "Token Google recusado: aud divergente. Aud={Audience}",
+                    payload.Aud);
                 return null;
             }
 
@@ -98,8 +115,29 @@ public class SocialAuthTokenValidator : ISocialAuthTokenValidator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao validar token Google.");
+            _logger.LogError(ex, "Falha HTTP ao validar o id_token do Google.");
             return null;
+        }
+    }
+
+    private static async Task<string> DescribeGoogleErrorAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
+            var description = root.TryGetProperty("error_description", out var descriptionElement)
+                ? descriptionElement.GetString()
+                : null;
+            return $"error={error}; description={description}";
+        }
+        catch (Exception ex)
+        {
+            return "sem detalhe do Google (" + ex.GetType().Name + ")";
         }
     }
 

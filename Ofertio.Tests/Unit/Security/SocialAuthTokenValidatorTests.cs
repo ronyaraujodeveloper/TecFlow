@@ -31,6 +31,16 @@ public class SocialAuthTokenValidatorTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task ValidateAsync_ShouldIgnoreGoogleAccessTokenWhenIdTokenIsMissing()
+    {
+        var validator = Create(ClientId, """{"sub":"sub-1","aud":"ofertio-test-client","email":"ana@ofertio.com"}""");
+
+        var result = await validator.ValidateAsync("Google", accessToken: "ya29.token", idToken: null);
+
+        Assert.Null(result);
+    }
+
     private static SocialAuthTokenValidator Create(string clientId, string json)
     {
         var configuration = new ConfigurationBuilder()

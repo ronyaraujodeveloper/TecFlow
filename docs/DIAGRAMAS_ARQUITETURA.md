@@ -58,7 +58,7 @@ flowchart LR
   TTAFF --> SHORT
   ML[MercadoLivreLinkStrategy]
   MLB[MercadoLivreCommissionUrlBuilder]
-  ML -->|matt_tool TrackingId / matt_word FriendlyName| MLAFF[mercadolivre.com.br/MLB-id]
+  ML -->|matt_tool TrackingId / matt_word FriendlyName| MLAFF[produto.mercadolivre.com.br/MLB-id]
   MLB --> MLAFF
   MLAFF --> SHORT
   AMZ[AmazonLinkStrategy]
@@ -2077,7 +2077,7 @@ flowchart LR
   API -->|TryWrite| FILA[Fila limitada de cliques]
   FILA --> BG[LinkClickTelemetryService]
   BG -->|await AddAsync| LOG[(LinkClickLog)]
-  ML[Gerador Mercado Livre] -->|matt_tool + matt_word| URL["mercadolivre.com.br/MLB-id"]
+  ML[Gerador Mercado Livre] -->|matt_tool + matt_word| URL["produto.mercadolivre.com.br/MLB-id"]
 ```
 
 ---

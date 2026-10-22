@@ -95,7 +95,7 @@ public class OfferValidationServiceTests
 
         Assert.True(page.IsAvailable);
         Assert.Equal(GroupOfferStatuses.Ativo, page.Status);
-        Assert.Equal("https://www.mercadolivre.com.br/MLB-4012345678", page.FinalUrl);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", page.FinalUrl);
         Assert.Equal("MLB4012345678", api.LastItemId);
         Assert.Equal(0, handler.Calls);
     }
@@ -119,7 +119,7 @@ public class OfferValidationServiceTests
         var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
 
         Assert.True(page.IsAvailable);
-        Assert.Equal("https://www.mercadolivre.com.br/MLB-19700000", page.FinalUrl);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-19700000", page.FinalUrl);
         Assert.Equal(1, handler.Calls);
     }
 

@@ -341,7 +341,7 @@ public class MercadoLivreApiServiceTests
         Assert.Equal("Dell i7", item.ProductName);
         Assert.Equal(10m, item.Price);
         Assert.Equal("https://http2.mlstatic.com/t.jpg", item.ImageUrl);
-        Assert.StartsWith("https://www.mercadolivre.com.br/MLB-1?", item.SourceUrl, StringComparison.Ordinal);
+        Assert.StartsWith("https://produto.mercadolivre.com.br/MLB-1?", item.SourceUrl, StringComparison.Ordinal);
         Assert.Contains("matt_tool=97303724", item.SourceUrl, StringComparison.OrdinalIgnoreCase);
         Assert.Equal([SearchPath, "/products/MLB1"], handler.Requests.Select(request => request.Path));
         Assert.All(handler.Requests, request => Assert.Equal("Bearer APP_USR-valid", request.Authorization));

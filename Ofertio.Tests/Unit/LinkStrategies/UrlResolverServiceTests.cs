@@ -51,7 +51,7 @@ public class UrlResolverServiceTests
 
         var result = await service.ResolveCanonicalAsync("https://meli.la/1aBcDeF");
 
-        Assert.Equal("https://www.mercadolivre.com.br/MLB-4012345678", result.CanonicalUrl);
+        Assert.Equal("https://produto.mercadolivre.com.br/MLB-4012345678", result.CanonicalUrl);
     }
 
     private sealed class NamedClientFactory : IHttpClientFactory

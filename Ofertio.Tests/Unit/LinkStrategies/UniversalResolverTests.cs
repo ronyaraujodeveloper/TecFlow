@@ -97,7 +97,7 @@ public class UniversalResolverTests
     [Theory]
     [InlineData(
         "https://www.mercadolivre.com.br/p/MLB20621890?matt_tool=97303724&matt_word=97303724",
-        "https://www.mercadolivre.com.br/MLB-20621890?matt_tool=55555555&matt_word=tecflow")]
+        "https://produto.mercadolivre.com.br/MLB-20621890?matt_tool=55555555&matt_word=tecflow")]
     [InlineData(
         "https://produto.mercadolivre.com.br/MLB-2062189012-item-_JM",
         "https://produto.mercadolivre.com.br/MLB-2062189012-item-_JM?matt_tool=55555555&matt_word=tecflow")]

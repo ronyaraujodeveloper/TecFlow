@@ -8,7 +8,7 @@ namespace Ofertio.Business.Integrations.MercadoLivre;
 /// </summary>
 public static class MercadoLivreShowcaseRules
 {
-    public const string DirectProductBase = "https://www.mercadolivre.com.br/MLB-";
+    public const string DirectProductBase = MercadoLivreCommissionUrlBuilder.DirectProductBase;
 
     public static readonly string[] ThirdPartyTrackingParameters =
     [
@@ -47,7 +47,7 @@ public static class MercadoLivreShowcaseRules
     }
 
     /// <summary>
-    /// Página direta do produto focado, sem <c>/p/</c>: <c>https://www.mercadolivre.com.br/MLB-{id}</c>.
+    /// Página direta do produto focado: <c>https://produto.mercadolivre.com.br/MLB-{id}</c>.
     /// </summary>
     public static bool TryExtractFocusedProductUrl(string? url, out string productUrl)
     {

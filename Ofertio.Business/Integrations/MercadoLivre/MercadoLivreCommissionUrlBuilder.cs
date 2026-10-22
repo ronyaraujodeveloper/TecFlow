@@ -7,12 +7,17 @@ namespace Ofertio.Business.Integrations.MercadoLivre;
 /// <summary>Monta o link de afiliado do Mercado Livre com matt_tool e matt_word.</summary>
 public static class MercadoLivreCommissionUrlBuilder
 {
-    public const string DirectProductBase = "https://www.mercadolivre.com.br/MLB-";
+    public const string ProductHost = "produto.mercadolivre.com.br";
+    public const string DirectProductBase = "https://produto.mercadolivre.com.br/MLB-";
     public const string MattToolQuery = "matt_tool";
     public const string MattWordQuery = "matt_word";
 
     private static readonly Regex CatalogDirectoryRegex = new(
         @"/p/MLB-?(?<digits>\d{1,14})(?!\d)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex BareProductPathRegex = new(
+        @"^/MLB-(?<digits>\d{1,14})$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static string BuildCatalogAffiliateUrl(string itemId, string mattTool, string mattWord)
@@ -27,7 +32,7 @@ public static class MercadoLivreCommissionUrlBuilder
     }
 
     /// <summary>
-    /// Página do produto sem o diretório <c>/p/</c>: <c>https://www.mercadolivre.com.br/MLB-{id}</c>.
+    /// Página do produto: <c>https://produto.mercadolivre.com.br/MLB-{id}</c>.
     /// </summary>
     public static string BuildDirectProductUrl(string itemId)
     {
@@ -60,6 +65,7 @@ public static class MercadoLivreCommissionUrlBuilder
 
         var builder = new UriBuilder(uri)
         {
+            Host = UseProductHost(uri.Host) ? ProductHost : uri.Host,
             Path = "/MLB-" + match.Groups["digits"].Value,
             Fragment = string.Empty
         };
@@ -118,8 +124,18 @@ public static class MercadoLivreCommissionUrlBuilder
         pairs[MattWordQuery] = ResolveMattWord(mattWord);
 
         var builder = new UriBuilder(uri) { Query = BuildQuery(pairs) };
+        if (UseProductHost(uri.Host) && BareProductPathRegex.IsMatch(uri.AbsolutePath))
+        {
+            builder.Host = ProductHost;
+        }
+
         return builder.Uri.ToString();
     }
+
+    private static bool UseProductHost(string host) =>
+        host.Equals("www.mercadolivre.com.br", StringComparison.OrdinalIgnoreCase)
+        || host.Equals("mercadolivre.com.br", StringComparison.OrdinalIgnoreCase)
+        || host.Equals(ProductHost, StringComparison.OrdinalIgnoreCase);
 
     public static string ResolveMattTool(IntegracaoLoja store)
     {

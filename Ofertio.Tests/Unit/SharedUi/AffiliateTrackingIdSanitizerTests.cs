@@ -138,6 +138,23 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
+    public void ProductPageAddress_ShouldStayCompleteAndNotCountAsAffiliateId()
+    {
+        var pasted = "https://www.mercadolivre.com.br/oculos-havaianas-conchas-preto/p/MLB20621890#reco_item_pos=1&reco_backend=item_decorator&reco_backend_type=function&reco_client=home_items-decorator-legacy&reco_id=67631c7a-f46d-446a-9ab9-03440ef68179&reco_model=&c_id=/home/navigation-trends-recommendations/element&c_uid=1f2fc6b9-7108-4a8b-b0c8-4ff38e599028&da_id=navigation_trend&da_position=1&id_origin=/home/dynamic_access&da_sort_algorithm=ranker";
+
+        var preserved = AffiliateTrackingIdValidator.PreservePastedValue(pasted);
+        var parsed = AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(pasted, out var id)
+            && !string.IsNullOrWhiteSpace(id);
+
+        Assert.Equal(pasted, preserved);
+        Assert.Contains("/p/MLB20621890", preserved, StringComparison.Ordinal);
+        Assert.True(preserved.Length > AffiliateTrackingIdValidator.MaxLength);
+        Assert.False(parsed);
+        Assert.True(AffiliateTrackingIdValidator.IsMercadoLivreProductPage(pasted));
+        Assert.False(AffiliateTrackingIdValidator.NeedsMercadoLivreUrlExpansion(pasted));
+    }
+
+    [Fact]
     public void TryParseMercadoLivreTrackingId_ShouldReadIdFromShareText()
     {
         var ok = AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(

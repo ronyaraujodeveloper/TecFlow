@@ -12,6 +12,8 @@ public static class AffiliateTrackingIdSanitizer
 
     public const string MercadoLivrePasteMessage = AffiliateTrackingIdValidator.MercadoLivrePasteMessage;
 
+    public const string MercadoLivreProductPageMessage = AffiliateTrackingIdValidator.MercadoLivreProductPageMessage;
+
     public static string Extract(MarketplaceType platform, string? raw) =>
         ExtractAffiliateIdFromUrl(raw ?? string.Empty, platform.ToString());
 
@@ -48,6 +50,12 @@ public static class AffiliateTrackingIdSanitizer
 
     public static string IsolateHttpUrl(string? value) =>
         AffiliateTrackingIdValidator.IsolateHttpUrl(value);
+
+    public static string PreservePastedValue(string? value) =>
+        AffiliateTrackingIdValidator.PreservePastedValue(value);
+
+    public static bool IsMercadoLivreProductPage(string? value) =>
+        AffiliateTrackingIdValidator.IsMercadoLivreProductPage(value);
 
     public static string ExtractedCredentialMessage(string id, MarketplaceType platform) =>
         AffiliateTrackingIdValidator.ExtractedCredentialMessage(id, platform);

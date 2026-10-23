@@ -60,14 +60,14 @@ public static class MercadoLivreShowcaseRules
         var parameters = ParseParameters(uri.Query, uri.Fragment);
         if (TryReadId(parameters, CatalogIdKeys, out var catalogDigits))
         {
-            productUrl = DirectProductBase + catalogDigits;
+            productUrl = MercadoLivreCommissionUrlBuilder.CatalogProductBase + catalogDigits;
             return true;
         }
 
         var catalog = CatalogPathRegex.Match(uri.AbsolutePath);
         if (catalog.Success)
         {
-            productUrl = DirectProductBase + DigitsOf(catalog.Groups["id"].Value);
+            productUrl = MercadoLivreCommissionUrlBuilder.CatalogProductBase + DigitsOf(catalog.Groups["id"].Value);
             return true;
         }
 

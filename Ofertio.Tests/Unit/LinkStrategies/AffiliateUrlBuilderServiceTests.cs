@@ -51,7 +51,7 @@ public class AffiliateUrlBuilderServiceTests
             MarketplaceType.MercadoLivre,
             "97303724");
 
-        Assert.StartsWith("https://produto.mercadolivre.com.br/MLB-999?", url, StringComparison.Ordinal);
+        Assert.StartsWith("https://www.mercadolivre.com.br/p/MLB999?", url, StringComparison.Ordinal);
         Assert.Contains("matt_tool=97303724", url, StringComparison.Ordinal);
     }
 
@@ -84,7 +84,7 @@ public class AffiliateUrlBuilderServiceTests
             null,
             "97303724");
 
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-19700000?matt_tool=97303724&matt_word=97303724", url);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB19700000?matt_tool=97303724&matt_word=97303724", url);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class AffiliateUrlBuilderServiceTests
             MarketplaceType.MercadoLivre,
             "97303724");
 
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-22334455?matt_tool=97303724&matt_word=97303724", url);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB22334455?matt_tool=97303724&matt_word=97303724", url);
     }
 
     [Fact]

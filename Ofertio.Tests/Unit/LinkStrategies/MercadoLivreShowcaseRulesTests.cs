@@ -24,10 +24,10 @@ public class MercadoLivreShowcaseRulesTests
         "https://produto.mercadolivre.com.br/MLB-4012345678")]
     [InlineData(
         "https://www.mercadolivre.com.br/social/achados?product_id=MLB19700000",
-        "https://produto.mercadolivre.com.br/MLB-19700000")]
+        "https://www.mercadolivre.com.br/p/MLB19700000")]
     [InlineData(
         "https://www.mercadolivre.com.br/p/MLB19700000?matt_tool=1&reco_client=home_affiliate-profile",
-        "https://produto.mercadolivre.com.br/MLB-19700000")]
+        "https://www.mercadolivre.com.br/p/MLB19700000")]
     [InlineData(
         "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM?reco_client=home_affiliate-profile",
         "https://produto.mercadolivre.com.br/MLB-4012345678-fone-_JM")]

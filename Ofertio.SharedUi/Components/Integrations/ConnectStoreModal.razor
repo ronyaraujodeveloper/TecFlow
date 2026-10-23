@@ -110,7 +110,7 @@
                         <input id="tracking-id"
                                type="text"
                                class="form-control mt-1"
-                               maxlength="2048"
+                               maxlength="4096"
                                placeholder="@TrackingIdPlaceholder"
                                inputmode="@TrackingIdInputMode"
                                autocomplete="off"
@@ -394,10 +394,13 @@
 
     private void ApplyTrackingId(string input, bool fromShortener = false)
     {
-        var extracted = SelectedPlatform is MarketplaceType.MercadoLivre
-            && ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(input, out var mercadoLivreId)
-            ? mercadoLivreId
-            : ExtractAffiliateIdFromUrl(input, SelectedPlatform.ToString());
+        if (SelectedPlatform is MarketplaceType.MercadoLivre)
+        {
+            ApplyMercadoLivrePaste(input);
+            return;
+        }
+
+        var extracted = ExtractAffiliateIdFromUrl(input, SelectedPlatform.ToString());
         if (AffiliateTrackingIdSanitizer.IsBooleanLiteral(extracted))
         {
             extracted = string.Empty;
@@ -430,9 +433,39 @@
         }
     }
 
+    private void ApplyMercadoLivrePaste(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            _trackingId = string.Empty;
+            _trackingInvalid = false;
+            _extractSuccess = null;
+            _formError = null;
+            return;
+        }
+
+        if (ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(input, out var mercadoLivreId))
+        {
+            _trackingId = mercadoLivreId;
+            _trackingInvalid = false;
+            _extractSuccess = AffiliateTrackingIdSanitizer.ExtractedCredentialMessage(mercadoLivreId, _platform);
+            _formError = null;
+            return;
+        }
+
+        _trackingId = AffiliateTrackingIdSanitizer.PreservePastedValue(input);
+        _trackingInvalid = true;
+        _extractSuccess = null;
+        _formError = AffiliateTrackingIdSanitizer.IsMercadoLivreProductPage(input)
+            ? AffiliateTrackingIdSanitizer.MercadoLivreProductPageMessage
+            : AffiliateTrackingIdSanitizer.MercadoLivrePasteMessage;
+    }
+
     private string TrackingFailureMessage() =>
         _platform is MarketplaceType.MercadoLivre
-            ? AffiliateTrackingIdSanitizer.MercadoLivrePasteMessage
+            ? AffiliateTrackingIdSanitizer.IsMercadoLivreProductPage(_trackingId)
+                ? AffiliateTrackingIdSanitizer.MercadoLivreProductPageMessage
+                : AffiliateTrackingIdSanitizer.MercadoLivrePasteMessage
             : AffiliateTrackingIdSanitizer.InvalidMessage;
 
     private void DetectSelectedPlatform(string? input)
@@ -520,12 +553,29 @@
                     rawTracking);
             }
 
-            trackingId = ExtractAffiliateIdFromUrl(trackingId, SelectedPlatform.ToString());
+            if (SelectedPlatform is MarketplaceType.MercadoLivre)
+            {
+                if (!ConnectStoreManualLinkForm.TryExtractMercadoLivreTrackingId(trackingId, out var mercadoLivreId))
+                {
+                    _trackingId = AffiliateTrackingIdSanitizer.PreservePastedValue(rawTracking);
+                    _trackingInvalid = true;
+                    _formError = TrackingFailureMessage();
+                    return;
+                }
+
+                trackingId = mercadoLivreId;
+            }
+            else
+            {
+                trackingId = ExtractAffiliateIdFromUrl(trackingId, SelectedPlatform.ToString());
+            }
 
             if (!AffiliateTrackingIdSanitizer.TryNormalize(_platform, trackingId, out var normalized)
                 || AffiliateTrackingIdSanitizer.LooksLikeUrl(normalized))
             {
-                _trackingId = trackingId;
+                _trackingId = SelectedPlatform is MarketplaceType.MercadoLivre
+                    ? AffiliateTrackingIdSanitizer.PreservePastedValue(rawTracking)
+                    : trackingId;
                 _trackingInvalid = true;
                 _formError = TrackingFailureMessage();
                 return;

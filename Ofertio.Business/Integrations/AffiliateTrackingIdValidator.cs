@@ -8,11 +8,16 @@ public static class AffiliateTrackingIdValidator
 {
     public const int MaxLength = 64;
 
+    public const int PasteMaxLength = 4096;
+
     public const string InvalidMessage =
         "O valor informado não é um ID de afiliado válido. Informe o seu ID numérico/tag ou cole um link longo de comissão.";
 
     public const string MercadoLivrePasteMessage =
         "Cole o link completo que o Mercado Livre copia ao compartilhar um produto.";
+
+    public const string MercadoLivreProductPageMessage =
+        "Esse é o endereço da página do produto. No Mercado Livre, toque em Compartilhar e cole o link que o aplicativo copia.";
 
     public static string DuplicateTrackingIdMessage(MarketplaceType platform) =>
         $"⚠️ Este ID de Afiliado já está cadastrado no sistema para a plataforma {platform.GetDisplayName()}. Não é permitido duplicar credenciais.";
@@ -421,13 +426,24 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
-        var absolute = EnsureAbsoluteHttpUrl(isolated);
-        if (IsShortenerUrl(absolute))
+        return IsShortenerUrl(EnsureAbsoluteHttpUrl(isolated));
+    }
+
+    public static string PreservePastedValue(string? input)
+    {
+        var value = IsolateHttpUrl(input);
+        return value.Length <= PasteMaxLength ? value : value[..PasteMaxLength];
+    }
+
+    public static bool IsMercadoLivreProductPage(string? input)
+    {
+        var isolated = IsolateHttpUrl(input);
+        if (!LooksLikeUrl(isolated) || IsShortenerUrl(EnsureAbsoluteHttpUrl(isolated)))
         {
-            return true;
+            return false;
         }
 
-        return TryDetectPlatformFromUrl(absolute, out var platform)
+        return TryDetectPlatformFromUrl(isolated, out var platform)
             && platform is MarketplaceType.MercadoLivre;
     }
 

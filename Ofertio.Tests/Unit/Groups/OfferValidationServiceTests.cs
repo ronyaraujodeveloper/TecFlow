@@ -119,7 +119,7 @@ public class OfferValidationServiceTests
         var page = await service.ValidateProductPageStatusAsync("https://meli.la/abc123");
 
         Assert.True(page.IsAvailable);
-        Assert.Equal("https://produto.mercadolivre.com.br/MLB-19700000", page.FinalUrl);
+        Assert.Equal("https://www.mercadolivre.com.br/p/MLB19700000", page.FinalUrl);
         Assert.Equal(1, handler.Calls);
     }
 

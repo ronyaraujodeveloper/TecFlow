@@ -9,6 +9,7 @@ public static class MercadoLivreCommissionUrlBuilder
 {
     public const string ProductHost = "produto.mercadolivre.com.br";
     public const string DirectProductBase = "https://produto.mercadolivre.com.br/MLB-";
+    public const string CatalogProductBase = "https://www.mercadolivre.com.br/p/MLB";
     public const string MattToolQuery = "matt_tool";
     public const string MattWordQuery = "matt_word";
 
@@ -48,7 +49,10 @@ public static class MercadoLivreCommissionUrlBuilder
         return string.IsNullOrWhiteSpace(digits) ? string.Empty : DirectProductBase + digits;
     }
 
-    /// <summary>Tira <c>/p/</c> do caminho. <c>/p/MLB123</c> e <c>/slug/p/MLB123</c> viram <c>/MLB-123</c>.</summary>
+    /// <summary>
+    /// Página de catálogo (<c>/p/MLB...</c>) permanece no endereço original.
+    /// Reescrever para <c>produto.mercadolivre.com.br/MLB-{id}</c> abre uma página que não existe.
+    /// </summary>
     public static string RemoveCatalogDirectory(string url)
     {
         var sanitized = MercadoLivreProductUrlParser.Sanitize(url);
@@ -57,24 +61,22 @@ public static class MercadoLivreCommissionUrlBuilder
             return sanitized;
         }
 
-        var match = CatalogDirectoryRegex.Match(uri.AbsolutePath);
-        if (!match.Success)
+        if (!CatalogDirectoryRegex.IsMatch(uri.AbsolutePath))
         {
             return sanitized;
         }
 
         var builder = new UriBuilder(uri)
         {
-            Host = UseProductHost(uri.Host) ? ProductHost : uri.Host,
-            Path = "/MLB-" + match.Groups["digits"].Value,
+            Host = "www.mercadolivre.com.br",
             Fragment = string.Empty
         };
         return builder.Uri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.UriEscaped);
     }
 
     /// <summary>
-    /// Link de afiliado do produto, sem o diretório <c>/p/</c>. Os <c>matt_*</c> de terceiros saem antes
-    /// de aplicar o <c>matt_tool</c> e o <c>matt_word</c> desta conta.
+    /// Link de afiliado do produto. Catálogo <c>/p/MLB...</c> continua catálogo; anúncio <c>/MLB-...</c> continua anúncio.
+    /// Os <c>matt_*</c> de terceiros saem antes de aplicar o <c>matt_tool</c> e o <c>matt_word</c> desta conta.
     /// </summary>
     public static string BuildProductAffiliateUrl(string productUrl, string mattTool, string mattWord)
     {

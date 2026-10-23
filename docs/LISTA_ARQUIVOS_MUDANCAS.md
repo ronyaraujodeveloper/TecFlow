@@ -1983,4 +1983,4 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** — `BuildDirectProductUrl` e `RemoveCatalogDirectory`. `matt_tool`/`matt_word` saem em `https://www.mercadolivre.com.br/MLB-{id}`; `/p/MLB…` e `/slug/p/MLB…` deixam de ser gerados.
 - [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** — produto focado da vitrine no mesmo formato, sem `/p/`.
 - [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** — fallback sem permalink usa `/MLB-{id}`.
-- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** — host do link gerado é `produto.mercadolivre.com.br` (`https://produto.mercadolivre.com.br/MLB-{id}?matt_tool=&matt_word=`). O `www` com o ID direto devolve “página não existe”.
+- [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** — catálogo `/p/MLB{id}` permanece em `www.mercadolivre.com.br`; anúncio `produto.mercadolivre.com.br/MLB-{id}-slug` permanece no host do anúncio. `produto.mercadolivre.com.br/MLB-{id}` sem o caminho do catálogo devolve “página não existe”.

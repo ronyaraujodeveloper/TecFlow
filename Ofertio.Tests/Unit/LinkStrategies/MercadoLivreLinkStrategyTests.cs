@@ -101,9 +101,27 @@ public class MercadoLivreLinkStrategyTests
             Guid.NewGuid(),
             "aff-10");
 
-        Assert.StartsWith("https://produto.mercadolivre.com.br/MLB-20621890?", link, StringComparison.Ordinal);
+        Assert.StartsWith("https://www.mercadolivre.com.br/p/MLB20621890?", link, StringComparison.Ordinal);
+        Assert.DoesNotContain("produto.mercadolivre.com.br", link, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("MLB1234567890", link, StringComparison.Ordinal);
         Assert.DoesNotContain("97303724", link, StringComparison.Ordinal);
+        AssertMattParams(link);
+    }
+
+    [Fact]
+    public async Task GenerateDeepLinkAsync_CatalogUrlWithSlug_ShouldKeepTheProductPage()
+    {
+        var link = await CreateStrategy().GenerateDeepLinkAsync(
+            "https://www.mercadolivre.com.br/oculos-havaianas-conchas-preto/p/MLB20621890#reco_item_pos=1&reco_backend=item_decorator",
+            Guid.NewGuid(),
+            "aff-10");
+
+        Assert.StartsWith(
+            "https://www.mercadolivre.com.br/oculos-havaianas-conchas-preto/p/MLB20621890?",
+            link,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("produto.mercadolivre.com.br", link, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("#", link, StringComparison.Ordinal);
         AssertMattParams(link);
     }
 

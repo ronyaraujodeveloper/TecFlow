@@ -1,4 +1,5 @@
-﻿using Ofertio.Business.Service.Application;
+﻿using Ofertio.Business.Integrations;
+using Ofertio.Business.Service.Application;
 using Ofertio.Business.Service.LinkStrategies;
 using Ofertio.Core.Enums;
 
@@ -38,7 +39,29 @@ public class UrlUnshortenerServiceTests
         Assert.True(UrlUnshortenerService.TryDetectMarketplace(result, out var platform));
         Assert.Equal(MarketplaceType.Amazon, platform);
         Assert.DoesNotContain("promobit-d-20", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(ShortAffiliateLinkService.IsSupportedDomain(result));
+    }
+
+    [Fact]
+    public async Task ResolveAffiliateUrlAsync_ShouldKeepMercadoLivreIdAfterStrippingTheLink()
+    {
+        var resolved = await UrlUnshortenerService.ResolveAffiliateUrlAsync(
+            "https://meli.la/abc123",
+            (url, _) =>
+            {
+                if (url.Contains("meli.la", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Task.FromResult<string?>(
+                        "https://www.mercadolivre.com.br/p/MLB4012345678?matt_tool=14343296&matt_word=loja");
+                }
+
+                return Task.FromResult<string?>(null);
+            });
+
+        Assert.Equal("14343296", resolved.MercadoLivreTrackingId);
+        Assert.Contains("mercadolivre.com.br", resolved.Url, StringComparison.OrdinalIgnoreCase);
+        Assert.True(AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId("14343296", out var id));
+        Assert.Equal("14343296", id);
+        Assert.True(ShortAffiliateLinkService.IsSupportedDomain(resolved.Url));
     }
 
     [Fact]

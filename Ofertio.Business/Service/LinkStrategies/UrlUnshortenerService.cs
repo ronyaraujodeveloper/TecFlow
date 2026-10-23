@@ -93,13 +93,24 @@ public static class UrlUnshortenerService
     /// Percorre até 5 saltos até um marketplace suportado (Amazon, Shopee, Magalu, ML, Kabum, TikTok, Casas Bahia).
     /// Cada iteração só faz HTTP se a URL atual ainda não for destino de loja.
     /// </summary>
+    public readonly record struct AffiliateUrlResolution(string Url, string? MercadoLivreTrackingId);
+
     public static async Task<string> ResolveToFinalSupportedMarketplaceAsync(
         string inputUrl,
         IUrlExpansionService expansionService,
         CancellationToken cancellationToken = default)
     {
+        var resolved = await ResolveAffiliateUrlAsync(inputUrl, expansionService, cancellationToken);
+        return resolved.Url;
+    }
+
+    public static async Task<AffiliateUrlResolution> ResolveAffiliateUrlAsync(
+        string inputUrl,
+        IUrlExpansionService expansionService,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(expansionService);
-        return await ResolveToFinalSupportedMarketplaceAsync(
+        return await ResolveAffiliateUrlAsync(
             inputUrl,
             async (url, token) =>
             {
@@ -120,19 +131,30 @@ public static class UrlUnshortenerService
         Func<string, CancellationToken, Task<string?>> followNextHopAsync,
         CancellationToken cancellationToken = default)
     {
+        var resolved = await ResolveAffiliateUrlAsync(inputUrl, followNextHopAsync, cancellationToken);
+        return resolved.Url;
+    }
+
+    public static async Task<AffiliateUrlResolution> ResolveAffiliateUrlAsync(
+        string inputUrl,
+        Func<string, CancellationToken, Task<string?>> followNextHopAsync,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(followNextHopAsync);
         if (string.IsNullOrWhiteSpace(inputUrl))
         {
-            return inputUrl;
+            return new AffiliateUrlResolution(inputUrl, null);
         }
 
         var currentUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(inputUrl.Trim());
+        string? capturedId = null;
         var iteration = 0;
         while (iteration < MaxResolutionLoops)
         {
+            capturedId = PreferCapturedId(capturedId, currentUrl);
             if (IsSupportedMarketplaceUrl(currentUrl))
             {
-                return FinalizeMarketplaceUrl(currentUrl);
+                return new AffiliateUrlResolution(FinalizeMarketplaceUrl(currentUrl), capturedId);
             }
 
             var nextUrl = await followNextHopAsync(currentUrl, cancellationToken);
@@ -146,9 +168,22 @@ public static class UrlUnshortenerService
             iteration++;
         }
 
-        return IsSupportedMarketplaceUrl(currentUrl)
+        capturedId = PreferCapturedId(capturedId, currentUrl);
+        var url = IsSupportedMarketplaceUrl(currentUrl)
             ? FinalizeMarketplaceUrl(currentUrl)
             : currentUrl;
+        return new AffiliateUrlResolution(url, capturedId);
+    }
+
+    private static string? PreferCapturedId(string? current, string url)
+    {
+        if (!AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(url, out var parsed)
+            || string.IsNullOrWhiteSpace(parsed))
+        {
+            return current;
+        }
+
+        return parsed;
     }
 
     public static string StripForeignTracking(string? url) =>

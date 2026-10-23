@@ -104,7 +104,7 @@
                                     aria-controls="tracking-id-help"
                                     @onclick="ToggleIdHelp">
                                 <i class="bi bi-question-circle" aria-hidden="true"></i>
-                                Como pegar meu ID?
+                                @(_platform == MarketplaceType.MercadoLivre ? "Como copiar o link?" : "Como pegar meu ID?")
                             </button>
                         </div>
                         <input id="tracking-id"
@@ -119,7 +119,14 @@
                                @onchange="OnTrackingIdInput"
                                disabled="@_linking" />
                         <p class="affiliate-id-paste-hint small mb-0 mt-2">
-                            💡 Dica: Você pode colar aqui o ID direto OU qualquer link de teste do seu painel de afiliado. O Ofertio identificará e extrairá o seu código de rastreamento automaticamente!
+                            @if (_platform == MarketplaceType.MercadoLivre)
+                            {
+                                <text>Cole o link completo que o Mercado Livre copia ao compartilhar um produto.</text>
+                            }
+                            else
+                            {
+                                <text>💡 Dica: Você pode colar aqui o ID direto OU qualquer link de teste do seu painel de afiliado. O Ofertio identificará e extrairá o seu código de rastreamento automaticamente!</text>
+                            }
                         </p>
                         @if (_showIdHelp)
                         {
@@ -232,7 +239,7 @@
     private string _platformLabel => _platform.GetDisplayName();
     private string TrackingIdLabel => _platform switch
     {
-        MarketplaceType.MercadoLivre => "Link de Afiliado ou ID do Mercado Livre",
+        MarketplaceType.MercadoLivre => "Link de afiliado do Mercado Livre",
         MarketplaceType.Amazon => "Tag de Associado / Tracking ID",
         MarketplaceType.MagazineLuiza => "ID de Afiliado / Nome da Loja Parceira",
         MarketplaceType.Kabum => "ID de Afiliado / Tracking ID",
@@ -336,7 +343,7 @@
 
     private async Task OnTrackingIdInput(ChangeEventArgs e)
     {
-        var raw = e.Value?.ToString() ?? string.Empty;
+        var raw = AffiliateTrackingIdSanitizer.IsolateHttpUrl(e.Value?.ToString());
         if (AffiliateTrackingIdSanitizer.IsBooleanLiteral(raw))
         {
             raw = string.Empty;
@@ -400,7 +407,7 @@
         if (_trackingInvalid)
         {
             _extractSuccess = null;
-            _formError = AffiliateTrackingIdSanitizer.InvalidMessage;
+            _formError = TrackingFailureMessage();
             return;
         }
 
@@ -416,11 +423,17 @@
         }
 
         _extractSuccess = null;
-        if (string.Equals(_formError, AffiliateTrackingIdSanitizer.InvalidMessage, StringComparison.Ordinal))
+        if (string.Equals(_formError, AffiliateTrackingIdSanitizer.InvalidMessage, StringComparison.Ordinal)
+            || string.Equals(_formError, AffiliateTrackingIdSanitizer.MercadoLivrePasteMessage, StringComparison.Ordinal))
         {
             _formError = null;
         }
     }
+
+    private string TrackingFailureMessage() =>
+        _platform is MarketplaceType.MercadoLivre
+            ? AffiliateTrackingIdSanitizer.MercadoLivrePasteMessage
+            : AffiliateTrackingIdSanitizer.InvalidMessage;
 
     private void DetectSelectedPlatform(string? input)
     {
@@ -514,7 +527,7 @@
             {
                 _trackingId = trackingId;
                 _trackingInvalid = true;
-                _formError = AffiliateTrackingIdSanitizer.InvalidMessage;
+                _formError = TrackingFailureMessage();
                 return;
             }
 

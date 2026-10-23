@@ -56,6 +56,10 @@ dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup
 
 O roteiro completo está em [`docs/EXECUCAO_HOMOLOGACAO.md`](./docs/EXECUCAO_HOMOLOGACAO.md), executado em sequência no PowerShell como Administrador. Ele normaliza o encoding, aplica as migrations, publica API e WebUi em `C:\inetpub\ofertio`, reinicia o IIS, roda o smoke test e registra o commit em [`docs/GIT_VERSAO.md`](./docs/GIT_VERSAO.md).
 
+## 🐳 Produção (Docker)
+
+A VPS usa Docker, não o IIS. A configuração está em [`docs/CONFIGURACAO_PRODUCAO_DOCKER.md`](./docs/CONFIGURACAO_PRODUCAO_DOCKER.md). O roteiro de publicação está em [`docs/EXECUCAO_PRODUCAO.md`](./docs/EXECUCAO_PRODUCAO.md).
+
 - Preserve `C:\inetpub\ofertio\api\App_Data` no publish (chaves do Data Protection e sessão do Telegram).
 - Não recrie a sub-aplicação `/api` dentro do site `Ofertio.WebUi` (causa HTTP 500.35).
 - Logs da API: `C:\inetpub\ofertio\api\logs\stdout_*.log`.

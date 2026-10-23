@@ -159,7 +159,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         if (!AffiliateTrackingIdValidator.TryNormalize(dto.PlatformType, dto.TrackingId, out var normalizedTracking))
         {
-            return Fail(AffiliateTrackingIdValidator.InvalidMessage);
+            return Fail(TrackingIdFailureMessage(dto.PlatformType));
         }
 
         dto.TrackingId = string.IsNullOrWhiteSpace(normalizedTracking) ? null : normalizedTracking;
@@ -335,7 +335,7 @@ public class IntegracaoLojaService : IIntegracaoLojaService
 
         if (!AffiliateTrackingIdValidator.TryNormalize(dto.PlatformType, dto.TrackingId, out var normalizedTracking))
         {
-            return Fail(AffiliateTrackingIdValidator.InvalidMessage);
+            return Fail(TrackingIdFailureMessage(dto.PlatformType));
         }
 
         var trackingId = string.IsNullOrWhiteSpace(normalizedTracking) ? null : normalizedTracking.Trim();
@@ -509,7 +509,8 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         CancellationToken cancellationToken = default)
     {
         var marketplace = AffiliateTrackingIdValidator.ParsePlatform(platform);
-        var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(url?.Trim() ?? string.Empty);
+        var workingUrl = AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(
+            AffiliateTrackingIdValidator.IsolateHttpUrl(url));
         if (string.IsNullOrWhiteSpace(workingUrl))
         {
             return new ExpandAffiliateUrlResponseDto
@@ -519,18 +520,26 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             };
         }
 
+        string? capturedMercadoLivreId = null;
         try
         {
             if (_urlExpansionService is not null
                 && (AffiliateTrackingIdValidator.IsShortenerUrl(workingUrl)
                     || AffiliateTrackingIdValidator.NeedsMercadoLivreUrlExpansion(workingUrl)))
             {
-                workingUrl = marketplace is MarketplaceType.MercadoLivre
-                    ? await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
+                if (marketplace is MarketplaceType.MercadoLivre)
+                {
+                    var resolved = await UrlUnshortenerService.ResolveAffiliateUrlAsync(
                         workingUrl,
                         _urlExpansionService,
-                        cancellationToken)
-                    : await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+                        cancellationToken);
+                    workingUrl = resolved.Url;
+                    capturedMercadoLivreId = resolved.MercadoLivreTrackingId;
+                }
+                else
+                {
+                    workingUrl = await _urlExpansionService.ExpandUrlAsync(workingUrl, cancellationToken);
+                }
             }
         }
         catch (Exception ex)
@@ -550,7 +559,9 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             marketplace = detectedPlatform;
         }
 
-        var extracted = AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(workingUrl, marketplace.ToString());
+        var extracted = !string.IsNullOrWhiteSpace(capturedMercadoLivreId)
+            ? capturedMercadoLivreId
+            : AffiliateTrackingIdValidator.ExtractAffiliateIdFromUrl(workingUrl, marketplace.ToString());
         var valid = AffiliateTrackingIdValidator.TryNormalize(marketplace, extracted, out var id)
             && !AffiliateTrackingIdValidator.IsBooleanLiteral(id);
         var extractedId = valid && !AffiliateTrackingIdValidator.LooksLikeUrl(id)
@@ -559,11 +570,16 @@ public class IntegracaoLojaService : IIntegracaoLojaService
         return new ExpandAffiliateUrlResponseDto
         {
             Status = !string.IsNullOrWhiteSpace(extractedId),
-            Descricao = valid ? "OK" : AffiliateTrackingIdValidator.InvalidMessage,
+            Descricao = valid ? "OK" : TrackingIdFailureMessage(marketplace),
             ExpandedUrl = AffiliateTrackingIdValidator.IsBooleanLiteral(workingUrl) ? string.Empty : workingUrl,
             ExtractedId = extractedId
         };
     }
+
+    private static string TrackingIdFailureMessage(MarketplaceType platform) =>
+        platform is MarketplaceType.MercadoLivre
+            ? AffiliateTrackingIdValidator.MercadoLivrePasteMessage
+            : AffiliateTrackingIdValidator.InvalidMessage;
 
     private static IntegracaoLoja SyncStatus(IntegracaoLoja item)
     {

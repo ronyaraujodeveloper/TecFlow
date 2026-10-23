@@ -152,3 +152,4 @@
 [2026-10-22 17:41:56] fix(auth): valida o id_token do Google e compara o aud com o ClientId da API
 [2026-10-22 19:33:34] fix(links): rastreio assincrono e link do Mercado Livre sem /p/
 [2026-10-22 19:43:27] fix(links): link do Mercado Livre no host produto.mercadolivre.com.br
+[2026-10-23 15:58:01] fix(lojas): conecta o Mercado Livre pelo link completo de divulgação

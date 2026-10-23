@@ -145,6 +145,7 @@ public sealed class MarketplaceAccountService
         IUrlExpansionService? expansionService,
         CancellationToken cancellationToken = default)
     {
+        input = AffiliateTrackingIdValidator.IsolateHttpUrl(input);
         if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(input, out var trackingId)
             && !string.IsNullOrWhiteSpace(trackingId))
         {
@@ -156,17 +157,22 @@ public sealed class MarketplaceAccountService
             return NormalizeMercadoLivreTrackingId(input);
         }
 
-        var expanded = await UrlUnshortenerService.ResolveToFinalSupportedMarketplaceAsync(
-            input!.Trim(),
+        var resolved = await UrlUnshortenerService.ResolveAffiliateUrlAsync(
+            input,
             expansionService,
             cancellationToken);
 
-        if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(expanded, out trackingId)
+        if (!string.IsNullOrWhiteSpace(resolved.MercadoLivreTrackingId))
+        {
+            return resolved.MercadoLivreTrackingId;
+        }
+
+        if (AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(resolved.Url, out trackingId)
             && !string.IsNullOrWhiteSpace(trackingId))
         {
             return trackingId;
         }
 
-        return NormalizeMercadoLivreTrackingId(expanded);
+        return NormalizeMercadoLivreTrackingId(resolved.Url);
     }
 }

@@ -138,6 +138,40 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
+    public void TryParseMercadoLivreTrackingId_ShouldReadIdFromShareText()
+    {
+        var ok = AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(
+            "Olha esse produto no Mercado Livre https://www.mercadolivre.com.br/p/MLB4012345678?matt_tool=14343296&matt_word=loja",
+            out var id);
+
+        Assert.True(ok);
+        Assert.Equal("14343296", id);
+    }
+
+    [Fact]
+    public void TryParseMercadoLivreTrackingId_ShouldReadIdFromEncodedFullLink()
+    {
+        var destination = "https://produto.mercadolivre.com.br/MLB-4012345678?matt_tool=14343296&matt_word=loja";
+        var pasted = "https://www.mercadolivre.com.br/gz/redirect?go=" + Uri.EscapeDataString(destination);
+
+        var ok = AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(pasted, out var id);
+
+        Assert.True(ok);
+        Assert.Equal("14343296", id);
+    }
+
+    [Fact]
+    public void TryParseMercadoLivreTrackingId_ShouldReadMattToolIdFromFullLink()
+    {
+        var ok = AffiliateTrackingIdValidator.TryParseMercadoLivreTrackingId(
+            "https://www.mercadolivre.com.br/social/loja?matt_word=loja&matt_tool_id=55501928&forceInApp=true",
+            out var id);
+
+        Assert.True(ok);
+        Assert.Equal("55501928", id);
+    }
+
+    [Fact]
     public void Extract_ShouldKeepPlainMercadoLivreNumericId()
     {
         var id = AffiliateTrackingIdSanitizer.Extract(

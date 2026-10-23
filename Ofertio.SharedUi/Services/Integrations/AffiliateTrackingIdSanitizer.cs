@@ -10,6 +10,8 @@ public static class AffiliateTrackingIdSanitizer
 
     public const string InvalidMessage = AffiliateTrackingIdValidator.InvalidMessage;
 
+    public const string MercadoLivrePasteMessage = AffiliateTrackingIdValidator.MercadoLivrePasteMessage;
+
     public static string Extract(MarketplaceType platform, string? raw) =>
         ExtractAffiliateIdFromUrl(raw ?? string.Empty, platform.ToString());
 
@@ -43,6 +45,9 @@ public static class AffiliateTrackingIdSanitizer
 
     public static string EnsureAbsoluteHttpUrl(string? value) =>
         AffiliateTrackingIdValidator.EnsureAbsoluteHttpUrl(value);
+
+    public static string IsolateHttpUrl(string? value) =>
+        AffiliateTrackingIdValidator.IsolateHttpUrl(value);
 
     public static string ExtractedCredentialMessage(string id, MarketplaceType platform) =>
         AffiliateTrackingIdValidator.ExtractedCredentialMessage(id, platform);

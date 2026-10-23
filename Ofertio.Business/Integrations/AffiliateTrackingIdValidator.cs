@@ -11,6 +11,9 @@ public static class AffiliateTrackingIdValidator
     public const string InvalidMessage =
         "O valor informado não é um ID de afiliado válido. Informe o seu ID numérico/tag ou cole um link longo de comissão.";
 
+    public const string MercadoLivrePasteMessage =
+        "Cole o link completo que o Mercado Livre copia ao compartilhar um produto.";
+
     public static string DuplicateTrackingIdMessage(MarketplaceType platform) =>
         $"⚠️ Este ID de Afiliado já está cadastrado no sistema para a plataforma {platform.GetDisplayName()}. Não é permitido duplicar credenciais.";
 
@@ -47,7 +50,7 @@ public static class AffiliateTrackingIdValidator
     ];
 
     private static readonly Regex MercadoLivreMattToolRegex = new(
-        @"matt_tool=([0-9]+)",
+        @"(?:^|[?&#])matt_tool(?:_id)?=([0-9]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly (string Host, string PathPrefix)[] ShortenerPathPrefixes =
@@ -399,58 +402,33 @@ public static class AffiliateTrackingIdValidator
             return true;
         }
 
-        var trimmed = input.Trim().Trim('"', '\'');
-        if (trimmed.Length > 0 && trimmed.All(char.IsDigit))
-        {
-            trackingId = Truncate(trimmed);
-            return true;
-        }
-
-        var match = MercadoLivreMattToolRegex.Match(trimmed);
-        if (match.Success)
-        {
-            trackingId = Truncate(match.Groups[1].Value);
-            return true;
-        }
-
-        if (TryExtractMercadoLivreAffiliateId(trimmed, out var extracted)
-            && IsNumericAffiliateId(extracted))
-        {
-            trackingId = Truncate(extracted);
-            return true;
-        }
-
-        return false;
-    }
-
-    public static bool NeedsMercadoLivreUrlExpansion(string? input)
-    {
-        if (string.IsNullOrWhiteSpace(input) || TryParseMercadoLivreTrackingId(input, out _))
+        var trimmed = IsolateHttpUrl(input);
+        if (!TryReadMercadoLivreToolId(trimmed, out var extracted))
         {
             return false;
         }
 
-        var absolute = EnsureAbsoluteHttpUrl(input);
+        trackingId = Truncate(extracted);
+        return true;
+    }
+
+    public static bool NeedsMercadoLivreUrlExpansion(string? input)
+    {
+        var isolated = IsolateHttpUrl(input);
+        if (string.IsNullOrWhiteSpace(isolated)
+            || (TryParseMercadoLivreTrackingId(isolated, out var parsed) && !string.IsNullOrWhiteSpace(parsed)))
+        {
+            return false;
+        }
+
+        var absolute = EnsureAbsoluteHttpUrl(isolated);
         if (IsShortenerUrl(absolute))
         {
             return true;
         }
 
-        foreach (var candidate in AbsoluteUrlCandidates(absolute))
-        {
-            if (!TryParseAbsoluteUri(candidate, out var uri))
-            {
-                continue;
-            }
-
-            var path = uri.AbsolutePath ?? string.Empty;
-            if (path.Contains("/sec/", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return TryDetectPlatformFromUrl(absolute, out var platform)
+            && platform is MarketplaceType.MercadoLivre;
     }
 
     public static bool LooksLikeUrl(string? value)
@@ -497,6 +475,34 @@ public static class AffiliateTrackingIdValidator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Separa a URL quando o usuário cola o texto inteiro do compartilhamento, com frase antes do link.
+    /// </summary>
+    public static string IsolateHttpUrl(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return string.Empty;
+        }
+
+        var index = trimmed.IndexOf("http://", StringComparison.OrdinalIgnoreCase);
+        var secure = trimmed.IndexOf("https://", StringComparison.OrdinalIgnoreCase);
+        if (secure >= 0 && (index < 0 || secure < index))
+        {
+            index = secure;
+        }
+
+        if (index < 0)
+        {
+            return trimmed;
+        }
+
+        var end = trimmed.IndexOfAny([' ', '\r', '\n', '\t'], index);
+        var url = end < 0 ? trimmed[index..] : trimmed[index..end];
+        return url.TrimEnd('.', ',', ';', ')', ']', '>');
     }
 
     public static string EnsureAbsoluteHttpUrl(string? value)
@@ -1003,34 +1009,75 @@ public static class AffiliateTrackingIdValidator
             return false;
         }
 
-        var trimmed = input.Trim().Trim('"', '\'');
-        if (trimmed.Length > 0 && trimmed.All(char.IsDigit))
+        return TryReadMercadoLivreToolId(input.Trim().Trim('"', '\''), out id);
+    }
+
+    private static bool TryReadMercadoLivreToolId(string input, out string id)
+    {
+        id = string.Empty;
+        if (string.IsNullOrWhiteSpace(input))
         {
-            id = trimmed;
-            return true;
+            return false;
         }
 
-        var match = MercadoLivreMattToolRegex.Match(trimmed);
-        if (match.Success)
+        var first = true;
+        foreach (var variant in MercadoLivreSearchVariants(input))
         {
-            id = match.Groups[1].Value;
-            return true;
-        }
-
-        foreach (var key in new[] { "matt_tool", "penn", "penn_id" })
-        {
-            if (!TryReadParam(trimmed, key, out var value)
-                || IsBooleanLiteral(value)
-                || !IsNumericAffiliateId(value))
+            if (first && variant.Length > 0 && variant.All(char.IsDigit))
             {
-                continue;
+                id = variant;
+                return true;
             }
 
-            id = value;
-            return true;
+            first = false;
+            var match = MercadoLivreMattToolRegex.Match(variant);
+            if (match.Success)
+            {
+                id = match.Groups[1].Value;
+                return true;
+            }
+
+            foreach (var key in new[] { "matt_tool", "matt_tool_id", "penn", "penn_id" })
+            {
+                if (!TryReadParam(variant, key, out var value)
+                    || IsBooleanLiteral(value)
+                    || !IsNumericAffiliateId(value))
+                {
+                    continue;
+                }
+
+                id = value;
+                return true;
+            }
         }
 
         return false;
+    }
+
+    private static IEnumerable<string> MercadoLivreSearchVariants(string input)
+    {
+        var current = input.Replace("&amp;", "&", StringComparison.OrdinalIgnoreCase);
+        for (var hop = 0; hop < 4; hop++)
+        {
+            yield return current;
+            string decoded;
+            try
+            {
+                decoded = Uri.UnescapeDataString(current);
+            }
+            catch (UriFormatException)
+            {
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(decoded)
+                || string.Equals(decoded, current, StringComparison.Ordinal))
+            {
+                yield break;
+            }
+
+            current = decoded;
+        }
     }
 
     private static string Decode(string value)

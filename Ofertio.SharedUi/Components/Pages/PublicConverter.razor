@@ -26,14 +26,14 @@ else if (_page is null)
 }
 else
 {
-    <section class="card border-0 shadow-sm mx-auto public-converter-card" style="max-width: 640px;">
-        <div class="card-body p-4">
-            <h1 class="h4 fw-bold mb-2">@(_page.DisplayName ?? "Converter link de produto")</h1>
-            <p class="text-muted small mb-3">
+    <section class="card border-0 shadow-sm mx-auto public-converter-card">
+        <div class="card-body">
+            <h1 class="public-converter-title">@(_page.DisplayName ?? "Converter link de produto")</h1>
+            <p class="public-converter-lead">
                 Cole o link do produto. A comissão vai para o afiliado desta página.
             </p>
 
-            <div class="d-flex flex-wrap gap-2 mb-3 public-converter-platforms" aria-label="Lojas conectadas">
+            <div class="d-flex flex-wrap public-converter-platforms" aria-label="Lojas conectadas">
                 @foreach (var platform in DistinctPlatforms)
                 {
                     var definition = MarketplaceUrlDetector.All.FirstOrDefault(item => item.IntegrationType == platform);
@@ -48,9 +48,9 @@ else
                 }
             </div>
 
-            <label class="form-label fw-semibold" for="public-product-url">Link do produto</label>
+            <label class="form-label public-converter-label" for="public-product-url">Link do produto</label>
             <input id="public-product-url"
-                   class="form-control mb-3"
+                   class="form-control public-converter-input"
                    placeholder="Cole aqui o link da Shopee, Amazon, Magalu..."
                    value="@_productUrl"
                    disabled="@_isConverting"
@@ -82,57 +82,28 @@ else
 
             @if (_result is { HasConvertedLink: true })
             {
-                <hr class="my-3 border-secondary-subtle" />
-
-                <div class="public-converter-results" role="region" aria-label="Links gerados">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" for="public-direct-url">
-                            Link de comissão gerado (Direto)
-                        </label>
-                        <div class="input-group">
-                            <input id="public-direct-url"
-                                   class="form-control font-monospace small"
-                                   readonly
-                                   value="@DirectCommissionUrl" />
-                            <button type="button"
-                                    class="btn @(_copiedDirect ? "btn-success" : "btn-outline-primary")"
-                                    disabled="@(_isCopying || string.IsNullOrWhiteSpace(DirectCommissionUrl))"
-                                    @onclick="() => CopyAsync(DirectCommissionUrl, isDirect: true)">
-                                Copiar
-                            </button>
-                            <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(DirectCommissionUrl) ? "disabled" : null)"
-                               href="@DirectCommissionUrl"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               title="Ir para o produto">
-                                Abrir
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="mb-0">
-                        <label class="form-label fw-semibold" for="public-ofertio-url">
-                            Link de rastreio Ofertio
-                        </label>
-                        <div class="input-group">
-                            <input id="public-ofertio-url"
-                                   class="form-control font-monospace small"
-                                   readonly
-                                   value="@OfertioTrackingUrl" />
-                            <button type="button"
-                                    class="btn @(_copiedTrack ? "btn-success" : "btn-outline-primary")"
-                                    disabled="@(_isCopying || string.IsNullOrWhiteSpace(OfertioTrackingUrl))"
-                                    @onclick="() => CopyAsync(OfertioTrackingUrl, isDirect: false)">
-                                Copiar
-                            </button>
-                            <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(OfertioTrackingUrl) ? "disabled" : null)"
-                               href="@OfertioTrackingUrl"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               title="Abrir rastreio Ofertio">
-                                Abrir
-                            </a>
-                        </div>
+                <div class="public-converter-results" role="region" aria-label="Link de rastreio">
+                    <label class="form-label public-converter-label" for="public-ofertio-url">
+                        Link de rastreio Ofertio
+                    </label>
+                    <div class="input-group">
+                        <input id="public-ofertio-url"
+                               class="form-control font-monospace small"
+                               readonly
+                               value="@OfertioTrackingUrl" />
+                        <button type="button"
+                                class="btn @(_copiedTrack ? "btn-success" : "btn-outline-primary")"
+                                disabled="@(_isCopying || string.IsNullOrWhiteSpace(OfertioTrackingUrl))"
+                                @onclick="() => CopyAsync(OfertioTrackingUrl)">
+                            Copiar
+                        </button>
+                        <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(OfertioTrackingUrl) ? "disabled" : null)"
+                           href="@OfertioTrackingUrl"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           title="Abrir rastreio Ofertio">
+                            Abrir
+                        </a>
                     </div>
                 </div>
             }
@@ -147,7 +118,6 @@ else
     private bool _notFound;
     private bool _isConverting;
     private bool _isCopying;
-    private bool _copiedDirect;
     private bool _copiedTrack;
     private string _productUrl = string.Empty;
     private string? _error;
@@ -157,8 +127,6 @@ else
         (_page?.ConnectedPlatforms ?? [])
             .Distinct()
             .ToList();
-
-    private string DirectCommissionUrl => _result?.AffiliateUrl?.Trim() ?? string.Empty;
 
     private string OfertioTrackingUrl => ShortLinkPublicUrl.RebaseToCurrentHost(_result?.ResolvedShortUrl, GetBaseUrl());
 
@@ -192,7 +160,6 @@ else
     {
         _error = null;
         _result = null;
-        _copiedDirect = false;
         _copiedTrack = false;
     }
 
@@ -200,7 +167,6 @@ else
     {
         _error = null;
         _result = null;
-        _copiedDirect = false;
         _copiedTrack = false;
         _isConverting = true;
         try
@@ -227,7 +193,7 @@ else
         }
     }
 
-    private async Task CopyAsync(string url, bool isDirect)
+    private async Task CopyAsync(string url)
     {
         if (string.IsNullOrWhiteSpace(url) || _isCopying)
         {
@@ -238,20 +204,9 @@ else
         try
         {
             var copied = await Js.InvokeAsync<bool>("ofertioAppInterop.copyToClipboard", url);
-            if (!copied)
-            {
-                return;
-            }
-
-            if (isDirect)
-            {
-                _copiedDirect = true;
-                _copiedTrack = false;
-            }
-            else
+            if (copied)
             {
                 _copiedTrack = true;
-                _copiedDirect = false;
             }
         }
         catch (Exception ex)

@@ -1,13 +1,13 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="public-converter-shell min-vh-100 d-flex flex-column">
-    <header class="py-3 border-bottom bg-white">
-        <div class="container d-flex align-items-center justify-content-between">
+<div class="public-converter-shell">
+    <header class="public-converter-header border-bottom bg-white">
+        <div class="container d-flex align-items-center justify-content-between gap-2">
             <a href="/" class="fw-bold text-decoration-none text-dark">Ofertio</a>
-            <span class="text-muted small">Conversor de links do afiliado</span>
+            <span class="text-muted small text-truncate">Conversor de links do afiliado</span>
         </div>
     </header>
-    <main class="container py-4 flex-grow-1">
+    <main class="container public-converter-main">
         @Body
     </main>
 </div>

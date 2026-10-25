@@ -2333,43 +2333,112 @@ html, body {
     }
 }
 
+.public-converter-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.public-converter-header {
+    padding: 0.4rem 0;
+}
+
+.public-converter-main {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0.65rem 0 1rem;
+}
+
+.public-converter-card {
+    width: 100%;
+    max-width: 640px;
+}
+
+.public-converter-card .card-body {
+    padding: 0.85rem 1rem 0.95rem;
+}
+
+.public-converter-card .form-control,
+.public-converter-card .btn {
+    padding-top: 0.32rem;
+    padding-bottom: 0.32rem;
+}
+
+.public-converter-title {
+    margin: 0 0 0.2rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.public-converter-lead {
+    margin: 0 0 0.55rem;
+    color: #6c757d;
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+
+.public-converter-label {
+    margin-bottom: 0.25rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.public-converter-input {
+    margin-bottom: 0.55rem;
+}
+
+.public-converter-results {
+    margin-top: 0.7rem;
+}
+
 .public-converter-platforms {
-    gap: 0.4rem;
+    gap: 0.35rem;
+    margin-bottom: 0.55rem;
 }
 
 .public-converter-platforms .marketplace-chip {
-    min-width: 4.8rem;
-    max-width: 5.6rem;
-    padding: 0.4rem 0.6rem;
-    gap: 0.2rem;
-    border-radius: 0.65rem;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-width: 4.4rem;
+    max-width: 5.2rem;
+    padding: 0.28rem 0.35rem 0.22rem;
+    gap: 0.12rem;
+    border-radius: 0.55rem;
+    border-width: 1px;
+    box-shadow: none;
 }
 
 .public-converter-platforms .marketplace-chip-icon {
-    width: 1.6rem;
-    height: 1.6rem;
-    border-radius: 0.45rem;
-    font-size: 0.55rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 0.3rem;
+    font-size: 0.48rem;
 }
 
 .public-converter-platforms .marketplace-chip-name {
     font-size: 0.58rem;
+    line-height: 1.15;
 }
 
 .public-converter-platforms .marketplace-chip-status {
-    width: 0.4rem;
-    height: 0.4rem;
+    width: 0.32rem;
+    height: 0.32rem;
+    box-shadow: none;
 }
 
 .public-converter-platforms .marketplace-chip-tag {
     font-size: 0.5rem;
 }
 
-@media (min-width: 576px) {
-    .public-converter-platforms .marketplace-chip {
-        min-width: 5.2rem;
-        max-width: 5.8rem;
-    }
+.public-converter-platforms .marketplace-chip.marketplace-chip--connected,
+.public-converter-platforms .marketplace-chip.marketplace-chip--detected {
+    box-shadow: none;
+    transform: none;
+    animation: none;
 }
 
 .link-history-section {

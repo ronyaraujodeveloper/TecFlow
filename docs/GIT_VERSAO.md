@@ -154,3 +154,5 @@
 [2026-10-22 19:43:27] fix(links): link do Mercado Livre no host produto.mercadolivre.com.br
 [2026-10-23 15:58:01] fix(lojas): conecta o Mercado Livre pelo link completo de divulgação
 [2026-10-23 17:47:40] fix(links): preserva a pagina de catalogo do Mercado Livre na conversao
+
+[2026-10-24 22:52:53] fix(publico): compacta o conversor para caber na tela e exibe so o rastreio Ofertio

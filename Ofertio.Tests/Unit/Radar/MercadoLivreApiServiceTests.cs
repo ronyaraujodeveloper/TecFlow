@@ -535,6 +535,27 @@ public class MercadoLivreApiServiceTests
     }
 
     [Fact]
+    public async Task GetItemAsync_WithCatalogIdAndNoWinner_ShouldUseProductNameImageAndPrice()
+    {
+        var handler = new RoutingHandler();
+        handler.PathResponses["/items/MLB20621890"] = (HttpStatusCode.NotFound, """{"message":"not found","error":"not_found"}""");
+        handler.PathResponses["/products/MLB20621890"] = (
+            HttpStatusCode.OK,
+            """{"id":"MLB20621890","name":"Óculos Havaianas","pictures":[{"url":"https://http2.mlstatic.com/oculos.jpg"}],"buy_box_winner":null,"buy_box_winner_price_range":{"min":{"price":89.9}}}""");
+        var sut = CreateSut(handler, new MercadoLivreIntegrationOptions { AccessToken = "APP_USR-static" });
+
+        var item = await sut.GetItemAsync(0, "MLB20621890");
+
+        Assert.NotNull(item);
+        Assert.Equal("Óculos Havaianas", item!.ProductName);
+        Assert.Equal("https://http2.mlstatic.com/oculos.jpg", item.ImageUrl);
+        Assert.Equal(89.9m, item.Price);
+        Assert.Equal(
+            ["/items/MLB20621890", "/products/MLB20621890"],
+            handler.Requests.Select(request => request.Path));
+    }
+
+    [Fact]
     public async Task GetItemAsync_WithoutUser_ShouldNotUseAnyTenantAccountToken()
     {
         var handler = new RoutingHandler();

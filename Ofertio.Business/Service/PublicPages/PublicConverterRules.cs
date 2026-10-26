@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
 
@@ -10,7 +11,25 @@ public static class PublicConverterRules
     public const string GeradorSource = "Gerador";
     public const string PublicPageSource = "PublicPage";
 
+    private const string SlugAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+    private static readonly Regex RandomSlugPattern = new("^[a-z0-9]{6,10}$", RegexOptions.Compiled);
     private static readonly Regex InvalidSlugChars = new("[^a-z0-9-]+", RegexOptions.Compiled);
+
+    /// <summary>Código público inicial, de 6 a 10 caracteres, no lugar de um slug fixo como afiliado-1.</summary>
+    public static string CreateRandomSlug()
+    {
+        var length = RandomNumberGenerator.GetInt32(6, 11);
+        return string.Create(length, 0, static (span, _) =>
+        {
+            for (var index = 0; index < span.Length; index++)
+            {
+                span[index] = SlugAlphabet[RandomNumberGenerator.GetInt32(SlugAlphabet.Length)];
+            }
+        });
+    }
+
+    public static bool IsRandomSlug(string? slug) =>
+        !string.IsNullOrWhiteSpace(slug) && RandomSlugPattern.IsMatch(slug);
 
     public static bool IsPublicPageSource(string? source) =>
         string.Equals(source, PublicPageSource, StringComparison.OrdinalIgnoreCase);

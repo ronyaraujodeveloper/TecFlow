@@ -17,6 +17,7 @@ public class SaasPlan : BaseEntity
 
     public bool RadarEnabled { get; set; } = true;
 
+    /// <summary>Disparos de WhatsApp e Telegram somados por dia. 0 = ilimitado.</summary>
     public int MaxDailySchedules { get; set; }
 
     public bool IsActive { get; set; } = true;

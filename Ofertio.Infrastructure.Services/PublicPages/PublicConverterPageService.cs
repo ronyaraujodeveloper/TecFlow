@@ -5,6 +5,7 @@ using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Application;
 using Ofertio.Business.Service.LinkStrategies;
+using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.PublicPages;
 using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
@@ -67,6 +68,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             {
                 Status = true,
                 Descricao = "OK",
+                CanCustomizeSlug = await CanCustomizeSlugAsync(userId, cancellationToken),
                 DataList = pages.Select(page => Map(page)).ToList(),
                 Data = pages.FirstOrDefault(page => page.IsActive) is { } active ? Map(active) : pages.Select(page => Map(page)).FirstOrDefault()
             };
@@ -96,15 +98,19 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             {
                 Status = true,
                 Descricao = "Slug inalterado.",
+                CanCustomizeSlug = await CanCustomizeSlugAsync(userId, cancellationToken),
                 Data = Map(active)
             };
         }
 
+        if (!await CanCustomizeSlugAsync(userId, cancellationToken))
+        {
+            return Fail("Seu plano não libera a personalização do slug.");
+        }
+
         var taken = await _context.PublicConverterPages
             .IgnoreQueryFilters()
-            .AnyAsync(
-                page => page.Slug == normalized && page.PublicCode != active.PublicCode,
-                cancellationToken);
+            .AnyAsync(page => page.Slug == normalized && page.Id != active.Id, cancellationToken);
         if (taken)
         {
             return Fail("Este slug já está em uso. Escolha outro endereço público.");
@@ -125,6 +131,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         {
             Status = true,
             Descricao = "Slug atualizado. O endereço anterior continua convertendo.",
+            CanCustomizeSlug = true,
             Data = Map(created)
         };
     }
@@ -253,13 +260,85 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             UserId = userId,
             TenantId = tenantId,
             DisplayName = user?.Name,
-            Slug = PublicConverterRules.NormalizeSlug($"afiliado-{userId}"),
+            Slug = await CreateUniqueSlugAsync(cancellationToken),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
         await _context.PublicConverterPages.AddAsync(created, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return created;
+    }
+
+    private async Task<string> CreateUniqueSlugAsync(CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            var candidate = PublicConverterRules.CreateRandomSlug();
+            var taken = await _context.PublicConverterPages
+                .IgnoreQueryFilters()
+                .AnyAsync(page => page.Slug == candidate, cancellationToken);
+            if (!taken)
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("Não foi possível gerar um endereço público único.");
+    }
+
+    /// <summary>
+    /// Liberado só quando a linha "Slug personalizado" está ativa e marcada para o plano da conta.
+    /// Sem essa linha, ou com ela desmarcada, o campo permanece bloqueado.
+    /// </summary>
+    private async Task<bool> CanCustomizeSlugAsync(int userId, CancellationToken cancellationToken)
+    {
+        var user = await _context.UserAccounts
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(item => item.Id == userId)
+            .Select(item => new { item.TenantId, item.Plan })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (user is null)
+        {
+            return false;
+        }
+
+        var tenantPlan = await _context.Tenants
+            .AsNoTracking()
+            .Where(item => item.Id == user.TenantId)
+            .Select(item => item.PlanCode)
+            .FirstOrDefaultAsync(cancellationToken);
+        var code = (string.IsNullOrWhiteSpace(tenantPlan) ? user.Plan : tenantPlan)?.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        var planId = await _context.SaasPlans
+            .AsNoTracking()
+            .Where(plan => plan.Code == code && plan.IsActive)
+            .Select(plan => (int?)plan.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (planId is null)
+        {
+            return false;
+        }
+
+        var menuItemId = await _context.MenuItems
+            .AsNoTracking()
+            .Where(item => item.Key == DefaultMenuCatalog.CustomPublicSlug && item.IsActive)
+            .Select(item => (int?)item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (menuItemId is null)
+        {
+            return false;
+        }
+
+        return await _context.PlanMenuPermissions
+            .AsNoTracking()
+            .AnyAsync(
+                permission => permission.PlanId == planId && permission.MenuItemId == menuItemId && permission.IsVisible,
+                cancellationToken);
     }
 
     private async Task<List<MarketplaceType>> LoadDistinctPlatformsAsync(

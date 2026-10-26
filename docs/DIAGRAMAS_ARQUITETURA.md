@@ -98,6 +98,7 @@ flowchart LR
   PUB -->|Copiar JS clipboard + Abrir _blank| CLIP
   GEN -->|ShortAffiliateLinks Source=PublicPage UserId afiliado| SQL
   MINE[MinhasPaginasPublicas] -->|historico slug badge Inativo| PC
+  MINE -->|Novo slug bloqueado até a permissão Slug personalizado do plano| MENU[Matriz de menus por plano]
   HIST -->|badge Pagina publica| SQL
   UI -->|checkboxes StoreIds| API
   ACCNT[ShortAffiliateLinkAccount IsActive] -->|inativação lógica| SQL
@@ -235,7 +236,7 @@ flowchart LR
   MLAUTH -->|PKCE: abre state selado ➔ code_challenge SHA-256 + code_challenge_method=S256 na URL| MLPKCE[MercadoLivrePkce + MarketplaceOAuthState.CodeVerifier]
   MLCTRL -->|state.CodeVerifier ➔ IntegracaoLojaDto ➔ code_verifier no POST oauth/token| MLAUTH
   MLMETA[ProductMetadataService] -->|ML: GetItemAsync com UserId do IAffiliateLinkGenerationContext| MLAPI
-  MLAPI -->|404 em /items ➔ GET /products/ID ➔ buy_box_winner ➔ /items/ID| MLAPP
+  MLAPI -->|404 em /items ➔ GET /products/ID: nome/foto/preço do produto; se houver buy_box_winner, /items/ID completa| MLAPP
   PIPE -->|OfferPriceTextRules preço à vista ignora 12x R$ e De/Por| PRICE[OfferPriceTextRules]
   VAL -->|ShopeeProductPageRules IsSoldOut Esgotado + preço ativo meta/JSON-LD| SHPRULE[ShopeeProductPageRules]
   PIPE -->|divergência ≥30% preço da página| SQL
@@ -1497,6 +1498,8 @@ flowchart LR
   WH --> AWS[AsaasWebhookService]
   WORKER --> SVC
   SVC --> DB[(AppDbContext: Tenants, Usuarios, MasterAuditLogs, SystemSettings ENC, SaasPlans, SaasPayments, SystemBanners, TenantNotifications, ProductChangelogEntries)]
+  PLANUI["/master/planos Disparos/dia"] --> SVC
+  SVC -->|novo disparo WhatsApp ou Telegram| GUARDPLAN[PlanScheduleGuard lê MaxDailySchedules]
   AUDIT --> DB
   AWS --> DB
   DB -.->|DatabaseSettingsConfigurationProvider| CFG[IConfiguration da API]

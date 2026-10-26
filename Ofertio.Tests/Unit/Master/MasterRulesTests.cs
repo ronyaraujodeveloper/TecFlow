@@ -274,6 +274,7 @@ public class PlanLimitRulesTests
         Assert.Contains("Starter", PlanLimitRules.StoresLimitMessage(limits));
         Assert.Contains("2", PlanLimitRules.StoresLimitMessage(limits));
         Assert.Contains("10", PlanLimitRules.SchedulesLimitMessage(limits));
+        Assert.Contains("disparo", PlanLimitRules.SchedulesLimitMessage(limits), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Radar", PlanLimitRules.RadarBlockedMessage(limits));
     }
 }

@@ -105,6 +105,69 @@ public static class MercadoLivreItemParser
         return (string.IsNullOrWhiteSpace(winnerId) ? null : winnerId.Trim(), name, image);
     }
 
+    /// <summary>
+    /// Metadados do produto de catálogo para o Gerador de Links. Nome e foto vêm do produto;
+    /// o preço prefere o anúncio ganhador e, sem ele, o mínimo da faixa. Nulo só quando não há nome, preço nem foto.
+    /// </summary>
+    public static OfficialOfferSnapshotDto? ParseCatalogSnapshot(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "null" : json);
+            var root = doc.RootElement;
+            if (!IsProduct(root))
+            {
+                return null;
+            }
+
+            var (_, name, image) = ParseCatalogProduct(root.GetRawText());
+            decimal? price = null;
+            decimal? original = null;
+            string? shipping = null;
+            if (root.TryGetProperty("buy_box_winner", out var winner) && winner.ValueKind == JsonValueKind.Object)
+            {
+                price = ReadDecimal(winner, "price");
+                original = ReadDecimal(winner, "original_price");
+                if (winner.TryGetProperty("shipping", out var ship)
+                    && ship.ValueKind == JsonValueKind.Object
+                    && ship.TryGetProperty("free_shipping", out var free)
+                    && free.ValueKind == JsonValueKind.True)
+                {
+                    shipping = "Frete grátis";
+                }
+            }
+
+            if (price is null or <= 0
+                && root.TryGetProperty("buy_box_winner_price_range", out var range)
+                && range.ValueKind == JsonValueKind.Object
+                && range.TryGetProperty("min", out var min))
+            {
+                price = ReadDecimal(min, "price");
+            }
+
+            if (string.IsNullOrWhiteSpace(name) && price is null or <= 0 && string.IsNullOrWhiteSpace(image))
+            {
+                return null;
+            }
+
+            return new OfficialOfferSnapshotDto
+            {
+                IsAvailable = true,
+                Price = price is > 0 ? price : null,
+                OriginalPrice = original > price ? original : null,
+                ProductName = string.IsNullOrWhiteSpace(name) ? null : name.Trim(),
+                ImageUrl = string.IsNullOrWhiteSpace(image) ? null : image,
+                Shipping = shipping,
+                Source = "Api",
+                Platform = MarketplaceType.MercadoLivre
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public const int MaxGalleryPictures = 12;
 
     /// <summary><c>pictures[].url</c> do produto de catálogo, sem repetição, em https.</summary>

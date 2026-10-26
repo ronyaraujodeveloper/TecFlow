@@ -6,7 +6,7 @@ using Ofertio.Database;
 
 namespace Ofertio.Infrastructure.Services.Master;
 
-/// <summary>Limite diário de agendamentos (WhatsApp + Telegram somados) definido pelo plano SaaS.</summary>
+/// <summary>Limite diário de disparos (WhatsApp + Telegram somados) definido em Planos.</summary>
 public static class PlanScheduleGuard
 {
     public static async Task<string?> CheckAsync(

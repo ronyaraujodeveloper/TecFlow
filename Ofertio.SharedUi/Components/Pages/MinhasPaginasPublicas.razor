@@ -46,11 +46,16 @@
                     <input id="public-slug"
                            class="form-control"
                            value="@_draftSlug"
+                           disabled="@(!_canCustomizeSlug || _isSaving)"
                            @oninput="e => _draftSlug = e.Value?.ToString() ?? string.Empty" />
-                    <button type="button" class="btn btn-primary" disabled="@_isSaving" @onclick="SaveSlugAsync">
+                    <button type="button" class="btn btn-primary" disabled="@(!_canCustomizeSlug || _isSaving)" @onclick="SaveSlugAsync">
                         @(_isSaving ? "Salvando..." : "Salvar slug")
                     </button>
                 </div>
+                @if (!_canCustomizeSlug)
+                {
+                    <p class="small text-muted mt-2 mb-0">O slug personalizado fica bloqueado até o seu plano liberar essa permissão. O endereço aleatório continua no ar.</p>
+                }
                 @if (!string.IsNullOrWhiteSpace(_activeUrl))
                 {
                     <p class="small text-muted mt-2 mb-0">Endereço ativo: <a href="@_activeUrl" target="_blank" rel="noopener">@_activeUrl</a></p>
@@ -105,6 +110,7 @@
 @code {
     private readonly List<PublicConverterPageDto> _pages = [];
     private string _draftSlug = string.Empty;
+    private bool _canCustomizeSlug;
     private string? _activeUrl;
     private string? _message;
     private bool _messageIsError;
@@ -123,6 +129,7 @@
         {
             var result = await PublicPages.ListMineAsync();
             _pages.Clear();
+            _canCustomizeSlug = result.Success && result.Data?.CanCustomizeSlug == true;
             if (result.Success && result.Data?.DataList is { Count: > 0 })
             {
                 _pages.AddRange(result.Data.DataList);

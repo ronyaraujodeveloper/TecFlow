@@ -43,4 +43,7 @@ public class PublicConverterPageResponseDto : ResponseDto
     public PublicConverterPageDto? Data { get; set; }
 
     public List<PublicConverterPageDto>? DataList { get; set; }
+
+    /// <summary>Verdadeiro quando o plano ativo tem a permissão "Slug personalizado" marcada na matriz.</summary>
+    public bool CanCustomizeSlug { get; set; }
 }

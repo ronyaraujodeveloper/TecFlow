@@ -31,7 +31,7 @@ public static class PlanLimitRules
         $"Seu plano {limits.PlanCode} permite até {limits.MaxStores} loja(s) conectada(s). Faça upgrade para conectar mais.";
 
     public static string SchedulesLimitMessage(PlanLimits limits) =>
-        $"Seu plano {limits.PlanCode} permite até {limits.MaxDailySchedules} agendamento(s) por dia. Faça upgrade para agendar mais.";
+        $"Seu plano {limits.PlanCode} permite até {limits.MaxDailySchedules} disparo(s) por dia. Faça upgrade para disparar mais.";
 
     public static string RadarBlockedMessage(PlanLimits limits) =>
         $"O Radar de Ofertas não está incluído no plano {limits.PlanCode}. Faça upgrade para liberar.";

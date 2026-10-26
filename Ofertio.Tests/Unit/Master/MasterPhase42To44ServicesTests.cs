@@ -61,9 +61,12 @@ public class MenuPermissionServiceTests
 
         Assert.Equal(DefaultMenuCatalog.All.Count, await context.MenuItems.CountAsync());
         var roadmap = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.Roadmap);
+        var slugItem = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.CustomPublicSlug);
         var hidden = await context.PlanMenuPermissions.Where(item => !item.IsVisible && item.MenuItemId != roadmap.Id).ToListAsync();
-        Assert.Equal(2, hidden.Count);
-        Assert.All(hidden, item => Assert.Equal(starter.Id, item.PlanId));
+        var radarHidden = hidden.Where(item => item.MenuItemId != slugItem.Id).ToList();
+        Assert.Equal(2, radarHidden.Count);
+        Assert.All(radarHidden, item => Assert.Equal(starter.Id, item.PlanId));
+        Assert.Equal(2, hidden.Count(item => item.MenuItemId == slugItem.Id));
         Assert.Equal(2, await context.PlanMenuPermissions.CountAsync(item => item.MenuItemId == roadmap.Id && !item.IsVisible));
         var radar = await context.MenuItems.SingleAsync(item => item.Key == DefaultMenuCatalog.RadarOffers);
         var parent = await context.MenuItems.SingleAsync(item => item.Key == "integracoes.links");

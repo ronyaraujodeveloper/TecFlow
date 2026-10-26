@@ -32,6 +32,9 @@ public static class DefaultMenuCatalog
     /// <summary>Permissão "Integrações Globais": libera as telas que consomem a API oficial conectada no Master.</summary>
     public const string GlobalIntegrations = "integracoes-globais";
 
+    /// <summary>Permissão sob Minhas Páginas Públicas: libera trocar o slug aleatório por um endereço próprio.</summary>
+    public const string CustomPublicSlug = "integracoes.paginas.slug";
+
     private static readonly IReadOnlyList<string> RadarPlans = [SaasPlanCodes.Starter];
 
     /// <summary>Telas ocultadas automaticamente quando a permissão (chave) está desligada para o plano.</summary>
@@ -72,6 +75,7 @@ public static class DefaultMenuCatalog
         new("integracoes.estudio", "Estúdio de mídia", "/estudio-midia", "bi-image", "integracoes.conteudo", 20),
         new("integracoes.achadinhos", "Achadinhos VIP", "/achadinhos", "bi-stars", "integracoes.conteudo", 30),
         new("integracoes.paginas", "Minhas Páginas Públicas", "/minhas-paginas-publicas", "bi-globe2", "integracoes.conteudo", 40),
+        new(CustomPublicSlug, "Slug personalizado", null, "bi-pencil", "integracoes.paginas", 10, HiddenForAllPlans: true, IsFeatureToggle: true),
         new("integracoes.resultados", "Saúde & Resultados", null, "bi-activity", "integracoes", 40),
         new("integracoes.saude-ofertas", "Saúde de ofertas", "/saude/ofertas", "bi-heart-pulse", "integracoes.resultados", 10),
         new("integracoes.saude-agendamentos", "Saúde de agendamentos", "/saude/agendamentos", "bi-shield-check", "integracoes.resultados", 20),

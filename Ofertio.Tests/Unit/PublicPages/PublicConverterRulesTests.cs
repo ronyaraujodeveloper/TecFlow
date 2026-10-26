@@ -1,10 +1,18 @@
 ﻿using Ofertio.API.Controllers;
 using Ofertio.Business.Dto;
+using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.PublicPages;
 using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
+using Ofertio.Database;
+using Ofertio.Database.MultiTenancy;
+using Ofertio.Infrastructure.Services.PublicPages;
+using Ofertio.Util.Security;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Ofertio.Tests.Unit.PublicPages;
@@ -96,6 +104,16 @@ public class PublicConverterRulesTests
         Assert.Equal(12, created.UserId);
         Assert.Equal("novo-slug", created.Slug);
     }
+
+    [Fact]
+    public void CreateRandomSlug_ShouldStayBetweenSixAndTenCharactersAndNotRepeat()
+    {
+        var slugs = Enumerable.Range(0, 40).Select(_ => PublicConverterRules.CreateRandomSlug()).ToList();
+
+        Assert.All(slugs, slug => Assert.True(PublicConverterRules.IsRandomSlug(slug)));
+        Assert.Equal(slugs.Count, slugs.Distinct(StringComparer.Ordinal).Count());
+        Assert.DoesNotContain(slugs, slug => slug.StartsWith("afiliado", StringComparison.Ordinal));
+    }
 }
 
 public class PublicConverterControllerTests
@@ -121,5 +139,113 @@ public class PublicConverterControllerTests
         Assert.True(body.Status);
         Assert.False(body.Data!.IsActive);
         Assert.Equal("slug-velho", body.Data.Slug);
+    }
+}
+
+public class PublicConverterPageServiceTests
+{
+    [Fact]
+    public async Task ListMine_ShouldCreateAUniqueRandomSlugAndKeepCustomizationLocked()
+    {
+        await using var context = CreateContext();
+        var service = CreateService(context);
+
+        var first = await service.ListMineAsync(1);
+        var second = await service.ListMineAsync(2);
+
+        Assert.True(first.Status);
+        Assert.False(first.CanCustomizeSlug);
+        Assert.True(PublicConverterRules.IsRandomSlug(first.Data!.Slug));
+        Assert.True(PublicConverterRules.IsRandomSlug(second.Data!.Slug));
+        Assert.NotEqual(first.Data.Slug, second.Data.Slug);
+    }
+
+    [Fact]
+    public async Task ChangeSlug_ShouldRejectDuplicateAndAllowThePlanThatWasReleased()
+    {
+        await using var context = CreateContext();
+        var plan = new SaasPlan { Code = SaasPlanCodes.Pro, Name = "Pro", IsActive = true };
+        var menu = new MenuItem { Key = DefaultMenuCatalog.CustomPublicSlug, Title = "Slug personalizado", IsActive = true };
+        context.SaasPlans.Add(plan);
+        context.MenuItems.Add(menu);
+        await context.SaveChangesAsync();
+        context.PlanMenuPermissions.Add(new PlanMenuPermission { PlanId = plan.Id, MenuItemId = menu.Id, IsVisible = true });
+        var tenant = new Tenant { Name = "Loja Pro", PlanCode = SaasPlanCodes.Pro };
+        context.Tenants.Add(tenant);
+        context.UserAccounts.Add(new UserAccount
+        {
+            Id = 7,
+            Name = "Pro",
+            Email = "pro@ofertio.com",
+            PasswordHash = "h",
+            TenantId = tenant.Id,
+            Plan = SaasPlanCodes.Pro
+        });
+        context.PublicConverterPages.Add(new PublicConverterPage
+        {
+            UserId = 1,
+            Slug = "loja-da-ana",
+            IsActive = true,
+            PublicCode = Guid.NewGuid()
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var duplicate = await service.ChangeSlugAsync(7, "loja-da-ana");
+        var custom = await service.ChangeSlugAsync(7, "minha-loja");
+
+        Assert.False(duplicate.Status);
+        Assert.Contains("já está em uso", duplicate.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.True(custom.Status);
+        Assert.Equal("minha-loja", custom.Data!.Slug);
+    }
+
+    [Fact]
+    public async Task ChangeSlug_ShouldStayBlockedWhenThePlanPermissionIsOff()
+    {
+        await using var context = CreateContext();
+        var plan = new SaasPlan { Code = SaasPlanCodes.Starter, Name = "Starter", IsActive = true };
+        var menu = new MenuItem { Key = DefaultMenuCatalog.CustomPublicSlug, Title = "Slug personalizado", IsActive = true };
+        context.SaasPlans.Add(plan);
+        context.MenuItems.Add(menu);
+        await context.SaveChangesAsync();
+        context.PlanMenuPermissions.Add(new PlanMenuPermission { PlanId = plan.Id, MenuItemId = menu.Id, IsVisible = false });
+        var tenant = new Tenant { Name = "Loja", PlanCode = SaasPlanCodes.Starter };
+        context.Tenants.Add(tenant);
+        context.UserAccounts.Add(new UserAccount
+        {
+            Id = 4,
+            Name = "Starter",
+            Email = "starter@ofertio.com",
+            PasswordHash = "h",
+            TenantId = tenant.Id,
+            Plan = SaasPlanCodes.Starter
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+        var created = await service.ListMineAsync(4);
+
+        var blocked = await service.ChangeSlugAsync(4, "slug-livre");
+
+        Assert.False(blocked.Status);
+        Assert.Contains("não libera", blocked.Descricao, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(created.Data!.Slug, (await service.ListMineAsync(4)).Data!.Slug);
+    }
+
+    private static PublicConverterPageService CreateService(AppDbContext context) =>
+        new(
+            context,
+            Moq.Mock.Of<IMarketplaceAccountRepository>(),
+            null!,
+            null!,
+            NullLogger<PublicConverterPageService>.Instance);
+
+    private static AppDbContext CreateContext()
+    {
+        var encryption = new Moq.Mock<IEncryptionService>();
+        encryption.Setup(service => service.Encrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        encryption.Setup(service => service.Decrypt(It.IsAny<string>())).Returns<string>(value => value ?? string.Empty);
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        return new AppDbContext(options, encryption.Object, new NullCurrentTenantService());
     }
 }

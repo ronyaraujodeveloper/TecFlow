@@ -197,7 +197,7 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
 
     /// <summary>
     /// Links <c>/p/MLB...</c> trazem o código do produto de catálogo, que <c>/items</c> não conhece (404):
-    /// consulta <c>/products/{id}</c> e segue para o anúncio ganhador da buy box.
+    /// consulta <c>/products/{id}</c>. O anúncio ganhador completa os dados; sem ele, nome, foto e preço do produto seguem.
     /// </summary>
     private async Task<OfficialOfferSnapshotDto?> GetCatalogBuyBoxItemAsync(
         string catalogId,
@@ -216,35 +216,38 @@ public sealed class MercadoLivreApiService : IMercadoLivreApiService
             return null;
         }
 
-        var (winnerItemId, productName, productImage) = MercadoLivreItemParser.ParseCatalogProduct(productBody);
-        if (winnerItemId is null)
+        var catalog = MercadoLivreItemParser.ParseCatalogSnapshot(productBody);
+        var (winnerItemId, _, _) = MercadoLivreItemParser.ParseCatalogProduct(productBody);
+        if (winnerItemId is not null)
         {
-            _logger.LogInformation(
-                "[ML Item] Produto de catálogo {CatalogId} sem anúncio ganhador (buy_box_winner) na API oficial.",
-                catalogId);
-            return null;
-        }
+            var (itemStatus, itemBody) = await SendItemAsync(winnerItemId, accessToken, cancellationToken);
+            if (itemStatus == HttpStatusCode.OK)
+            {
+                var snapshot = MercadoLivreItemParser.Parse(itemBody);
+                if (snapshot is not null)
+                {
+                    snapshot.ProductName ??= catalog?.ProductName;
+                    snapshot.ImageUrl ??= catalog?.ImageUrl;
+                    snapshot.Price ??= catalog?.Price;
+                    return snapshot;
+                }
+            }
 
-        var (itemStatus, itemBody) = await SendItemAsync(winnerItemId, accessToken, cancellationToken);
-        if (itemStatus != HttpStatusCode.OK)
-        {
             _logger.LogError(
                 "[ML Item] Erro API ML [{StatusCode}] no anúncio {ItemId} do catálogo {CatalogId}: {Body}",
                 itemStatus,
                 winnerItemId,
                 catalogId,
                 itemBody);
-            return null;
         }
-
-        var snapshot = MercadoLivreItemParser.Parse(itemBody);
-        if (snapshot is not null)
+        else
         {
-            snapshot.ProductName ??= productName;
-            snapshot.ImageUrl ??= productImage;
+            _logger.LogInformation(
+                "[ML Item] Produto de catálogo {CatalogId} sem anúncio ganhador; nome, preço e foto vêm de /products.",
+                catalogId);
         }
 
-        return snapshot;
+        return catalog;
     }
 
     private Task<(HttpStatusCode StatusCode, string Body)> SendItemAsync(

@@ -179,6 +179,19 @@ public class MercadoLivreItemParserTests
     }
 
     [Fact]
+    public void ParseCatalogSnapshot_WithoutWinner_ShouldKeepNameImageAndRangePrice()
+    {
+        var item = MercadoLivreItemParser.ParseCatalogSnapshot(
+            """{"id":"MLB20621890","name":"Óculos Havaianas","pictures":[{"url":"http://http2.mlstatic.com/oculos.jpg"}],"buy_box_winner":null,"buy_box_winner_price_range":{"min":{"price":89.9}}}""");
+
+        Assert.NotNull(item);
+        Assert.Equal("Óculos Havaianas", item!.ProductName);
+        Assert.Equal("https://http2.mlstatic.com/oculos.jpg", item.ImageUrl);
+        Assert.Equal(89.9m, item.Price);
+        Assert.Equal("Api", item.Source);
+    }
+
+    [Fact]
     public void ParseCatalogOffer_WithoutWinner_ShouldUseMinimumOfPriceRange()
     {
         var item = MercadoLivreItemParser.ParseCatalogOffer(

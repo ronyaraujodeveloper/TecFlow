@@ -135,6 +135,21 @@ public class MenuCatalogTests
     }
 
     [Fact]
+    public void CustomPublicSlug_ShouldSitUnderPublicPagesAndStartHiddenForEveryPlan()
+    {
+        var permission = DefaultMenuCatalog.Find(DefaultMenuCatalog.CustomPublicSlug)!;
+
+        Assert.Equal("integracoes.paginas", permission.ParentKey);
+        Assert.True(permission.IsFeatureToggle);
+        Assert.True(permission.HiddenForAllPlans);
+        Assert.Null(permission.Route);
+        Assert.DoesNotContain(DefaultMenuCatalog.CustomPublicSlug, Keys(DefaultMenuCatalog.BuildDefaultTree()));
+    }
+
+    private static IEnumerable<string> Keys(IEnumerable<ClientMenuNodeDto> nodes) =>
+        nodes.SelectMany(node => new[] { node.Key }.Concat(Keys(node.Children)));
+
+    [Fact]
     public void BuildDefaultTree_ShouldNestChildrenInOrder()
     {
         var tree = DefaultMenuCatalog.BuildDefaultTree();

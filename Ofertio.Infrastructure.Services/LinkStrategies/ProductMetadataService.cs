@@ -297,8 +297,9 @@ public sealed class ProductMetadataService : IProductMetadataService
         ExtractGenericMetadata(expandedUrl, cancellationToken);
 
     /// <summary>
-    /// Mercado Livre só pela API oficial (<c>GET /items/{MLB}</c> com Bearer da conta conectada): a página pública
-    /// não é baixada para não acionar a verificação anti-robô. Sem código MLB ou sem resposta, usa o slug da URL.
+    /// Mercado Livre só pela API oficial: <c>GET /items/{MLB}</c> e, no catálogo <c>/p/MLB</c>, <c>GET /products/{id}</c>.
+    /// Nome, preço e foto do produto de catálogo valem mesmo sem anúncio ganhador. A página pública não é baixada.
+    /// Sem código MLB ou sem resposta da API, usa o slug da URL.
     /// </summary>
     private async Task<ProductMetadataDto> ExtractMercadoLivreMetadata(
         string expandedUrl,

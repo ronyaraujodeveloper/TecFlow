@@ -90,7 +90,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         {
             await _audit.LogAsync(actor, MasterAuditActions.PlanSaved, "SaasPlan", plan.Id.ToString(),
                 $"{(isNew ? "Criado" : "Alterado")} plano {plan.Code}: R$ {plan.MonthlyPrice:N2}/mês, R$ {plan.AnnualPrice:N2}/ano, " +
-                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, agendamentos {plan.MaxDailySchedules}/dia.",
+                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, disparos {plan.MaxDailySchedules}/dia.",
                 cancellationToken);
         }
 

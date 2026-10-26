@@ -775,7 +775,7 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.26 — Página pública de conversão (slug versionado)
 
-- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`).
+- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`). O endereço inicial é um código aleatório de 6 a 10 caracteres, único na tabela; "Slug personalizado" (`integracoes.paginas.slug`) na matriz libera a troca, desmarcado em todos os planos até o Master marcar.
 - [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio Ofertio) com Copiar/Abrir.
 - [x] **app.css** — `.public-converter-platforms` (padding `0.4rem 0.6rem`, min/max-width e ícones menores).
 - [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.
@@ -1167,7 +1167,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Service/Master/TenantLifecycleRules.cs** — status, ações (pausar/suspender/reativar/cancelar/estender trial), carência de inadimplência.
 - [x] **Service/Master/SaasMetricsRules.cs** — MRR, ARR, ARPU, churn 30d, conversão de trial, novos assinantes por mês.
 - [x] **Service/Master/SystemSettingCatalog.cs** — catálogo de chaves globais (marketplaces, mensageria, cofre, ASAAS) e máscara.
-- [x] **Service/Master/PlanLimitRules.cs** — `PlanLimits`, `SaasPlanCodes`, limites de lojas/agendamentos/radar/cota VIP.
+- [x] **Service/Master/PlanLimitRules.cs** — `PlanLimits`, `SaasPlanCodes`, limites de lojas, disparos/dia (WhatsApp + Telegram), radar e cota VIP. A quantidade é editada em `/master/planos`.
 - [x] **Dto/MasterDtos.cs** — DTOs do painel master, webhook ASAAS e comunicação.
 - [x] **Interfaces/Services/IMasterServices.cs** — contratos dos serviços master e do gateway de pagamento.
 
@@ -1181,7 +1181,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Master/MasterAuditService.cs** / **MasterAuditActions.cs** — trilha imutável.
 - [x] **Master/MasterOperatorService.cs** — CRUD de operadores internos.
 - [x] **Master/DatabaseSettingsConfigurationProvider.cs** / **SystemSettingsService.cs** — cofre criptografado no banco como fonte de configuração.
-- [x] **Master/SaasPlanService.cs** / **PlanScheduleGuard.cs** — planos e enforcement de limites.
+- [x] **Master/SaasPlanService.cs** / **PlanScheduleGuard.cs** — planos e enforcement do limite de disparos/dia (WhatsApp + Telegram somados; 0 = ilimitado).
 - [x] **Master/TenantAdminService.cs** / **TenantAccessReader.cs** — Tenant 360°, ciclo de vida, créditos, armazenamento e purge.
 - [x] **Master/AsaasPaymentGateway.cs** / **AsaasWebhookService.cs** — assinatura recorrente e baixa/bloqueio automático.
 - [x] **Master/ImpersonationService.cs** — emulação auditada.
@@ -1668,10 +1668,10 @@ API / Orquestrador / Worker / WebUi
 ### MercadoLivreNoScraping - Resolvedor de links e metadados do ML sem scraping público
 
 - [x] **Ofertio.Infrastructure.Services/Groups/OfferValidationService.cs** - links do ML não baixam a página: extrai o MLB (redirects só pelos cabeçalhos quando é encurtador/vitrine), consulta `IMercadoLivreApiService.GetItemAsync` e devolve Ativo/Esgotado/Inativo; sem MLB ou sem resposta da API fica "Verificando"; busca no lugar do produto continua Esgotado.
-- [x] **Ofertio.Infrastructure.Services/LinkStrategies/ProductMetadataService.cs** - metadados do ML (título, preço, imagem) pela API oficial com o usuário do `IAffiliateLinkGenerationContext`; sem MLB ou sem resposta usa o slug da URL, nunca o HTML.
+- [x] **Ofertio.Infrastructure.Services/LinkStrategies/ProductMetadataService.cs** - metadados do ML (título, preço, imagem) pela API oficial com o usuário do `IAffiliateLinkGenerationContext`; catálogo `/p/MLB` usa nome, foto e preço de `/products` mesmo sem anúncio ganhador; sem MLB ou sem resposta usa o slug da URL, nunca o HTML.
 - [x] **Ofertio.Infrastructure.Services/LinkStrategies/UrlExpansionService.cs** - para ao chegar numa URL de produto do ML com MLB e não lê o corpo de páginas do ML.
-- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem usuário (rotinas em segundo plano) não usa a conta de nenhum tenant; código de catálogo (`/p/MLB...`) com 404 em `/items` segue `/products/{id}` ➔ anúncio ganhador da buy box.
-- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogProduct` (buy_box_winner, nome, foto).
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - sem usuário (rotinas em segundo plano) não usa a conta de nenhum tenant; código de catálogo (`/p/MLB...`) com 404 em `/items` segue `/products/{id}`: o anúncio ganhador completa os dados, e sem ele ficam nome, foto e preço do próprio produto.
+- [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** - `ParseCatalogProduct` (buy_box_winner, nome, foto) e `ParseCatalogSnapshot` (nome, foto e preço do produto de catálogo).
 - [x] **Ofertio.Tests/Unit/Groups/OfferValidationServiceTests.cs** - status do ML pela API sem nenhum GET na página (encerrado, sem estoque, ativo, API indisponível, vitrine focada).
 - [x] **Ofertio.Tests/Unit/LinkStrategies/ProductMetadataServiceTests.cs** - metadados do ML pela API com o usuário da geração e sem requisição HTTP.
 - [x] **Ofertio.Tests/Unit/LinkStrategies/AffiliateLinkInfrastructureTests.cs** - expansão para no produto do ML sem baixar a página.

@@ -296,11 +296,16 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(item => item.Id == userId)
-            .Select(item => new { item.TenantId, item.Plan })
+            .Select(item => new { item.TenantId, item.Plan, item.Role })
             .FirstOrDefaultAsync(cancellationToken);
         if (user is null)
         {
             return false;
+        }
+
+        if (MasterRoles.IsMaster(user.Role))
+        {
+            return true;
         }
 
         var tenantPlan = await _context.Tenants

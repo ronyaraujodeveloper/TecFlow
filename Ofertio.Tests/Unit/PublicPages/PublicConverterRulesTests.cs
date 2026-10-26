@@ -232,6 +232,30 @@ public class PublicConverterPageServiceTests
         Assert.Equal(created.Data!.Slug, (await service.ListMineAsync(4)).Data!.Slug);
     }
 
+    [Fact]
+    public async Task ChangeSlug_ShouldAllowMasterAccountWithoutSaasPlan()
+    {
+        await using var context = CreateContext();
+        context.UserAccounts.Add(new UserAccount
+        {
+            Id = 9,
+            Name = "Master",
+            Email = "master@ofertio.com",
+            PasswordHash = "h",
+            TenantId = Guid.NewGuid(),
+            Plan = "Master",
+            Role = MasterRoles.SuperAdmin
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        Assert.True((await service.ListMineAsync(9)).CanCustomizeSlug);
+        var changed = await service.ChangeSlugAsync(9, "vitrine-master");
+
+        Assert.True(changed.Status);
+        Assert.Equal("vitrine-master", changed.Data!.Slug);
+    }
+
     private static PublicConverterPageService CreateService(AppDbContext context) =>
         new(
             context,

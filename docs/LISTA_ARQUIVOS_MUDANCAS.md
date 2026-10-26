@@ -775,7 +775,7 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.26 — Página pública de conversão (slug versionado)
 
-- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`). O endereço inicial é um código aleatório de 6 a 10 caracteres, único na tabela; "Slug personalizado" (`integracoes.paginas.slug`) na matriz libera a troca, desmarcado em todos os planos até o Master marcar.
+- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`). O endereço inicial é um código aleatório de 6 a 10 caracteres, único na tabela; "Slug personalizado" (`integracoes.paginas.slug`) na matriz libera a troca, desmarcado em todos os planos até o Master marcar. Contas Master (SuperAdmin, SuporteTecnico, FinanceiroSaaS) sempre podem trocar.
 - [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio Ofertio) com Copiar/Abrir.
 - [x] **app.css** — `.public-converter-platforms` (padding `0.4rem 0.6rem`, min/max-width e ícones menores).
 - [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.
@@ -1854,7 +1854,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Service/Radar/OfficialCatalogSearchRules.cs** - mensagens apontam para o administrador / Painel Master ➔ Integrações Globais.
 - [x] **Ofertio.Infrastructure.Services/Master/GlobalIntegrationService.cs** *(novo)* - status, salvar tempo de cache (vault global), desconectar e concluir a autorização Master (exige `ManageGlobalKeys`), com auditoria.
 - [x] **Ofertio.Infrastructure.Services/Master/MasterAuditActions.cs** e **MasterBackofficeRegistrationExtensions.cs** - ações `integracao-global.*` e registro do serviço.
-- [x] **Ofertio.Infrastructure.Services/Master/MenuPermissionService.cs** - matriz com as dependências da permissão; menu do cliente oculta as telas dependentes quando a permissão está desligada no plano.
+- [x] **Ofertio.Infrastructure.Services/Master/MenuPermissionService.cs** - matriz com as dependências da permissão; menu do cliente oculta as telas dependentes quando a permissão está desligada no plano. Itens do catálogo com `IsFeatureToggle` (ex.: "Slug personalizado") também recebem o selo "permissão" na matriz.
 - [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreApiService.cs** - token Master primeiro (refresh sob semáforo, persistência e nova tentativa transparente em 401/403), fallback para o token legado do usuário/estático/app; cache global de buscas via `IMemoryCache`.
 - [x] **Ofertio.API/Controllers/Master/MasterGlobalIntegrationsController.cs** *(novo)* - `api/master/integracoes-globais/mercado-livre` (status, configurações, desconectar, authorize-url) sob `ManageGlobalKeys`.
 - [x] **Ofertio.API/Security/MercadoLivreOAuthCallbackFlow.cs**, **MarketplaceAuthController.cs** e **MercadoLivreController.cs** - callback com state Master grava o token global e volta para a tela do Master.

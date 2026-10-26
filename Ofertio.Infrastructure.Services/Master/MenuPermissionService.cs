@@ -50,7 +50,8 @@ public sealed class MenuPermissionService : IMenuPermissionService
             Rows = MenuVisibilityRules.Flatten(items)
                 .Select(entry => new MenuPermissionRowDto
                 {
-                    IsFeatureToggle = DefaultMenuCatalog.FeatureDependencies.ContainsKey(entry.Item.Key),
+                    IsFeatureToggle = DefaultMenuCatalog.FeatureDependencies.ContainsKey(entry.Item.Key)
+                        || DefaultMenuCatalog.Find(entry.Item.Key)?.IsFeatureToggle == true,
                     ControlledTitles = DefaultMenuCatalog.FeatureDependencies.TryGetValue(entry.Item.Key, out var dependents)
                         ? dependents.Where(byKey.ContainsKey).Select(key => byKey[key].Title).ToList()
                         : [],

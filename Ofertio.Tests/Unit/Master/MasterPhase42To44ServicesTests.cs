@@ -119,6 +119,24 @@ public class MenuPermissionServiceTests
     }
 
     [Fact]
+    public async Task Matrix_ShouldShowCustomSlugAsPermissionRightBelowPublicPages()
+    {
+        var (context, service, starter, pro) = await SeedAsync();
+        await using var scope = context;
+
+        var rows = (await service.GetMatrixAsync()).Rows;
+
+        var pages = rows.FindIndex(row => row.Key == "integracoes.paginas");
+        var slug = rows[pages + 1];
+        Assert.Equal(DefaultMenuCatalog.CustomPublicSlug, slug.Key);
+        Assert.Equal(rows[pages].MenuItemId, slug.ParentId);
+        Assert.Equal(rows[pages].Depth + 1, slug.Depth);
+        Assert.True(slug.IsFeatureToggle);
+        Assert.False(slug.Visibility[starter.Id]);
+        Assert.False(slug.Visibility[pro.Id]);
+    }
+
+    [Fact]
     public async Task ClientMenu_RoadmapShouldOnlyAppearInMasterView()
     {
         var (context, service, _, _) = await SeedAsync();

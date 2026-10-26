@@ -775,7 +775,7 @@ API / Orquestrador / Worker / WebUi
 
 ### Fase 19.26 — Página pública de conversão (slug versionado)
 
-- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`). O endereço inicial é um código aleatório de 6 a 10 caracteres, único na tabela; "Slug personalizado" (`integracoes.paginas.slug`) na matriz libera a troca, desmarcado em todos os planos até o Master marcar. Contas Master (SuperAdmin, SuporteTecnico, FinanceiroSaaS) sempre podem trocar.
+- [x] **PublicConverterPage.cs** / **PublicConverterPages** — versionamento de slug (`IsActive=false` no antigo, novo registro com o mesmo `PublicCode`). O endereço inicial é um código aleatório de 6 a 10 caracteres, único na tabela; "Slug personalizado" (`integracoes.paginas.slug`) na matriz libera a troca, desmarcado em todos os planos até o Master marcar. Contas Master (SuperAdmin, SuporteTecnico, FinanceiroSaaS) seguem só a coluna Ativo da linha; clientes seguem Ativo + a coluna do próprio plano.
 - [x] **PublicConverter.razor** — aceita slug ativo e inativo; badges `DistinctBy(PlatformType)` compactos (~35%); Converter + Limpar; resultados em duas linhas (direto e rastreio Ofertio) com Copiar/Abrir.
 - [x] **app.css** — `.public-converter-platforms` (padding `0.4rem 0.6rem`, min/max-width e ícones menores).
 - [x] **MinhasPaginasPublicas.razor** — histórico de slugs com badge Inativo.

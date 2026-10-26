@@ -287,11 +287,21 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
     }
 
     /// <summary>
-    /// Liberado só quando a linha "Slug personalizado" está ativa e marcada para o plano da conta.
-    /// Sem essa linha, ou com ela desmarcada, o campo permanece bloqueado.
+    /// Linha "Slug personalizado" inativa bloqueia todos. Ativa: contas Master liberadas (como no menu do
+    /// Painel Master, que ignora as colunas de plano); clientes precisam da coluna do próprio plano marcada.
     /// </summary>
     private async Task<bool> CanCustomizeSlugAsync(int userId, CancellationToken cancellationToken)
     {
+        var menuItemId = await _context.MenuItems
+            .AsNoTracking()
+            .Where(item => item.Key == DefaultMenuCatalog.CustomPublicSlug && item.IsActive)
+            .Select(item => (int?)item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (menuItemId is null)
+        {
+            return false;
+        }
+
         var user = await _context.UserAccounts
             .IgnoreQueryFilters()
             .AsNoTracking()
@@ -325,16 +335,6 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             .Select(plan => (int?)plan.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (planId is null)
-        {
-            return false;
-        }
-
-        var menuItemId = await _context.MenuItems
-            .AsNoTracking()
-            .Where(item => item.Key == DefaultMenuCatalog.CustomPublicSlug && item.IsActive)
-            .Select(item => (int?)item.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (menuItemId is null)
         {
             return false;
         }

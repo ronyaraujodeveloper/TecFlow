@@ -233,9 +233,39 @@ public class PublicConverterPageServiceTests
     }
 
     [Fact]
-    public async Task ChangeSlug_ShouldAllowMasterAccountWithoutSaasPlan()
+    public async Task ChangeSlug_MasterShouldFollowOnlyTheActiveColumn()
     {
         await using var context = CreateContext();
+        SeedMaster(context, slugActive: true);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        Assert.True((await service.ListMineAsync(9)).CanCustomizeSlug);
+        var changed = await service.ChangeSlugAsync(9, "vitrine-master");
+
+        Assert.True(changed.Status);
+        Assert.Equal("vitrine-master", changed.Data!.Slug);
+    }
+
+    [Fact]
+    public async Task ChangeSlug_MasterShouldBeBlockedWhenTheRowIsInactive()
+    {
+        await using var context = CreateContext();
+        SeedMaster(context, slugActive: false);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var created = await service.ListMineAsync(9);
+        var blocked = await service.ChangeSlugAsync(9, "vitrine-master");
+
+        Assert.False(created.CanCustomizeSlug);
+        Assert.False(blocked.Status);
+        Assert.Contains("não libera", blocked.Descricao, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void SeedMaster(AppDbContext context, bool slugActive)
+    {
+        context.MenuItems.Add(new MenuItem { Key = DefaultMenuCatalog.CustomPublicSlug, Title = "Slug personalizado", IsActive = slugActive });
         context.UserAccounts.Add(new UserAccount
         {
             Id = 9,
@@ -246,14 +276,6 @@ public class PublicConverterPageServiceTests
             Plan = "Master",
             Role = MasterRoles.SuperAdmin
         });
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        Assert.True((await service.ListMineAsync(9)).CanCustomizeSlug);
-        var changed = await service.ChangeSlugAsync(9, "vitrine-master");
-
-        Assert.True(changed.Status);
-        Assert.Equal("vitrine-master", changed.Data!.Slug);
     }
 
     private static PublicConverterPageService CreateService(AppDbContext context) =>

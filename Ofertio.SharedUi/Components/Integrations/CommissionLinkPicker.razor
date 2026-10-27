@@ -7,6 +7,7 @@
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject ILogger<CommissionLinkPicker> Logger
 @inject NavigationManager NavigationManager
+@inject IUserClock Clock
 
 <div class="commission-link-picker mb-3">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -122,7 +123,11 @@
     [Parameter]
     public EventCallback<AffiliateLinkHistoryItemDto> OnLinkItemSelected { get; set; }
 
-    protected override async Task OnInitializedAsync() => await ReloadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureLoadedAsync();
+        await ReloadAsync();
+    }
 
     public async Task ResetAsync()
     {
@@ -237,13 +242,13 @@
 
         if (DateTime.TryParse(_fromDate, out var from))
         {
-            var start = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
+            var start = Clock.ToUtc(from.Date);
             query = query.Where(item => item.CreatedAt >= start);
         }
 
         if (DateTime.TryParse(_toDate, out var to))
         {
-            var end = DateTime.SpecifyKind(to.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            var end = Clock.ToUtc(to.Date.AddDays(1)).AddTicks(-1);
             query = query.Where(item => item.CreatedAt <= end);
         }
 

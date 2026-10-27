@@ -9,6 +9,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime Js
 @inject ILogger<TelegramAgendador> Logger
+@inject IUserClock Clock
 
 <PageTitle>Agendador Telegram — Ofertio</PageTitle>
 
@@ -120,7 +121,7 @@
                             <tr>
                                 <td>@item.Title</td>
                                 <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
-                                <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="small">@Clock.ToLocal(item.ScheduledAt).ToString("dd/MM/yyyy HH:mm")</td>
                                 <td class="small">
                                     @item.TargetChatIds.Count @(item.TargetChatIds.Count == 1 ? "canal" : "canais")
                                     @if (item.TargetChatNames.Count > 0)
@@ -144,7 +145,7 @@
     private string _title = string.Empty;
     private string _message = string.Empty;
     private string _imageUrl = string.Empty;
-    private string _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+    private string _scheduledLocal = string.Empty;
     private int _intervalSeconds = TelegramBroadcastStatuses.DefaultIntervalSeconds;
     private int _pickerEpoch;
     private bool _isBusy;
@@ -153,9 +154,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Clock.EnsureLoadedAsync();
+        _scheduledLocal = DefaultScheduledLocal();
         await LoadAsync();
         ApplyCloneQuery();
     }
+
+    private string DefaultScheduledLocal() => Clock.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
 
     private void ApplyCloneQuery()
     {
@@ -277,7 +282,7 @@
             DateTime? when = null;
             if (DateTime.TryParse(_scheduledLocal, out var parsed))
             {
-                when = DateTime.SpecifyKind(parsed, DateTimeKind.Local);
+                when = Clock.ToUtc(parsed);
             }
 
             var response = await TelegramApi.ScheduleCampaignAsync(new TelegramScheduleCampaignDto
@@ -325,7 +330,7 @@
         _title = string.Empty;
         _message = string.Empty;
         _imageUrl = string.Empty;
-        _scheduledLocal = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+        _scheduledLocal = DefaultScheduledLocal();
         _intervalSeconds = TelegramBroadcastStatuses.DefaultIntervalSeconds;
         if (_linkPicker is not null)
         {

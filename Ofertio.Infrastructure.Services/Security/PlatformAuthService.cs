@@ -5,6 +5,7 @@ using Ofertio.Business.Dto.Auth;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Security;
+using Ofertio.Business.Service.Common;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Infrastructure.Security;
@@ -295,6 +296,31 @@ public class PlatformAuthService : IPlatformAuthService
         };
     }
 
+    public async Task<AuthProviderResponseDto> ChangeStateAsync(
+        int userId,
+        ChangeStateDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userAccountRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            return Fail("Usuário não encontrado.");
+        }
+
+        var requested = request?.StateCode?.Trim();
+        var stateCode = BrazilTimeZoneRules.NormalizeStateCode(requested);
+        if (!string.IsNullOrEmpty(requested) && stateCode is null)
+        {
+            return Fail("Estado inválido. Escolha uma UF da lista.");
+        }
+
+        user.StateCode = stateCode;
+        user.Touch();
+        await _userAccountRepository.UpdateAsync(user);
+        var zone = BrazilTimeZoneRules.Resolve(stateCode);
+        return await BuildProviderResponseAsync(user, $"Fuso horário salvo: {zone.Label}.", cancellationToken);
+    }
+
     public async Task<AuthProviderResponseDto> GetProviderStatusAsync(
         int userId,
         CancellationToken cancellationToken = default)
@@ -438,7 +464,8 @@ public class PlatformAuthService : IPlatformAuthService
             {
                 Provider = string.Empty,
                 HasPassword = hasPassword,
-                LinkedProviders = logins.Select(login => login.LoginProvider).Distinct().ToList()
+                LinkedProviders = logins.Select(login => login.LoginProvider).Distinct().ToList(),
+                StateCode = BrazilTimeZoneRules.NormalizeStateCode(user.StateCode)
             }
         };
     }

@@ -34,6 +34,11 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     [Column("TelefoneWhatsApp")]
     public string? WhatsAppPhone { get; set; }
 
+    /// <summary>UF do cliente; define o fuso dos horários na tela. Vazio = Brasília.</summary>
+    [Column("Estado")]
+    [MaxLength(2)]
+    public string? StateCode { get; set; }
+
     public string? TikTokShopAccessToken { get; set; }
     public string? TikTokRefreshToken { get; set; }
     public DateTime? TikTokTokenExpiresAt { get; set; }

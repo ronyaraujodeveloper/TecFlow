@@ -5,6 +5,7 @@
 @using Ofertio.SharedUi.Services.Radar
 @inject IOfferIntelligenceApiService Api
 @inject ILogger<SaudeOfertas> Logger
+@inject IUserClock Clock
 
 <PageTitle>Saúde de cupom e estoque — Ofertio</PageTitle>
 
@@ -40,7 +41,7 @@
                             <td>@item.Channel</td>
                             <td>@item.Message</td>
                             <td>@(item.CouponCode ?? "—")</td>
-                            <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                            <td>@Clock.ToLocal(item.CreatedAt).ToString("dd/MM HH:mm")</td>
                         </tr>
                     }
                 </tbody>
@@ -55,6 +56,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Clock.EnsureLoadedAsync();
         try
         {
             var result = await Api.ListHealthAsync();

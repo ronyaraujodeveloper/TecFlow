@@ -9,6 +9,7 @@
 @using Ofertio.SharedUi.Services.State
 @inject IAffiliateAnalyticsApiService AnalyticsApi
 @inject IActiveStoreScopeService StoreScope
+@inject IUserClock Clock
 @implements IDisposable
 <PageTitle>Conciliação financeira — Ofertio</PageTitle>
 
@@ -206,11 +207,19 @@
         StoreScope.OnStoreChanged += HandleStoreScopeChanged;
         _storeScopeSubscribed = true;
 
+        await Clock.EnsureLoadedAsync();
+        _startDate = Clock.Now.Date.AddDays(-30);
+        _endDate = Clock.Now.Date;
+
         await StoreScope.EnsureInitializedAsync();
         ApplyActiveStoreScope();
 
         await LoadAsync();
     }
+
+    private DateTime? StartUtc => _startDate is { } start ? Clock.ToUtc(start.Date) : null;
+
+    private DateTime? EndUtc => _endDate is { } end ? Clock.ToUtc(end.Date.AddDays(1)).AddTicks(-1) : null;
 
     private void HandleStoreScopeChanged()
     {
@@ -234,8 +243,8 @@
     private async Task ApplyFilterAndLoadAsync()
     {
         _filter.Page = 1;
-        _filter.StartDate = _startDate?.ToUniversalTime();
-        _filter.EndDate = _endDate?.ToUniversalTime().Date.AddDays(1).AddTicks(-1);
+        _filter.StartDate = StartUtc;
+        _filter.EndDate = EndUtc;
         await LoadAsync();
     }
 
@@ -257,8 +266,8 @@
 
         _loading = true;
         _errorMessage = null;
-        _filter.StartDate ??= _startDate?.ToUniversalTime();
-        _filter.EndDate ??= _endDate?.ToUniversalTime();
+        _filter.StartDate ??= StartUtc;
+        _filter.EndDate ??= EndUtc;
 
         try
         {

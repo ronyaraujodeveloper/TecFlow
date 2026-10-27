@@ -4,6 +4,7 @@
 @using Ofertio.Business.Dto
 @using Ofertio.SharedUi.Services.Health
 @inject IPlatformHealthApiService HealthApi
+@inject IUserClock Clock
 
 <PageTitle>Saúde do sistema — Ofertio</PageTitle>
 
@@ -64,7 +65,7 @@
                             <li class="list-group-item health-error-item">
                                 <div class="d-flex justify-content-between align-items-start gap-2">
                                     <span class="badge @GetSourceBadgeClass(err.Source)">@err.Source</span>
-                                    <time class="small text-muted">@err.OccurredAtUtc.ToLocalTime().ToString("g")</time>
+                                    <time class="small text-muted">@Clock.ToLocal(err.OccurredAtUtc.UtcDateTime).ToString("g")</time>
                                 </div>
                                 <p class="mb-0 mt-2 fw-medium">@err.Message</p>
                                 @if (!string.IsNullOrWhiteSpace(err.Detail))
@@ -85,7 +86,11 @@
     private string? _errorMessage;
     private HealthDashboardDto? _dashboard;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureLoadedAsync();
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {

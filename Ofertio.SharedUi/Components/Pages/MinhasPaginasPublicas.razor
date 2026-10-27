@@ -6,6 +6,7 @@
 @inject IPublicConverterApiService PublicPages
 @inject NavigationManager Navigation
 @inject ILogger<MinhasPaginasPublicas> Logger
+@inject IUserClock Clock
 
 <PageTitle>Minhas Páginas Públicas — Ofertio</PageTitle>
 
@@ -96,7 +97,7 @@
                                             <span class="badge text-bg-secondary">Inativo</span>
                                         }
                                     </td>
-                                    <td class="small">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="small">@Clock.ToLocal(item.CreatedAt).ToString("dd/MM/yyyy HH:mm")</td>
                                 </tr>
                             }
                         </tbody>
@@ -119,6 +120,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Clock.EnsureLoadedAsync();
         await LoadAsync();
     }
 

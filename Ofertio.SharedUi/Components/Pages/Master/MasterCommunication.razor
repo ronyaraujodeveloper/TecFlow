@@ -171,7 +171,7 @@
         }
     }
 
-    private static SystemBannerDto NewBanner() => new() { StartsAt = DateTime.Now };
+    private static SystemBannerDto NewBanner() => new() { StartsAt = ToBrasilia(DateTime.UtcNow) };
 
     private void EditBanner(SystemBannerDto banner) => _banner = new SystemBannerDto
     {
@@ -179,8 +179,8 @@
         Title = banner.Title,
         Message = banner.Message,
         Severity = banner.Severity,
-        StartsAt = banner.StartsAt?.ToLocalTime(),
-        EndsAt = banner.EndsAt?.ToLocalTime(),
+        StartsAt = banner.StartsAt is { } startsAt ? ToBrasilia(startsAt) : null,
+        EndsAt = banner.EndsAt is { } endsAt ? ToBrasilia(endsAt) : null,
         IsActive = banner.IsActive
     };
 
@@ -202,8 +202,8 @@
             Title = _banner.Title,
             Message = _banner.Message,
             Severity = _banner.Severity,
-            StartsAt = _banner.StartsAt?.ToUniversalTime(),
-            EndsAt = _banner.EndsAt?.ToUniversalTime(),
+            StartsAt = _banner.StartsAt is { } startsAt ? FromBrasilia(startsAt) : null,
+            EndsAt = _banner.EndsAt is { } endsAt ? FromBrasilia(endsAt) : null,
             IsActive = _banner.IsActive
         };
 

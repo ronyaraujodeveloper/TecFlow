@@ -13,6 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime Js
 @inject ILogger<WhatsAppAgendador> Logger
+@inject IUserClock Clock
 
 <PageTitle>Agendador WhatsApp — Ofertio</PageTitle>
 
@@ -202,7 +203,7 @@
                         <tr>
                             <td>@item.Title</td>
                             <td><span class="badge @StatusClass(item.Status)">@item.UiStatusLabel</span></td>
-                            <td class="small">@item.ScheduledAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="small">@Clock.ToLocal(item.ScheduledAt).ToString("dd/MM/yyyy HH:mm")</td>
                             <td>@item.IntervalSeconds s</td>
                             <td>
                                 <div class="campaign-groups-popover" tabindex="0">
@@ -319,13 +320,13 @@
             if (DateTime.TryParse(_filterFrom, out var from))
             {
                 var start = from.Date;
-                query = query.Where(item => item.ScheduledAt.ToLocalTime().Date >= start);
+                query = query.Where(item => Clock.ToLocal(item.ScheduledAt).Date >= start);
             }
 
             if (DateTime.TryParse(_filterTo, out var to))
             {
                 var end = to.Date;
-                query = query.Where(item => item.ScheduledAt.ToLocalTime().Date <= end);
+                query = query.Where(item => Clock.ToLocal(item.ScheduledAt).Date <= end);
             }
 
             if (!string.IsNullOrWhiteSpace(_searchText))
@@ -364,6 +365,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Clock.EnsureLoadedAsync();
+        model.SetSchedule(Clock.Now.AddMinutes(5));
         await LoadAsync();
         ApplyCloneQuery();
         StartPolling();
@@ -377,7 +380,7 @@
             return;
         }
 
-        model.Reset();
+        model.Reset(Clock.Now);
         model.LinkComissaoUrl = link;
         var title = ReadQueryValue("cloneTitle");
         if (!string.IsNullOrWhiteSpace(title))
@@ -500,7 +503,7 @@
             DateTime? when = null;
             if (DateTime.TryParse(model.DataHoraLocal, out var parsed))
             {
-                when = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
+                when = Clock.ToUtc(parsed);
             }
 
             ApiResult<WhatsAppBroadcastResponseDto> response;
@@ -562,9 +565,7 @@
         model.Mensagem = copy;
         model.LinkComissaoUrl = string.IsNullOrWhiteSpace(item.CommissionLinkUrl) ? link : item.CommissionLinkUrl;
         model.ImageUrl = item.ImageUrl ?? string.Empty;
-        var agora = DateTime.Now;
-        model.DataHora = WhatsAppBroadcastRules.ResolveEditScheduledAt(item.ScheduledAt, agora, out var dataAjustada);
-        model.DataHoraLocal = model.DataHora.ToString("yyyy-MM-ddTHH:mm");
+        model.SetSchedule(WhatsAppBroadcastRules.ResolveEditScheduledAt(Clock.ToLocal(item.ScheduledAt), Clock.Now, out var dataAjustada));
         model.IntervaloSegundos = WhatsAppBroadcastRules.ClampIntervalSeconds(item.IntervalSeconds);
         if (model.IntervaloSegundos is not 15 and not 30 and not 45 and not 60)
         {
@@ -745,7 +746,7 @@
     private async Task ResetFormAsync()
     {
         editingId = null;
-        model.Reset();
+        model.Reset(Clock.Now);
         _commissionPlatform = null;
         _commissionPlatformName = null;
         _messageUrlWarning = null;
@@ -761,7 +762,7 @@
         model.DataHoraLocal = e.Value?.ToString() ?? string.Empty;
         if (DateTime.TryParse(model.DataHoraLocal, out var parsed))
         {
-            model.DataHora = DateTime.SpecifyKind(parsed, DateTimeKind.Local);
+            model.DataHora = parsed;
         }
     }
 
@@ -895,22 +896,28 @@
 
         public string ImageUrl { get; set; } = string.Empty;
 
-        public DateTime DataHora { get; set; } = DateTime.Now.AddMinutes(5);
+        /// <summary>Horário de parede do cliente (fuso do estado), convertido para UTC só no envio.</summary>
+        public DateTime DataHora { get; set; }
 
-        public string DataHoraLocal { get; set; } = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+        public string DataHoraLocal { get; set; } = string.Empty;
 
         public int IntervaloSegundos { get; set; } = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
 
         public HashSet<string> GruposSelecionados { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public void Reset()
+        public void SetSchedule(DateTime local)
+        {
+            DataHora = local;
+            DataHoraLocal = local.ToString("yyyy-MM-ddTHH:mm");
+        }
+
+        public void Reset(DateTime nowLocal)
         {
             Titulo = string.Empty;
             Mensagem = string.Empty;
             LinkComissaoUrl = string.Empty;
             ImageUrl = string.Empty;
-            DataHora = DateTime.Now.AddMinutes(5);
-            DataHoraLocal = DataHora.ToString("yyyy-MM-ddTHH:mm");
+            SetSchedule(nowLocal.AddMinutes(5));
             IntervaloSegundos = WhatsAppBroadcastStatuses.DefaultIntervalSeconds;
             GruposSelecionados.Clear();
         }

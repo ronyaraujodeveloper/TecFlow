@@ -19,6 +19,13 @@ public interface IAccountSecurityApiService
     Task<AuthProviderResponseDto> ChangePasswordAsync(
         ChangePasswordDto request,
         CancellationToken cancellationToken = default);
+
+    Task<AuthProviderResponseDto> ChangeStateAsync(
+        ChangeStateDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Status sem overlay de carregamento (usado pelo relógio do usuário em segundo plano).</summary>
+    Task<AuthProviderResponseDto> GetStatusQuietlyAsync(CancellationToken cancellationToken = default);
 }
 
 public class AccountSecurityApiService : IAccountSecurityApiService
@@ -64,6 +71,17 @@ public class AccountSecurityApiService : IAccountSecurityApiService
         using var _ = _loadingService.BeginScope("Atualizando senha...");
         return SendEnvelopeAsync(HttpMethod.Put, "api/auth/change-password", request, cancellationToken);
     }
+
+    public Task<AuthProviderResponseDto> ChangeStateAsync(
+        ChangeStateDto request,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = _loadingService.BeginScope("Salvando fuso horário...");
+        return SendEnvelopeAsync(HttpMethod.Put, "api/auth/state", request, cancellationToken);
+    }
+
+    public Task<AuthProviderResponseDto> GetStatusQuietlyAsync(CancellationToken cancellationToken = default) =>
+        SendEnvelopeAsync(HttpMethod.Get, "api/auth/status", body: null, cancellationToken);
 
     private async Task<AuthProviderResponseDto> SendEnvelopeAsync(
         HttpMethod method,

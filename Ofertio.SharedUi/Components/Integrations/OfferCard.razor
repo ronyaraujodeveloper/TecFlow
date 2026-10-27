@@ -3,6 +3,7 @@
 @using Ofertio.Business.Service.LinkStrategies
 @using Ofertio.Core.Entities
 @using Ofertio.SharedUi.Models
+@inject IUserClock Clock
 
 <article class="card border-0 shadow-sm h-100 monitored-offer-card" aria-busy="@(PendingAction is not null ? "true" : "false")">
     <div class="card-body p-3 d-flex flex-column gap-2">
@@ -153,7 +154,9 @@
 
     private string CloneTitle => IsTelegram ? "Clonar Oferta" : "Clonar para Minha Campanha";
 
-    private DateTime CapturedAtLocal => CapturedMessageTimeRules.ToBrasilia(Item.ReceivedAt);
+    private DateTime CapturedAtLocal => Clock.ToLocal(Item.ReceivedAt);
+
+    protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 
     private string CapturedAtLabel => CapturedAtLocal.ToString("dd/MM/yyyy HH:mm");
 

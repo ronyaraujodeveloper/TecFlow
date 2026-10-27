@@ -141,20 +141,17 @@ public static class WhatsAppBroadcastRules
         value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
         || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-    public static DateTime ResolveEditScheduledAt(DateTime scheduledAt, DateTime now, out bool adjusted)
+    /// <summary>Ambos os valores no horário do cliente (fuso do estado), nunca no fuso do servidor.</summary>
+    public static DateTime ResolveEditScheduledAt(DateTime scheduledLocal, DateTime nowLocal, out bool adjusted)
     {
-        var localScheduled = scheduledAt.Kind == DateTimeKind.Utc
-            ? scheduledAt.ToLocalTime()
-            : DateTime.SpecifyKind(scheduledAt, DateTimeKind.Local);
-        var localNow = now.Kind == DateTimeKind.Utc ? now.ToLocalTime() : now;
-        if (localScheduled > localNow)
+        if (scheduledLocal > nowLocal)
         {
             adjusted = false;
-            return localScheduled;
+            return scheduledLocal;
         }
 
         adjusted = true;
-        return localNow.AddMinutes(10);
+        return nowLocal.AddMinutes(10);
     }
 
     public static bool IsPrivilegedWhatsAppRole(string? role)

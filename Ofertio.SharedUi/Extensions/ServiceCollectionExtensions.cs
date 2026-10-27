@@ -15,6 +15,7 @@ using Ofertio.SharedUi.Services.Devices;
 using Ofertio.SharedUi.Services.Integrations;
 using Ofertio.SharedUi.Services.LinkGenerator;
 using Ofertio.SharedUi.Services.Radar;
+using Ofertio.SharedUi.Services.Time;
 
 namespace Ofertio.SharedUi.Extensions;
 
@@ -55,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
+        services.AddScoped<IUserClock, UserClock>();
         services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
         services.AddScoped<IMarketplaceOAuthConnectService, MarketplaceOAuthConnectService>();
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();

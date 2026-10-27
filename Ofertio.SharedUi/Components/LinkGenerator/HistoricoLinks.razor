@@ -6,6 +6,7 @@
 @inject IAffiliateLinkApiService AffiliateLinkApi
 @inject IActiveStoreScopeService StoreScope
 @inject ILogger<HistoricoLinks> Logger
+@inject IUserClock Clock
 @implements IDisposable
 
 <section class="link-history-section mt-5 mx-auto" aria-label="Histórico de links de comissão">
@@ -121,7 +122,7 @@
                                 }
                             </div>
                             <time class="text-muted small" datetime="@item.CreatedAt.ToString("o")">
-                                @item.CreatedAt.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                @Clock.ToLocal(item.CreatedAt).ToString("dd/MM/yy HH:mm")
                             </time>
                         </div>
 
@@ -285,7 +286,7 @@
                                     }
                                 </td>
                                 <td class="small text-nowrap">
-                                    @(item?.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))
+                                    @(item is null ? null : Clock.ToLocal(item.CreatedAt).ToString("dd/MM/yyyy HH:mm"))
                                 </td>
                                 <td class="text-end">
                                     <span class="link-history-clicks-inline">@(item?.ClickCount ?? 0)</span>
@@ -344,6 +345,7 @@
     {
         StoreScope.OnStoreChanged += HandleStoreChanged;
         await StoreScope.EnsureInitializedAsync();
+        await Clock.EnsureLoadedAsync();
         await LoadHistoryAsync();
     }
 

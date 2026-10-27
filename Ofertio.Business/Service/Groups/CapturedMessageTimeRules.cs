@@ -1,4 +1,5 @@
-﻿using Ofertio.Core.Entities;
+﻿using Ofertio.Business.Service.Common;
+using Ofertio.Core.Entities;
 
 namespace Ofertio.Business.Service.Groups;
 
@@ -10,8 +11,6 @@ public static class CapturedMessageTimeRules
 {
     private static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MaxMessageAge = TimeSpan.FromDays(365);
-    private static readonly TimeSpan BrasiliaFallbackOffset = TimeSpan.FromHours(-3);
-    private static readonly Lazy<TimeZoneInfo?> BrasiliaZone = new(ResolveBrasiliaZone);
 
     /// <summary>
     /// Ordem padrão do feed: horário da mensagem capturada (mais recente primeiro). <c>CreatedAt</c> não serve
@@ -22,13 +21,7 @@ public static class CapturedMessageTimeRules
         query.OrderByDescending(item => item.ReceivedAt).ThenByDescending(item => item.Id);
 
     /// <summary>Valor em UTC: <c>Local</c> é convertido e <c>Unspecified</c> (lido do banco) já é UTC.</summary>
-    public static DateTime NormalizeUtc(DateTime value) =>
-        value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
+    public static DateTime NormalizeUtc(DateTime value) => BrazilTimeZoneRules.NormalizeUtc(value);
 
     public static DateTime? FromUnixSeconds(long seconds)
     {
@@ -65,30 +58,5 @@ public static class CapturedMessageTimeRules
         return sent > now + MaxClockSkew || sent < now - MaxMessageAge ? now : sent;
     }
 
-    public static DateTime ToBrasilia(DateTime value)
-    {
-        var utc = NormalizeUtc(value);
-        return BrasiliaZone.Value is { } zone
-            ? TimeZoneInfo.ConvertTimeFromUtc(utc, zone)
-            : DateTime.SpecifyKind(utc + BrasiliaFallbackOffset, DateTimeKind.Unspecified);
-    }
-
-    private static TimeZoneInfo? ResolveBrasiliaZone()
-    {
-        foreach (var id in new[] { "E. South America Standard Time", "America/Sao_Paulo" })
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(id);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-            }
-            catch (InvalidTimeZoneException)
-            {
-            }
-        }
-
-        return null;
-    }
+    public static DateTime ToBrasilia(DateTime value) => BrazilTimeZoneRules.ToLocal(value, null);
 }

@@ -25,6 +25,11 @@ public interface IPlatformAuthService
         ChangePasswordDto request,
         CancellationToken cancellationToken = default);
 
+    Task<AuthProviderResponseDto> ChangeStateAsync(
+        int userId,
+        ChangeStateDto request,
+        CancellationToken cancellationToken = default);
+
     Task<UserResponseDto> RegisterAsync(
         UserDto request,
         CancellationToken cancellationToken = default);

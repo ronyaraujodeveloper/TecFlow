@@ -74,7 +74,8 @@ Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conve
 
 ## 8. Regras de tela específicas
 
-- **Edição de agendamentos:** se `DataAgendada > DateTime.Now`, mantenha data e hora originais; se já passou, ajuste para `DateTime.Now.AddMinutes(10)` e mostre aviso apenas nesse caso.
+- **Edição de agendamentos:** se `DataAgendada > Clock.Now`, mantenha data e hora originais; se já passou, ajuste para `Clock.Now.AddMinutes(10)` e mostre aviso apenas nesse caso.
+- **Horários:** o banco guarda UTC. Nas telas do cliente use `IUserClock` (`ToLocal`, `ToUtc`, `Now`, fuso do estado em Minha Conta); no Painel Master use `ToBrasilia`/`FromBrasilia` do `MasterPageBase`. Nunca use `ToLocalTime()`, `DateTime.Now` ou `DateTimeKind.Local`: no Docker o servidor roda em UTC.
 - **Imagens de produto:** a conversão de links grava `og:image` em `ProductImageUrl` (editável); o agendador preenche "URL da imagem (opcional)" ao escolher o link, e o campo tem preview de 80x80 px.
 
 ## 9. Assets estáticos e localização

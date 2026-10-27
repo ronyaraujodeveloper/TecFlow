@@ -1499,7 +1499,7 @@ flowchart LR
   WORKER --> SVC
   SVC --> DB[(AppDbContext: Tenants, Usuarios, MasterAuditLogs, SystemSettings ENC, SaasPlans, SaasPayments, SystemBanners, TenantNotifications, ProductChangelogEntries)]
   PLANUI["/master/planos Disparos/dia"] --> SVC
-  SVC -->|novo disparo WhatsApp ou Telegram| GUARDPLAN[PlanScheduleGuard lê MaxDailySchedules]
+  SVC -->|novo disparo WhatsApp ou Telegram| GUARDPLAN[PlanScheduleGuard lê MaxDailySchedules e conta o dia no fuso do estado do cliente]
   AUDIT --> DB
   AWS --> DB
   DB -.->|DatabaseSettingsConfigurationProvider| CFG[IConfiguration da API]
@@ -2081,6 +2081,24 @@ flowchart LR
   FILA --> BG[LinkClickTelemetryService]
   BG -->|await AddAsync| LOG[(LinkClickLog)]
   ML[Gerador Mercado Livre] -->|matt_tool + matt_word| URL["catálogo /p/MLB ou anúncio produto.mercadolivre.com.br/MLB-id-slug"]
+```
+
+### Fuso horário de Brasília e por estado (`BrazilStateTimeZone`)
+
+O banco guarda UTC. A conversão acontece na aplicação pelo estado da conta, sem depender do fuso do servidor (Docker em UTC, IIS em Brasília). O broker não participa.
+
+```mermaid
+flowchart LR
+  MC["Minha Conta: cartão Fuso horário"] -->|PUT api/auth/state| AUTH[AuthController]
+  AUTH --> PAS[PlatformAuthService.ChangeStateAsync]
+  PAS --> DB[("Usuarios.Estado (UF)")]
+  DB -->|GET api/auth/status StateCode| CLOCK[IUserClock por circuito]
+  CLOCK --> RULES[BrazilTimeZoneRules: UF → IANA / UTC-3, -4, -5]
+  TELAS[Agendadores, históricos, cards e filtros] -->|ToLocal / ToUtc / Now| CLOCK
+  TELAS -->|ScheduledAt em UTC| API[WhatsApp / Telegram BroadcastService]
+  API --> GUARD[PlanScheduleGuard: dia no fuso do estado]
+  GUARD --> RULES
+  MASTER[Painel Master] -->|ToBrasilia / FromBrasilia| RULES
 ```
 
 ---

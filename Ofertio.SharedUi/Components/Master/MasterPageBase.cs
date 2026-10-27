@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Ofertio.Business.Dto;
+using Ofertio.Business.Service.Common;
 using Ofertio.SharedUi.Models;
 using Ofertio.SharedUi.Services.Auth;
 
@@ -77,9 +78,14 @@ public abstract class MasterPageBase : ComponentBase
         _ => $"{bytes} B"
     };
 
+    /// <summary>O Painel Master exibe sempre o horário de Brasília, qualquer que seja o estado do operador.</summary>
+    protected static DateTime ToBrasilia(DateTime utc) => BrazilTimeZoneRules.ToLocal(utc, null);
+
+    protected static DateTime FromBrasilia(DateTime local) => BrazilTimeZoneRules.ToUtc(local, null);
+
     protected static string Date(DateTime? value) =>
-        value.HasValue ? value.Value.ToLocalTime().ToString("dd/MM/yyyy", PtBr) : "—";
+        value.HasValue ? ToBrasilia(value.Value).ToString("dd/MM/yyyy", PtBr) : "—";
 
     protected static string DateTimeText(DateTime? value) =>
-        value.HasValue ? value.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", PtBr) : "—";
+        value.HasValue ? ToBrasilia(value.Value).ToString("dd/MM/yyyy HH:mm", PtBr) : "—";
 }

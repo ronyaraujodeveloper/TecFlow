@@ -1,5 +1,6 @@
 ﻿@using Ofertio.Business.Dto
 @using Ofertio.Core.Enums
+@inject IUserClock Clock
 
 <div class="marketplace-store-card card border-0 shadow-sm h-100">
     <div class="card-body d-flex flex-column gap-3">
@@ -24,13 +25,13 @@
         <dl class="marketplace-store-meta mb-0">
             <div>
                 <dt>Vinculada em</dt>
-                <dd>@Store.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                <dd>@Clock.ToLocal(Store.CreatedAt).ToString("dd/MM/yyyy HH:mm")</dd>
             </div>
             @if (!Store.PlatformType.IsUniversalAffiliatePlatform())
             {
                 <div>
                     <dt>Token expira em</dt>
-                    <dd>@Store.ExpiresAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                    <dd>@Clock.ToLocal(Store.ExpiresAt).ToString("dd/MM/yyyy HH:mm")</dd>
                 </div>
             }
         </dl>
@@ -81,6 +82,8 @@
     [Parameter] public EventCallback<MarketplaceAccountDto> OnEdit { get; set; }
 
     private bool _confirmDelete;
+
+    protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 
     private string AffiliateIdDisplay
     {

@@ -2902,6 +2902,11 @@ namespace Ofertio.Data.Migrations
                         .HasColumnType("nvarchar(32)")
                         .HasDefaultValue("TenantUser");
 
+                    b.Property<string>("StateCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)")
+                        .HasColumnName("Estado");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 

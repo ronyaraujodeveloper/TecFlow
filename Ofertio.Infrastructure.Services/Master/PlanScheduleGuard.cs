@@ -1,12 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Common;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Database;
 
 namespace Ofertio.Infrastructure.Services.Master;
 
-/// <summary>Limite diário de disparos (WhatsApp + Telegram somados) definido em Planos.</summary>
+/// <summary>Limite diário de disparos (WhatsApp + Telegram somados) definido em Planos; o dia é o do fuso do estado do cliente.</summary>
 public static class PlanScheduleGuard
 {
     public static async Task<string?> CheckAsync(
@@ -27,8 +28,13 @@ public static class PlanScheduleGuard
             return null;
         }
 
-        var dayStart = scheduledAtUtc.Date;
-        var dayEnd = dayStart.AddDays(1);
+        var stateCode = await context.UserAccounts
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => user.StateCode)
+            .FirstOrDefaultAsync(cancellationToken);
+        var (dayStart, dayEnd) = BrazilTimeZoneRules.DayRangeUtc(scheduledAtUtc, stateCode);
         var whatsApp = await context.WhatsAppBroadcastCampaigns
             .CountAsync(item => item.UserId == userId
                                 && item.ScheduledAt >= dayStart

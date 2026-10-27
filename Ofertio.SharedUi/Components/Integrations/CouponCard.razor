@@ -4,6 +4,7 @@
 @using Ofertio.SharedUi.Models
 @inject IJSRuntime Js
 @inject IToastService ToastService
+@inject IUserClock Clock
 
 <article class="card border-0 shadow-sm h-100 coupon-card">
     <div class="card-body p-3 d-flex flex-column gap-2">
@@ -11,7 +12,7 @@
             <span class="marketplace-platform-badge badge-sm @PlatformBadgeHelper.GetPlatformBadgeClass(Item.PlatformName)">
                 @PlatformLabel
             </span>
-            <small class="text-muted text-end">@Item.GroupName · @CapturedMessageTimeRules.ToBrasilia(Item.ReceivedAt).ToString("dd/MM/yyyy HH:mm")</small>
+            <small class="text-muted text-end">@Item.GroupName · @Clock.ToLocal(Item.ReceivedAt).ToString("dd/MM/yyyy HH:mm")</small>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(Item.Title))
@@ -118,6 +119,8 @@
 @code {
     [Parameter, EditorRequired]
     public GroupCapturedOfferDto Item { get; set; } = default!;
+
+    protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 
     [Parameter]
     public bool IsBusy { get; set; }

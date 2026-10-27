@@ -1,4 +1,5 @@
-﻿using Ofertio.Business.Service.WhatsApp;
+﻿using Ofertio.Business.Service.Common;
+using Ofertio.Business.Service.WhatsApp;
 using Ofertio.Core.Entities;
 
 namespace Ofertio.Tests.Unit.WhatsApp;
@@ -117,6 +118,21 @@ public class WhatsAppBroadcastRulesTests
 
         Assert.True(adjusted);
         Assert.Equal(now.AddMinutes(10), resolved);
+    }
+
+    [Fact]
+    public void ResolveEditScheduledAt_ShouldKeepClientWallClockRegardlessOfServerZone()
+    {
+        var scheduledUtc = new DateTime(2026, 10, 26, 23, 0, 0, DateTimeKind.Utc);
+        var nowUtc = new DateTime(2026, 10, 26, 22, 0, 0, DateTimeKind.Utc);
+
+        var resolved = WhatsAppBroadcastRules.ResolveEditScheduledAt(
+            BrazilTimeZoneRules.ToLocal(scheduledUtc, "SP"),
+            BrazilTimeZoneRules.ToLocal(nowUtc, "SP"),
+            out var adjusted);
+
+        Assert.False(adjusted);
+        Assert.Equal(new DateTime(2026, 10, 26, 20, 0, 0), resolved);
     }
 
     [Fact]

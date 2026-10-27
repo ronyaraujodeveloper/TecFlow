@@ -1984,3 +1984,22 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreShowcaseRules.cs** — produto focado da vitrine no mesmo formato, sem `/p/`.
 - [x] **Ofertio.Infrastructure.Services/Radar/MercadoLivreItemParser.cs** — fallback sem permalink usa `/MLB-{id}`.
 - [x] **Ofertio.Business/Integrations/MercadoLivre/MercadoLivreCommissionUrlBuilder.cs** — catálogo `/p/MLB{id}` permanece em `www.mercadolivre.com.br`; anúncio `produto.mercadolivre.com.br/MLB-{id}-slug` permanece no host do anúncio. `produto.mercadolivre.com.br/MLB-{id}` sem o caminho do catálogo devolve “página não existe”.
+
+### Fuso horário de Brasília e por estado (sem horário de verão)
+
+- [x] **Ofertio.Business/Service/Common/BrazilTimeZoneRules.cs** (novo) — 27 UFs com fuso IANA e deslocamento fixo (UTC-3, -4 em AM/RR/RO/MT/MS, -5 no AC); `Resolve` (vazio/inválido = Brasília), `ToLocal`, `ToUtc`, `DayRangeUtc` e `NormalizeUtc`, sem depender do fuso do servidor.
+- [x] **Ofertio.Business/Service/Groups/CapturedMessageTimeRules.cs** — `NormalizeUtc` e `ToBrasilia` delegam para `BrazilTimeZoneRules`.
+- [x] **Ofertio.Core/Entities/UserAccount.cs** — `StateCode` (coluna `Estado`, `nvarchar(2)`, opcional).
+- [x] **Ofertio.Data/Migrations/20261026234651_AddUserStateCode.cs** (novo, + Designer e snapshot) — coluna `Estado` em `Usuarios`.
+- [x] **Ofertio.Business/Dto/Auth/AuthProviderResponseDto.cs** — `AuthProviderInfoDto.StateCode` e `ChangeStateDto`.
+- [x] **Ofertio.Business/Interfaces/Services/IPlatformAuthService.cs** / **Ofertio.Infrastructure.Services/Security/PlatformAuthService.cs** — `ChangeStateAsync` valida a UF e devolve o estado no status.
+- [x] **Ofertio.API/Controllers/AuthController.cs** — `PUT api/auth/state` (autenticado).
+- [x] **Ofertio.SharedUi/Services/Auth/AccountSecurityApiService.cs** — `ChangeStateAsync` e `GetStatusQuietlyAsync`.
+- [x] **Ofertio.SharedUi/Services/Time/UserClock.cs** (novo) — `IUserClock` por circuito: carrega a UF uma vez e converte UTC ⇄ horário do cliente; registrado em `ServiceCollectionExtensions` e importado em `_Imports.razor`.
+- [x] **Ofertio.SharedUi/Components/Pages/AccountSecurity.razor** — cartão “Fuso horário” com seletor de estado (Brasília padrão) em Minha Conta.
+- [x] **Ofertio.SharedUi/Components/Pages/Integracoes/WhatsAppAgendador.razor** / **TelegramAgendador.razor** — horário padrão, edição, filtros e envio pelo fuso do cliente (`Clock.ToUtc`); corrige disparos 3 h adiantados no Docker em UTC.
+- [x] **Ofertio.Business/Service/WhatsApp/WhatsAppBroadcastRules.cs** — `ResolveEditScheduledAt` compara horários de parede do cliente, sem `ToLocalTime`.
+- [x] **HistoricoLinks.razor**, **MarketplaceStoreCard.razor**, **Novidades.razor**, **PainelSaude.razor**, **SaudeOfertas.razor**, **MinhasPaginasPublicas.razor**, **ConciliacaoDetalhes.razor**, **ConciliacaoFinanceira.razor**, **PipelineStatusWidget.razor**, **CommissionLinkPicker.razor**, **OfferCard.razor**, **CouponCard.razor** — exibição e filtros de data via `IUserClock`.
+- [x] **Ofertio.SharedUi/Components/Master/MasterPageBase.cs** / **Master/MasterCommunication.razor** — Painel Master sempre em Brasília (`ToBrasilia`/`FromBrasilia`).
+- [x] **Ofertio.Infrastructure.Services/Master/PlanScheduleGuard.cs** — limite de disparos/dia conta o dia no fuso do estado do cliente.
+- [x] **Ofertio.Tests/Unit/Common/BrazilTimeZoneRulesTests.cs** (novo) / **Unit/Master/PlanScheduleGuardTests.cs** (novo) / **Unit/WhatsApp/WhatsAppBroadcastRulesTests.cs** — fusos por UF, sem horário de verão, ida e volta, dia do cliente e edição no horário de parede.

@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ISystemCommunicationApiService Api
+@inject IUserClock Clock
 
 <PageTitle>Novidades — Ofertio</PageTitle>
 
@@ -27,7 +28,7 @@
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <span class="badge text-bg-primary">@entry.Version</span>
                     <h2 class="h6 fw-semibold mb-0">@entry.Title</h2>
-                    <span class="text-muted small ms-auto">@entry.PublishedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                    <span class="text-muted small ms-auto">@Clock.ToLocal(entry.PublishedAt).ToString("dd/MM/yyyy")</span>
                 </div>
                 @foreach (var line in entry.Body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
@@ -44,6 +45,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Clock.EnsureLoadedAsync();
         var result = await Api.ChangelogAsync();
         if (result.Success && result.Data is not null)
         {

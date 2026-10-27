@@ -96,6 +96,27 @@ public class AuthController : ControllerBase
             "alterar senha");
     }
 
+    [HttpPut("state")]
+    [Authorize]
+    public async Task<ActionResult<AuthProviderResponseDto>> ChangeStateAsync(
+        [FromBody] ChangeStateDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new AuthProviderResponseDto
+            {
+                Status = false,
+                Descricao = "Usuário não autenticado."
+            });
+        }
+
+        return await ExecuteProviderAsync(
+            () => _platformAuthService.ChangeStateAsync(userId.Value, request, cancellationToken),
+            "salvar estado");
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<UserResponseDto>> RegisterAsync(

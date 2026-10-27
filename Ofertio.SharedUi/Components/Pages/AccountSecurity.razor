@@ -4,8 +4,10 @@
 @attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Ofertio.Business.Dto.Auth
+@using Ofertio.Business.Service.Common
 @using Ofertio.SharedUi.Models.Enums
 @inject IAccountSecurityApiService SecurityApi
+@inject IUserClock Clock
 @inject IOAuthProviderRegistry OAuthRegistry
 @inject IModalService ModalService
 @inject IToastService ToastService
@@ -46,6 +48,44 @@
     {
         <ErrorAlert Message="@_loadError" OnDismiss="@(EventCallback.Factory.Create(this, ClearLoadError))" />
     }
+
+    <section class="card border-0 shadow-sm mb-4" aria-label="Fuso horário">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-5">
+                    <h2 class="h5 fw-semibold mb-1"><i class="bi bi-clock me-1"></i>Fuso horário</h2>
+                    <p class="text-muted small mb-0">
+                        Agendamentos e históricos aparecem no horário do seu estado. O Brasil não tem horário de verão.
+                    </p>
+                </div>
+                <div class="col-12 col-sm-8 col-lg-5">
+                    <label class="form-label fw-semibold small" for="account-state">Estado</label>
+                    <select id="account-state"
+                            class="form-select"
+                            @bind="_stateCode"
+                            disabled="@(_isLoading || _isSavingState)">
+                        <option value="">Brasília (padrão)</option>
+                        @foreach (var state in BrazilTimeZoneRules.States)
+                        {
+                            <option value="@state.Code">@state.Name — @state.Label</option>
+                        }
+                    </select>
+                    <div class="form-text">
+                        Agora: @BrazilTimeZoneRules.ToLocal(DateTime.UtcNow, _stateCode).ToString("dd/MM/yyyy HH:mm")
+                        (@BrazilTimeZoneRules.Resolve(_stateCode).Label)
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4 col-lg-2">
+                    <button type="button"
+                            class="btn btn-primary btn-touch w-100"
+                            disabled="@(_isLoading || _isSavingState || !StateChanged)"
+                            @onclick="SaveStateAsync">
+                        <i class="bi bi-check-circle me-1"></i>@(_isSavingState ? "Salvando..." : "Salvar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <ul class="nav nav-pills account-security-tabs flex-column flex-sm-row gap-2 mb-4" role="tablist">
         <li class="nav-item" role="presentation">
@@ -236,6 +276,11 @@
     private string? _passwordMessage;
     private bool _passwordMessageIsError;
     private readonly ChangePasswordFormModel _passwordModel = new();
+    private string _stateCode = string.Empty;
+    private string _savedStateCode = string.Empty;
+    private bool _isSavingState;
+
+    private bool StateChanged => !string.Equals(_stateCode, _savedStateCode, StringComparison.Ordinal);
 
     protected override async Task OnInitializedAsync()
     {
@@ -296,6 +341,44 @@
         _providerInfo = info;
         _hasPassword = info.HasPassword;
         _activeMethodCount = (_hasPassword ? 1 : 0) + (info.LinkedProviders?.Count ?? 0);
+        _savedStateCode = BrazilTimeZoneRules.NormalizeStateCode(info.StateCode) ?? string.Empty;
+        _stateCode = _savedStateCode;
+        Clock.SetStateCode(_savedStateCode);
+    }
+
+    private async Task SaveStateAsync()
+    {
+        _isSavingState = true;
+        try
+        {
+            var response = await SecurityApi.ChangeStateAsync(new ChangeStateDto { StateCode = _stateCode });
+            if (!response.Status)
+            {
+                ToastService.ShowError(response.Descricao);
+                return;
+            }
+
+            if (response.Data is not null)
+            {
+                ApplyProviderInfo(response.Data);
+            }
+            else
+            {
+                _savedStateCode = _stateCode;
+                Clock.SetStateCode(_stateCode);
+            }
+
+            ToastService.ShowSuccess(response.Descricao);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao salvar o estado da conta.");
+            ToastService.ShowError("Erro inesperado ao salvar o fuso horário.");
+        }
+        finally
+        {
+            _isSavingState = false;
+        }
     }
 
     private bool IsProviderLinked(string provider) =>

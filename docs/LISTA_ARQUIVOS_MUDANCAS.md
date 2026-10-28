@@ -2022,7 +2022,8 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Infrastructure.Services/Billing/UserProfileService.cs** (novo) — leitura com sugestão de nome/celular da conta e upsert do cadastro; atualiza o nome de exibição do usuário.
 - [x] **Ofertio.Infrastructure.Services/Billing/MyPlanService.cs** (novo) — resumo da assinatura e checkout: recusa Master, valida ciclo, plano, cadastro e cartão; grava o pedido sem trocar o plano do inquilino.
 - [x] **Ofertio.Infrastructure.Services/Billing/SimulatedPlanPaymentGateway.cs** (novo) — gateway da fase 1: aprova como "Simulado", sem cobrança.
-- [x] **Ofertio.Infrastructure.Services/Billing/BillingRegistrationExtensions.cs** (novo) — `AddOfertioBilling()`, chamado em `AddOfertioMasterBackoffice()`.
+- [x] **Ofertio.Infrastructure.Services/Billing/BillingRegistrationExtensions.cs** (novo) — `AddOfertioBilling()`, chamado em `AddOfertioMasterBackoffice()`; liga a seção `Billing` ao `BillingOptions`.
+- [x] **Ofertio.Infrastructure.Services/Billing/BillingOptions.cs** (novo) — `Billing:MasterCheckoutTestEmails`: contas Master liberadas para testar Meu plano como cliente. Preenchido só em `Ofertio.API/appsettings.Homologacao.json` (`rony.araujo@gmail.com`); vazio em produção.
 - [x] **Ofertio.API/Controllers/MyAccountController.cs** (novo) — `GET/PUT api/conta/dados`, `GET api/conta/plano`, `POST api/conta/plano/pagamento` e `GET api/conta/plano/pagamento/{id}`.
 - [x] **Ofertio.API/Middlewares/TenantAccessGuardMiddleware.cs** — `/api/conta` liberado para o inquilino bloqueado regularizar a assinatura.
 - [x] **Ofertio.SharedUi/Services/Account/MyAccountApiService.cs** (novo) — cliente HTTP de `api/conta`; registrado em `ServiceCollectionExtensions` e importado em `_Imports.razor`.

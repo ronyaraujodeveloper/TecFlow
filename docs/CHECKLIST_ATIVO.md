@@ -41,6 +41,7 @@
 
 - [ ] **Migration:** aplicar `AddBillingProfileAndCheckout` em homologação (runbook `EXECUCAO_HOMOLOGACAO.md`) e, depois, em produção pelo fluxo de produção.
 - [ ] **Fluxo no navegador:** menu Minha conta ➔ Meu plano; olho de um plano; Escolher com cadastro incompleto deve abrir o modal "Completar meus dados" e levar a `/meus-dados?plano=…`; salvar completo deve seguir para o pagamento; Anual com `4111 1111 1111 1111` deve terminar em "Pedido registrado em modo de teste". Conferir no celular.
+- [ ] **Teste com a conta Master (`BillingOptions`):** `rony.araujo@gmail.com` está liberado só em homologação (`Billing:MasterCheckoutTestEmails` no `appsettings.Homologacao.json` da API). Remover a liberação ao terminar os testes; nunca preencher em produção.
 - [ ] **Vantagens:** preencher "Vantagens (uma por linha)" em `/master/planos` para Starter, Pro, Agency e Enterprise.
 - [ ] **Fase 2: cobrança real (ASAAS):** decidir entre formulário próprio com tokenização do cartão ou página de pagamento do ASAAS; trocar o `SimulatedPlanPaymentGateway` e deixar o webhook trocar plano e ciclo do inquilino.
 - [ ] **CEP automático:** preencher rua, bairro, cidade e UF pelo ViaCEP em `/meus-dados`.

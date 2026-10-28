@@ -53,6 +53,9 @@ public class MyPlanResponseDto : ResponseDto
 {
     public bool IsMaster { get; set; }
 
+    /// <summary>Conta Master liberada por configuração para testar o fluxo como cliente (IsMaster fica false).</summary>
+    public bool IsMasterCheckoutTest { get; set; }
+
     public string? CurrentPlanCode { get; set; }
 
     public string? CurrentPlanName { get; set; }

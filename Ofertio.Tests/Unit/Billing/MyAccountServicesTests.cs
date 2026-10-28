@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Service.Master;
@@ -69,8 +70,13 @@ public class MyAccountServicesTests
         Card = new CreditCardDto { Number = "4111 1111 1111 1111", HolderName = "MARIA SILVA", Expiry = "12/30", Cvv = "123" }
     };
 
-    private static MyPlanService CreatePlanService(AppDbContext context) =>
-        new(context, new UserProfileService(context), new SimulatedPlanPaymentGateway(), NullLogger<MyPlanService>.Instance);
+    private static MyPlanService CreatePlanService(AppDbContext context, params string[] masterTestEmails) =>
+        new(
+            context,
+            new UserProfileService(context),
+            new SimulatedPlanPaymentGateway(),
+            Options.Create(new BillingOptions { MasterCheckoutTestEmails = [.. masterTestEmails] }),
+            NullLogger<MyPlanService>.Instance);
 
     [Fact]
     public async Task GetProfile_WithoutSavedProfile_ShouldSuggestAccountNameAndPhone()
@@ -146,6 +152,36 @@ public class MyAccountServicesTests
         Assert.False(result.Status);
         Assert.Contains("Master", result.Descricao);
         Assert.False(await context.PlanCheckouts.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Checkout_ForMasterInTestList_ShouldBehaveLikeClient()
+    {
+        await using var context = await SeedAsync();
+        await new UserProfileService(context).SaveAsync(MasterId, CompleteProfile());
+        var service = CreatePlanService(context, " MASTER@ofertio.com ");
+
+        var overview = await service.GetOverviewAsync(MasterId);
+        var result = await service.CheckoutAsync(MasterId, ProAnnualCheckout());
+
+        Assert.False(overview.IsMaster);
+        Assert.True(overview.IsMasterCheckoutTest);
+        Assert.True(result.Status, result.Descricao);
+        Assert.Equal(PlanCheckoutStatuses.Simulated, (await context.PlanCheckouts.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Checkout_ForMasterOutsideTestList_ShouldStillBeRefused()
+    {
+        await using var context = await SeedAsync();
+        var service = CreatePlanService(context, "outro@ofertio.com");
+
+        var overview = await service.GetOverviewAsync(MasterId);
+        var result = await service.CheckoutAsync(MasterId, ProAnnualCheckout());
+
+        Assert.True(overview.IsMaster);
+        Assert.False(overview.IsMasterCheckoutTest);
+        Assert.False(result.Status);
     }
 
     [Fact]

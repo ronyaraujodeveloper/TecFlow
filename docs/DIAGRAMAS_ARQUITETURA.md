@@ -2126,6 +2126,7 @@ flowchart LR
   UPS --> R1[UserProfileRules + ValidationHelper]
   UPS --> PERF[("PerfisCadastrais: CPF/CNPJ criptografado")]
   MPS --> R2[PlanPricingRules + CreditCardRules]
+  OPT["BillingOptions: Master liberado para teste (só homologação)"] -.-> MPS
   MPS --> GW[IPlanPaymentGateway]
   GW -.fase 1.-> SIM[SimulatedPlanPaymentGateway]
   GW -.fase 2.-> ASAAS[Gateway ASAAS]

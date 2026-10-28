@@ -40,6 +40,14 @@
             </div>
         }
 
+        @if (_overview.IsMasterCheckoutTest)
+        {
+            <div class="alert alert-warning small py-2 d-flex align-items-center gap-2" role="status">
+                <i class="bi bi-cone-striped" aria-hidden="true"></i>
+                <span>Conta Master liberada para testar o fluxo como cliente neste ambiente.</span>
+            </div>
+        }
+
         @if (_overview.IsMaster)
         {
             <div class="alert alert-secondary small py-2 d-flex align-items-center gap-2" role="status">

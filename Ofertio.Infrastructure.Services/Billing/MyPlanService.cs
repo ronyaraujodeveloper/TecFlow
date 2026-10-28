@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Billing;
@@ -19,17 +20,20 @@ public sealed class MyPlanService : IMyPlanService
     private readonly AppDbContext _context;
     private readonly UserProfileService _profiles;
     private readonly IPlanPaymentGateway _gateway;
+    private readonly BillingOptions _options;
     private readonly ILogger<MyPlanService> _logger;
 
     public MyPlanService(
         AppDbContext context,
         UserProfileService profiles,
         IPlanPaymentGateway gateway,
+        IOptions<BillingOptions> options,
         ILogger<MyPlanService> logger)
     {
         _context = context;
         _profiles = profiles;
         _gateway = gateway;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -55,6 +59,7 @@ public sealed class MyPlanService : IMyPlanService
             Status = true,
             Descricao = "OK",
             IsMaster = account.IsMaster,
+            IsMasterCheckoutTest = account.IsMasterCheckoutTest,
             CurrentPlanCode = current?.Code ?? account.PlanCode,
             CurrentPlanName = current?.Name ?? account.PlanCode,
             BillingCycle = account.BillingCycle,
@@ -182,12 +187,15 @@ public sealed class MyPlanService : IMyPlanService
     {
         var user = await _context.UserAccounts.IgnoreQueryFilters().AsNoTracking()
             .Where(item => item.Id == userId)
-            .Select(item => new { item.TenantId, item.Plan, item.Role })
+            .Select(item => new { item.TenantId, item.Plan, item.Role, item.Email })
             .FirstOrDefaultAsync(cancellationToken);
         if (user is null)
         {
             return null;
         }
+
+        var isMaster = MasterRoles.IsMaster(user.Role);
+        var isMasterCheckoutTest = isMaster && _options.IsMasterCheckoutTester(user.Email);
 
         var tenant = await _context.Tenants.IgnoreQueryFilters().AsNoTracking()
             .Where(item => item.Id == user.TenantId)
@@ -195,7 +203,8 @@ public sealed class MyPlanService : IMyPlanService
             .FirstOrDefaultAsync(cancellationToken);
         return new AccountSnapshot(
             user.TenantId,
-            MasterRoles.IsMaster(user.Role),
+            isMaster && !isMasterCheckoutTest,
+            isMasterCheckoutTest,
             string.IsNullOrWhiteSpace(tenant?.PlanCode) ? user.Plan : tenant.PlanCode,
             tenant?.BillingCycle,
             tenant?.Status,
@@ -223,6 +232,7 @@ public sealed class MyPlanService : IMyPlanService
     private sealed record AccountSnapshot(
         Guid TenantId,
         bool IsMaster,
+        bool IsMasterCheckoutTest,
         string? PlanCode,
         string? BillingCycle,
         string? TenantStatus,

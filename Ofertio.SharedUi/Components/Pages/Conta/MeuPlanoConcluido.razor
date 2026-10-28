@@ -1,0 +1,130 @@
+﻿@page "/meu-plano/pagamento/concluido/{CheckoutId:int}"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using System.Globalization
+@inject IMyAccountApiService AccountApi
+@inject IUserClock Clock
+
+<PageTitle>Pedido de assinatura — Ofertio</PageTitle>
+
+<div class="dashboard-page my-plan-done-page">
+    <CheckoutSteps Current="4" />
+
+    @if (_isLoading)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3 py-4">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+                <p class="mb-0 text-muted">Carregando o pedido...</p>
+            </div>
+        </div>
+    }
+    else if (_checkout is null)
+    {
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>@(_error ?? "Pedido não encontrado.")</span>
+            <a href="/meu-plano" class="btn btn-sm btn-outline-secondary ms-md-auto"><i class="bi bi-arrow-left me-1"></i>Voltar para Meu plano</a>
+        </div>
+    }
+    else
+    {
+        <section class="card border-0 shadow-sm checkout-result mx-auto" aria-live="polite">
+            <div class="card-body p-4 text-center">
+                <span class="checkout-result__icon checkout-result__icon--@StatusTone" aria-hidden="true">
+                    <i class="bi @StatusIcon"></i>
+                </span>
+                <h1 class="h4 fw-bold mt-3 mb-2">@StatusTitle</h1>
+                <p class="text-muted mb-4">@_checkout.Message</p>
+
+                <dl class="row small text-start mb-4">
+                    <dt class="col-5 text-muted fw-normal">Pedido</dt>
+                    <dd class="col-7 text-end">#@_checkout.Id</dd>
+                    <dt class="col-5 text-muted fw-normal">Plano</dt>
+                    <dd class="col-7 text-end fw-semibold">@_checkout.PlanName</dd>
+                    <dt class="col-5 text-muted fw-normal">Pagamento</dt>
+                    <dd class="col-7 text-end">@_checkout.BillingCycle</dd>
+                    <dt class="col-5 text-muted fw-normal">Valor</dt>
+                    <dd class="col-7 text-end">@_checkout.Amount.ToString("C", PtBr)</dd>
+                    <dt class="col-5 text-muted fw-normal">Cartão</dt>
+                    <dd class="col-7 text-end">@_checkout.CardBrand •••• @_checkout.CardLast4</dd>
+                    <dt class="col-5 text-muted fw-normal">Data</dt>
+                    <dd class="col-7 text-end">@Clock.ToLocal(_checkout.CreatedAt).ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    @if (_checkout.Status == PlanCheckoutStatuses.Declined)
+                    {
+                        <a href="/meu-plano/pagamento/@Uri.EscapeDataString(_checkout.PlanCode)" class="btn btn-primary btn-touch">
+                            <i class="bi bi-arrow-repeat me-1"></i>Tentar novamente
+                        </a>
+                    }
+                    <a href="/meu-plano" class="btn btn-outline-primary btn-touch">
+                        <i class="bi bi-award me-1"></i>Voltar para Meu plano
+                    </a>
+                    <a href="/dashboard" class="btn btn-outline-secondary btn-touch">
+                        <i class="bi bi-speedometer2 me-1"></i>Ir para o painel
+                    </a>
+                </div>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private PlanCheckoutDto? _checkout;
+    private bool _isLoading = true;
+    private string? _error;
+
+    [Parameter]
+    public int CheckoutId { get; set; }
+
+    private string StatusTone => _checkout?.Status switch
+    {
+        PlanCheckoutStatuses.Paid => "success",
+        PlanCheckoutStatuses.Declined => "danger",
+        PlanCheckoutStatuses.Pending => "warning",
+        _ => "info"
+    };
+
+    private string StatusIcon => _checkout?.Status switch
+    {
+        PlanCheckoutStatuses.Paid => "bi-check-circle-fill",
+        PlanCheckoutStatuses.Declined => "bi-x-circle-fill",
+        PlanCheckoutStatuses.Pending => "bi-hourglass-split",
+        _ => "bi-info-circle-fill"
+    };
+
+    private string StatusTitle => _checkout?.Status switch
+    {
+        PlanCheckoutStatuses.Paid => "Pagamento aprovado!",
+        PlanCheckoutStatuses.Declined => "Pagamento recusado",
+        PlanCheckoutStatuses.Pending => "Aguardando confirmação do pagamento",
+        _ => "Pedido registrado em modo de teste"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            await Clock.EnsureLoadedAsync();
+            var result = await AccountApi.GetCheckoutAsync(CheckoutId);
+            if (result.Success && result.Data is { Status: true, Data: { } checkout })
+            {
+                _checkout = checkout;
+            }
+            else
+            {
+                _checkout = null;
+                _error = result.ErrorMessage ?? result.Data?.Descricao;
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

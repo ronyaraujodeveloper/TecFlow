@@ -47,6 +47,8 @@ dotnet build .\Ofertio.sln -c Release
 dotnet test .\Ofertio.Tests\Ofertio.Tests.csproj
 dotnet test .\Ofertio.Tests\Ofertio.Tests.csproj --filter "FullyQualifiedName~Radar"
 
+Execute a FASE 2: Publicação e Deploy Limpo no IIS do arquivo ./docs/EXECUCAO_HOMOLOGACAO.md
+
 # Migrations (SQL Server)
 dotnet ef migrations add <Nome> --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext

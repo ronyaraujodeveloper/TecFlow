@@ -2003,3 +2003,37 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Master/MasterPageBase.cs** / **Master/MasterCommunication.razor** — Painel Master sempre em Brasília (`ToBrasilia`/`FromBrasilia`).
 - [x] **Ofertio.Infrastructure.Services/Master/PlanScheduleGuard.cs** — limite de disparos/dia conta o dia no fuso do estado do cliente.
 - [x] **Ofertio.Tests/Unit/Common/BrazilTimeZoneRulesTests.cs** (novo) / **Unit/Master/PlanScheduleGuardTests.cs** (novo) / **Unit/WhatsApp/WhatsAppBroadcastRulesTests.cs** — fusos por UF, sem horário de verão, ida e volta, dia do cliente e edição no horário de parede.
+
+### Meus dados e Meu plano — fase 1, pagamento simulado (`MyPlanCheckout`)
+
+- [x] **Ofertio.Core/Entities/UserProfile.cs** (novo) — tabela `PerfisCadastrais`: PF/PJ (`PersonTypes`), nome completo ou razão social, responsável, CPF/CNPJ (criptografado), celular e endereço; um perfil por usuário.
+- [x] **Ofertio.Core/Entities/PlanCheckout.cs** (novo) — tabela `PedidosAssinatura`: plano, ciclo, valor, status (`PlanCheckoutStatuses`: Pendente, Simulado, Pago, Recusado), bandeira e 4 últimos dígitos. Número, CVV e validade nunca são gravados.
+- [x] **Ofertio.Core/Entities/SaasPlan.cs** — `Highlights` (vantagens, uma por linha).
+- [x] **Ofertio.Database/AppDbContext.cs** — DbSets `UserProfiles` e `PlanCheckouts`, índices, precisão do valor e `Document` com `EncryptedStringConverter`.
+- [x] **Ofertio.Data/Migrations/20261027003501_AddBillingProfileAndCheckout.cs** (novo, + Designer e snapshot) — coluna `Highlights` em `SaasPlans` e tabelas `PerfisCadastrais` e `PedidosAssinatura`.
+- [x] **Ofertio.Business/Dto/UserProfileDto.cs** (novo) — `UserProfileDto` e `UserProfileResponseDto` (com `MissingFields`).
+- [x] **Ofertio.Business/Dto/PlanCheckoutDto.cs** (novo) — `PlanCheckoutDto`, `CreditCardDto` (só na requisição), `PlanCheckoutResponseDto` e `MyPlanResponseDto`.
+- [x] **Ofertio.Business/Dto/Master/MasterDtos.cs** — `SaasPlanDto.Highlights`.
+- [x] **Ofertio.Business/Service/Billing/UserProfileRules.cs** (novo) — normalização, validação (CPF/CNPJ, celular e CEP pelo `ValidationHelper` do Util), campos pendentes e máscara do documento.
+- [x] **Ofertio.Business/Service/Billing/PlanPricingRules.cs** (novo) — ciclo Mensal/Anual, preço, economia do anual, vantagens e limites em texto.
+- [x] **Ofertio.Business/Service/Billing/CreditCardRules.cs** (novo) — Luhn, bandeira, validade, CVV (4 dígitos no Amex) e últimos 4 dígitos.
+- [x] **Ofertio.Business/Interfaces/Services/IMyAccountServices.cs** (novo) — `IUserProfileService`, `IMyPlanService` e `IPlanPaymentGateway` (+ `PlanPaymentRequest`/`PlanPaymentResult`).
+- [x] **Ofertio.Business/Service/Master/SaasPlanService.cs** — grava `Highlights`; `Map` público para Meu plano.
+- [x] **Ofertio.Infrastructure.Services/Billing/UserProfileService.cs** (novo) — leitura com sugestão de nome/celular da conta e upsert do cadastro; atualiza o nome de exibição do usuário.
+- [x] **Ofertio.Infrastructure.Services/Billing/MyPlanService.cs** (novo) — resumo da assinatura e checkout: recusa Master, valida ciclo, plano, cadastro e cartão; grava o pedido sem trocar o plano do inquilino.
+- [x] **Ofertio.Infrastructure.Services/Billing/SimulatedPlanPaymentGateway.cs** (novo) — gateway da fase 1: aprova como "Simulado", sem cobrança.
+- [x] **Ofertio.Infrastructure.Services/Billing/BillingRegistrationExtensions.cs** (novo) — `AddOfertioBilling()`, chamado em `AddOfertioMasterBackoffice()`.
+- [x] **Ofertio.API/Controllers/MyAccountController.cs** (novo) — `GET/PUT api/conta/dados`, `GET api/conta/plano`, `POST api/conta/plano/pagamento` e `GET api/conta/plano/pagamento/{id}`.
+- [x] **Ofertio.API/Middlewares/TenantAccessGuardMiddleware.cs** — `/api/conta` liberado para o inquilino bloqueado regularizar a assinatura.
+- [x] **Ofertio.SharedUi/Services/Account/MyAccountApiService.cs** (novo) — cliente HTTP de `api/conta`; registrado em `ServiceCollectionExtensions` e importado em `_Imports.razor`.
+- [x] **Ofertio.SharedUi/Components/Account/CheckoutSteps.razor** (novo) — etapas Plano, Ciclo, Cartão e Confirmação.
+- [x] **Ofertio.SharedUi/Components/Account/PlanBenefitsModal.razor** (novo) — modal do olho: preço, vantagens e limites; fecha com Esc e clique fora.
+- [x] **Ofertio.SharedUi/Components/Pages/Conta/MeusDados.razor** (novo) — `/meus-dados`: PF/PJ, identificação, endereço e pendências; com `?plano=` segue para o pagamento ao completar.
+- [x] **Ofertio.SharedUi/Components/Pages/Conta/MeuPlano.razor** (novo) — `/meu-plano`: plano atual, último pedido, cards com olho e modal de pendências antes do pagamento.
+- [x] **Ofertio.SharedUi/Components/Pages/Conta/MeuPlanoPagamento.razor** (novo) — `/meu-plano/pagamento/{plano}`: ciclo mensal/anual, cartão com bandeira detectada e resumo.
+- [x] **Ofertio.SharedUi/Components/Pages/Conta/MeuPlanoConcluido.razor** (novo) — `/meu-plano/pagamento/concluido/{id}`: resultado do pedido por status.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterPlans.razor** — textarea "Vantagens (uma por linha)" por plano.
+- [x] **Ofertio.SharedUi/Components/Layout/UserProfileMenu.razor** — atalhos Meus dados e Meu plano.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** — `.checkout-step*`, `.plan-card*`, `.cycle-option*` e `.checkout-result*`.
+- [x] **Ofertio.Business/Service/Master/MenuCatalog.cs** — pasta "Minha conta" (`minha-conta`) com Segurança (`conta`), Meus dados (`conta.dados`) e Meu plano (`conta.plano`).
+- [x] **Ofertio.Tests/Unit/Billing/BillingRulesTests.cs** (novo) / **Unit/Billing/MyAccountServicesTests.cs** (novo) / **Unit/Master/MasterPhase42To44RulesTests.cs** — regras de cadastro, preço e cartão; upsert do perfil e checkout simulado (Master, pendências, plano inativo, só bandeira e últimos 4); pasta Minha conta no catálogo.

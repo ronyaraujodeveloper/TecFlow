@@ -80,6 +80,8 @@ public class AppDbContext : DbContext
     public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
     public DbSet<SaasPlan> SaasPlans { get; set; } = null!;
     public DbSet<SaasPayment> SaasPayments { get; set; } = null!;
+    public DbSet<UserProfile> UserProfiles { get; set; } = null!;
+    public DbSet<PlanCheckout> PlanCheckouts { get; set; } = null!;
     public DbSet<SystemBanner> SystemBanners { get; set; } = null!;
     public DbSet<TenantNotification> TenantNotifications { get; set; } = null!;
     public DbSet<ProductChangelogEntry> ProductChangelogEntries { get; set; } = null!;
@@ -707,8 +709,21 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Name).HasMaxLength(64).IsRequired();
             entity.Property(item => item.MonthlyPrice).HasPrecision(18, 2);
             entity.Property(item => item.AnnualPrice).HasPrecision(18, 2);
+            entity.Property(item => item.Highlights).HasMaxLength(2000);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
             entity.HasIndex(item => item.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<UserProfile>(entity =>
+        {
+            entity.Property(item => item.Document).HasMaxLength(512);
+            entity.HasIndex(item => item.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<PlanCheckout>(entity =>
+        {
+            entity.Property(item => item.Amount).HasPrecision(18, 2);
+            entity.HasIndex(item => new { item.UserId, item.CreatedAt });
         });
 
         modelBuilder.Entity<SaasPayment>(entity =>
@@ -902,6 +917,9 @@ public class AppDbContext : DbContext
             .HasConversion(encryptedNullableString);
 
         userAccount.Property(u => u.TikTokRefreshToken)
+            .HasConversion(encryptedNullableString);
+
+        modelBuilder.Entity<UserProfile>().Property(p => p.Document)
             .HasConversion(encryptedNullableString);
 
         var marketplaceToken = modelBuilder.Entity<MarketplaceToken>();

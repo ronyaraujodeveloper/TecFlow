@@ -1,0 +1,111 @@
+﻿@using System.Globalization
+
+@if (Plan is not null)
+{
+    <div class="modal fade show d-block"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="plan-benefits-title"
+         @ref="_dialog"
+         @onkeydown="OnKeyDownAsync">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="confirm-dialog-icon confirm-dialog-icon--info" aria-hidden="true">
+                            <i class="bi bi-stars"></i>
+                        </span>
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="plan-benefits-title">Plano @Plan.Name</h2>
+                            <p class="small text-muted mb-0">@PriceSummary</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    @if (_highlights.Count > 0)
+                    {
+                        <h3 class="h6 fw-semibold">Vantagens</h3>
+                        <ul class="plan-benefits-list list-unstyled mb-3">
+                            @foreach (var line in _highlights)
+                            {
+                                <li><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>@line</li>
+                            }
+                        </ul>
+                    }
+                    <h3 class="h6 fw-semibold">Limites do plano</h3>
+                    <ul class="plan-benefits-list list-unstyled mb-0">
+                        @foreach (var line in PlanPricingRules.LimitLines(Plan))
+                        {
+                            <li><i class="bi bi-dot me-1" aria-hidden="true"></i>@line</li>
+                        }
+                    </ul>
+                </div>
+                <div class="modal-footer border-0 d-flex flex-wrap justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseAsync">
+                        <i class="bi bi-x-circle me-1"></i>Fechar
+                    </button>
+                    @if (CanChoose)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="ChooseAsync">
+                            <i class="bi bi-check-circle me-1"></i>Escolher este plano
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" @onclick="CloseAsync"></div>
+}
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private ElementReference _dialog;
+    private SaasPlanDto? _renderedPlan;
+    private List<string> _highlights = [];
+
+    [Parameter]
+    public SaasPlanDto? Plan { get; set; }
+
+    [Parameter]
+    public bool CanChoose { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<SaasPlanDto> OnChoose { get; set; }
+
+    private string PriceSummary => Plan is null
+        ? string.Empty
+        : PlanPricingRules.IsFree(Plan)
+            ? "Sem cobrança"
+            : $"{Plan.MonthlyPrice.ToString("C", PtBr)}/mês ou {Plan.AnnualPrice.ToString("C", PtBr)}/ano";
+
+    protected override void OnParametersSet()
+    {
+        _highlights = PlanPricingRules.HighlightLines(Plan?.Highlights);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Plan is not null && !ReferenceEquals(Plan, _renderedPlan))
+        {
+            _renderedPlan = Plan;
+            await _dialog.FocusAsync();
+        }
+        else if (Plan is null)
+        {
+            _renderedPlan = null;
+        }
+    }
+
+    private Task OnKeyDownAsync(KeyboardEventArgs args) =>
+        args.Key == "Escape" ? CloseAsync() : Task.CompletedTask;
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private Task ChooseAsync() => Plan is null ? Task.CompletedTask : OnChoose.InvokeAsync(Plan);
+}

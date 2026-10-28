@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Billing;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Database;
@@ -81,6 +82,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         plan.DailyVipQuota = request.DailyVipQuota;
         plan.RadarEnabled = request.RadarEnabled;
         plan.MaxDailySchedules = request.MaxDailySchedules;
+        plan.Highlights = PlanPricingRules.NormalizeHighlights(request.Highlights);
         plan.IsActive = request.IsActive;
         plan.SortOrder = request.SortOrder;
         plan.Touch();
@@ -141,7 +143,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
     public static PlanLimits ToLimits(SaasPlan plan) =>
         new(plan.Code, plan.MaxStores, plan.DailyVipQuota, plan.RadarEnabled, plan.MaxDailySchedules);
 
-    private static SaasPlanDto Map(SaasPlan plan) =>
+    public static SaasPlanDto Map(SaasPlan plan) =>
         new()
         {
             Id = plan.Id,
@@ -153,6 +155,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
             DailyVipQuota = plan.DailyVipQuota,
             RadarEnabled = plan.RadarEnabled,
             MaxDailySchedules = plan.MaxDailySchedules,
+            Highlights = plan.Highlights,
             IsActive = plan.IsActive,
             SortOrder = plan.SortOrder
         };

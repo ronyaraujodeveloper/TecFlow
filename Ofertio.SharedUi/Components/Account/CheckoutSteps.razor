@@ -1,0 +1,28 @@
+﻿<ol class="checkout-steps list-unstyled d-flex flex-wrap gap-2 mb-4" aria-label="Etapas da assinatura">
+    @for (var index = 0; index < Steps.Length; index++)
+    {
+        var step = index + 1;
+        var state = step < Current ? "done" : step == Current ? "current" : "next";
+        <li class="checkout-step checkout-step--@state" aria-current="@(step == Current ? "step" : null)">
+            <span class="checkout-step__badge">
+                @if (step < Current)
+                {
+                    <i class="bi bi-check-lg" aria-hidden="true"></i>
+                }
+                else
+                {
+                    @step
+                }
+            </span>
+            <span class="checkout-step__label">@Steps[index]</span>
+        </li>
+    }
+</ol>
+
+@code {
+    private static readonly string[] Steps = ["Plano", "Ciclo", "Cartão", "Confirmação"];
+
+    /// <summary>Etapa atual, de 1 (Plano) a 4 (Confirmação).</summary>
+    [Parameter]
+    public int Current { get; set; } = 1;
+}

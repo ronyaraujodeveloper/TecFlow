@@ -5,12 +5,16 @@ using Ofertio.Core.Security;
 
 namespace Ofertio.API.Middlewares;
 
-/// <summary>Bloqueia inquilinos pausados, suspensos ou cancelados (exceto operadores master e rotas públicas).</summary>
+/// <summary>
+/// Bloqueia inquilinos pausados, suspensos ou cancelados (exceto operadores master e rotas públicas).
+/// Meus dados e Meu plano (/api/conta) ficam abertos para o cliente regularizar a assinatura.
+/// </summary>
 public sealed class TenantAccessGuardMiddleware
 {
     private static readonly string[] ExemptPrefixes =
     [
         "/api/auth",
+        "/api/conta",
         "/api/sistema",
         "/api/webhooks",
         "/api/v1/integrations",

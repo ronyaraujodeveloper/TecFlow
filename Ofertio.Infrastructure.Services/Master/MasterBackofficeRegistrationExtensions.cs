@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Infrastructure.Services.Billing;
 using Ofertio.Infrastructure.Services.Groups;
 
 namespace Ofertio.Infrastructure.Services.Master;
@@ -27,6 +28,7 @@ public static class MasterBackofficeRegistrationExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(20);
         });
+        services.AddOfertioBilling();
         services.AddScoped<IMenuPermissionService, MenuPermissionService>();
         services.AddScoped<IGlobalIntegrationService, GlobalIntegrationService>();
         services.AddScoped<IDeveloperAccountService, DeveloperAccountService>();

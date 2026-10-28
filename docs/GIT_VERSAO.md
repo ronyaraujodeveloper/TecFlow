@@ -160,3 +160,4 @@
 [2026-10-26 20:00:36] fix(planos): libera slug personalizado para contas Master e marca a linha como permissao na matriz
 [2026-10-26 20:26:52] fix(planos): conta Master segue a coluna Ativo do slug personalizado
 [2026-10-26 21:04:36] feat(fuso): horario de Brasilia e fuso por estado (UF) em Minha Conta, agendadores e limite diario sem depender do fuso do servidor
+[2026-10-27 21:10:24] feat(conta): Meus dados e Meu plano com escolha de plano, modal de vantagens, pendencias do cadastro e pagamento simulado (sem gravar cartao)

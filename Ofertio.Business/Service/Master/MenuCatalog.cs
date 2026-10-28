@@ -35,6 +35,11 @@ public static class DefaultMenuCatalog
     /// <summary>Permissão sob Minhas Páginas Públicas: libera trocar o slug aleatório por um endereço próprio.</summary>
     public const string CustomPublicSlug = "integracoes.paginas.slug";
 
+    /// <summary>Pasta "Minha conta": Segurança (chave legada "conta"), Meus dados e Meu plano.</summary>
+    public const string MyAccount = "minha-conta";
+    public const string MyData = "conta.dados";
+    public const string MyPlan = "conta.plano";
+
     private static readonly IReadOnlyList<string> RadarPlans = [SaasPlanCodes.Starter];
 
     /// <summary>Telas ocultadas automaticamente quando a permissão (chave) está desligada para o plano.</summary>
@@ -82,7 +87,10 @@ public static class DefaultMenuCatalog
         new("integracoes.lucro-grupo", "Lucro por grupo", "/atribuicao/grupos", "bi-pie-chart", "integracoes.resultados", 30),
 
         new("novidades", "Novidades", "/novidades", "bi-megaphone", null, 60),
-        new("conta", "Minha conta / Segurança", "/minha-conta", "bi-shield-lock", null, 70),
+        new(MyAccount, "Minha conta", null, "bi-person-circle", null, 70),
+        new("conta", "Segurança", "/minha-conta", "bi-shield-lock", MyAccount, 10),
+        new(MyData, "Meus dados", "/meus-dados", "bi-person-vcard", MyAccount, 20),
+        new(MyPlan, "Meu plano", "/meu-plano", "bi-credit-card", MyAccount, 30),
 
         new(Roadmap, "Próximos Desenvolvimentos", null, "bi-rocket-takeoff", null, 80, HiddenForAllPlans: true),
         new("proximos.campanhas", "Campanhas", "/campanhas", "bi-megaphone", Roadmap, 10),

@@ -1,0 +1,262 @@
+﻿@page "/meu-plano"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using System.Globalization
+@inject IMyAccountApiService AccountApi
+@inject IModalService ModalService
+@inject NavigationManager Navigation
+@inject IUserClock Clock
+
+<PageTitle>Meu plano — Ofertio</PageTitle>
+
+<div class="dashboard-page my-plan-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Meu plano</h1>
+            <p class="text-muted small mb-0">Veja sua assinatura, compare os planos e escolha o que combina com você.</p>
+        </div>
+        <div class="dashboard-toolbar">
+            <a href="/meus-dados" class="btn btn-outline-primary btn-touch">
+                <i class="bi bi-person-vcard me-1"></i>Meus dados
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@_isLoading" @onclick="LoadAsync">
+                <i class="bi bi-arrow-repeat me-1"></i>@(_isLoading ? "Atualizando..." : "Atualizar")
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <ErrorAlert Message="@_error" OnDismiss="@(EventCallback.Factory.Create(this, () => _error = null))" />
+    }
+
+    @if (_overview is not null)
+    {
+        @if (_overview.IsPaymentSimulated)
+        {
+            <div class="alert alert-info small py-2 d-flex align-items-center gap-2" role="status">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>Pagamento em modo de teste: você pode percorrer todo o fluxo, mas nenhuma cobrança é feita e o plano não muda.</span>
+            </div>
+        }
+
+        @if (_overview.IsMaster)
+        {
+            <div class="alert alert-secondary small py-2 d-flex align-items-center gap-2" role="status">
+                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                <span>Conta Master não tem assinatura. Os planos abaixo aparecem como o cliente os vê, sem o botão de escolher.</span>
+            </div>
+        }
+        else if (_overview.MissingFields.Count > 0)
+        {
+            <div class="alert alert-warning small py-2 d-flex flex-wrap align-items-center gap-2" role="status">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <span>Para assinar um plano ainda falta: <strong>@string.Join(", ", _overview.MissingFields)</strong>.</span>
+                <a href="/meus-dados" class="btn btn-sm btn-warning ms-md-auto">
+                    <i class="bi bi-pencil-square me-1"></i>Completar meus dados
+                </a>
+            </div>
+        }
+
+        @if (!_overview.IsMaster)
+        {
+            <section class="card border-0 shadow-sm mb-4" aria-label="Assinatura atual">
+                <div class="card-body p-3 p-md-4 d-flex flex-column flex-md-row gap-3 align-items-md-center">
+                    <span class="my-plan-current-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
+                    <div class="flex-grow-1">
+                        <p class="small text-muted mb-1">Seu plano atual</p>
+                        <h2 class="h5 fw-bold mb-1">
+                            @(_overview.CurrentPlanName ?? "Sem plano")
+                            @if (!string.IsNullOrWhiteSpace(_overview.TenantStatus))
+                            {
+                                <span class="badge rounded-pill @StatusBadgeClass(_overview.TenantStatus) ms-2 align-middle">@_overview.TenantStatus</span>
+                            }
+                        </h2>
+                        <p class="small text-muted mb-0">
+                            @if (!string.IsNullOrWhiteSpace(_overview.BillingCycle))
+                            {
+                                <span>Cobrança @_overview.BillingCycle.ToLowerInvariant()</span>
+                            }
+                            @if (_overview.TrialEndsAt is { } trial && trial > DateTime.UtcNow)
+                            {
+                                <span> · teste até @Clock.ToLocal(trial).ToString("dd/MM/yyyy")</span>
+                            }
+                            @if (_overview.RenewalAt is { } renewal)
+                            {
+                                <span> · renova em @Clock.ToLocal(renewal).ToString("dd/MM/yyyy")</span>
+                            }
+                        </p>
+                    </div>
+                    @if (_overview.LastCheckout is { } last)
+                    {
+                        <div class="small text-md-end">
+                            <p class="text-muted mb-1">Último pedido</p>
+                            <a href="/meu-plano/pagamento/concluido/@last.Id">
+                                @last.PlanName · @last.BillingCycle.ToLowerInvariant() · @last.Status
+                            </a>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        <h2 class="h5 fw-semibold mb-3">Planos disponíveis</h2>
+        @if (_overview.Plans.Count == 0)
+        {
+            <p class="text-muted">Nenhum plano à venda no momento.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var plan in _overview.Plans)
+                {
+                    var isCurrent = IsCurrent(plan);
+                    var savings = PlanPricingRules.AnnualSavingsPercent(plan.MonthlyPrice, plan.AnnualPrice);
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <article class="card h-100 border-0 shadow-sm plan-card @(isCurrent ? "plan-card--current" : null)">
+                            <div class="card-body d-flex flex-column gap-2">
+                                <div class="d-flex align-items-start justify-content-between gap-2">
+                                    <h3 class="h5 fw-bold mb-0">@plan.Name</h3>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            title="Ver vantagens do plano @plan.Name"
+                                            aria-label="Ver vantagens do plano @plan.Name"
+                                            @onclick="() => _benefitsPlan = plan">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                @if (PlanPricingRules.IsFree(plan))
+                                {
+                                    <p class="plan-card__price mb-0">Gratuito</p>
+                                }
+                                else
+                                {
+                                    <p class="plan-card__price mb-0">
+                                        @plan.MonthlyPrice.ToString("C", PtBr)<span class="small text-muted fw-normal">/mês</span>
+                                    </p>
+                                    @if (plan.AnnualPrice > 0)
+                                    {
+                                        <p class="small text-muted mb-0">
+                                            ou @plan.AnnualPrice.ToString("C", PtBr)/ano
+                                            @if (savings > 0)
+                                            {
+                                                <span class="badge text-bg-success ms-1">economize @savings%</span>
+                                            }
+                                        </p>
+                                    }
+                                }
+                                <ul class="list-unstyled small mb-2 plan-card__limits">
+                                    @foreach (var line in PlanPricingRules.LimitLines(plan))
+                                    {
+                                        <li><i class="bi bi-check2 text-success me-1" aria-hidden="true"></i>@line</li>
+                                    }
+                                </ul>
+                                <div class="mt-auto">
+                                    @if (isCurrent)
+                                    {
+                                        <span class="badge text-bg-primary w-100 py-2"><i class="bi bi-award me-1"></i>Seu plano</span>
+                                    }
+                                    else if (PlanPricingRules.IsFree(plan))
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary w-100" disabled>
+                                            <i class="bi bi-dash-circle me-1"></i>Sem cobrança
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-primary w-100" disabled="@_overview.IsMaster" @onclick="() => ChooseAsync(plan)">
+                                            <i class="bi bi-check-circle me-1"></i>Escolher
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<PlanBenefitsModal Plan="@_benefitsPlan"
+                   CanChoose="@(_benefitsPlan is not null && _overview is { IsMaster: false } && !IsCurrent(_benefitsPlan) && !PlanPricingRules.IsFree(_benefitsPlan))"
+                   OnClose="@(() => _benefitsPlan = null)"
+                   OnChoose="ChooseAsync" />
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private MyPlanResponseDto? _overview;
+    private SaasPlanDto? _benefitsPlan;
+    private bool _isLoading;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureLoadedAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+        try
+        {
+            var result = await AccountApi.GetPlanAsync();
+            if (result.Success && result.Data is { Status: true } data)
+            {
+                _overview = data;
+            }
+            else
+            {
+                _error = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar os planos.";
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private bool IsCurrent(SaasPlanDto plan) =>
+        string.Equals(plan.Code, _overview?.CurrentPlanCode, StringComparison.OrdinalIgnoreCase);
+
+    private async Task ChooseAsync(SaasPlanDto plan)
+    {
+        _benefitsPlan = null;
+        if (_overview is null || _overview.IsMaster)
+        {
+            return;
+        }
+
+        var code = Uri.EscapeDataString(plan.Code);
+        if (_overview.MissingFields.Count > 0)
+        {
+            var completeNow = await ModalService.ConfirmAsync(new ConfirmDialogRequest
+            {
+                Title = "Faltam dados cadastrais",
+                Message = $"Para assinar o plano {plan.Name} falta: {string.Join(", ", _overview.MissingFields)}. O que deseja fazer?",
+                ConfirmText = "Completar meus dados",
+                CancelText = "Agora não",
+                Kind = ConfirmDialogKind.Warning
+            });
+            if (completeNow)
+            {
+                Navigation.NavigateTo($"/meus-dados?plano={code}");
+            }
+
+            return;
+        }
+
+        Navigation.NavigateTo($"/meu-plano/pagamento/{code}");
+    }
+
+    private static string StatusBadgeClass(string status) => TenantStatuses.Normalize(status) switch
+    {
+        TenantStatuses.Ativo => "text-bg-success",
+        TenantStatuses.Trial => "text-bg-info",
+        TenantStatuses.Inadimplente => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+}

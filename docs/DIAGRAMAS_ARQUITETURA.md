@@ -2101,6 +2101,39 @@ flowchart LR
   MASTER[Painel Master] -->|ToBrasilia / FromBrasilia| RULES
 ```
 
+### Meus dados e Meu plano (`MyPlanCheckout`)
+
+Fase 1: navegação completa com pagamento simulado. O cartão só trafega na requisição; o banco recebe bandeira e 4 últimos dígitos. O plano do inquilino não muda no checkout (com cobrança real, quem troca é o webhook do gateway).
+
+```mermaid
+flowchart LR
+  MENU["Menu Minha conta: Meu plano"] --> MP["/meu-plano"]
+  MP -->|olho| MOD[PlanBenefitsModal]
+  MP -->|Escolher| PEND{Cadastro completo?}
+  PEND -->|não: modal Completar meus dados| MD["/meus-dados?plano=X"]
+  MD -->|salvo e completo| PAG
+  PEND -->|sim| PAG["/meu-plano/pagamento/X: Mensal ou Anual + cartão"]
+  PAG --> OK["/meu-plano/pagamento/concluido/id"]
+```
+
+```mermaid
+flowchart LR
+  UI[MeusDados / MeuPlano / Pagamento] --> CLI[MyAccountApiService]
+  CLI -->|api/conta/dados| CTRL[MyAccountController]
+  CLI -->|api/conta/plano e plano/pagamento| CTRL
+  CTRL --> UPS[UserProfileService]
+  CTRL --> MPS[MyPlanService]
+  UPS --> R1[UserProfileRules + ValidationHelper]
+  UPS --> PERF[("PerfisCadastrais: CPF/CNPJ criptografado")]
+  MPS --> R2[PlanPricingRules + CreditCardRules]
+  MPS --> GW[IPlanPaymentGateway]
+  GW -.fase 1.-> SIM[SimulatedPlanPaymentGateway]
+  GW -.fase 2.-> ASAAS[Gateway ASAAS]
+  MPS --> PED[("PedidosAssinatura: bandeira + últimos 4")]
+  MPS --> PLANOS[("SaasPlans: preços, limites e Highlights")]
+  GUARD[TenantAccessGuardMiddleware] -->|libera /api/conta ao bloqueado| CTRL
+```
+
 ---
 
 **FIM DOS DIAGRAMAS**

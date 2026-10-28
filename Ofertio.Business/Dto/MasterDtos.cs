@@ -95,6 +95,8 @@ public class SaasPlanDto
     public int DailyVipQuota { get; set; }
     public bool RadarEnabled { get; set; }
     public int MaxDailySchedules { get; set; }
+    /// <summary>Vantagens do modal de Meu plano, uma por linha.</summary>
+    public string? Highlights { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
     public int TenantCount { get; set; }

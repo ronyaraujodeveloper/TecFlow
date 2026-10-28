@@ -169,10 +169,19 @@ public class MenuCatalogTests
         var tree = DefaultMenuCatalog.BuildDefaultTree();
 
         var categories = tree.Where(node => node.Route is null).Select(node => node.Key).ToList();
-        Assert.Equal(["mensageria", "canais", "integracoes"], categories);
+        Assert.Equal(["mensageria", "canais", "integracoes", DefaultMenuCatalog.MyAccount], categories);
         var canais = tree.Single(node => node.Key == "canais");
         Assert.Equal(["whatsapp", "telegram"], canais.Children.Select(node => node.Key));
         Assert.All(canais.Children, parent => Assert.Equal(2, parent.Children.Count));
+    }
+
+    [Fact]
+    public void Catalog_MyAccountFolder_ShouldGroupSecurityDataAndPlan()
+    {
+        var account = DefaultMenuCatalog.BuildDefaultTree().Single(node => node.Key == DefaultMenuCatalog.MyAccount);
+
+        Assert.True(account.IsFolder);
+        Assert.Equal(["/minha-conta", "/meus-dados", "/meu-plano"], account.Children.Select(node => node.Route));
     }
 }
 

@@ -10,7 +10,7 @@
 <div class="dashboard-page">
     <div class="mb-4">
         <h1 class="h3 fw-bold mb-1">Planos e matriz de funcionalidades</h1>
-        <p class="text-muted small mb-0">Preços, ciclos e limites aplicados automaticamente aos inquilinos. Disparos/dia soma WhatsApp e Telegram; 0 = ilimitado.</p>
+        <p class="text-muted small mb-0">Preços, ciclos e limites aplicados automaticamente aos inquilinos. Disparos/dia soma WhatsApp e Telegram; 0 = ilimitado. As vantagens de cada plano aparecem para o cliente em Meu plano.</p>
     </div>
 
     <MasterAlerts Error="@Error" Info="@Info" />
@@ -47,8 +47,14 @@
                         <td class="text-end">
                             @if (Can(MasterPermissions.ManagePlans))
                             {
-                                <button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveAsync(plan)">Salvar</button>
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveAsync(plan)"><i class="bi bi-check-circle me-1"></i>Salvar</button>
                             }
+                        </td>
+                    </tr>
+                    <tr class="master-plan-highlights-row">
+                        <td colspan="10" class="border-top-0 pt-0">
+                            <label class="form-label small text-muted mb-1" for="plan-highlights-@plan.Code">Vantagens (uma por linha) — aparecem no olho de Meu plano</label>
+                            <textarea id="plan-highlights-@plan.Code" class="form-control form-control-sm" rows="2" maxlength="2000" @bind="plan.Highlights"></textarea>
                         </td>
                     </tr>
                 }

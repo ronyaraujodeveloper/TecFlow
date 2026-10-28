@@ -1630,3 +1630,13 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Vincular conta:** botão com `bi-link-45deg` abre `/auth/challenge/google?link=true`. O retorno em `/signin-google` fica num cookie separado e `POST api/auth/providers/vincular` grava o Google no usuário autenticado.
 - [x] **Desvincular conta:** botão `btn-outline-danger` com `bi-line-slash`. Sem senha e sem outro provedor, a tela alerta e a API recusa a remoção do único método.
 
+## 💳 Meus dados e Meu plano — fase 1 (`MyPlanCheckout`)
+
+- [x] **Menu:** pasta "Minha conta" com Segurança (`/minha-conta`), Meus dados (`/meus-dados`) e Meu plano (`/meu-plano`); atalhos também no menu do perfil.
+- [x] **Meus dados:** PF (CPF) ou PJ (CNPJ + responsável), nome de exibição, nome completo/razão social, celular e endereço de cobrança. CPF, CNPJ, celular e CEP validados pelo `ValidationHelper`; documento criptografado em `PerfisCadastrais`. A tela lista o que ainda falta para assinar.
+- [x] **Meu plano:** plano atual (status, ciclo, teste e renovação no fuso do cliente), último pedido e cards dos planos ativos com preço mensal, anual e economia. O olho abre o modal de vantagens (`SaasPlans.Highlights`, editável em `/master/planos`) e limites.
+- [x] **Pendências:** ao escolher com cadastro incompleto, o modal pergunta se quer completar agora e leva a `/meus-dados?plano=…`; ao salvar completo, segue direto para o pagamento.
+- [x] **Pagamento:** etapas Plano ➔ Ciclo ➔ Cartão ➔ Confirmação; Mensal ou Anual; cartão com bandeira detectada, Luhn, validade e CVV. O pedido vai para `PedidosAssinatura` só com bandeira e 4 últimos dígitos.
+- [x] **Gateway simulado:** `SimulatedPlanPaymentGateway` aprova como "Simulado", sem cobrança e sem trocar o plano. Conta Master vê os planos sem poder assinar. `/api/conta` fica liberado para o inquilino bloqueado.
+- [x] **Testes:** regras de cadastro, preço e cartão; upsert do perfil e checkout simulado com InMemory; pasta Minha conta no catálogo.
+

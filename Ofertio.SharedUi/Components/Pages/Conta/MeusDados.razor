@@ -1,0 +1,257 @@
+﻿@page "/meus-dados"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Ofertio.Business.Service.Common
+@inject IMyAccountApiService AccountApi
+@inject IToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>Meus dados — Ofertio</PageTitle>
+
+<div class="dashboard-page my-data-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Meus dados</h1>
+            <p class="text-muted small mb-0">Dados cadastrais usados na assinatura e na emissão da cobrança.</p>
+        </div>
+        <div class="dashboard-toolbar">
+            <a href="/meu-plano" class="btn btn-outline-secondary btn-touch">
+                <i class="bi bi-arrow-left me-1"></i>Voltar para Meu plano
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(PlanCode))
+    {
+        <div class="alert alert-info small py-2 d-flex align-items-center gap-2" role="status">
+            <i class="bi bi-credit-card" aria-hidden="true"></i>
+            <span>Complete os dados abaixo para continuar a assinatura do plano <strong>@PlanCode</strong>.</span>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <ErrorAlert Message="@_error" OnDismiss="@(EventCallback.Factory.Create(this, () => _error = null))" />
+    }
+
+    @if (_missing.Count > 0 && !_isLoading)
+    {
+        <div class="alert alert-warning small py-2 d-flex align-items-center gap-2" role="status">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>Para assinar um plano ainda falta: <strong>@string.Join(", ", _missing)</strong>.</span>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3 py-4">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando seus dados...</span></div>
+                <p class="mb-0 text-muted">Carregando seus dados...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <section class="card border-0 shadow-sm mb-3" aria-label="Tipo de cadastro">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h6 fw-semibold mb-2">Tipo de cadastro</h2>
+                <div class="btn-group flex-wrap" role="group" aria-label="Pessoa física ou empresa">
+                    <input type="radio" class="btn-check" name="person-type" id="person-pf" checked="@(!IsCompany)" @onchange="() => SetPersonType(PersonTypes.Individual)" />
+                    <label class="btn btn-outline-primary" for="person-pf"><i class="bi bi-person me-1"></i>Pessoa física (CPF)</label>
+                    <input type="radio" class="btn-check" name="person-type" id="person-pj" checked="@IsCompany" @onchange="() => SetPersonType(PersonTypes.Company)" />
+                    <label class="btn btn-outline-primary" for="person-pj"><i class="bi bi-building me-1"></i>Empresa (CNPJ)</label>
+                </div>
+            </div>
+        </section>
+
+        <section class="card border-0 shadow-sm mb-3" aria-label="Identificação">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h6 fw-semibold mb-3">Identificação</h2>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-display-name">Nome de exibição</label>
+                        <input id="profile-display-name" class="form-control" maxlength="120" autocomplete="nickname" @bind="_form.DisplayName" />
+                        <div class="form-text">Como você aparece na plataforma.</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-email">E-mail de acesso</label>
+                        <input id="profile-email" class="form-control" value="@_form.Email" disabled />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-full-name">@(IsCompany ? "Razão social" : "Nome completo")</label>
+                        <input id="profile-full-name" class="form-control" maxlength="160" autocomplete="@(IsCompany ? "organization" : "name")" @bind="_form.FullName" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-document">@(IsCompany ? "CNPJ" : "CPF")</label>
+                        <input id="profile-document" class="form-control" maxlength="18" inputmode="@(IsCompany ? "text" : "numeric")"
+                               placeholder="@(IsCompany ? "00.000.000/0000-00" : "000.000.000-00")" @bind="_form.Document" />
+                    </div>
+                    @if (IsCompany)
+                    {
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold" for="profile-responsible">Nome do responsável</label>
+                            <input id="profile-responsible" class="form-control" maxlength="160" autocomplete="name" @bind="_form.ResponsibleName" />
+                        </div>
+                    }
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-phone">Celular</label>
+                        <input id="profile-phone" class="form-control" maxlength="16" inputmode="tel" autocomplete="tel-national"
+                               placeholder="(11) 91234-5678" @bind="_form.Phone" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card border-0 shadow-sm mb-3" aria-label="Endereço">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h6 fw-semibold mb-3">Endereço de cobrança</h2>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-4 col-md-3">
+                        <label class="form-label small fw-semibold" for="profile-cep">CEP</label>
+                        <input id="profile-cep" class="form-control" maxlength="9" inputmode="numeric" autocomplete="postal-code"
+                               placeholder="00000-000" @bind="_form.PostalCode" />
+                    </div>
+                    <div class="col-12 col-sm-8 col-md-6">
+                        <label class="form-label small fw-semibold" for="profile-street">Rua</label>
+                        <input id="profile-street" class="form-control" maxlength="160" autocomplete="address-line1" @bind="_form.Street" />
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold" for="profile-number">Número</label>
+                        <input id="profile-number" class="form-control" maxlength="16" @bind="_form.Number" />
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label small fw-semibold" for="profile-complement">Complemento</label>
+                        <input id="profile-complement" class="form-control" maxlength="80" autocomplete="address-line2" @bind="_form.Complement" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold" for="profile-district">Bairro</label>
+                        <input id="profile-district" class="form-control" maxlength="80" @bind="_form.District" />
+                    </div>
+                    <div class="col-8 col-md-3">
+                        <label class="form-label small fw-semibold" for="profile-city">Cidade</label>
+                        <input id="profile-city" class="form-control" maxlength="80" autocomplete="address-level2" @bind="_form.City" />
+                    </div>
+                    <div class="col-4 col-md-1">
+                        <label class="form-label small fw-semibold" for="profile-state">UF</label>
+                        <select id="profile-state" class="form-select" @bind="_form.State">
+                            <option value="">—</option>
+                            @foreach (var state in BrazilTimeZoneRules.States)
+                            {
+                                <option value="@state.Code">@state.Code</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-end">
+            <a href="/meu-plano" class="btn btn-outline-secondary btn-touch">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@_isSaving" @onclick="SaveAsync">
+                @if (_isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                    <span>Salvando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-check-circle me-1"></i>
+                    <span>@(string.IsNullOrWhiteSpace(PlanCode) ? "Salvar" : "Salvar e continuar para o pagamento")</span>
+                }
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfileDto _form = new();
+    private List<string> _missing = [];
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _error;
+
+    /// <summary>Plano escolhido em Meu plano; ao salvar com o cadastro completo, segue para o pagamento dele.</summary>
+    [SupplyParameterFromQuery(Name = "plano")]
+    public string? PlanCode { get; set; }
+
+    private bool IsCompany => UserProfileRules.IsCompany(_form.PersonType);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await AccountApi.GetProfileAsync();
+            if (result.Success && result.Data is { Status: true, Data: { } data } response)
+            {
+                data.Document = UserProfileRules.FormatDocument(data.Document);
+                _form = data;
+                _missing = response.MissingFields;
+            }
+            else
+            {
+                _error = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar seus dados.";
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void SetPersonType(string personType)
+    {
+        if (_form.PersonType == personType)
+        {
+            return;
+        }
+
+        _form.PersonType = personType;
+        _form.Document = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        try
+        {
+            var result = await AccountApi.SaveProfileAsync(_form);
+            if (!result.Success || result.Data is not { Status: true } response)
+            {
+                _error = result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível salvar seus dados.";
+                ToastService.ShowError(_error);
+                return;
+            }
+
+            _missing = response.MissingFields;
+            if (response.Data is not null)
+            {
+                response.Data.Document = UserProfileRules.FormatDocument(response.Data.Document);
+                _form = response.Data;
+            }
+
+            if (_missing.Count == 0 && !string.IsNullOrWhiteSpace(PlanCode))
+            {
+                ToastService.ShowSuccess("Dados salvos. Vamos ao pagamento.");
+                Navigation.NavigateTo($"/meu-plano/pagamento/{Uri.EscapeDataString(PlanCode)}");
+                return;
+            }
+
+            if (_missing.Count == 0)
+            {
+                ToastService.ShowSuccess(response.Descricao);
+            }
+            else
+            {
+                ToastService.ShowWarning(response.Descricao);
+            }
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

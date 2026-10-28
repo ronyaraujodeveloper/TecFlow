@@ -37,6 +37,15 @@
 - [ ] **Editar loja (`StoreEditModal`):** editar apelido e ID em `https://dev.ofertio.com.br/minhas-lojas` e conferir que continua um único card.
 - [ ] **Disparos automáticos (`DynamicTrackingLinkBaseUrl`):** mensagens montadas no servidor ainda usam `Ofertio:ShortLinks:PublicBaseUrl`; definir o domínio público por ambiente.
 
+## 💳 Meus dados e Meu plano (`MyPlanCheckout`)
+
+- [ ] **Migration:** aplicar `AddBillingProfileAndCheckout` em homologação (runbook `EXECUCAO_HOMOLOGACAO.md`) e, depois, em produção pelo fluxo de produção.
+- [ ] **Fluxo no navegador:** menu Minha conta ➔ Meu plano; olho de um plano; Escolher com cadastro incompleto deve abrir o modal "Completar meus dados" e levar a `/meus-dados?plano=…`; salvar completo deve seguir para o pagamento; Anual com `4111 1111 1111 1111` deve terminar em "Pedido registrado em modo de teste". Conferir no celular.
+- [ ] **Vantagens:** preencher "Vantagens (uma por linha)" em `/master/planos` para Starter, Pro, Agency e Enterprise.
+- [ ] **Fase 2: cobrança real (ASAAS):** decidir entre formulário próprio com tokenização do cartão ou página de pagamento do ASAAS; trocar o `SimulatedPlanPaymentGateway` e deixar o webhook trocar plano e ciclo do inquilino.
+- [ ] **CEP automático:** preencher rua, bairro, cidade e UF pelo ViaCEP em `/meus-dados`.
+- [ ] **Gestão da assinatura:** troca de plano com pró-rata, cancelamento e histórico de pedidos em Meu plano.
+
 ## 📝 Registrado sem implementação
 
 - **Autocomplete do ML como fallback (`MLBScraperPrimary`):** não gera ofertas (só termos) e responde 404/403 ao servidor; fora de escopo enquanto a busca for só pela API oficial.

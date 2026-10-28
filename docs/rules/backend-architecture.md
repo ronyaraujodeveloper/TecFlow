@@ -58,6 +58,8 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 - **Identificadores legados:** `SetApplicationName("TecFlow")` e o purpose `TecFlow.MarketplaceTokens.v1` **não podem ser renomeados** (ver [encoding-standards.md](./encoding-standards.md#5-identificadores-legados-não-renomear)).
 - **Segredos fora do repositório:** `appsettings` locais com segredos, `.env`, `*.pfx` e a pasta de chaves ficam no `.gitignore`. Senha do certificado do Kestrel só em User Secrets (`Kestrel:Endpoints:Https:Certificate:Password`) ou variável de ambiente.
 - **Logs:** nunca registrar tokens, senhas, `client_secret`, `code` do OAuth ou `code_verifier`.
+- **Cartão de crédito:** número, CVV e validade só trafegam na requisição (`CreditCardDto`) até o `IPlanPaymentGateway`; nunca são gravados, logados nem devolvidos. O pedido (`PedidosAssinatura`) guarda apenas bandeira e 4 últimos dígitos. CPF/CNPJ do cadastro (`PerfisCadastrais.Document`) fica criptografado.
+- **Troca de plano:** o checkout (`MyPlanService`) registra o pedido e nunca altera `Tenant.PlanCode`/`BillingCycle`; quem troca o plano é o webhook do gateway ao confirmar o pagamento.
 
 ## 7. Registro de telas e árvore dinâmica de menus
 

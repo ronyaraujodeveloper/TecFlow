@@ -68,7 +68,7 @@ Selos com cantos arredondados, `font-semibold` e tamanho compacto (`text-xs px-2
 
 ## 7. Menu lateral (Sidebar)
 
-Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conversão) ➔ **Canais** (Agendador WhatsApp, Agendador Telegram) ➔ **Integrações & Afiliados** (Minhas Lojas, Gerador de Links, Páginas Públicas) ➔ **Próximos Desenvolvimentos** (accordion com Dashboard, Campanhas, Métricas, Fila de engajamento "Em breve", Conciliação, Produtos propaganda, Saúde do sistema, Minha conta).
+Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conversão) ➔ **Canais** (Agendador WhatsApp, Agendador Telegram) ➔ **Integrações & Afiliados** (Minhas Lojas, Gerador de Links, Páginas Públicas) ➔ **Próximos Desenvolvimentos** (accordion com Dashboard, Campanhas, Métricas, Fila de engajamento "Em breve", Conciliação, Produtos propaganda, Saúde do sistema) ➔ **Minha conta** (Segurança, Meus dados, Meu plano; a chave `conta` continua sendo a Segurança).
 
 - Submenus retráteis controlam `isExpanded` em C# (`@onclick` + classes condicionais), sem JavaScript externo; transição suave e chevron que gira ao expandir.
 
@@ -76,6 +76,7 @@ Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conve
 
 - **Edição de agendamentos:** se `DataAgendada > Clock.Now`, mantenha data e hora originais; se já passou, ajuste para `Clock.Now.AddMinutes(10)` e mostre aviso apenas nesse caso.
 - **Horários:** o banco guarda UTC. Nas telas do cliente use `IUserClock` (`ToLocal`, `ToUtc`, `Now`, fuso do estado em Minha Conta); no Painel Master use `ToBrasilia`/`FromBrasilia` do `MasterPageBase`. Nunca use `ToLocalTime()`, `DateTime.Now` ou `DateTimeKind.Local`: no Docker o servidor roda em UTC.
+- **Meu plano e pagamento:** escolher plano com cadastro incompleto abre o `ConfirmAsync` "Completar meus dados" (leva a `/meus-dados?plano=…`), nunca bloqueia em silêncio. Campos do cartão usam `autocomplete` `cc-number`/`cc-name`/`cc-exp`/`cc-csc`, CVV como `password`, e são limpos depois do envio. Enquanto o gateway for simulado, as telas mostram o aviso de modo de teste.
 - **Imagens de produto:** a conversão de links grava `og:image` em `ProductImageUrl` (editável); o agendador preenche "URL da imagem (opcional)" ao escolher o link, e o campo tem preview de 80x80 px.
 
 ## 9. Assets estáticos e localização

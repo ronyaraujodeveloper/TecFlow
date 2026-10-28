@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Ofertio.SharedUi.Configuration;
+using Ofertio.SharedUi.Services.Account;
 using Ofertio.SharedUi.Services.Auth;
 using Ofertio.SharedUi.Services.Advertising;
 using Ofertio.SharedUi.Services.Health;
@@ -57,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IUserClock, UserClock>();
+        services.AddScoped<IMyAccountApiService, MyAccountApiService>();
         services.AddScoped<IIntegracaoLojaApiService, IntegracaoLojaApiService>();
         services.AddScoped<IMarketplaceOAuthConnectService, MarketplaceOAuthConnectService>();
         services.AddScoped<IAffiliateLinkApiService, AffiliateLinkApiService>();

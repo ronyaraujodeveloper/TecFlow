@@ -48,5 +48,8 @@ public class OfficialCatalogSearchFilter
 
     public bool Amazon { get; set; } = true;
 
+    /// <summary>TikTok Shop (Affiliate Creator com o token Master das Integrações Globais).</summary>
+    public bool TikTokShop { get; set; } = true;
+
     public int Limit { get; set; } = 20;
 }

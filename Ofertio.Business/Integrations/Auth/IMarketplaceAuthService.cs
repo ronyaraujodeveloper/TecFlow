@@ -24,4 +24,14 @@ public interface IMarketplaceAuthService
         string? redirectUri,
         string? codeVerifier = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Troca o <c>auth_code</c> do TikTok Shop por access/refresh token, <c>open_id</c> e <c>user_type</c> (sem persistir).</summary>
+    Task<MarketplaceOAuthExchangeResult> ExchangeTikTokShopCodeAsync(
+        string code,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Renova um par de tokens do TikTok Shop (sem persistir).</summary>
+    Task<MarketplaceOAuthExchangeResult> RefreshTikTokShopTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default);
 }

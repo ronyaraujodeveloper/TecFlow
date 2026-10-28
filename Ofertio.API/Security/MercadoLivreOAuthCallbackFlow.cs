@@ -144,7 +144,7 @@ public static class MercadoLivreOAuthCallbackFlow
         && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
         && MarketplaceOAuthStateRules.IsAllowedReturnPath(uri.AbsolutePath);
 
-    private static bool TryConsumeStateNonce(IMemoryCache? memoryCache, MarketplaceOAuthState state)
+    internal static bool TryConsumeStateNonce(IMemoryCache? memoryCache, MarketplaceOAuthState state)
     {
         if (memoryCache is null)
         {
@@ -161,7 +161,7 @@ public static class MercadoLivreOAuthCallbackFlow
         return true;
     }
 
-    private static ClaimsPrincipal BuildStatePrincipal(MarketplaceOAuthState state)
+    internal static ClaimsPrincipal BuildStatePrincipal(MarketplaceOAuthState state)
     {
         var claims = new List<Claim>
         {
@@ -175,7 +175,7 @@ public static class MercadoLivreOAuthCallbackFlow
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "OAuthState"));
     }
 
-    private static MercadoLivreOAuthCallbackOutcome Fail(int statusCode, string? callbackUri, string? message, string? path = null)
+    internal static MercadoLivreOAuthCallbackOutcome Fail(int statusCode, string? callbackUri, string? message, string? path = null)
     {
         var text = string.IsNullOrWhiteSpace(message) ? "Não foi possível vincular a loja." : message.Trim();
         return new MercadoLivreOAuthCallbackOutcome(statusCode, new MarketplaceOAuthCallbackResultDto

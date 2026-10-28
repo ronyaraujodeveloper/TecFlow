@@ -13,14 +13,18 @@ public static class GlobalIntegrationRules
 
     public const string OverviewPath = "/master/integracoes-globais";
     public const string MercadoLivrePath = MarketplaceOAuthStateRules.MasterMercadoLivrePath;
+    public const string TikTokShopPath = MarketplaceOAuthStateRules.MasterTikTokShopPath;
+
+    public const string MercadoLivreKey = "mercado-livre";
+    public const string TikTokShopKey = "tiktok-shop";
 
     /// <summary>Folga antes do vencimento em que o access token já é tratado como expirado.</summary>
     public static readonly TimeSpan FreshnessMargin = TimeSpan.FromMinutes(2);
 
     public static readonly IReadOnlyList<GlobalIntegrationProviderDto> Providers =
     [
-        new("mercado-livre", "API Mercado Livre", "bi-bag-check", MercadoLivrePath, true),
-        new("tiktok-shop", "API TikTok Shop", "bi-tiktok", null, false),
+        new(MercadoLivreKey, "API Mercado Livre", "bi-bag-check", MercadoLivrePath, true),
+        new(TikTokShopKey, "API TikTok Shop", "bi-tiktok", TikTokShopPath, true),
         new("shopee", "API Shopee", "bi-shop", null, false)
     ];
 

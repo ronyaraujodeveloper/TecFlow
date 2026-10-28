@@ -80,7 +80,8 @@
                 <MarketplaceStoreCard Store="store"
                                       IsBusy="@_isBusy"
                                       OnUnlink="ConfirmarDesconexaoAsync"
-                                      OnEdit="OpenEditModal" />
+                                      OnEdit="OpenEditModal"
+                                      OnConnectCreator="ConnectTikTokCreatorAsync" />
             }
         </section>
     }
@@ -295,6 +296,9 @@
             await InvokeAsync(StateHasChanged);
         }
     }
+
+    private Task ConnectTikTokCreatorAsync(MarketplaceAccountDto store) =>
+        StartOAuthAsync((MarketplaceType.TikTokShop, store.FriendlyName));
 
     private async Task OnLojaVinculadaAsync()
     {

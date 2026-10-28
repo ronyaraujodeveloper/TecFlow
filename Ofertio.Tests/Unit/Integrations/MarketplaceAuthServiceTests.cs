@@ -288,7 +288,7 @@ public class MarketplaceAuthServiceTests
         var handler = StubHttpMessageHandler.WithJsonResponse(oauthJson);
         var client = new HttpClient(handler);
         _httpClientFactory
-            .Setup(f => f.CreateClient("Ofertio.MarketplaceOAuth"))
+            .Setup(f => f.CreateClient(MarketplaceAuthService.TikTokShopOAuthClientName))
             .Returns(client);
 
         // Act
@@ -297,6 +297,57 @@ public class MarketplaceAuthServiceTests
         // Assert
         Assert.Equal("new-token", token);
         _tokenRepository.Verify(r => r.UpsertAsync(It.Is<MarketplaceToken>(t => t.AccessToken == "new-token")), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExchangeTikTokShopCodeAsync_ShouldParseEnvelopeWithUnixExpiryAndCreatorType()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var accessExpire = now.AddDays(7).ToUnixTimeSeconds();
+        var refreshExpire = now.AddDays(30).ToUnixTimeSeconds();
+        var json = $$$"""
+            {"code":0,"message":"success","data":{"access_token":"tts-access","access_token_expire_in":{{{accessExpire}}},
+             "refresh_token":"tts-refresh","refresh_token_expire_in":{{{refreshExpire}}},"open_id":"open-1",
+             "seller_name":"Criador X","user_type":1}}
+            """;
+        HttpRequestMessage? captured = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            captured = request;
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(json) };
+        });
+        _httpClientFactory
+            .Setup(f => f.CreateClient(MarketplaceAuthService.TikTokShopOAuthClientName))
+            .Returns(new HttpClient(handler));
+
+        var result = await CreateService().ExchangeTikTokShopCodeAsync("auth-code-real");
+
+        Assert.True(result.Success);
+        Assert.Equal("tts-access", result.AccessToken);
+        Assert.Equal("tts-refresh", result.RefreshToken);
+        Assert.Equal("open-1", result.OpenId);
+        Assert.Equal("Criador X", result.AccountName);
+        Assert.Equal(Ofertio.Business.Integrations.TikTokShop.TikTokShopUserTypes.Creator, result.UserType);
+        Assert.InRange(result.ExpiresAt, now.AddDays(7).UtcDateTime.AddMinutes(-5), now.AddDays(7).UtcDateTime.AddMinutes(5));
+        Assert.NotNull(result.RefreshExpiresAt);
+        Assert.InRange(result.RefreshExpiresAt!.Value, now.AddDays(30).UtcDateTime.AddMinutes(-5), now.AddDays(30).UtcDateTime.AddMinutes(5));
+        Assert.Equal(HttpMethod.Get, captured!.Method);
+        Assert.Contains("grant_type=authorized_code", captured.RequestUri!.Query, StringComparison.Ordinal);
+        Assert.Contains("auth_code=auth-code-real", captured.RequestUri.Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExchangeTikTokShopCodeAsync_ShouldFailWhenEnvelopeHasErrorCode()
+    {
+        var handler = StubHttpMessageHandler.WithJsonResponse("""{"code":36004004,"message":"invalid auth_code","data":null}""");
+        _httpClientFactory
+            .Setup(f => f.CreateClient(MarketplaceAuthService.TikTokShopOAuthClientName))
+            .Returns(new HttpClient(handler));
+
+        var result = await CreateService().ExchangeTikTokShopCodeAsync("auth-code-real");
+
+        Assert.False(result.Success);
+        Assert.Contains("invalid auth_code", result.ErrorMessage, StringComparison.Ordinal);
     }
 
     private MarketplaceAuthService CreateMercadoLivreService(

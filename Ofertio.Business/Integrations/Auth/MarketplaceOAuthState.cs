@@ -33,6 +33,9 @@ public static class MarketplaceOAuthStateRules
     /// <summary>Retorno do OAuth Master (token global da API Mercado Livre, Painel Master).</summary>
     public const string MasterMercadoLivrePath = "/master/integracoes-globais/mercado-livre";
 
+    /// <summary>Retorno do OAuth Master (token global da API TikTok Shop, Painel Master).</summary>
+    public const string MasterTikTokShopPath = "/master/integracoes-globais/tiktok-shop";
+
     public const string InvalidStateMessage =
         "Link de autorização inválido ou expirado. Clique em Conectar novamente.";
 
@@ -55,7 +58,7 @@ public static class MarketplaceOAuthStateRules
             userId,
             tenantId,
             platform,
-            string.IsNullOrWhiteSpace(friendlyName) ? "Mercado Livre" : friendlyName.Trim(),
+            string.IsNullOrWhiteSpace(friendlyName) ? DefaultFriendlyName(platform) : friendlyName.Trim(),
             string.IsNullOrWhiteSpace(callbackUri) ? null : callbackUri.Trim(),
             Guid.NewGuid().ToString("N"),
             (now ?? DateTimeOffset.UtcNow).Add(Lifetime),
@@ -74,11 +77,19 @@ public static class MarketplaceOAuthStateRules
         return origin + (IsAllowedReturnPath(path) ? path : AccountsPath) + query;
     }
 
-    public static string ReturnPathFor(MarketplaceOAuthState? state) =>
-        state?.IsMaster == true ? MasterMercadoLivrePath : AccountsPath;
+    public static string ReturnPathFor(MarketplaceOAuthState? state) => state switch
+    {
+        { IsMaster: true, Platform: MarketplaceType.TikTokShop } => MasterTikTokShopPath,
+        { IsMaster: true } => MasterMercadoLivrePath,
+        _ => AccountsPath
+    };
 
     /// <summary>Únicos destinos aceitos para o retorno do OAuth (evita open redirect).</summary>
     public static bool IsAllowedReturnPath(string? path) =>
         string.Equals(path, AccountsPath, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(path, MasterMercadoLivrePath, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(path, MasterMercadoLivrePath, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(path, MasterTikTokShopPath, StringComparison.OrdinalIgnoreCase);
+
+    private static string DefaultFriendlyName(MarketplaceType platform) =>
+        platform == MarketplaceType.TikTokShop ? "TikTok Shop" : "Mercado Livre";
 }

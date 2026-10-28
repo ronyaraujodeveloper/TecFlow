@@ -13,6 +13,7 @@ public sealed record AffiliateCategoryRate(string Id, string Name, decimal Perce
 public static class AffiliateCommissionRules
 {
     public const string SourceShopeeApi = "API Shopee";
+    public const string SourceTikTokShopApi = "API TikTok Shop";
     public const string SourceMercadoLivreTable = "Tabela ML por categoria";
     public const string SourceUserRate = "Sua taxa";
 

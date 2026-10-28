@@ -20,9 +20,10 @@ public static class MasterRoutes
     /// <summary>Cofre isolado das chaves globais da plataforma (AppId/SecretKey, Evolution, Telegram, OpenAI, ASAAS).</summary>
     public const string Vault = "/master/vault";
     public const string LegacySettings = "/master/configuracoes";
-    /// <summary>Conexões Master com APIs oficiais (Mercado Livre; previstas TikTok Shop e Shopee) usadas por todos os clientes.</summary>
+    /// <summary>Conexões Master com APIs oficiais (Mercado Livre e TikTok Shop; prevista Shopee) usadas por todos os clientes.</summary>
     public const string GlobalIntegrations = GlobalIntegrationRules.OverviewPath;
     public const string GlobalMercadoLivre = GlobalIntegrationRules.MercadoLivrePath;
+    public const string GlobalTikTokShop = GlobalIntegrationRules.TikTokShopPath;
     /// <summary>Somente contas corporativas de teste/dev da Ofertio; lojas dos afiliados ficam em /marketplace-accounts.</summary>
     public const string DeveloperAccounts = "/master/marketplace-accounts";
     public const string Operators = "/master/operadores";
@@ -42,7 +43,8 @@ public static class MasterRoutes
         new(Vault, "Cofre de chaves (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys),
         new(GlobalIntegrations, "Integrações Globais", "bi-globe-americas", MasterPermissions.ManageGlobalKeys,
         [
-            new(GlobalMercadoLivre, "API Mercado Livre", "bi-bag-check", MasterPermissions.ManageGlobalKeys)
+            new(GlobalMercadoLivre, "API Mercado Livre", "bi-bag-check", MasterPermissions.ManageGlobalKeys),
+            new(GlobalTikTokShop, "API TikTok Shop", "bi-tiktok", MasterPermissions.ManageGlobalKeys)
         ]),
         new(DeveloperAccounts, "Contas de teste / dev", "bi-person-badge", MasterPermissions.ManageGlobalKeys),
         new(Operators, "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators),

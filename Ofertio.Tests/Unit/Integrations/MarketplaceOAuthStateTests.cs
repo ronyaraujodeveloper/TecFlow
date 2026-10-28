@@ -184,6 +184,71 @@ public class MarketplaceOAuthStateTests
         lojas.Verify(s => s.LinkAsync(It.IsAny<int>(), It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task AuthorizeUrl_ShouldSealUserAndTenantInTikTokShopState()
+    {
+        string? sentState = null;
+        var auth = new Mock<IMarketplaceAuthService>();
+        auth.Setup(s => s.GenerateAuthorizationUrl(MarketplaceType.TikTokShop, Callback, It.IsAny<string?>()))
+            .Callback<MarketplaceType, string, string?>((_, _, state) => sentState = state)
+            .Returns("https://services.tiktokshop.com/open/authorize?service_id=1&state=x");
+        var protector = new OAuthStateProtector(Key);
+        var controller = CreateController(auth.Object, new Mock<IIntegracaoLojaService>().Object, protector, authenticated: true);
+
+        var result = await controller.GetPlatformAuthorizationUrl("tiktok", Callback, "ticket-1", "Loja TikTok");
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.True(protector.TryUnprotect(sentState, out var opened));
+        Assert.Equal(MarketplaceType.TikTokShop, opened!.Platform);
+        Assert.Equal(7, opened.UserId);
+        Assert.Equal("Loja TikTok", opened.FriendlyName);
+    }
+
+    [Fact]
+    public async Task SealedCallback_ShouldLinkTikTokCreatorAccountForClient()
+    {
+        var protector = new OAuthStateProtector(Key);
+        var sealedState = protector.Protect(MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.TikTokShop, "Loja TikTok", Callback));
+        IntegracaoLojaDto? linked = null;
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .Callback<int, IntegracaoLojaDto, CancellationToken>((_, dto, _) => linked = dto)
+            .ReturnsAsync(new IntegracaoLojaResponseDto { Status = true, Descricao = "ok" });
+        var controller = CreateController(new Mock<IMarketplaceAuthService>().Object, lojas.Object, protector, authenticated: false);
+
+        var result = await controller.CompleteSealedCallbackAsync(
+            new MarketplaceOAuthCallbackRequestDto { Code = "tts-code", State = sealedState },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<MarketplaceOAuthCallbackResultDto>(ok.Value);
+        Assert.True(body.Success);
+        Assert.Equal("https://localhost:7002/marketplace-accounts?status=success", body.ReturnUrl);
+        Assert.Equal(MarketplaceType.TikTokShop, linked!.PlatformType);
+        Assert.Equal("tts-code", linked.AuthorizationCode);
+        Assert.Equal("Loja TikTok", linked.FriendlyName);
+    }
+
+    [Fact]
+    public async Task SealedCallback_ShouldStillCompleteMercadoLivreStates()
+    {
+        var protector = new OAuthStateProtector(Key);
+        var sealedState = protector.Protect(MarketplaceOAuthStateRules.Create(7, TenantId, MarketplaceType.MercadoLivre, "Loja ML", Callback));
+        IntegracaoLojaDto? linked = null;
+        var lojas = new Mock<IIntegracaoLojaService>();
+        lojas.Setup(s => s.LinkAsync(7, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()))
+            .Callback<int, IntegracaoLojaDto, CancellationToken>((_, dto, _) => linked = dto)
+            .ReturnsAsync(new IntegracaoLojaResponseDto { Status = true, Descricao = "ok" });
+        var controller = CreateController(new Mock<IMarketplaceAuthService>().Object, lojas.Object, protector, authenticated: false);
+
+        var result = await controller.CompleteSealedCallbackAsync(
+            new MarketplaceOAuthCallbackRequestDto { Code = "TG-code", State = sealedState },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(MarketplaceType.MercadoLivre, linked!.PlatformType);
+    }
+
     private static MarketplaceAuthController CreateController(
         IMarketplaceAuthService auth,
         IIntegracaoLojaService lojas,

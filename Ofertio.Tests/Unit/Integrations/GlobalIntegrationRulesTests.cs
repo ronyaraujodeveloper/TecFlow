@@ -92,13 +92,27 @@ public class GlobalIntegrationRulesTests
     }
 
     [Fact]
-    public void Providers_ShouldExposeMercadoLivreAndPlannedApis()
+    public void Providers_ShouldExposeMercadoLivreTikTokShopAndPlannedApis()
     {
-        var mercadoLivre = Assert.Single(GlobalIntegrationRules.Providers, provider => provider.Available);
+        var available = GlobalIntegrationRules.Providers.Where(provider => provider.Available).ToList();
 
-        Assert.Equal(GlobalIntegrationRules.MercadoLivrePath, mercadoLivre.Href);
-        Assert.Contains(GlobalIntegrationRules.Providers, provider => provider.Key == "tiktok-shop" && !provider.Available);
+        Assert.Equal(2, available.Count);
+        Assert.Equal(GlobalIntegrationRules.MercadoLivrePath, available.Single(p => p.Key == "mercado-livre").Href);
+        Assert.Equal(GlobalIntegrationRules.TikTokShopPath, available.Single(p => p.Key == "tiktok-shop").Href);
         Assert.Contains(GlobalIntegrationRules.Providers, provider => provider.Key == "shopee" && !provider.Available);
+    }
+
+    [Fact]
+    public void ReturnPathFor_ShouldRouteByPlatformAndMasterFlag()
+    {
+        const string callback = "https://dev.ofertio.com.br/integracoes/oauth/callback";
+        var masterTikTok = MarketplaceOAuthStateRules.Create(1, null, MarketplaceType.TikTokShop, null, callback) with { IsMaster = true };
+        var clientTikTok = MarketplaceOAuthStateRules.Create(1, null, MarketplaceType.TikTokShop, null, callback);
+
+        Assert.Equal("/master/integracoes-globais/tiktok-shop", MarketplaceOAuthStateRules.ReturnPathFor(masterTikTok));
+        Assert.Equal("/marketplace-accounts", MarketplaceOAuthStateRules.ReturnPathFor(clientTikTok));
+        Assert.Equal("TikTok Shop", clientTikTok.FriendlyName);
+        Assert.Null(clientTikTok.CodeVerifier);
     }
 
     [Fact]
@@ -115,6 +129,7 @@ public class GlobalIntegrationRulesTests
     [Theory]
     [InlineData("/marketplace-accounts", true)]
     [InlineData("/master/integracoes-globais/mercado-livre", true)]
+    [InlineData("/master/integracoes-globais/tiktok-shop", true)]
     [InlineData("/master/vault", false)]
     [InlineData("https://evil.example/marketplace-accounts", false)]
     [InlineData(null, false)]

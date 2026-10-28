@@ -1,4 +1,5 @@
 ﻿using Ofertio.Business.Integrations.MercadoLivre;
+using Ofertio.Business.Integrations.TikTokShop;
 
 namespace Ofertio.Business.Service.Master;
 
@@ -38,6 +39,11 @@ public static class SystemSettingCatalog
         new("Integrations:AmazonPaApi:AccessKey", CategoryMarketplaces, "Amazon PA-API — Access Key", false),
         new("Integrations:AmazonPaApi:SecretKey", CategoryMarketplaces, "Amazon PA-API — Secret Key", true),
         new("Integrations:AmazonPaApi:PartnerTag", CategoryMarketplaces, "Amazon — Partner Tag", false, "minhaloja-20"),
+        new("Integrations:TikTokShop:AppKey", CategoryMarketplaces, "TikTok Shop — App Key", false),
+        new("Integrations:TikTokShop:AppSecret", CategoryMarketplaces, "TikTok Shop — App Secret", true),
+        new("Integrations:TikTokShop:ServiceId", CategoryMarketplaces, "TikTok Shop — Service ID", false),
+        new("Integrations:TikTokShop:RedirectUri", CategoryMarketplaces, "TikTok Shop — Redirect URL", false, "https://dev.ofertio.com.br/integracoes/oauth/callback"),
+        new(TikTokShopSearchCacheRules.SettingKey, CategoryMarketplaces, "TikTok Shop — Tempo de Cache de Buscas (minutos)", false, "15"),
 
         new("EvolutionApi:BaseUrl", CategoryMessaging, "Evolution API — URL base", false, "http://localhost:8080"),
         new("EvolutionApi:ApiKey", CategoryMessaging, "Evolution API — Global API Key", true),

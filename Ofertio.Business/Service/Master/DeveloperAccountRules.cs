@@ -5,8 +5,9 @@ public static class DeveloperPlatforms
     public const string MercadoLivre = "MercadoLivre";
     public const string Shopee = "Shopee";
     public const string Amazon = "Amazon";
+    public const string TikTokShop = "TikTokShop";
 
-    public static readonly IReadOnlyList<string> All = [MercadoLivre, Shopee, Amazon];
+    public static readonly IReadOnlyList<string> All = [MercadoLivre, Shopee, Amazon, TikTokShop];
 
     public static string? Normalize(string? platform) =>
         All.FirstOrDefault(item => string.Equals(item, platform?.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -16,6 +17,7 @@ public static class DeveloperPlatforms
         MercadoLivre => "Mercado Livre",
         Shopee => "Shopee Afiliados",
         Amazon => "Amazon PA-API",
+        TikTokShop => "TikTok Shop (Criador)",
         _ => platform ?? string.Empty
     };
 }
@@ -77,7 +79,7 @@ public static class DeveloperAccountRules
     {
         if (DeveloperPlatforms.Normalize(platform) is null)
         {
-            return "Plataforma inválida. Use Mercado Livre, Shopee ou Amazon.";
+            return "Plataforma inválida. Use Mercado Livre, Shopee, Amazon ou TikTok Shop.";
         }
 
         if (DeveloperAccountKinds.Normalize(kind) is null)

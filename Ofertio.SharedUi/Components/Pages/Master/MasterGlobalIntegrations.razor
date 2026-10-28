@@ -31,15 +31,19 @@
                             {
                                 <span class="badge text-bg-secondary">Em breve</span>
                             }
-                            else if (_mercadoLivre is not null && provider.Href == MasterRoutes.GlobalMercadoLivre)
+                            else if (StatusFor(provider) is { } badgeStatus)
                             {
-                                <span class="badge @GlobalIntegrationRules.StatusBadgeClass(_mercadoLivre.Status)">@_mercadoLivre.Status</span>
+                                <span class="badge @GlobalIntegrationRules.StatusBadgeClass(badgeStatus.Status)">@badgeStatus.Status</span>
                             }
                         </div>
-                        @if (provider.Href == MasterRoutes.GlobalMercadoLivre && _mercadoLivre is not null)
+                        @if (StatusFor(provider) is { } status)
                         {
                             <div class="small text-muted">
-                                Token expira em @DateTimeText(_mercadoLivre.ExpiresAt) · cache de buscas: @CacheText(_mercadoLivre.SearchCacheMinutes)
+                                @if (!string.IsNullOrWhiteSpace(status.AccountName))
+                                {
+                                    <span>Conta: @status.AccountName · </span>
+                                }
+                                Token expira em @DateTimeText(status.ExpiresAt) · cache de buscas: @CacheText(status.SearchCacheMinutes)
                             </div>
                         }
                         else if (!provider.Available)
@@ -69,6 +73,7 @@
 
 @code {
     private GlobalIntegrationStatusDto? _mercadoLivre;
+    private GlobalIntegrationStatusDto? _tikTokShop;
 
     protected override async Task LoadAsync()
     {
@@ -78,12 +83,25 @@
             return;
         }
 
-        var result = await Api.GlobalMercadoLivreStatusAsync();
-        if (Accept(result))
+        var mercadoLivre = await Api.GlobalMercadoLivreStatusAsync();
+        if (Accept(mercadoLivre))
         {
-            _mercadoLivre = result.Data;
+            _mercadoLivre = mercadoLivre.Data;
+        }
+
+        var tikTokShop = await Api.GlobalTikTokShopStatusAsync();
+        if (Accept(tikTokShop))
+        {
+            _tikTokShop = tikTokShop.Data;
         }
     }
+
+    private GlobalIntegrationStatusDto? StatusFor(GlobalIntegrationProviderDto provider) => provider.Href switch
+    {
+        MasterRoutes.GlobalMercadoLivre => _mercadoLivre,
+        MasterRoutes.GlobalTikTokShop => _tikTokShop,
+        _ => null
+    };
 
     private static string CacheText(int minutes) => minutes == 0 ? "desligado" : $"{minutes} min";
 }

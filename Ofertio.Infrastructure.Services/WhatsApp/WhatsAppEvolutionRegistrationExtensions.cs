@@ -107,6 +107,9 @@ public static class WhatsAppEvolutionRegistrationExtensions
             client.Timeout = TimeSpan.FromSeconds(12);
         });
         services.AddScoped<ILiveCheckSearchService, Ofertio.Infrastructure.Services.Radar.LiveCheckSearchService>();
+        services.AddHttpClient(Ofertio.Infrastructure.Services.Integrations.TikTokShop.TikTokShopAffiliateApiService.HttpClientName)
+            .RemoveAllLoggers();
+        services.AddScoped<Ofertio.Business.Integrations.TikTokShop.ITikTokShopAffiliateApiService, Ofertio.Infrastructure.Services.Integrations.TikTokShop.TikTokShopAffiliateApiService>();
         services.AddScoped<IOfficialCatalogSearchService, Ofertio.Infrastructure.Services.Radar.OfficialCatalogSearchService>();
         services.AddScoped<Ofertio.Infrastructure.Services.Radar.ColdStorageArchiver>();
         services.AddScoped<IDataPurgeService, Ofertio.Infrastructure.Services.Radar.DataPurgeService>();

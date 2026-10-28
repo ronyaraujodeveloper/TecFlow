@@ -1,6 +1,6 @@
 ﻿# 🔑 Integrações, OAuth & Marketplaces
 
-> Fluxo OAuth do Mercado Livre, token Master, busca pela API oficial, sanitização de links de afiliado e novas plataformas. Segurança dos tokens em repouso: [backend-architecture.md](./backend-architecture.md#6-segurança-criptografia-e-lgpd).
+> Fluxo OAuth do Mercado Livre e do TikTok Shop (App de Criador), token Master, busca pela API oficial, sanitização de links de afiliado e novas plataformas. Segurança dos tokens em repouso: [backend-architecture.md](./backend-architecture.md#6-segurança-criptografia-e-lgpd).
 
 ## 1. Limites inegociáveis
 
@@ -48,12 +48,24 @@
 - **Encurtadores** (`meli.la`, `/sec/`, `amzn.to`, `a.co`, `kb.um`, `magalu.me`...) são expandidos só pelos cabeçalhos de redirect.
 - **Link de rastreio Ofertio:** `{base}/{storeSlug}/{code}` (slug `^[A-Za-z0-9]{1,80}$`) ou `/r/{code}`, com base `NavigationManager.BaseUri`; a WebUi repassa para a API. A API consulta o código com `await` e devolve o 302 na hora; o clique entra numa fila limitada e um serviço em segundo plano grava no SQL Server.
 
-## 6. Plataformas suportadas (Strategy Pattern)
+## 6. TikTok Shop (App de Criador / Affiliate Creator)
+
+- **Modelo:** o token Master (conta de criador autorizada em Master ➔ Integrações Globais ➔ API TikTok Shop, `/master/integracoes-globais/tiktok-shop`) **só busca** produtos em colaboração aberta. Cada cliente conecta a **própria conta de criador** no card TikTok de Minhas Lojas ("Conectar conta de criador TikTok"), e o link de promoção é gerado com o token dele.
+- **Conta de vendedor é recusada:** a troca do code devolve `user_type`; só `1` (criador) é aceito, no Master e no cliente.
+- **Credenciais no cofre:** `Integrations:TikTokShop:AppKey`, `AppSecret` (secreto), `ServiceId` e `RedirectUri` (= `https://dev.ofertio.com.br/integracoes/oauth/callback`, idêntica à cadastrada no Partner Center). Teste em Master ➔ Contas de teste / dev ("TikTok Shop (Criador)").
+- **Autorização:** `https://services.tiktokshop.com/open/authorize?service_id=&state=` com o `state` selado (mesmo `OAuthStateProtector` do ML). O callback da WebUi chama `POST api/marketplace-auth/oauth/sealed-callback`, que despacha pela plataforma do state (`TikTokShopOAuthCallbackFlow` ou `MercadoLivreOAuthCallbackFlow`).
+- **Tokens:** `GET auth.tiktok-shops.com/api/v2/token/get` (e `/refresh`) com `app_key`, `app_secret` e `auth_code`/`refresh_token` na query, como exige a API. Por isso os `HttpClient` do OAuth e do teste de saúde usam `RemoveAllLoggers()` (a URL nunca vai para o log). As expirações vêm como data Unix e são convertidas.
+- **Assinatura 202309:** HMAC-SHA256 (chave = `app_secret`) de `app_secret + path + parâmetros da query em ordem alfabética (chave+valor, sem sign e access_token) + body + app_secret`, em hexadecimal minúsculo; o token vai no cabeçalho `x-tts-access-token`.
+- **Busca:** `POST affiliate_creator/202405/open_collaborations/products/search` (`page_size` até 20, `title_keywords`, faixa de preço). Comissão em centésimos de ponto percentual (1250 = 12,5%). Token vencido ou recusado (401 ou código de token) ➔ `refresh_token` sob semáforo ➔ uma nova tentativa; falha grava `LastError` e pede reautorização no Master. Cache global igual ao do ML (padrão 15 min, 0 desliga).
+- **Link do cliente:** com conta de criador conectada, `TikTokAffiliateLinkClient` gera o link de promoção (`AffiliatePromotionLinkPath`, `{product_id}`) com o token do cliente e renova o token na própria loja. Sem conta, ou se a API recusar, o link segue com `sub_id` e a mensagem avisa: "Conecte sua conta de criador TikTok em Minhas Lojas para garantir a comissão."
+- **Paths configuráveis:** `AffiliateProductSearchPath` e `AffiliatePromotionLinkPath` ficam em `Integrations:TikTokShop` para ajuste sem deploy de código durante a homologação do app.
+
+## 7. Plataformas suportadas (Strategy Pattern)
 
 | Plataforma | Estratégia | Parâmetro de afiliado | Status |
 | :--- | :--- | :--- | :--- |
 | Shopee | `ShopeeLinkStrategy` | br.shp.ee / app | 🟢 Homologação |
-| TikTok Shop | `TikTokShopLinkStrategy` | `shop.tiktok.com/view/product/{id}?sub_id=` | 🟢 Homologação |
+| TikTok Shop | `TikTokShopLinkStrategy` | link de promoção oficial (conta de criador) ou `shop.tiktok.com/view/product/{id}?sub_id=` | 🟢 Homologação |
 | Mercado Livre | `MercadoLivreLinkStrategy` | `matt_tool` + `matt_word` em `/MLB-{id}` e `/sec/` | 🟢 Concluído |
 | Amazon | `AmazonLinkStrategy` | `tag` em `/dp/{ASIN}` | 🟢 Concluído |
 | Kabum! | `KabumLinkStrategy` | `sub_id` + `utm_source=afiliado` | 🟢 Concluído |
@@ -68,7 +80,7 @@
 3. Registro: `builder.Services.AddScoped<IPlatformLinkStrategy, NomePlataformaLinkStrategy>();`
 4. Retorno no `ConvertLinkResponseDto`: `OriginalUrl`, `AffiliateUrl`, `ShortenedShopeeUrl` / `ShortenedPlatformUrl` e `OfertioTrackingUrl` (`/{storeSlug}/{code}`).
 
-## 7. Telegram Client API (UserBot MTProto)
+## 8. Telegram Client API (UserBot MTProto)
 
 1. `App API ID` e `App API Hash` gerados pelo usuário em `https://my.telegram.org`.
 2. Primeiro login por código (SMS/app do Telegram) gera a sessão em `C:\ProgramData\Ofertio\telegram-sessions`.

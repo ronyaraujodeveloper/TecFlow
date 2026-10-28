@@ -74,7 +74,7 @@ public class MarketplaceAuthController : ControllerBase
             return BadRequest(new { error = "redirectUri é obrigatório." });
         }
 
-        var stateValue = await SealMercadoLivreStateAsync(type, state, friendlyName, redirectUri);
+        var stateValue = await SealOAuthStateAsync(type, state, friendlyName, redirectUri);
         return GenerateAuthorizeResult(type, redirectUri, stateValue);
     }
 
@@ -99,7 +99,7 @@ public class MarketplaceAuthController : ControllerBase
         }
 
         var stateValue = string.IsNullOrWhiteSpace(state) ? friendlyName ?? lojaId : state;
-        stateValue = await SealMercadoLivreStateAsync(type, stateValue, friendlyName, redirectUri);
+        stateValue = await SealOAuthStateAsync(type, stateValue, friendlyName, redirectUri);
         return GenerateAuthorizeResult(type, redirectUri, stateValue);
     }
 
@@ -130,13 +130,53 @@ public class MarketplaceAuthController : ControllerBase
         };
     }
 
-    private async Task<string?> SealMercadoLivreStateAsync(
+    /// <summary>
+    /// Callback genérico com <c>state</c> selado: abre o state e despacha para o fluxo da plataforma
+    /// (Mercado Livre ou TikTok Shop), Master ou cliente.
+    /// </summary>
+    [HttpPost("oauth/sealed-callback")]
+    [AllowAnonymous]
+    public async Task<ActionResult<MarketplaceOAuthCallbackResultDto>> CompleteSealedCallbackAsync(
+        [FromBody] MarketplaceOAuthCallbackRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var platform = _stateProtector is not null && _stateProtector.TryUnprotect(request?.State, out var state) && state is not null
+            ? state.Platform
+            : MarketplaceType.MercadoLivre;
+        var outcome = platform == MarketplaceType.TikTokShop
+            ? await TikTokShopOAuthCallbackFlow.CompleteAsync(
+                HttpContext,
+                request,
+                _stateProtector,
+                _memoryCache,
+                _integracaoLojaService,
+                _logger,
+                cancellationToken,
+                _globalIntegrationService)
+            : await MercadoLivreOAuthCallbackFlow.CompleteAsync(
+                HttpContext,
+                request,
+                _stateProtector,
+                _memoryCache,
+                _integracaoLojaService,
+                _logger,
+                cancellationToken,
+                _globalIntegrationService);
+        return outcome.StatusCode switch
+        {
+            StatusCodes.Status200OK => Ok(outcome.Result),
+            StatusCodes.Status400BadRequest => BadRequest(outcome.Result),
+            _ => StatusCode(outcome.StatusCode, outcome.Result)
+        };
+    }
+
+    private async Task<string?> SealOAuthStateAsync(
         MarketplaceType type,
         string? state,
         string? friendlyName,
         string redirectUri)
     {
-        if (type != MarketplaceType.MercadoLivre || _stateProtector is null)
+        if (type is not (MarketplaceType.MercadoLivre or MarketplaceType.TikTokShop) || _stateProtector is null)
         {
             return state;
         }
@@ -184,9 +224,9 @@ public class MarketplaceAuthController : ControllerBase
 
             return Ok(ToAuthorizeDto(type, url));
         }
-        catch (InvalidOperationException ex) when (type == MarketplaceType.MercadoLivre)
+        catch (InvalidOperationException ex) when (type is MarketplaceType.MercadoLivre or MarketplaceType.TikTokShop)
         {
-            _logger.LogWarning(ex, "OAuth Mercado Livre não configurado.");
+            _logger.LogWarning(ex, "OAuth de {Marketplace} não configurado.", type);
             return BadRequest(new { error = ex.Message });
         }
         catch (Exception ex)

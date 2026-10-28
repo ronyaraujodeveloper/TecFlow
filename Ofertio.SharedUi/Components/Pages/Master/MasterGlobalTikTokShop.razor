@@ -1,0 +1,293 @@
+﻿@page "/master/integracoes-globais/tiktok-shop"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@using Ofertio.Business.Integrations.Auth
+@using Ofertio.Business.Integrations.TikTokShop
+@inject IMasterApiService Api
+@inject NavigationManager Navigation
+
+<PageTitle>API TikTok Shop — Integrações Globais — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-1">
+                    <li class="breadcrumb-item"><a href="@MasterRoutes.GlobalIntegrations">Integrações Globais</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">API TikTok Shop</li>
+                </ol>
+            </nav>
+            <h1 class="h3 fw-bold mb-1">API TikTok Shop</h1>
+            <p class="text-muted small mb-0">
+                Token OAuth Master de uma conta de criador (Affiliate Creator), usado só para buscar produtos com comissão
+                aberta para todos os clientes. Os links de divulgação são gerados com a conta de criador de cada cliente,
+                conectada em Minhas Lojas. Quando o token expira, o backend renova via <code>refresh_token</code>.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary btn-touch" disabled="@Busy" @onclick="LoadStatusAsync">
+                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Atualizar
+            </button>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@(Busy || !CanManage)" @onclick="AuthorizeAsync">
+                <i class="bi @(IsConnected ? "bi-arrow-repeat" : "bi-shield-lock") me-1" aria-hidden="true"></i>Autorizar / Reautorizar TikTok Shop
+            </button>
+        </div>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (_status is null)
+    {
+        @if (Busy)
+        {
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                Carregando status da integração...
+            </div>
+        }
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-plug me-1" aria-hidden="true"></i>Conexão OAuth Master (criador)</span>
+                        <span class="badge @GlobalIntegrationRules.StatusBadgeClass(_status.Status)">@_status.Status</span>
+                    </div>
+                    <div class="card-body">
+                        @if (!_status.HasAppCredentials)
+                        {
+                            <div class="alert alert-warning small py-2">
+                                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                App Key/App Secret do TikTok Shop ausentes. Configure-os no
+                                <a href="@MasterRoutes.Vault">Cofre de chaves</a> antes de autorizar.
+                            </div>
+                        }
+
+                        <dl class="row small mb-0">
+                            <dt class="col-sm-5">Status</dt>
+                            <dd class="col-sm-7">@StatusDescription</dd>
+
+                            <dt class="col-sm-5">Conta de criador</dt>
+                            <dd class="col-sm-7">@(_status.AccountName ?? "—")</dd>
+
+                            <dt class="col-sm-5">Access token expira em</dt>
+                            <dd class="col-sm-7">
+                                @DateTimeText(_status.ExpiresAt)
+                                @if (_status.RenewsOnNextCall)
+                                {
+                                    <span class="text-muted"> · vencido, renovado automaticamente na próxima busca</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Refresh token válido até</dt>
+                            <dd class="col-sm-7">@(_status.RefreshExpiresAt is null ? (IsConnected ? "sem data informada pelo TikTok Shop" : "—") : DateTimeText(_status.RefreshExpiresAt))</dd>
+
+                            <dt class="col-sm-5">Última renovação automática</dt>
+                            <dd class="col-sm-7">@DateTimeText(_status.LastRefreshAt)</dd>
+
+                            <dt class="col-sm-5">Autorizado por</dt>
+                            <dd class="col-sm-7">@(_status.AuthorizedBy ?? "—") @(_status.AuthorizedAt is null ? null : $"em {DateTimeText(_status.AuthorizedAt)}")</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(_status.LastError))
+                            {
+                                <dt class="col-sm-5 text-danger">Último erro</dt>
+                                <dd class="col-sm-7 text-danger">@_status.LastError</dd>
+                            }
+                        </dl>
+                    </div>
+                    @if (IsConnected)
+                    {
+                        <div class="card-footer bg-transparent">
+                            @if (_confirmDisconnect)
+                            {
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <span class="small text-danger">Desconectar a API? A busca TikTok Shop fica indisponível para todos os clientes.</span>
+                                    <button type="button" class="btn btn-danger btn-sm" disabled="@Busy" @onclick="DisconnectAsync">
+                                        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Sim, desconectar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@Busy" @onclick="() => _confirmDisconnect = false">
+                                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancelar
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-outline-danger btn-sm" disabled="@(Busy || !CanManage)" @onclick="() => _confirmDisconnect = true">
+                                    <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Desconectar API
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header fw-semibold">
+                        <i class="bi bi-lightning-charge me-1" aria-hidden="true"></i>Cache global de buscas
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label small mb-1" for="tts-search-cache-minutes">Tempo de Cache de Buscas (minutos)</label>
+                        <input id="tts-search-cache-minutes"
+                               type="number"
+                               class="form-control"
+                               min="0"
+                               max="@TikTokShopSearchCacheRules.MaxMinutes"
+                               step="1"
+                               @bind="_cacheMinutes" />
+                        <div class="form-text">
+                            Uma busca idêntica (mesmo termo e filtros) feita por qualquer cliente dentro deste tempo é respondida do cache,
+                            sem consumir a cota da API. 0 desliga o cache; máximo @TikTokShopSearchCacheRules.MaxMinutes (24 h).
+                        </div>
+                        <button type="button" class="btn btn-primary btn-touch mt-3" disabled="@(Busy || !CanManage)" @onclick="SaveCacheAsync">
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>Salvar tempo de cache
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private GlobalIntegrationStatusDto? _status;
+    private int _cacheMinutes = TikTokShopSearchCacheRules.DefaultMinutes;
+    private bool _confirmDisconnect;
+
+    private bool CanManage => Can(MasterPermissions.ManageGlobalKeys);
+
+    private bool IsConnected => _status is not null && _status.Status != GlobalIntegrationRules.StatusDisconnected;
+
+    private string StatusDescription => _status?.Status switch
+    {
+        GlobalIntegrationRules.StatusActive => "Ativo — a busca TikTok Shop de todos os clientes usa o token Master.",
+        GlobalIntegrationRules.StatusExpired => "Expirado — a renovação automática falhou; clique em Autorizar / Reautorizar.",
+        _ => "Desconectado — a busca TikTok Shop fica indisponível até a autorização com uma conta de criador."
+    };
+
+    protected override async Task LoadAsync()
+    {
+        ApplyQueryFeedback();
+        if (!CanManage)
+        {
+            Error = "Seu papel não tem acesso às Integrações Globais (chaves globais).";
+            return;
+        }
+
+        await LoadStatusAsync();
+    }
+
+    private void ApplyQueryFeedback()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        if (!query.TryGetValue("status", out var status))
+        {
+            return;
+        }
+
+        if (string.Equals(status, "success", StringComparison.OrdinalIgnoreCase))
+        {
+            SetResult(true, "API TikTok Shop autorizada. A busca de todos os clientes já usa o token Master.");
+        }
+        else
+        {
+            SetResult(false, query.TryGetValue("message", out var message) && !string.IsNullOrWhiteSpace(message)
+                ? message.ToString()
+                : "Não foi possível autorizar a API TikTok Shop.");
+        }
+
+        Navigation.NavigateTo(uri.AbsolutePath, replace: true);
+    }
+
+    private async Task LoadStatusAsync()
+    {
+        Busy = true;
+        try
+        {
+            var result = await Api.GlobalTikTokShopStatusAsync();
+            if (Accept(result))
+            {
+                _status = result.Data;
+                _cacheMinutes = _status?.SearchCacheMinutes ?? TikTokShopSearchCacheRules.DefaultMinutes;
+            }
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private async Task AuthorizeAsync()
+    {
+        Busy = true;
+        try
+        {
+            var callbackUri = OAuthRedirectUriNormalizer.Normalize(Navigation.ToAbsoluteUri("integracoes/oauth/callback").ToString());
+            var result = await Api.GlobalTikTokShopAuthorizeUrlAsync(callbackUri);
+            if (!Accept(result))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(result.Data?.AuthorizeUrl))
+            {
+                SetResult(false, "O TikTok Shop não devolveu a URL de autorização. Verifique App Key/Service ID no Cofre.");
+                return;
+            }
+
+            Navigation.NavigateTo(result.Data.AuthorizeUrl, forceLoad: true);
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private async Task SaveCacheAsync()
+    {
+        if (_cacheMinutes < 0 || _cacheMinutes > TikTokShopSearchCacheRules.MaxMinutes)
+        {
+            SetResult(false, $"Informe um tempo entre 0 e {TikTokShopSearchCacheRules.MaxMinutes} minutos.");
+            return;
+        }
+
+        Busy = true;
+        try
+        {
+            var result = await Api.SaveGlobalTikTokShopSettingsAsync(new GlobalIntegrationSettingsDto { SearchCacheMinutes = _cacheMinutes });
+            if (AcceptOperation(result) && _status is not null)
+            {
+                _status.SearchCacheMinutes = _cacheMinutes;
+            }
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        Busy = true;
+        try
+        {
+            var result = await Api.DisconnectGlobalTikTokShopAsync();
+            _confirmDisconnect = false;
+            if (AcceptOperation(result))
+            {
+                var message = Info;
+                await LoadStatusAsync();
+                Info = message;
+            }
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+}

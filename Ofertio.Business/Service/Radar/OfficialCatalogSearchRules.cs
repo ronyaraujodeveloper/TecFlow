@@ -45,6 +45,9 @@ public static class OfficialCatalogSearchRules
     public const string MercadoLivreMissingAccountMessage =
         "API Mercado Livre ainda não autorizada pelo administrador da plataforma";
 
+    public const string TikTokShopMissingAccountMessage =
+        Ofertio.Business.Integrations.TikTokShop.TikTokShopAffiliateSearchRules.MissingAccountMessage;
+
     public const string MercadoLivreSearchForbiddenMessage =
         "A API oficial do Mercado Livre recusou a busca (HTTP 403). A conexão é gerenciada pelo administrador da plataforma (Painel Master ➔ Integrações Globais); a vitrine pública não é consultada para evitar o bloqueio anti-robô.";
 
@@ -199,7 +202,7 @@ public static class OfficialCatalogSearchRules
         IReadOnlyList<OfficialCatalogProductDto> items,
         OfficialCatalogSearchFilter filter)
     {
-        var anyStore = filter.MercadoLivre || filter.Shopee || filter.Amazon;
+        var anyStore = filter.MercadoLivre || filter.Shopee || filter.Amazon || filter.TikTokShop;
         var categories = SelectedMercadoLivreDomains(filter, int.MaxValue).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return items
             .Where(item => !anyStore || item.PlatformType switch
@@ -207,6 +210,7 @@ public static class OfficialCatalogSearchRules
                 MarketplaceType.MercadoLivre => filter.MercadoLivre,
                 MarketplaceType.Shopee => filter.Shopee,
                 MarketplaceType.Amazon => filter.Amazon,
+                MarketplaceType.TikTokShop => filter.TikTokShop,
                 _ => true
             })
             .Where(item => categories.Count == 0
@@ -508,10 +512,10 @@ public static class OfficialCatalogSearchRules
         }
     }
 
-    /// <summary>Taxa recalculada na tela (ex.: o usuário mudou a sua taxa): a comissão da API da Shopee é mantida.</summary>
+    /// <summary>Taxa recalculada na tela (ex.: o usuário mudou a sua taxa): a comissão informada pela API (Shopee, TikTok Shop) é mantida.</summary>
     public static void ResetEstimatedCommission(OfficialCatalogProductDto item)
     {
-        if (item.CommissionSource == AffiliateCommissionRules.SourceShopeeApi)
+        if (item.CommissionSource is AffiliateCommissionRules.SourceShopeeApi or AffiliateCommissionRules.SourceTikTokShopApi)
         {
             return;
         }

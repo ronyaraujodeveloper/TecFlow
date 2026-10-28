@@ -10,6 +10,17 @@
 - [ ] **Taxas de comissão (`MercadoLivreCategoryCommission`):** comparar `AffiliateCommissionRules` com o painel de afiliado do ML (a venda indireta paga a metade).
 - [ ] **Sua taxa do ML (`AffiliateOfferMetrics`):** salvar a taxa média no modal de regras da Buscar Ofertas.
 
+## 🎵 TikTok Shop: App de Criador e Integrações Globais (`TikTokShopGlobalIntegration`)
+
+- [ ] **Migration:** aplicar `AddGlobalIntegrationExternalAccount` em homologação (runbook `EXECUCAO_HOMOLOGACAO.md`) e, depois, em produção.
+- [ ] **Partner Center:** criar o app do tipo Criador (Affiliate Creator) com os escopos de busca de produtos em colaboração aberta e de link de promoção; Redirect URL = `https://dev.ofertio.com.br/integracoes/oauth/callback`.
+- [ ] **Cofre:** preencher `Integrations:TikTokShop:AppKey`, `AppSecret`, `ServiceId` e `RedirectUri` em Master ➔ Cofre de chaves; testar em Master ➔ Contas de teste / dev ("TikTok Shop (Criador)").
+- [ ] **Token Master:** autorizar em Master ➔ Integrações Globais ➔ API TikTok Shop com uma conta de criador (conta de vendedor deve ser recusada) e conferir o nome da conta e a expiração na tela.
+- [ ] **Busca:** em `/busca`, marcar só "TikTok Shop" e conferir ofertas, comissão e o selo do canal. Confirmar no log que a resposta real bate com os campos lidos (`sales_price`, `commission.rate`, `detail_link`); se o TikTok mudar o path, ajustar `AffiliateProductSearchPath` sem novo código.
+- [ ] **Conta de criador do cliente:** em Minhas Lojas, "Conectar conta de criador TikTok" no card TikTok; converter um link e conferir o link de promoção oficial. Validar o path `AffiliatePromotionLinkPath` e o campo do link na resposta real.
+- [ ] **Sem conta de criador:** converter um link TikTok numa loja só com o ID e conferir o aviso "Conecte sua conta de criador TikTok em Minhas Lojas para garantir a comissão".
+- [ ] **Legado:** avaliar a remoção de `TikTokShopApiService` e `TikTokAuthController` (fluxo de vendedor antigo, sem uso no App de Criador).
+
 ## 🔎 Buscar Ofertas: validação no navegador
 
 - [ ] **Varredura (`MercadoLivreScanBudgetAndScreenFilters`):** "dell inspiron" + Notebooks deve mostrar "N ofertas · 100 produtos analisados".

@@ -1895,6 +1895,40 @@ flowchart LR
   RULES -->|"ligada"| SHOW["Menus voltam a aparecer"]
 ```
 
+### Integrações Globais: API TikTok Shop, App de Criador (`TikTokShopGlobalIntegration`)
+
+O token Master (conta de criador autorizada no Painel Master) só busca produtos. Cada cliente conecta a própria conta de criador em Minhas Lojas, e o link de promoção é gerado com o token dele.
+
+```mermaid
+flowchart LR
+  MASTER["MasterGlobalTikTokShop.razor<br/>/master/integracoes-globais/tiktok-shop"] --> CTRL["MasterGlobalIntegrationsController<br/>(ManageGlobalKeys)"]
+  CTRL -->|"authorize-url (state IsMaster)"| TTS["services.tiktokshop.com/open/authorize<br/>service_id + state"]
+  STORE["MinhasLojas / MarketplaceStoreCard<br/>Conectar conta de criador"] -->|"api/marketplace-auth/tiktok/authorize-url<br/>(state selado)"| TTS
+  TTS --> WEBUI["WebUi /integracoes/oauth/callback"]
+  WEBUI -->|"POST api/marketplace-auth/oauth/sealed-callback"| FLOW["TikTokShopOAuthCallbackFlow"]
+  FLOW -->|"state.IsMaster"| GIS["GlobalIntegrationService<br/>rejeita conta de vendedor"]
+  FLOW -->|"cliente"| LOJA["IntegracaoLojaService<br/>LinkUniversalAccountAsync"]
+  GIS --> AUTH["MarketplaceAuthService<br/>GET auth.tiktok-shops.com/api/v2/token/get"]
+  LOJA --> AUTH
+  GIS --> DB[("GlobalIntegrationTokens<br/>+ ExternalAccountId/Name")]
+  LOJA --> ACC[("MarketplaceAccounts / IntegracaoLojas<br/>token do criador")]
+```
+
+```mermaid
+flowchart TD
+  BUSCA["Buscar Ofertas (cliente)"] --> OCS["OfficialCatalogSearchService<br/>canal TikTokShop"]
+  OCS --> AFF["TikTokShopAffiliateApiService"]
+  AFF --> CACHE{"IMemoryCache<br/>tts-search: termo + filtros"}
+  CACHE -->|não| TOKEN["Token Master (GlobalIntegrationTokens)"]
+  TOKEN -->|"expirado"| REFRESH["RefreshTikTokShopTokenAsync<br/>(SemaphoreSlim, LastError)"]
+  TOKEN --> CALL["POST affiliate_creator/202405/<br/>open_collaborations/products/search<br/>assinatura 202309 + x-tts-access-token"]
+  REFRESH --> CALL
+  CALL -->|"401 ou código de token"| REFRESH
+  GEN["Gerador de Links"] --> STRAT["TikTokShopLinkStrategy"]
+  STRAT -->|"conta de criador conectada"| CLIENT["TikTokAffiliateLinkClient<br/>promotion_link com token do cliente"]
+  STRAT -->|"sem conta ou falha"| SUBID["shop.tiktok.com/view/product/{id}?sub_id=<br/>+ aviso GenerationWarning"]
+```
+
 ### Filtros compactos da Buscar Ofertas (`CompactSearchFilters`)
 
 ```mermaid

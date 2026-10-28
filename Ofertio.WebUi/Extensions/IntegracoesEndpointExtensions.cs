@@ -107,7 +107,7 @@ public static class IntegracoesEndpointExtensions
 
         if (MarketplaceOAuthStateRules.IsProtected(state))
         {
-            return await CompleteSealedMercadoLivreCallbackAsync(httpContext, httpClientFactory, logger, code, state);
+            return await CompleteSealedCallbackAsync(httpContext, httpClientFactory, logger, code, state);
         }
 
         if (httpContext.User.Identity?.IsAuthenticated != true)
@@ -181,10 +181,11 @@ public static class IntegracoesEndpointExtensions
     }
 
     /// <summary>
-    /// Mercado Livre com state selado: não exige cookie de sessão. A API abre o state, grava os tokens
-    /// e devolve a origem onde o OAuth começou (ex.: https://localhost:7002/marketplace-accounts?status=success).
+    /// State selado (Mercado Livre ou TikTok Shop): não exige cookie de sessão. A API abre o state, despacha pela
+    /// plataforma, grava os tokens e devolve a origem onde o OAuth começou
+    /// (ex.: https://localhost:7002/marketplace-accounts?status=success).
     /// </summary>
-    private static async Task<IResult> CompleteSealedMercadoLivreCallbackAsync(
+    private static async Task<IResult> CompleteSealedCallbackAsync(
         HttpContext httpContext,
         IHttpClientFactory httpClientFactory,
         ILogger logger,
@@ -197,7 +198,7 @@ public static class IntegracoesEndpointExtensions
         {
             var client = httpClientFactory.CreateClient("Orquestrador");
             using var response = await client.PostAsJsonAsync(
-                "api/marketplace-auth/mercadolivre/callback",
+                "api/marketplace-auth/oauth/sealed-callback",
                 new MarketplaceOAuthCallbackRequestDto
                 {
                     Code = string.IsNullOrWhiteSpace(code) ? null : code,
@@ -210,7 +211,7 @@ public static class IntegracoesEndpointExtensions
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning(
-                    "Callback ML sem sessão recusado pela API. Status={StatusCode} Message={Message}",
+                    "Callback OAuth selado recusado pela API. Status={StatusCode} Message={Message}",
                     (int)response.StatusCode,
                     result?.Message);
             }
@@ -219,7 +220,7 @@ public static class IntegracoesEndpointExtensions
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Erro ao concluir callback OAuth do Mercado Livre sem sessão.");
+            logger.LogError(ex, "Erro ao concluir callback OAuth selado sem sessão.");
             return Results.Redirect(MarketplaceOAuthStateRules.BuildReturnUrl(null, success: false, "Erro inesperado ao vincular loja."));
         }
     }

@@ -795,6 +795,8 @@ public class AppDbContext : DbContext
             entity.Property(item => item.RefreshToken).HasColumnType("nvarchar(max)");
             entity.Property(item => item.LastError).HasMaxLength(512);
             entity.Property(item => item.AuthorizedBy).HasMaxLength(256);
+            entity.Property(item => item.ExternalAccountId).HasMaxLength(128);
+            entity.Property(item => item.ExternalAccountName).HasMaxLength(256);
             entity.HasIndex(item => item.Provider).IsUnique();
         });
 

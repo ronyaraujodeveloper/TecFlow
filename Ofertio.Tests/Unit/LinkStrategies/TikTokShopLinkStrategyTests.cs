@@ -77,6 +77,61 @@ public class TikTokShopLinkStrategyTests
     }
 
     [Fact]
+    public async Task GenerateDeepLinkAsync_ShouldUseOfficialPromotionLinkWhenCreatorAccountIsConnected()
+    {
+        var client = new Mock<ITikTokAffiliateLinkClient>();
+        client.Setup(x => x.GenerateAffiliateLinkAsync(
+                It.IsAny<IntegracaoLoja>(),
+                CanonicalUrl,
+                "aff-10",
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://vt.tiktok.com/oficial");
+        var context = new AffiliateLinkGenerationContext { UserId = 10 };
+        var strategy = CreateStrategy(store: CreateStore(TrackingId, "Loja TikTok"), client: client.Object, context: context);
+
+        var link = await strategy.GenerateDeepLinkAsync(CanonicalUrl, Guid.NewGuid(), "aff-10");
+
+        Assert.Equal("https://vt.tiktok.com/oficial", link);
+        Assert.Null(context.GenerationWarning);
+    }
+
+    [Fact]
+    public async Task GenerateDeepLinkAsync_ShouldWarnAndKeepSubIdWhenCreatorAccountIsMissing()
+    {
+        var client = new Mock<ITikTokAffiliateLinkClient>(MockBehavior.Strict);
+        var store = CreateStore(TrackingId, "Loja TikTok");
+        store.AccessToken = Ofertio.Business.Integrations.Auth.HomologMarketplaceAuth.StubAccessToken;
+        var context = new AffiliateLinkGenerationContext { UserId = 10 };
+        var strategy = CreateStrategy(store: store, client: client.Object, context: context);
+
+        var link = await strategy.GenerateDeepLinkAsync(CanonicalUrl, Guid.NewGuid(), "aff-10");
+
+        Assert.Equal($"https://shop.tiktok.com/view/product/{ProductId}?sub_id={TrackingId}", link);
+        Assert.Equal(TikTokShopCreatorLinkRules.NoCreatorAccountWarning, context.GenerationWarning);
+    }
+
+    [Fact]
+    public async Task GenerateDeepLinkAsync_ShouldFallbackToSubIdWhenOfficialLinkFails()
+    {
+        var client = new Mock<ITikTokAffiliateLinkClient>();
+        client.Setup(x => x.GenerateAffiliateLinkAsync(
+                It.IsAny<IntegracaoLoja>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AffiliateLinkGenerationException("produto fora da colaboração aberta"));
+        var context = new AffiliateLinkGenerationContext { UserId = 10 };
+        var strategy = CreateStrategy(store: CreateStore(TrackingId, "Loja TikTok"), client: client.Object, context: context);
+
+        var link = await strategy.GenerateDeepLinkAsync(CanonicalUrl, Guid.NewGuid(), "aff-10");
+
+        Assert.Equal($"https://shop.tiktok.com/view/product/{ProductId}?sub_id={TrackingId}", link);
+        Assert.Equal(TikTokShopCreatorLinkRules.OfficialLinkFailedWarning, context.GenerationWarning);
+    }
+
+    [Fact]
     public void PlatformLinkResolver_ShouldSelectTikTokShopStrategy()
     {
         var resolver = new PlatformLinkResolver(
@@ -90,13 +145,16 @@ public class TikTokShopLinkStrategyTests
 
     private static TikTokShopLinkStrategy CreateStrategy(
         IUrlExpansionService? expansion = null,
-        IntegracaoLoja? store = null) =>
+        IntegracaoLoja? store = null,
+        ITikTokAffiliateLinkClient? client = null,
+        AffiliateLinkGenerationContext? context = null) =>
         new(
             expansion ?? new PassthroughUrlExpansionService(),
             new FixedStoreResolver(store ?? CreateStore(TrackingId, "Loja TikTok")),
-            new AffiliateLinkGenerationContext { UserId = 10 },
+            context ?? new AffiliateLinkGenerationContext { UserId = 10 },
             CreateHostEnvironment(),
-            NullLogger<TikTokShopLinkStrategy>.Instance);
+            NullLogger<TikTokShopLinkStrategy>.Instance,
+            client);
 
     private static IHostEnvironment CreateHostEnvironment()
     {

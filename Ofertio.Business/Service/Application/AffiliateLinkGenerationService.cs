@@ -92,6 +92,7 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
             foreach (var storeScope in storeScopes)
             {
                 _generationContext.OfficialShortenedShopeeUrl = null;
+                _generationContext.GenerationWarning = null;
 
                 var generatedLink = await strategy.GenerateDeepLinkAsync(
                     resolvedUrl,
@@ -155,12 +156,15 @@ public sealed class AffiliateLinkGenerationService : IAffiliateLinkGenerationSer
                     IsActive = true
                 });
 
+                var successMessage = string.IsNullOrWhiteSpace(_generationContext.GenerationWarning)
+                    ? "Link de afiliado gerado com sucesso."
+                    : $"Link de afiliado gerado com sucesso. {_generationContext.GenerationWarning.Trim()}";
                 lastSuccess = new GerarLinkAfiliadoResponseDto
                 {
                     Success = true,
                     Status = true,
-                    Message = "Link de afiliado gerado com sucesso.",
-                    Descricao = "Link de afiliado gerado com sucesso.",
+                    Message = successMessage,
+                    Descricao = successMessage,
                     OriginalUrl = workingUrl,
                     AffiliateUrl = generatedLink,
                     ConvertedUrl = generatedLink,

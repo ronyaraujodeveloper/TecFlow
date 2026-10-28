@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Ofertio.Business.Dto;
+using Ofertio.Business.Integrations.TikTokShop;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Groups;
 using Ofertio.Business.Service.Radar;
@@ -19,6 +20,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<OfficialCatalogSearchService> _logger;
     private readonly ICatalogOfferIndex? _catalogIndex;
+    private readonly ITikTokShopAffiliateApiService? _tikTokShop;
 
     public OfficialCatalogSearchService(
         IMercadoLivreApiService mercadoLivre,
@@ -26,7 +28,8 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         IAmazonPaApiService amazon,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<OfficialCatalogSearchService> logger,
-        ICatalogOfferIndex? catalogIndex = null)
+        ICatalogOfferIndex? catalogIndex = null,
+        ITikTokShopAffiliateApiService? tikTokShop = null)
     {
         _mercadoLivre = mercadoLivre;
         _shopee = shopee;
@@ -34,6 +37,7 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         _dbContextFactory = dbContextFactory;
         _logger = logger;
         _catalogIndex = catalogIndex;
+        _tikTokShop = tikTokShop;
     }
 
     public async Task<OfficialCatalogSearchResponseDto> SearchAsync(
@@ -56,9 +60,10 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var includeMl = filter.MercadoLivre;
         var includeShopee = filter.Shopee;
         var includeAmazon = filter.Amazon;
-        if (!includeMl && !includeShopee && !includeAmazon)
+        var includeTikTok = filter.TikTokShop;
+        if (!includeMl && !includeShopee && !includeAmazon && !includeTikTok)
         {
-            includeMl = includeShopee = includeAmazon = true;
+            includeMl = includeShopee = includeAmazon = includeTikTok = true;
         }
 
         var limit = OfficialCatalogSearchRules.ClampLimit(filter.Limit);
@@ -72,32 +77,39 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         var amazonTask = includeAmazon
             ? _amazon.SearchProductsAsync(userId, keyword, limit, cancellationToken)
             : skipped;
+        var tikTokTask = includeTikTok
+            ? SearchTikTokShopSafeAsync(keyword, limit, filter, cancellationToken)
+            : skipped;
         var internalTask = filter.MercadoLivreOffset > 0
             ? Task.FromResult<IReadOnlyList<OfficialCatalogProductDto>>([])
             : SearchLocalProductsAsync(keyword, limit, cancellationToken);
         var ratesTask = LoadCommissionRatesAsync(userId, cancellationToken);
-        await Task.WhenAll(mlTask, shopeeTask, amazonTask, internalTask, ratesTask);
+        await Task.WhenAll(mlTask, shopeeTask, amazonTask, tikTokTask, internalTask, ratesTask);
         var (mercadoLivreRate, amazonRate) = await ratesTask;
 
         var ml = await mlTask;
         var shopee = await shopeeTask;
         var amazon = await amazonTask;
+        var tikTok = await tikTokTask;
         var mlItems = ml.Items;
         var shopeeItems = shopee.Items;
         var amazonItems = amazon.Items;
+        var tikTokItems = tikTok.Items;
         var localItems = await internalTask;
 
         _logger.LogInformation(
-            "Busca concluída para '{query}': ML={mlCount}, Shopee={shopeeCount}, Amazon={amazonCount}, Local={localCount}",
+            "Busca concluída para '{query}': ML={mlCount}, Shopee={shopeeCount}, Amazon={amazonCount}, TikTokShop={tikTokCount}, Local={localCount}",
             keyword,
             mlItems.Count,
             shopeeItems.Count,
             amazonItems.Count,
+            tikTokItems.Count,
             localItems.Count);
 
         var deduplicated = mlItems
             .Concat(shopeeItems)
             .Concat(amazonItems)
+            .Concat(tikTokItems)
             .Concat(localItems)
             .Where(item => OfficialCatalogSearchRules.PassesOptionalFilters(item, filter))
             .GroupBy(item => item.SourceUrl.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -156,6 +168,14 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
                     amazonItems.Count,
                     amazon.MissingCredentials,
                     OfficialCatalogSearchRules.AmazonMissingPaApiMessage),
+                OfficialCatalogSearchRules.BuildChannelStatus(
+                    "TikTokShop",
+                    "TikTok Shop",
+                    includeTikTok,
+                    OfficialCatalogSearchRules.CountVisibleOffers(tikTokItems, filter),
+                    tikTok.MissingCredentials,
+                    OfficialCatalogSearchRules.TikTokShopMissingAccountMessage,
+                    tikTok.MissingCredentials ? null : tikTok.ErrorMessage),
                 OfficialCatalogSearchRules.BuildChannelStatus(
                     "Local",
                     "Base Local (Grupos)",
@@ -230,6 +250,43 @@ public sealed class OfficialCatalogSearchService : IOfficialCatalogSearchService
         }
         catch (Exception ex)
         {
+            return OfficialCatalogChannelResult.Failed(
+                string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado" : ex.Message);
+        }
+    }
+
+    /// <summary>Busca Affiliate Creator com o token Master; "Carregar mais" do Mercado Livre não repete o TikTok Shop.</summary>
+    private async Task<OfficialCatalogChannelResult> SearchTikTokShopSafeAsync(
+        string keyword,
+        int limit,
+        OfficialCatalogSearchFilter filter,
+        CancellationToken cancellationToken)
+    {
+        if (_tikTokShop is null)
+        {
+            return OfficialCatalogChannelResult.Unconfigured();
+        }
+
+        if (filter.MercadoLivreOffset > 0)
+        {
+            return OfficialCatalogChannelResult.Empty;
+        }
+
+        try
+        {
+            return await _tikTokShop.SearchProductsAsync(
+                new TikTokShopProductSearchRequest
+                {
+                    Query = keyword,
+                    PageSize = limit,
+                    MinPrice = filter.MinPrice,
+                    MaxPrice = filter.MaxPrice
+                },
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "[TikTok Shop Busca] Falha inesperada na busca '{Query}'.", keyword);
             return OfficialCatalogChannelResult.Failed(
                 string.IsNullOrWhiteSpace(ex.Message) ? "Erro inesperado" : ex.Message);
         }

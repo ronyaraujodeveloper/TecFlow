@@ -178,7 +178,8 @@ public class MarketplaceStockService : IMarketplaceStockService
             _tikTokOptions.AppSecret,
             apiPath,
             timestamp,
-            bodyJson);
+            bodyJson,
+            new Dictionary<string, string?> { ["shop_id"] = shopId });
 
         var url = AppendQuery(relativePath, new Dictionary<string, string?>
         {

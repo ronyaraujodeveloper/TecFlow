@@ -28,6 +28,11 @@ public class GlobalIntegrationStatusDto
     public bool HasAppCredentials { get; set; }
 
     public int SearchCacheMinutes { get; set; }
+
+    /// <summary>Conta autorizada na plataforma (TikTok Shop: nome do criador).</summary>
+    public string? AccountName { get; set; }
+
+    public string? AccountId { get; set; }
 }
 
 public class GlobalIntegrationSettingsDto

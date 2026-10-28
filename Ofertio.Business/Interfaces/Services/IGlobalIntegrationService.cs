@@ -23,4 +23,24 @@ public interface IGlobalIntegrationService
         string? redirectUri,
         string? codeVerifier,
         CancellationToken cancellationToken = default);
+
+    Task<GlobalIntegrationStatusDto> GetTikTokShopStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<MasterOperationResultDto> SaveTikTokShopSettingsAsync(
+        MasterActor actor,
+        GlobalIntegrationSettingsDto request,
+        CancellationToken cancellationToken = default);
+
+    Task<MasterOperationResultDto> DisconnectTikTokShopAsync(
+        MasterActor actor,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Troca o <c>auth_code</c> do TikTok Shop pelo token Master; só operadores com acesso às chaves globais
+    /// e só contas de criador (<c>user_type</c> = 1).
+    /// </summary>
+    Task<MasterOperationResultDto> CompleteTikTokShopAuthorizationAsync(
+        int userId,
+        string code,
+        CancellationToken cancellationToken = default);
 }

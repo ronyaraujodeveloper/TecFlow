@@ -46,6 +46,10 @@ public interface IMasterApiService
     Task<ApiResult<MasterOperationResultDto>> SaveGlobalMercadoLivreSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalMercadoLivreAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalMercadoLivreAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default);
+    Task<ApiResult<GlobalIntegrationStatusDto>> GlobalTikTokShopStatusAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> SaveGlobalTikTokShopSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalTikTokShopAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalTikTokShopAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default);
 }
 
 public sealed class MasterApiService : IMasterApiService
@@ -178,6 +182,20 @@ public sealed class MasterApiService : IMasterApiService
     public Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalMercadoLivreAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default) =>
         WithLoading("Abrindo autorização do Mercado Livre...", () => _http.GetAsync<MarketplaceAuthorizeUrlResponseDto>(
             $"api/master/integracoes-globais/mercado-livre/authorize-url?redirectUri={Uri.EscapeDataString(redirectUri)}",
+            cancellationToken: cancellationToken));
+
+    public Task<ApiResult<GlobalIntegrationStatusDto>> GlobalTikTokShopStatusAsync(CancellationToken cancellationToken = default) =>
+        _http.GetAsync<GlobalIntegrationStatusDto>("api/master/integracoes-globais/tiktok-shop", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<MasterOperationResultDto>> SaveGlobalTikTokShopSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Salvando tempo de cache...", () => _http.PutAsync<GlobalIntegrationSettingsDto, MasterOperationResultDto>("api/master/integracoes-globais/tiktok-shop/configuracoes", request, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalTikTokShopAsync(CancellationToken cancellationToken = default) =>
+        WithLoading("Desconectando API TikTok Shop...", () => _http.PostAsync<object, MasterOperationResultDto>("api/master/integracoes-globais/tiktok-shop/desconectar", new { }, cancellationToken));
+
+    public Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalTikTokShopAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default) =>
+        WithLoading("Abrindo autorização do TikTok Shop...", () => _http.GetAsync<MarketplaceAuthorizeUrlResponseDto>(
+            $"api/master/integracoes-globais/tiktok-shop/authorize-url?redirectUri={Uri.EscapeDataString(redirectUri)}",
             cancellationToken: cancellationToken));
 
     private async Task<T> WithLoading<T>(string message, Func<Task<T>> action)

@@ -10,6 +10,7 @@ public static class OfferSearchFilterOptions
     public const string MercadoLivre = "mercado-livre";
     public const string Shopee = "shopee";
     public const string Amazon = "amazon";
+    public const string TikTokShop = "tiktok-shop";
 
     public const string CouponOnly = "cupom";
     public const string FreeShippingOnly = "frete-gratis";
@@ -22,10 +23,11 @@ public static class OfferSearchFilterOptions
     [
         new(MercadoLivre, "Mercado Livre"),
         new(Shopee, "Shopee"),
-        new(Amazon, "Amazon")
+        new(Amazon, "Amazon"),
+        new(TikTokShop, "TikTok Shop")
     ];
 
-    public static IReadOnlyList<string> DefaultPlatforms { get; } = [MercadoLivre, Shopee, Amazon];
+    public static IReadOnlyList<string> DefaultPlatforms { get; } = [MercadoLivre, Shopee, Amazon, TikTokShop];
 
     public static IReadOnlyList<MultiSelectOption> Qualifiers { get; } =
     [
@@ -86,6 +88,7 @@ public static class OfferSearchFilterOptions
         filter.MercadoLivre = Has(platforms, MercadoLivre);
         filter.Shopee = Has(platforms, Shopee);
         filter.Amazon = Has(platforms, Amazon);
+        filter.TikTokShop = Has(platforms, TikTokShop);
         filter.HasCoupon = Has(qualifiers, CouponOnly) ? true : null;
         filter.FreeShippingOnly = Has(qualifiers, FreeShippingOnly) ? true : null;
         filter.OfficialStoreOnly = Has(qualifiers, OfficialStoreOnly) ? true : null;

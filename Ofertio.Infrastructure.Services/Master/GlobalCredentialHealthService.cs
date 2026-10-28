@@ -32,7 +32,11 @@ public sealed class GlobalCredentialHealthService : IGlobalCredentialHealthServi
             (DeveloperPlatforms.Amazon,
                 Config("Integrations:AmazonPaApi:AccessKey"),
                 Config("Integrations:AmazonPaApi:SecretKey"),
-                Config("Integrations:AmazonPaApi:PartnerTag"))
+                Config("Integrations:AmazonPaApi:PartnerTag")),
+            (DeveloperPlatforms.TikTokShop,
+                Config("Integrations:TikTokShop:AppKey"),
+                Config("Integrations:TikTokShop:AppSecret"),
+                null)
         };
 
         var checks = await Task.WhenAll(targets.Select(async target =>

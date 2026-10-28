@@ -28,4 +28,10 @@ public class GlobalIntegrationToken : BaseEntity
     public int? AuthorizedByUserId { get; set; }
 
     public string? AuthorizedBy { get; set; }
+
+    /// <summary>Conta autorizada na plataforma (TikTok Shop: <c>open_id</c> do criador).</summary>
+    public string? ExternalAccountId { get; set; }
+
+    /// <summary>Nome exibido da conta autorizada (TikTok Shop: <c>seller_name</c>/nome do criador).</summary>
+    public string? ExternalAccountName { get; set; }
 }

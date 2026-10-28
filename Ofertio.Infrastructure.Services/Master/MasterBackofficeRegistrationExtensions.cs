@@ -37,7 +37,7 @@ public static class MasterBackofficeRegistrationExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(15);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Ofertio-HealthCheck/1.0");
-        });
+        }).RemoveAllLoggers();
         return services;
     }
 }

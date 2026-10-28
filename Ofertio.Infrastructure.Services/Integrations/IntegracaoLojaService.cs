@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Integrations;
 using Ofertio.Business.Integrations.Auth;
+using Ofertio.Business.Integrations.TikTokShop;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Mappings;
@@ -704,6 +705,19 @@ public class IntegracaoLojaService : IIntegracaoLojaService
                 return Fail(oauth.ErrorMessage ?? "Não foi possível autorizar o Mercado Livre.");
             }
         }
+        else if (platform == MarketplaceType.TikTokShop && !string.IsNullOrWhiteSpace(dto.AuthorizationCode))
+        {
+            oauth = await _marketplaceAuthService.ExchangeTikTokShopCodeAsync(dto.AuthorizationCode.Trim(), cancellationToken);
+            if (!oauth.Success)
+            {
+                return Fail(oauth.ErrorMessage ?? "Não foi possível autorizar o TikTok Shop.");
+            }
+
+            if (!TikTokShopUserTypes.IsCreator(oauth.UserType))
+            {
+                return Fail("A conta autorizada não é de criador (afiliado) do TikTok Shop. Entre com a sua conta de criador.");
+            }
+        }
 
         var marketplaceAccount = await _marketplaceAccountRepository.GetByShopAsync(shopKey, platform);
         if (marketplaceAccount is null && oauth is not null && string.IsNullOrWhiteSpace(affiliateTrackingId))
@@ -831,9 +845,13 @@ public class IntegracaoLojaService : IIntegracaoLojaService
     }
 
     private static string ResolveUniversalLinkMessage(string platformLabel, MarketplaceOAuthExchangeResult? oauth) =>
-        oauth is null
-            ? $"Conta {platformLabel} vinculada no modo Universal Link."
-            : $"Conta {platformLabel} autorizada via OAuth. A busca de ofertas já pode usar a API oficial.";
+        oauth switch
+        {
+            null => $"Conta {platformLabel} vinculada no modo Universal Link.",
+            { UserType: TikTokShopUserTypes.Creator } =>
+                "Conta de criador TikTok conectada. Os links do TikTok Shop já são gerados pela API oficial com a sua comissão.",
+            _ => $"Conta {platformLabel} autorizada via OAuth. A busca de ofertas já pode usar a API oficial."
+        };
 
     private async Task<MarketplaceAccount?> FindLatestUserAccountAsync(
         string userKey,

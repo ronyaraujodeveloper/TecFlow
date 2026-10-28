@@ -37,6 +37,10 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     private readonly IHostEnvironment _hostEnvironment;
     private readonly ITenantProvisioningService _tenantProvisioning;
     private readonly IOAuthStateProtector? _stateProtector;
+    private readonly IOptionsMonitor<TikTokShopIntegrationOptions>? _tikTokMonitor;
+
+    /// <summary>Valor atual (cofre Master recarregável) quando o monitor está disponível.</summary>
+    private TikTokShopIntegrationOptions TikTok => _tikTokMonitor?.CurrentValue ?? _tikTokOptions;
 
     public MarketplaceAuthService(
         IMarketplaceTokenRepository tokenRepository,
@@ -51,10 +55,12 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         IHostEnvironment hostEnvironment,
         ITenantProvisioningService tenantProvisioning,
         IOptions<MercadoLivreIntegrationOptions>? mercadoLivreOptions = null,
-        IOAuthStateProtector? stateProtector = null)
+        IOAuthStateProtector? stateProtector = null,
+        IOptionsMonitor<TikTokShopIntegrationOptions>? tikTokMonitor = null)
     {
         _mercadoLivreOptions = mercadoLivreOptions?.Value ?? new MercadoLivreIntegrationOptions();
         _stateProtector = stateProtector;
+        _tikTokMonitor = tikTokMonitor;
         _tokenRepository = tokenRepository;
         _accountRepository = accountRepository;
         _context = context;
@@ -466,15 +472,113 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     {
         EnsureTikTokCredentials();
 
+        var options = TikTok;
+        if (!string.IsNullOrWhiteSpace(options.ServiceId))
+        {
+            return AppendQuery(options.ServiceAuthorizeUrl, new Dictionary<string, string?>
+            {
+                ["service_id"] = options.ServiceId.Trim(),
+                ["state"] = state
+            });
+        }
+
         var query = new Dictionary<string, string?>
         {
-            ["app_key"] = _tikTokOptions.AppKey,
+            ["app_key"] = options.AppKey,
             ["state"] = state,
             ["redirect_uri"] = redirectUri,
             ["grant_type"] = "authorized_code"
         };
 
-        return AppendQuery(_tikTokOptions.AuthorizeUrl, query);
+        return AppendQuery(options.AuthorizeUrl, query);
+    }
+
+    public const string TikTokShopMissingCredentialsMessage =
+        "Configure Integrations:TikTokShop:AppKey e AppSecret no Cofre de chaves (app do TikTok Shop Partner Center).";
+
+    public async Task<MarketplaceOAuthExchangeResult> ExchangeTikTokShopCodeAsync(
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return MarketplaceOAuthExchangeResult.Fail("Código de autorização do TikTok Shop ausente.");
+        }
+
+        if (HomologMarketplaceAuth.IsStubAuthorizationCode(code))
+        {
+            return new MarketplaceOAuthExchangeResult
+            {
+                Success = true,
+                AccessToken = HomologMarketplaceAuth.StubAccessToken,
+                RefreshToken = HomologMarketplaceAuth.StubRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(HomologMarketplaceAuth.StubAccessTokenLifetimeSeconds),
+                OpenId = "stub-open-id",
+                AccountName = "Criador Homolog",
+                UserType = TikTokShopUserTypes.Creator
+            };
+        }
+
+        if (!TikTok.HasAppCredentials)
+        {
+            return MarketplaceOAuthExchangeResult.Fail(TikTokShopMissingCredentialsMessage);
+        }
+
+        try
+        {
+            return ToExchangeResult(await ExchangeTikTokCodeAsync(code.Trim(), cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[TikTok OAuth] Falha ao trocar o code por access_token.");
+            return MarketplaceOAuthExchangeResult.Fail($"TikTok Shop recusou a autorização: {ex.Message}");
+        }
+    }
+
+    public async Task<MarketplaceOAuthExchangeResult> RefreshTikTokShopTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return MarketplaceOAuthExchangeResult.Fail("Refresh token do TikTok Shop ausente.");
+        }
+
+        if (!TikTok.HasAppCredentials)
+        {
+            return MarketplaceOAuthExchangeResult.Fail(TikTokShopMissingCredentialsMessage);
+        }
+
+        try
+        {
+            return ToExchangeResult(await RefreshTikTokTokenAsync(refreshToken.Trim(), cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[TikTok OAuth] Falha ao renovar o access_token.");
+            return MarketplaceOAuthExchangeResult.Fail($"TikTok Shop recusou a renovação: {ex.Message}");
+        }
+    }
+
+    private static MarketplaceOAuthExchangeResult ToExchangeResult(OAuthTokenPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload.AccessToken))
+        {
+            return MarketplaceOAuthExchangeResult.Fail("TikTok Shop não retornou access token.");
+        }
+
+        var now = DateTime.UtcNow;
+        return new MarketplaceOAuthExchangeResult
+        {
+            Success = true,
+            AccessToken = payload.AccessToken,
+            RefreshToken = payload.RefreshToken,
+            ExpiresAt = now.AddSeconds(payload.AccessTokenLifetimeSeconds),
+            RefreshExpiresAt = payload.RefreshTokenLifetimeSeconds > 0 ? now.AddSeconds(payload.RefreshTokenLifetimeSeconds) : null,
+            OpenId = payload.OpenId,
+            AccountName = payload.AccountName,
+            UserType = payload.UserType
+        };
     }
 
     private string BuildShopeeAuthorizationUrl(string redirectUri, string state)
@@ -532,41 +636,22 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         }
     }
 
+    /// <summary>Troca oficial: <c>GET /api/v2/token/get?app_key&amp;app_secret&amp;auth_code&amp;grant_type=authorized_code</c> (sem assinatura).</summary>
     private async Task<OAuthTokenPayload> ExchangeTikTokCodeAsync(string code, CancellationToken cancellationToken)
     {
         EnsureTikTokCredentials();
 
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var apiPath = "/api/v2/token/get";
-        var bodyObject = new
+        var options = TikTok;
+        var url = AppendQuery(options.TokenUrl, new Dictionary<string, string?>
         {
-            app_key = _tikTokOptions.AppKey,
-            app_secret = _tikTokOptions.AppSecret,
-            auth_code = code,
-            grant_type = "authorized_code"
-        };
-
-        var bodyJson = JsonSerializer.Serialize(bodyObject);
-        var sign = _signatureService.GenerateTikTokShopSign(
-            _tikTokOptions.AppKey,
-            _tikTokOptions.AppSecret,
-            apiPath,
-            timestamp,
-            bodyJson);
-
-        var url = AppendQuery(_tikTokOptions.TokenUrl, new Dictionary<string, string?>
-        {
-            ["app_key"] = _tikTokOptions.AppKey,
-            ["timestamp"] = timestamp.ToString(),
-            ["sign"] = sign
+            ["app_key"] = options.AppKey.Trim(),
+            ["app_secret"] = options.AppSecret.Trim(),
+            ["auth_code"] = code,
+            ["grant_type"] = "authorized_code"
         });
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyJson, Encoding.UTF8, "application/json")
-        };
-
-        return await SendTokenRequestAsync(request, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        return await SendTokenRequestAsync(request, cancellationToken, TikTokShopOAuthClientName);
     }
 
     private async Task<OAuthTokenPayload> ExchangeShopeeCodeAsync(
@@ -614,37 +699,17 @@ public class MarketplaceAuthService : IMarketplaceAuthService
     {
         EnsureTikTokCredentials();
 
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var apiPath = "/api/v2/token/refresh";
-        var bodyObject = new
+        var options = TikTok;
+        var url = AppendQuery(options.RefreshTokenUrl, new Dictionary<string, string?>
         {
-            app_key = _tikTokOptions.AppKey,
-            app_secret = _tikTokOptions.AppSecret,
-            refresh_token = refreshToken,
-            grant_type = "refresh_token"
-        };
-
-        var bodyJson = JsonSerializer.Serialize(bodyObject);
-        var sign = _signatureService.GenerateTikTokShopSign(
-            _tikTokOptions.AppKey,
-            _tikTokOptions.AppSecret,
-            apiPath,
-            timestamp,
-            bodyJson);
-
-        var url = AppendQuery(_tikTokOptions.RefreshTokenUrl, new Dictionary<string, string?>
-        {
-            ["app_key"] = _tikTokOptions.AppKey,
-            ["timestamp"] = timestamp.ToString(),
-            ["sign"] = sign
+            ["app_key"] = options.AppKey.Trim(),
+            ["app_secret"] = options.AppSecret.Trim(),
+            ["refresh_token"] = refreshToken,
+            ["grant_type"] = "refresh_token"
         });
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyJson, Encoding.UTF8, "application/json")
-        };
-
-        return await SendTokenRequestAsync(request, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        return await SendTokenRequestAsync(request, cancellationToken, TikTokShopOAuthClientName);
     }
 
     private async Task<OAuthTokenPayload> RefreshShopeeTokenAsync(
@@ -696,11 +761,14 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         return await SendTokenRequestAsync(request, cancellationToken);
     }
 
+    public const string TikTokShopOAuthClientName = "Ofertio.TikTokShopOAuth";
+
     private async Task<OAuthTokenPayload> SendTokenRequestAsync(
         HttpRequestMessage request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string clientName = "Ofertio.MarketplaceOAuth")
     {
-        var client = _httpClientFactory.CreateClient("Ofertio.MarketplaceOAuth");
+        var client = _httpClientFactory.CreateClient(clientName);
         using var response = await client.SendAsync(request, cancellationToken);
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -710,20 +778,38 @@ public class MarketplaceAuthService : IMarketplaceAuthService
             throw new InvalidOperationException($"Falha na API OAuth ({(int)response.StatusCode}).");
         }
 
-        return ParseTokenPayload(content);
+        var payload = ParseTokenPayload(content, out var errorCode, out var errorMessage);
+        if (errorCode is not null)
+        {
+            _logger.LogWarning("OAuth token request recusado: code={Code} message={Message}", errorCode, errorMessage);
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(errorMessage)
+                ? $"Falha na API OAuth (code {errorCode})."
+                : $"{errorMessage} (code {errorCode}).");
+        }
+
+        return payload;
     }
 
-    private static OAuthTokenPayload ParseTokenPayload(string content)
+    private static OAuthTokenPayload ParseTokenPayload(string content) =>
+        ParseTokenPayload(content, out _, out _);
+
+    private static OAuthTokenPayload ParseTokenPayload(string content, out long? errorCode, out string? errorMessage)
     {
         var parsed = JsonSerializer.Deserialize<MarketplaceOAuthTokenResponse>(content)
             ?? throw new InvalidOperationException("Resposta OAuth inválida.");
 
+        errorCode = parsed.ResolveErrorCode();
+        errorMessage = parsed.Message;
+        var now = DateTime.UtcNow;
         return new OAuthTokenPayload
         {
             AccessToken = parsed.ResolveAccessToken() ?? string.Empty,
             RefreshToken = parsed.ResolveRefreshToken(),
-            AccessTokenLifetimeSeconds = parsed.ResolveAccessTokenLifetimeSeconds(),
-            RefreshTokenLifetimeSeconds = parsed.RefreshTokenExpireIn ?? parsed.Data?.RefreshTokenExpireIn ?? 0
+            AccessTokenLifetimeSeconds = parsed.ResolveAccessTokenLifetimeSeconds(now),
+            RefreshTokenLifetimeSeconds = parsed.ResolveRefreshTokenLifetimeSeconds(now),
+            OpenId = parsed.Data?.OpenId,
+            AccountName = parsed.Data?.SellerName,
+            UserType = parsed.Data?.UserType
         };
     }
 
@@ -747,7 +833,7 @@ public class MarketplaceAuthService : IMarketplaceAuthService
 
     private void EnsureTikTokCredentials()
     {
-        if (string.IsNullOrWhiteSpace(_tikTokOptions.AppKey) || string.IsNullOrWhiteSpace(_tikTokOptions.AppSecret))
+        if (!TikTok.HasAppCredentials)
         {
             throw new InvalidOperationException(
                 $"Configure {TikTokShopIntegrationOptions.SectionName}:AppKey e AppSecret.");
@@ -903,5 +989,8 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         public string? RefreshToken { get; init; }
         public int AccessTokenLifetimeSeconds { get; init; }
         public int RefreshTokenLifetimeSeconds { get; init; }
+        public string? OpenId { get; init; }
+        public string? AccountName { get; init; }
+        public int? UserType { get; init; }
     }
 }

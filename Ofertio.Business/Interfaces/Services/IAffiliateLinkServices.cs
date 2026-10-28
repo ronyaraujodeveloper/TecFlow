@@ -19,6 +19,9 @@ public interface IAffiliateLinkGenerationContext
 
     /// <summary>Encurtador oficial da Shopee (br.shp.ee) capturado na última conversão.</summary>
     string? OfficialShortenedShopeeUrl { get; set; }
+
+    /// <summary>Aviso da última conversão exibido junto ao link (ex.: TikTok Shop sem conta de criador conectada).</summary>
+    string? GenerationWarning { get; set; }
 }
 
 /// <summary>Expansão resiliente de URLs encurtadas (301/302) até a URL canônica.</summary>

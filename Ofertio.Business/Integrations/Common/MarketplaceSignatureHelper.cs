@@ -30,16 +30,59 @@ public static class MarketplaceSignatureHelper
         return ComputeHmacSha256Hex(partnerKey, baseString);
     }
 
+    /// <summary>
+    /// Assinatura TikTok Shop 202309 com os parâmetros comuns (<c>app_key</c>, <c>timestamp</c>) e os extras da query
+    /// (ex.: <c>shop_cipher</c>, <c>page_size</c>).
+    /// </summary>
     public static string GenerateTikTokShopSign(
         string appKey,
         string appSecret,
         string apiPath,
         long timestamp,
+        string? requestBody = null,
+        IReadOnlyDictionary<string, string?>? extraQuery = null)
+    {
+        var query = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["app_key"] = appKey,
+            ["timestamp"] = timestamp.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+        if (extraQuery is not null)
+        {
+            foreach (var (key, value) in extraQuery)
+            {
+                query[key] = value;
+            }
+        }
+
+        return ComputeTikTokShopSign(appSecret, apiPath, query, requestBody);
+    }
+
+    /// <summary>
+    /// Especificação TikTok Shop 202309: HMAC-SHA256 (chave = app_secret) de
+    /// <c>app_secret + path + chaves da query em ordem alfabética (chave+valor, sem sign e access_token) + body + app_secret</c>.
+    /// </summary>
+    public static string ComputeTikTokShopSign(
+        string appSecret,
+        string apiPath,
+        IEnumerable<KeyValuePair<string, string?>> query,
         string? requestBody = null)
     {
-        var path = NormalizeApiPath(apiPath);
-        var baseString = $"{appKey}{path}{timestamp}{requestBody ?? string.Empty}";
-        return ComputeHmacSha256Hex(appSecret, baseString);
+        var builder = new StringBuilder();
+        builder.Append(appSecret);
+        builder.Append(NormalizeApiPath(apiPath));
+        foreach (var (key, value) in query
+                     .Where(pair => !string.IsNullOrEmpty(pair.Key)
+                                    && pair.Value is not null
+                                    && pair.Key is not "sign" and not "access_token")
+                     .OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            builder.Append(key).Append(value);
+        }
+
+        builder.Append(requestBody ?? string.Empty);
+        builder.Append(appSecret);
+        return ComputeHmacSha256Hex(appSecret, builder.ToString());
     }
 
     private static string NormalizeApiPath(string apiPath)

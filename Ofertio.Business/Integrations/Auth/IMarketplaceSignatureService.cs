@@ -16,5 +16,6 @@ public interface IMarketplaceSignatureService
         string appSecret,
         string apiPath,
         long timestamp,
-        string? requestBody = null);
+        string? requestBody = null,
+        IReadOnlyDictionary<string, string?>? extraQuery = null);
 }

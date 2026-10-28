@@ -20,7 +20,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 | --- | --- |
 | 🏗️ [Arquitetura Backend & Banco](./docs/rules/backend-architecture.md) | C#/.NET 8, camadas, Padrão 3 Objetos, SQL Server, Data Protection, LGPD e testes. |
 | 🎨 [Interface & UI/UX](./docs/rules/frontend-ui.md) | Telas Blazor, ícones `bi bi-*`, combos, modais, Mobile First e badges. |
-| 🔑 [Marketplaces & OAuth](./docs/rules/marketplaces-oauth.md) | OAuth do Mercado Livre, token Master, busca oficial, sanitização de links e novas plataformas. |
+| 🔑 [Marketplaces & OAuth](./docs/rules/marketplaces-oauth.md) | OAuth do Mercado Livre e do TikTok Shop (App de Criador), token Master, busca oficial, sanitização de links e novas plataformas. |
 | 🔤 [Encoding & Nomenclatura](./docs/rules/encoding-standards.md) | UTF-8 com BOM, cultura pt-BR, idioma, nomes e identificadores legados. |
 
 ### ⚡ Regras de ouro (resumo)

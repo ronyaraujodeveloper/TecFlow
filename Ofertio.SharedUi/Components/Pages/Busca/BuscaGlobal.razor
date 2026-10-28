@@ -25,7 +25,7 @@
 <div class="dashboard-page busca-page">
     <div class="busca-header">
         <h1 class="h5 fw-bold mb-0"><i class="bi bi-search me-1" aria-hidden="true"></i>Buscar Ofertas</h1>
-        <span class="text-muted small d-none d-md-inline">APIs oficiais do Mercado Livre, Shopee e Amazon</span>
+        <span class="text-muted small d-none d-md-inline">APIs oficiais do Mercado Livre, Shopee, Amazon e TikTok Shop</span>
         <button type="button" class="btn btn-link btn-sm p-0 ms-auto" @onclick="() => _showRules = true">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Como funciona a busca e as regras
         </button>
@@ -519,6 +519,7 @@
                     <h3 class="h6 fw-bold">Sua comissão</h3>
                     <ul class="mb-2">
                         <li><strong>Shopee:</strong> a comissão de cada oferta vem da API de afiliados.</li>
+                        <li><strong>TikTok Shop:</strong> a comissão vem da API Affiliate Creator (colaboração aberta).</li>
                         <li>
                             <strong>Mercado Livre:</strong> estimada automaticamente pela categoria do anúncio (<code>category_id</code> ➔ categoria raiz),
                             pela tabela do afiliado generalista em venda direta. Na venda indireta (o cliente compra outro produto) o ML paga a metade.
@@ -577,6 +578,7 @@
                         <li>Somente as APIs oficiais das lojas; páginas públicas não são lidas.</li>
                         <li><strong>Mercado Livre:</strong> catálogo oficial com a sua conta conectada. Só aparecem produtos de catálogo com anúncio ativo e preço.</li>
                         <li><strong>Shopee:</strong> exige a chave de API de afiliado. <strong>Amazon:</strong> exige a PA-API configurada.</li>
+                        <li><strong>TikTok Shop:</strong> produtos em colaboração aberta, buscados com a conta de criador autorizada pelo administrador; para receber a comissão, conecte a sua conta de criador TikTok em Minhas Lojas.</li>
                         <li><strong>Base Local (Grupos):</strong> ofertas já capturadas nos seus grupos que contêm o termo (até @OfficialCatalogSearchRules.MaxLimit).</li>
                     </ul>
 
@@ -891,6 +893,7 @@
         MarketplaceType.MercadoLivre => "Comissão: categoria não identificada pela API do Mercado Livre",
         MarketplaceType.Amazon => "Comissão: defina a sua taxa da Amazon nas regras",
         MarketplaceType.Shopee => "Comissão não informada pela API da Shopee",
+        MarketplaceType.TikTokShop => "Comissão não informada pela API do TikTok Shop",
         _ => "Comissão não informada"
     };
 
@@ -1306,7 +1309,8 @@
                 MercadoLivreCategories = _lastFilter.MercadoLivreCategories,
                 MercadoLivreOffset = offset,
                 Shopee = false,
-                Amazon = false
+                Amazon = false,
+                TikTokShop = false
             });
             if (!result.Success || result.Data is null)
             {

@@ -1,35 +1,45 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Globalization;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Ofertio.Business.Integrations.Auth;
 using Ofertio.Business.Integrations.Common;
 using Ofertio.Business.Integrations.TikTokShop;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.LinkStrategies;
+using Ofertio.Core.Enums;
+using Ofertio.Database;
 using Ofertio.Database.Entity;
 
 namespace Ofertio.Infrastructure.Services.LinkStrategies;
 
-/// <summary>Integração com endpoint de geração de links do programa de afiliados TikTok Shop.</summary>
+/// <summary>
+/// Link de promoção oficial do TikTok Shop (Affiliate Creator, assinatura 202309) com o token de criador da loja do
+/// cliente. Token vencido ou recusado é renovado via <c>refresh_token</c> e gravado na loja antes de repetir.
+/// </summary>
 public sealed class TikTokAffiliateLinkClient : ITikTokAffiliateLinkClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly TimeSpan ExpirySkew = TimeSpan.FromMinutes(5);
 
     private readonly HttpClient _httpClient;
-    private readonly TikTokShopIntegrationOptions _options;
+    private readonly IOptionsMonitor<TikTokShopIntegrationOptions> _options;
     private readonly ILogger<TikTokAffiliateLinkClient> _logger;
+    private readonly IMarketplaceAuthService? _authService;
+    private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
 
     public TikTokAffiliateLinkClient(
         HttpClient httpClient,
-        IOptions<TikTokShopIntegrationOptions> options,
-        ILogger<TikTokAffiliateLinkClient> logger)
+        IOptionsMonitor<TikTokShopIntegrationOptions> options,
+        ILogger<TikTokAffiliateLinkClient> logger,
+        IMarketplaceAuthService? authService = null,
+        IDbContextFactory<AppDbContext>? dbContextFactory = null)
     {
         _httpClient = httpClient;
-        _options = options.Value;
+        _options = options;
         _logger = logger;
+        _authService = authService;
+        _dbContextFactory = dbContextFactory;
     }
 
     public async Task<string> GenerateAffiliateLinkAsync(
@@ -39,115 +49,158 @@ public sealed class TikTokAffiliateLinkClient : ITikTokAffiliateLinkClient
         string? customNickname,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_options.AppKey) || string.IsNullOrWhiteSpace(_options.AppSecret))
+        var options = _options.CurrentValue;
+        if (!options.HasAppCredentials)
         {
             throw new AffiliateLinkGenerationException(
                 "Credenciais TikTok Shop não configuradas. Contacte o administrador do sistema.");
         }
 
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var path = _options.GenerateAffiliateLinkPath;
-        var payload = new
+        if (!TikTokShopCreatorLinkRules.HasCreatorToken(store.AccessToken))
         {
-            product_url = expandedProductUrl,
-            tracking_id = affiliateId,
-            shop_id = store.ShopId,
-            sub_id = customNickname,
-            access_token = store.AccessToken
-        };
-
-        var jsonBody = JsonSerializer.Serialize(payload, JsonOptions);
-        var sign = MarketplaceSignatureHelper.GenerateTikTokShopSign(
-            _options.AppKey,
-            _options.AppSecret,
-            path,
-            timestamp,
-            jsonBody);
-
-        var query =
-            $"?app_key={Uri.EscapeDataString(_options.AppKey)}&timestamp={timestamp}&sign={sign}&shop_id={Uri.EscapeDataString(store.ShopId ?? string.Empty)}";
-        var requestUri = $"{path.TrimStart('/')}{query}";
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-        request.Headers.TryAddWithoutValidation("x-tts-access-token", store.AccessToken);
-
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogWarning(
-                "TikTok Shop affiliate link falhou. Status={StatusCode}. Body={Body}",
-                (int)response.StatusCode,
-                content);
-
-            throw MapTikTokFailure(content, response.StatusCode);
+            throw new AffiliateLinkGenerationException(TikTokShopCreatorLinkRules.NoCreatorAccountWarning);
         }
 
-        var link = TryExtractAffiliateUrl(content);
+        if (!TikTokShopProductUrlParser.TryParse(expandedProductUrl, out var productId))
+        {
+            throw new AffiliateLinkGenerationException(TikTokShopProductUrlParser.UnrecognizedLinkMessage);
+        }
+
+        var accessToken = store.ExpiresAt > DateTime.UtcNow.Add(ExpirySkew)
+            ? store.AccessToken!.Trim()
+            : await RefreshStoreTokenAsync(store, cancellationToken);
+
+        var (link, refused, error) = await RequestPromotionLinkAsync(options, accessToken, productId, cancellationToken);
+        if (refused)
+        {
+            accessToken = await RefreshStoreTokenAsync(store, cancellationToken);
+            (link, refused, error) = await RequestPromotionLinkAsync(options, accessToken, productId, cancellationToken);
+        }
+
         if (string.IsNullOrWhiteSpace(link))
         {
-            throw new AffiliateLinkGenerationException(
-                "O TikTok Shop não retornou um link de afiliado válido. Verifique se o produto participa do programa.");
+            throw new AffiliateLinkGenerationException(refused
+                ? "O TikTok Shop recusou o token da sua conta de criador. Reconecte a conta em Minhas Lojas."
+                : error ?? "O TikTok Shop não retornou um link de promoção. Verifique se o produto está em colaboração aberta.");
         }
 
         return link;
     }
 
-    private static AffiliateLinkGenerationException MapTikTokFailure(
-        string content,
-        System.Net.HttpStatusCode statusCode)
+    private async Task<(string? Link, bool Refused, string? Error)> RequestPromotionLinkAsync(
+        TikTokShopIntegrationOptions options,
+        string accessToken,
+        string productId,
+        CancellationToken cancellationToken)
     {
-        try
+        const string body = "{}";
+        var path = TikTokShopCreatorLinkRules.BuildPromotionLinkPath(options.AffiliatePromotionLinkPath, productId);
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var appKey = options.AppKey.Trim();
+        var sign = MarketplaceSignatureHelper.GenerateTikTokShopSign(appKey, options.AppSecret.Trim(), path, timestamp, body);
+        var requestUri = new StringBuilder(options.ApiBaseUrl.TrimEnd('/'))
+            .Append(path)
+            .Append("?app_key=").Append(Uri.EscapeDataString(appKey))
+            .Append("&timestamp=").Append(timestamp.ToString(CultureInfo.InvariantCulture))
+            .Append("&sign=").Append(sign)
+            .ToString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
         {
-            using var doc = JsonDocument.Parse(content);
-            if (doc.RootElement.TryGetProperty("message", out var messageProp))
-            {
-                var message = messageProp.GetString();
-                if (!string.IsNullOrWhiteSpace(message))
-                {
-                    return new AffiliateLinkGenerationException(
-                        $"TikTok Shop recusou a geração do link: {message}");
-                }
-            }
-        }
-        catch (JsonException)
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        request.Headers.TryAddWithoutValidation("x-tts-access-token", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        var link = TikTokShopCreatorLinkRules.TryExtractPromotionLink(content, out var errorCode, out var errorMessage);
+        if (TikTokShopAffiliateSearchRules.IsTokenRefused(response.StatusCode, errorCode))
         {
-            // Ignorado.
+            return (null, true, null);
         }
 
-        return statusCode == System.Net.HttpStatusCode.NotFound
-            ? new AffiliateLinkGenerationException(
-                "Produto não encontrado ou indisponível no programa de afiliados TikTok Shop.")
-            : new AffiliateLinkGenerationException(
-                "Não foi possível gerar o link de afiliado TikTok Shop. Verifique a URL e o status da loja.");
+        if (string.IsNullOrWhiteSpace(link))
+        {
+            _logger.LogWarning(
+                "TikTok Shop promotion link falhou. Status={StatusCode} Code={Code} Message={Message} ProductId={ProductId}",
+                (int)response.StatusCode,
+                errorCode,
+                errorMessage,
+                productId);
+            return (null, false, string.IsNullOrWhiteSpace(errorMessage)
+                ? null
+                : $"TikTok Shop recusou a geração do link: {errorMessage.Trim()}");
+        }
+
+        return (link, false, null);
     }
 
-    private static string? TryExtractAffiliateUrl(string content)
+    /// <summary>Renova o token de criador da loja e grava em IntegracaoLojas e MarketplaceAccounts.</summary>
+    private async Task<string> RefreshStoreTokenAsync(IntegracaoLoja store, CancellationToken cancellationToken)
     {
+        if (_authService is null
+            || string.IsNullOrWhiteSpace(store.RefreshToken)
+            || HomologMarketplaceAuth.IsStubToken(store.RefreshToken))
+        {
+            throw new AffiliateLinkGenerationException(
+                "O token da sua conta de criador TikTok expirou. Reconecte a conta em Minhas Lojas.");
+        }
+
+        var refreshed = await _authService.RefreshTikTokShopTokenAsync(store.RefreshToken.Trim(), cancellationToken);
+        if (!refreshed.Success || string.IsNullOrWhiteSpace(refreshed.AccessToken))
+        {
+            throw new AffiliateLinkGenerationException(
+                "Não foi possível renovar o token da sua conta de criador TikTok. Reconecte a conta em Minhas Lojas.");
+        }
+
+        store.AccessToken = refreshed.AccessToken.Trim();
+        store.RefreshToken = string.IsNullOrWhiteSpace(refreshed.RefreshToken) ? store.RefreshToken : refreshed.RefreshToken.Trim();
+        store.ExpiresAt = refreshed.ExpiresAt;
+        await PersistStoreTokenAsync(store, refreshed.RefreshExpiresAt, cancellationToken);
+        return store.AccessToken;
+    }
+
+    private async Task PersistStoreTokenAsync(IntegracaoLoja store, DateTime? refreshExpiresAt, CancellationToken cancellationToken)
+    {
+        if (_dbContextFactory is null)
+        {
+            return;
+        }
+
         try
         {
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("data", out var data)
-                && data.TryGetProperty("affiliate_link", out var affiliateLink))
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var integration = await dbContext.IntegracaoLojas
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(item => item.Id == store.Id, cancellationToken);
+            if (integration is not null)
             {
-                return affiliateLink.GetString();
+                integration.AccessToken = store.AccessToken;
+                integration.RefreshToken = store.RefreshToken;
+                integration.ExpiresAt = store.ExpiresAt;
+                integration.Status = MarketplaceIntegrationStatus.Active;
+                integration.Touch();
             }
 
-            if (root.TryGetProperty("data", out data)
-                && data.TryGetProperty("affiliateLink", out var camelLink))
+            var account = await dbContext.MarketplaceAccounts
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    item => item.ShopId == store.ShopId && item.MarketplaceType == MarketplaceType.TikTokShop,
+                    cancellationToken);
+            if (account is not null)
             {
-                return camelLink.GetString();
+                account.AccessToken = store.AccessToken;
+                account.RefreshToken = store.RefreshToken;
+                account.ExpiresAt = store.ExpiresAt;
+                account.RefreshExpiresAt = refreshExpiresAt ?? account.RefreshExpiresAt;
+                account.Touch();
             }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            return null;
+            _logger.LogWarning(ex, "Não foi possível gravar o token renovado da loja TikTok Shop {StoreId}.", store.Id);
         }
-
-        return null;
     }
 }

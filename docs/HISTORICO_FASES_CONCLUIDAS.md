@@ -1640,3 +1640,14 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Gateway simulado:** `SimulatedPlanPaymentGateway` aprova como "Simulado", sem cobrança e sem trocar o plano. Conta Master vê os planos sem poder assinar. `/api/conta` fica liberado para o inquilino bloqueado.
 - [x] **Testes:** regras de cadastro, preço e cartão; upsert do perfil e checkout simulado com InMemory; pasta Minha conta no catálogo.
 
+## 🎵 API TikTok Shop nas Integrações Globais (`TikTokShopGlobalIntegration`)
+
+- [x] **App de Criador:** autorização por `services.tiktokshop.com/open/authorize?service_id=`; troca e renovação do token via GET com envelope `{code, message, data}` e expiração em data Unix. Só conta de criador (`user_type = 1`) é aceita.
+- [x] **Assinatura 202309:** `ComputeTikTokShopSign` com path, query ordenada e body; `shop_id` passou a entrar na assinatura dos serviços de vendedor.
+- [x] **Cofre e saúde:** App Key, App Secret, Service ID, Redirect URI e cache da busca no cofre; plataforma "TikTok Shop (Criador)" em Contas de teste / dev.
+- [x] **Painel Master:** tela `/master/integracoes-globais/tiktok-shop` (status, conta de criador, cache, autorizar e desconectar) e card disponível na visão geral. Migration `AddGlobalIntegrationExternalAccount` guarda o ID e o nome da conta.
+- [x] **Callback selado genérico:** `POST api/marketplace-auth/oauth/sealed-callback` despacha pela plataforma do state para Mercado Livre ou TikTok Shop (Master ou cliente).
+- [x] **Busca:** canal TikTok Shop na Buscar Ofertas com o token Master (Affiliate Creator `open_collaborations/products/search`), renovação sob semáforo, uma nova tentativa em token recusado e cache global.
+- [x] **Link do cliente:** conta de criador conectada no card TikTok de Minhas Lojas; link de promoção oficial com o token do cliente e, sem conta, `sub_id` com aviso na mensagem de sucesso.
+- [x] **Testes:** assinatura, envelope OAuth, regras de busca e link, serviço com renovação e cache, canal na busca unificada, autorização Master e callback selado.
+

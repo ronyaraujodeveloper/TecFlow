@@ -46,6 +46,7 @@ public sealed class DeveloperAccountHealthChecker : IDeveloperAccountHealthCheck
                 DeveloperPlatforms.MercadoLivre => await CheckMercadoLivreAsync(clientId.Trim(), secret.Trim(), cancellationToken),
                 DeveloperPlatforms.Shopee => await CheckShopeeAsync(clientId.Trim(), secret.Trim(), cancellationToken),
                 DeveloperPlatforms.Amazon => await CheckAmazonAsync(clientId.Trim(), secret.Trim(), extra?.Trim(), cancellationToken),
+                DeveloperPlatforms.TikTokShop => await CheckTikTokShopAsync(clientId.Trim(), secret.Trim(), cancellationToken),
                 _ => (false, "Plataforma não suportada.")
             };
             return new DeveloperCredentialCheck(success, message, stopwatch.ElapsedMilliseconds);
@@ -115,6 +116,46 @@ public sealed class DeveloperAccountHealthChecker : IDeveloperAccountHealthCheck
         var signature = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
         return $"SHA256 Credential={appId}, Timestamp={timestamp}, Signature={signature}";
     }
+
+    /// <summary>
+    /// Troca de um <c>auth_code</c> fictício: o TikTok Shop recusa o code, mas só depois de validar app_key/app_secret.
+    /// Recusa que cita o app (key/secret) indica credencial inválida; recusa do code indica credencial aceita.
+    /// </summary>
+    private async Task<(bool, string)> CheckTikTokShopAsync(string appKey, string appSecret, CancellationToken cancellationToken)
+    {
+        var url = TikTokShopTokenUrl
+                  + "?app_key=" + Uri.EscapeDataString(appKey)
+                  + "&app_secret=" + Uri.EscapeDataString(appSecret)
+                  + "&auth_code=ofertio-health-check&grant_type=authorized_code";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Accept.ParseAdd("application/json");
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        var code = ReadNumber(json, "code");
+        var message = ReadString(json, "message") ?? response.ReasonPhrase ?? string.Empty;
+        if (!response.IsSuccessStatusCode && code is null)
+        {
+            return (false, $"TikTok Shop não respondeu como esperado (HTTP {(int)response.StatusCode}): {message}");
+        }
+
+        if (code is null or 0)
+        {
+            return (true, "TikTok Shop aceitou as credenciais do app.");
+        }
+
+        return IsTikTokAppCredentialError(message)
+            ? (false, $"TikTok Shop recusou o App Key/App Secret (code {code}): {message}")
+            : (true, $"App Key e App Secret aceitos pelo TikTok Shop (o code de teste foi recusado como esperado: {message}).");
+    }
+
+    public const string TikTokShopTokenUrl = "https://auth.tiktok-shops.com/api/v2/token/get";
+
+    internal static bool IsTikTokAppCredentialError(string? message) =>
+        !string.IsNullOrWhiteSpace(message)
+        && (message.Contains("app_key", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("app_secret", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("app key", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("app secret", StringComparison.OrdinalIgnoreCase));
 
     private async Task<(bool, string)> CheckAmazonAsync(string accessKey, string secretKey, string? partnerTag, CancellationToken cancellationToken)
     {

@@ -9,7 +9,7 @@ using Ofertio.Core.Security;
 
 namespace Ofertio.API.Controllers.Master;
 
-/// <summary>Integrações Globais: conexão Master com a API oficial do Mercado Livre (e futuras APIs).</summary>
+/// <summary>Integrações Globais: conexão Master com as APIs oficiais do Mercado Livre e do TikTok Shop.</summary>
 [Route("api/master/integracoes-globais")]
 public sealed class MasterGlobalIntegrationsController : MasterControllerBase
 {
@@ -50,7 +50,33 @@ public sealed class MasterGlobalIntegrationsController : MasterControllerBase
     /// <summary>URL oficial de autorização com <c>state</c> selado marcado como Master (retorno ao Painel Master).</summary>
     [HttpGet("mercado-livre/authorize-url")]
     [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
-    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetMercadoLivreAuthorizeUrl([FromQuery] string? redirectUri)
+    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetMercadoLivreAuthorizeUrl([FromQuery] string? redirectUri) =>
+        BuildMasterAuthorizeUrl(MarketplaceType.MercadoLivre, redirectUri);
+
+    [HttpGet("tiktok-shop")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public async Task<ActionResult<GlobalIntegrationStatusDto>> GetTikTokShopAsync(CancellationToken cancellationToken) =>
+        Ok(await _globalIntegrations.GetTikTokShopStatusAsync(cancellationToken));
+
+    [HttpPut("tiktok-shop/configuracoes")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public async Task<ActionResult<MasterOperationResultDto>> SaveTikTokShopSettingsAsync(
+        [FromBody] GlobalIntegrationSettingsDto request,
+        CancellationToken cancellationToken) =>
+        Result(await _globalIntegrations.SaveTikTokShopSettingsAsync(Actor, request ?? new GlobalIntegrationSettingsDto(), cancellationToken));
+
+    [HttpPost("tiktok-shop/desconectar")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public async Task<ActionResult<MasterOperationResultDto>> DisconnectTikTokShopAsync(CancellationToken cancellationToken) =>
+        Result(await _globalIntegrations.DisconnectTikTokShopAsync(Actor, cancellationToken));
+
+    /// <summary>URL oficial de autorização do app de criador com <c>state</c> selado marcado como Master.</summary>
+    [HttpGet("tiktok-shop/authorize-url")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public ActionResult<MarketplaceAuthorizeUrlResponseDto> GetTikTokShopAuthorizeUrl([FromQuery] string? redirectUri) =>
+        BuildMasterAuthorizeUrl(MarketplaceType.TikTokShop, redirectUri);
+
+    private ActionResult<MarketplaceAuthorizeUrlResponseDto> BuildMasterAuthorizeUrl(MarketplaceType platform, string? redirectUri)
     {
         if (string.IsNullOrWhiteSpace(redirectUri))
         {
@@ -67,22 +93,22 @@ public sealed class MasterGlobalIntegrationsController : MasterControllerBase
         var state = MarketplaceOAuthStateRules.Create(
             actor.UserId,
             tenantId,
-            MarketplaceType.MercadoLivre,
+            platform,
             "Integrações Globais",
             redirectUri) with { IsMaster = true };
         try
         {
-            var url = _marketplaceAuth.GenerateAuthorizationUrl(MarketplaceType.MercadoLivre, redirectUri, _stateProtector.Protect(state));
+            var url = _marketplaceAuth.GenerateAuthorizationUrl(platform, redirectUri, _stateProtector.Protect(state));
             return Ok(new MarketplaceAuthorizeUrlResponseDto
             {
                 AuthorizeUrl = url,
                 AuthorizationUrl = url,
-                Marketplace = nameof(MarketplaceType.MercadoLivre)
+                Marketplace = platform.ToString()
             });
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "OAuth Master do Mercado Livre não configurado.");
+            _logger.LogWarning(ex, "OAuth Master de {Platform} não configurado.", platform);
             return Error(ex.Message);
         }
     }

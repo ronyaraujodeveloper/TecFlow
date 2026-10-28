@@ -13,6 +13,15 @@
                 <h3 class="h6 fw-semibold mb-1 text-truncate" title="@Store.FriendlyName">@Store.FriendlyName</h3>
                 <p class="text-muted small mb-0">Shop ID: <span class="font-monospace">@Store.ShopId</span></p>
                 <p class="text-muted small mb-0">Affiliate ID: <span class="font-monospace">@AffiliateIdDisplay</span></p>
+                @if (IsTikTokShop)
+                {
+                    <p class="small mb-0 mt-1 @(Store.HasOAuthToken ? "text-success" : "text-warning")">
+                        <i class="bi @(Store.HasOAuthToken ? "bi-patch-check" : "bi-exclamation-triangle") me-1" aria-hidden="true"></i>
+                        @(Store.HasOAuthToken
+                            ? "Conta de criador TikTok conectada: links gerados pela API oficial."
+                            : "Conecte sua conta de criador TikTok para garantir a comissão nos links.")
+                    </p>
+                }
                 @if (Store.RequiresTrackingIdCorrection)
                 {
                     <p class="text-danger small mb-0 mt-2">
@@ -54,6 +63,16 @@
             }
             else
             {
+                @if (IsTikTokShop && OnConnectCreator.HasDelegate)
+                {
+                    <button type="button"
+                            class="btn @(Store.HasOAuthToken ? "btn-outline-secondary" : "btn-primary") btn-touch w-100 mb-2"
+                            disabled="@IsBusy"
+                            @onclick="() => OnConnectCreator.InvokeAsync(Store)">
+                        <i class="bi @(Store.HasOAuthToken ? "bi-arrow-repeat" : "bi-tiktok") me-1" aria-hidden="true"></i>
+                        @(Store.HasOAuthToken ? "Reconectar conta de criador TikTok" : "Conectar conta de criador TikTok")
+                    </button>
+                }
                 @if (OnEdit.HasDelegate)
                 {
                     <button type="button"
@@ -80,8 +99,11 @@
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnUnlink { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<MarketplaceAccountDto> OnConnectCreator { get; set; }
 
     private bool _confirmDelete;
+
+    private bool IsTikTokShop => Store.PlatformType == MarketplaceType.TikTokShop;
 
     protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 

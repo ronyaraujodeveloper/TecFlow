@@ -20,7 +20,8 @@ public class MarketplaceSignatureService : IMarketplaceSignatureService
         string appSecret,
         string apiPath,
         long timestamp,
-        string? requestBody = null) =>
+        string? requestBody = null,
+        IReadOnlyDictionary<string, string?>? extraQuery = null) =>
         MarketplaceSignatureHelper.GenerateTikTokShopSign(
-            appKey, appSecret, apiPath, timestamp, requestBody);
+            appKey, appSecret, apiPath, timestamp, requestBody, extraQuery);
 }

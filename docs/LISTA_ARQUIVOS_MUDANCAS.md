@@ -2083,7 +2083,7 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Services/Navigation/LegalRoutes.cs** (novo) — rotas `/legal/termos`, `/legal/privacidade` e `/legal/seguranca` e dados da empresa (TECSO TECNOLOGIA DE INFORMATICA LTDA, CNPJ, cidade, encarregado de dados e e-mail de contato provisório).
 - [x] **Ofertio.SharedUi/Components/Layout/LegalLayout.razor** (novo) — layout público com menu entre os três documentos e rodapé com os dados da empresa.
 - [x] **Ofertio.SharedUi/Components/Pages/Legal/TermosDeUso.razor** (novo) — Termos de Uso em português (CDC, arrependimento de 7 dias, limite de responsabilidade em reais, foro em São Paulo - SP).
-- [x] **Ofertio.SharedUi/Components/Pages/Legal/PoliticaPrivacidade.razor** (novo) — Política de Privacidade (LGPD): dados coletados, bases legais, compartilhamento, retenção, direitos do titular e cookies essenciais.
+- [x] **Ofertio.SharedUi/Components/Pages/Legal/PoliticaPrivacidade.razor** (novo) — Política de Privacidade (LGPD): dados coletados, bases legais, compartilhamento, retenção, direitos do titular e cookies essenciais; item 5 informa a hospedagem de produção na Hetzner (Alemanha).
 - [x] **Ofertio.SharedUi/Components/Pages/Legal/PoliticaSeguranca.razor** (novo) — Política de Segurança da Informação exigida pelo questionário do TikTok Partner Center; item 5.1 com a classificação da informação (Pública, Interna, Confidencial e Restrita), sem renumerar os demais itens citados no questionário.
 - [x] **Ofertio.SharedUi/Components/Pages/Home.razor** e **wwwroot/app.css** — links para os três documentos na tela de login e estilos `.legal-*`.
 - [x] **Ofertio.Tests/Unit/SharedUi/LegalPagesTests.cs** (novo) — páginas sem login (`[AllowAnonymous]`), rota e layout esperados.

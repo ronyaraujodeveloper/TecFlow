@@ -21,7 +21,8 @@
 - [ ] **Conta de criador do cliente:** em Minhas Lojas, "Conectar conta de criador TikTok" no card TikTok; converter um link e conferir o link de promoção oficial. Validar o path `AffiliatePromotionLinkPath` e o campo do link na resposta real.
 - [ ] **Sem conta de criador:** converter um link TikTok numa loja só com o ID e conferir o aviso "Conecte sua conta de criador TikTok em Minhas Lojas para garantir a comissão".
 - [ ] **Legado:** avaliar a remoção de `TikTokShopApiService` e `TikTokAuthController` (fluxo de vendedor antigo, sem uso no App de Criador).
-- [ ] **Questionário de segurança (`LegalPages`):** responder "política de segurança publicada" com `https://dev.ofertio.com.br/legal/seguranca` (e `/legal/privacidade`, `/legal/termos` onde for pedido); trocar pelas URLs de `https://ofertio.com.br` quando a produção subir.
+- [ ] **Questionário de segurança (`LegalPages`):** usar as URLs de produção `https://ofertio.com.br/legal/seguranca`, `/legal/privacidade` e `/legal/termos` (o dev depende do PC ligado); país dos dados = Alemanha (Hetzner) e Brasil.
+- [ ] **Deploy em produção (`EXECUCAO_PRODUCAO.md`):** antes de subir os containers, fazer backup do banco da VPS e aplicar as migrations `AddUserStateCode`, `AddBillingProfileAndCheckout` e `AddGlobalIntegrationExternalAccount` (script idempotente gerado com `dotnet ef migrations script 20261022014444_AddIndexedCatalogOffers --idempotent`); depois conferir `/legal/*` e o Mercado Livre em produção.
 
 ## ⚖️ Documentos legais (`LegalPages`)
 

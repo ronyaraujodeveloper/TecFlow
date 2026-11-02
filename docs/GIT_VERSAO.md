@@ -164,3 +164,4 @@
 [2026-10-27 21:27:16] feat(conta): libera conta Master configurada em Billing:MasterCheckoutTestEmails para testar Meu plano como cliente (so homologacao)
 [2026-10-27 22:15:03] feat(tiktok-shop): integra API TikTok Shop (app de criador) nas Integracoes Globais com token Master, busca oficial e link de promocao do criador
 [2026-11-02 15:13:08] fix(tiktok-shop): extrai ID do criador de crm_scenario no link compartilhado e atende redirect /integracoes/tiktok/callback
+[2026-11-02 16:04:18] fix(tiktok-shop): autoriza pelo link de criador shop.tiktok.com/alliance/creator/auth (app_key + state) em vez do link de vendedor e registra a URL gerada

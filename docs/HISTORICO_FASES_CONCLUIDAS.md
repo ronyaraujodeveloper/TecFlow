@@ -1651,5 +1651,6 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Link do cliente:** conta de criador conectada no card TikTok de Minhas Lojas; link de promoção oficial com o token do cliente e, sem conta, `sub_id` com aviso na mensagem de sucesso.
 - [x] **Testes:** assinatura, envelope OAuth, regras de busca e link, serviço com renovação e cache, canal na busca unificada, autorização Master e callback selado.
 - [x] **Redirect URL do app de desenvolvimento:** `/integracoes/tiktok/callback` atendida pela WebUi com o mesmo handler do callback OAuth.
+- [x] **Link de autorização de criador:** "Autorizar TikTok Shop" (Master e Minhas Lojas) passa a abrir `shop.tiktok.com/alliance/creator/auth?app_key=&state=`. O link anterior, `services.tiktokshop.com/open/authorize?service_id=`, é o de vendedor e levava à Central do Vendedor pedindo CNPJ/MEI. A URL gerada é registrada no log da API.
 - [x] **Credencial do link compartilhado:** em Conectar nova loja, o link de produto compartilhado pelo criador (direto ou `vt.tiktok.com`) extrai o ID do criador de `crm_scenario`; antes caía em `utm_source=copy`.
 

@@ -1902,7 +1902,7 @@ O token Master (conta de criador autorizada no Painel Master) só busca produtos
 ```mermaid
 flowchart LR
   MASTER["MasterGlobalTikTokShop.razor<br/>/master/integracoes-globais/tiktok-shop"] --> CTRL["MasterGlobalIntegrationsController<br/>(ManageGlobalKeys)"]
-  CTRL -->|"authorize-url (state IsMaster)"| TTS["services.tiktokshop.com/open/authorize<br/>service_id + state"]
+  CTRL -->|"authorize-url (state IsMaster)"| TTS["shop.tiktok.com/alliance/creator/auth<br/>app_key + state"]
   STORE["MinhasLojas / MarketplaceStoreCard<br/>Conectar conta de criador"] -->|"api/marketplace-auth/tiktok/authorize-url<br/>(state selado)"| TTS
   TTS --> WEBUI["WebUi /integracoes/tiktok/callback"]
   WEBUI -->|"POST api/marketplace-auth/oauth/sealed-callback"| FLOW["TikTokShopOAuthCallbackFlow"]

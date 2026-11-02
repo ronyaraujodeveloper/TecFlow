@@ -14,7 +14,7 @@
 
 - [ ] **Migration:** aplicar `AddGlobalIntegrationExternalAccount` em homologação (runbook `EXECUCAO_HOMOLOGACAO.md`) e, depois, em produção.
 - [x] **Partner Center (desenvolvimento):** app "Ofertio" Custom, categoria Creator collaborations; Redirect URL = `https://dev.ofertio.com.br/integracoes/tiktok/callback`.
-- [ ] **Escopos:** confirmar no app os escopos de busca de produtos em colaboração aberta e de link de promoção.
+- [ ] **Escopos:** em Partner Center ➔ Manage API, habilitar os escopos `creator.*` de busca de produtos em colaboração aberta e de link de promoção (o link de criador não leva escopos na URL).
 - [ ] **Cofre:** preencher `Integrations:TikTokShop:AppKey`, `AppSecret`, `ServiceId` e `RedirectUri` em Master ➔ Cofre de chaves; testar em Master ➔ Contas de teste / dev ("TikTok Shop (Criador)").
 - [ ] **Token Master:** autorizar em Master ➔ Integrações Globais ➔ API TikTok Shop com uma conta de criador (conta de vendedor deve ser recusada) e conferir o nome da conta e a expiração na tela.
 - [ ] **Busca:** em `/busca`, marcar só "TikTok Shop" e conferir ofertas, comissão e o selo do canal. Confirmar no log que a resposta real bate com os campos lidos (`sales_price`, `commission.rate`, `detail_link`); se o TikTok mudar o path, ajustar `AffiliateProductSearchPath` sem novo código.

@@ -83,7 +83,7 @@ public class MarketplaceAuthServiceTests
 
         // Assert
         Assert.Contains(MarketplaceTestOptionsFactory.TikTokAppKey, url);
-        Assert.Contains("redirect_uri=", url);
+        Assert.Contains("shop.tiktok.com/alliance/creator/auth", url);
         Assert.Contains("state=state-123", url);
     }
 
@@ -297,6 +297,22 @@ public class MarketplaceAuthServiceTests
         // Assert
         Assert.Equal("new-token", token);
         _tokenRepository.Verify(r => r.UpsertAsync(It.Is<MarketplaceToken>(t => t.AccessToken == "new-token")), Times.Once);
+    }
+
+    [Fact]
+    public void GenerateAuthorizationUrl_TikTokShop_ShouldUseCreatorAuthorizationLink()
+    {
+        var url = CreateService().GenerateAuthorizationUrl(
+            MarketplaceType.TikTokShop,
+            "https://dev.ofertio.com.br/integracoes/tiktok/callback",
+            "sealed-state");
+
+        Assert.StartsWith("https://shop.tiktok.com/alliance/creator/auth?", url);
+        Assert.Contains("app_key=" + Uri.EscapeDataString(MarketplaceTestOptionsFactory.TikTokAppKey), url);
+        Assert.Contains("state=sealed-state", url);
+        Assert.DoesNotContain("service_id", url);
+        Assert.DoesNotContain("services.tiktokshop.com", url);
+        Assert.DoesNotContain("app_secret", url);
     }
 
     [Fact]

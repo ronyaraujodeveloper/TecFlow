@@ -473,24 +473,17 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         EnsureTikTokCredentials();
 
         var options = TikTok;
-        if (!string.IsNullOrWhiteSpace(options.ServiceId))
+        var url = AppendQuery(options.CreatorAuthorizeUrl, new Dictionary<string, string?>
         {
-            return AppendQuery(options.ServiceAuthorizeUrl, new Dictionary<string, string?>
-            {
-                ["service_id"] = options.ServiceId.Trim(),
-                ["state"] = state
-            });
-        }
+            ["app_key"] = options.AppKey.Trim(),
+            ["state"] = state.Trim()
+        });
 
-        var query = new Dictionary<string, string?>
-        {
-            ["app_key"] = options.AppKey,
-            ["state"] = state,
-            ["redirect_uri"] = redirectUri,
-            ["grant_type"] = "authorized_code"
-        };
-
-        return AppendQuery(options.AuthorizeUrl, query);
+        _logger.LogInformation(
+            "[TikTok OAuth] URL de autorização de criador gerada: {AuthorizationUrl} (Redirect URL do app: {RedirectUri})",
+            url,
+            string.IsNullOrWhiteSpace(options.RedirectUri) ? redirectUri : options.RedirectUri);
+        return url;
     }
 
     public const string TikTokShopMissingCredentialsMessage =

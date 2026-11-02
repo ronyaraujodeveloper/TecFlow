@@ -222,6 +222,11 @@ public class MarketplaceAuthController : ControllerBase
                 throw new InvalidOperationException("URL de autorização vazia.");
             }
 
+            if (type is MarketplaceType.TikTokShop)
+            {
+                _logger.LogInformation("[TikTok OAuth] URL do cliente devolvida ao frontend: {AuthorizationUrl}", url);
+            }
+
             return Ok(ToAuthorizeDto(type, url));
         }
         catch (InvalidOperationException ex) when (type is MarketplaceType.MercadoLivre or MarketplaceType.TikTokShop)

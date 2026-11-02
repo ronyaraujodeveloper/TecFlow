@@ -166,3 +166,4 @@
 [2026-11-02 15:13:08] fix(tiktok-shop): extrai ID do criador de crm_scenario no link compartilhado e atende redirect /integracoes/tiktok/callback
 [2026-11-02 16:04:18] fix(tiktok-shop): autoriza pelo link de criador shop.tiktok.com/alliance/creator/auth (app_key + state) em vez do link de vendedor e registra a URL gerada
 [2026-11-02 16:58:24] fix(tiktok-shop): inclui service_id e redirect_uri (com Trim) no link de autorizacao de criador
+[2026-11-02 17:09:56] chore(tiktok-shop): loga a URL final de autorizacao de criador antes de devolver ao frontend

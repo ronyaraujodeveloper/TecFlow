@@ -99,6 +99,11 @@ public sealed class MasterGlobalIntegrationsController : MasterControllerBase
         try
         {
             var url = _marketplaceAuth.GenerateAuthorizationUrl(platform, redirectUri, _stateProtector.Protect(state));
+            if (platform is MarketplaceType.TikTokShop)
+            {
+                _logger.LogInformation("[TikTok OAuth] URL Master devolvida ao frontend: {AuthorizationUrl}", url);
+            }
+
             return Ok(new MarketplaceAuthorizeUrlResponseDto
             {
                 AuthorizeUrl = url,

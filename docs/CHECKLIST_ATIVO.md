@@ -21,6 +21,13 @@
 - [ ] **Conta de criador do cliente:** em Minhas Lojas, "Conectar conta de criador TikTok" no card TikTok; converter um link e conferir o link de promoção oficial. Validar o path `AffiliatePromotionLinkPath` e o campo do link na resposta real.
 - [ ] **Sem conta de criador:** converter um link TikTok numa loja só com o ID e conferir o aviso "Conecte sua conta de criador TikTok em Minhas Lojas para garantir a comissão".
 - [ ] **Legado:** avaliar a remoção de `TikTokShopApiService` e `TikTokAuthController` (fluxo de vendedor antigo, sem uso no App de Criador).
+- [ ] **Questionário de segurança (`LegalPages`):** responder "política de segurança publicada" com `https://dev.ofertio.com.br/legal/seguranca` (e `/legal/privacidade`, `/legal/termos` onde for pedido); trocar pelas URLs de `https://ofertio.com.br` quando a produção subir.
+
+## ⚖️ Documentos legais (`LegalPages`)
+
+- [ ] **Revisão jurídica:** pedir a um advogado a revisão dos Termos de Uso, da Política de Privacidade e da Política de Segurança.
+- [ ] **E-mail de contato:** trocar `LegalRoutes.ContactEmail` (hoje o e-mail pessoal) por um e-mail do domínio `ofertio.com.br` (ex.: `privacidade@` / `contato@`).
+- [ ] **Backup de produção:** criar a rotina de cópia do banco e das chaves de criptografia prometida na Política de Segurança (item 9) e testar uma restauração.
 
 ## 🔎 Buscar Ofertas: validação no navegador
 

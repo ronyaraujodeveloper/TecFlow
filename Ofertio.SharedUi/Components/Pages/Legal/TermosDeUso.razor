@@ -1,0 +1,164 @@
+﻿@page "/legal/termos"
+@layout Ofertio.SharedUi.Components.Layout.LegalLayout
+@attribute [AllowAnonymous]
+@using Ofertio.SharedUi.Services.Navigation
+
+<PageTitle>Termos de Uso — Ofertio</PageTitle>
+
+<h1>Termos de Uso</h1>
+<p class="legal-updated">Última atualização: @LegalRoutes.LastUpdated</p>
+
+<p>
+    Leia estes Termos de Uso com atenção antes de usar o Ofertio. Ao criar uma conta ou usar o Serviço, você declara que leu,
+    entendeu e concorda com estes Termos e com a nossa <a href="@LegalRoutes.Privacy">Política de Privacidade</a>.
+</p>
+
+<h2>1. Definições</h2>
+<ul>
+    <li><strong>Empresa</strong> (ou "nós"): @LegalRoutes.CompanyName, inscrita no CNPJ sob o nº @LegalRoutes.CompanyCnpj, com sede em @LegalRoutes.CompanyCity, responsável pelo Ofertio.</li>
+    <li><strong>Ofertio</strong> ou <strong>Serviço</strong>: a plataforma web disponível em <a href="@LegalRoutes.ProductionUrl">ofertio.com.br</a> e em seus subdomínios, incluindo as integrações, automações e páginas públicas oferecidas por ela.</li>
+    <li><strong>Usuário</strong> (ou "você"): a pessoa física ou jurídica que cria uma conta e usa o Serviço, normalmente na condição de afiliado ou criador de conteúdo.</li>
+    <li><strong>Conta</strong>: o cadastro individual que dá acesso ao Serviço.</li>
+    <li><strong>Plataformas Parceiras</strong>: marketplaces, programas de afiliados e serviços de terceiros que o Usuário conecta ao Ofertio, como Mercado Livre, Shopee, Amazon, Magazine Luiza, TikTok Shop, Kabum, Casas Bahia, WhatsApp, Telegram e Google.</li>
+    <li><strong>Conteúdo do Usuário</strong>: links, mensagens, textos, imagens, listas de grupos e demais informações que o Usuário cadastra, gera ou envia pelo Serviço.</li>
+    <li><strong>Plano</strong>: a modalidade de assinatura contratada, com os recursos e limites informados na tela "Meu plano".</li>
+</ul>
+
+<h2>2. Aceitação e elegibilidade</h2>
+<p>
+    Para usar o Serviço você precisa ter pelo menos 18 anos e capacidade civil para contratar. Se usar o Serviço em nome de uma empresa,
+    você declara ter poderes para aceitar estes Termos em nome dela. Se não concordar com alguma parte destes Termos, não use o Serviço.
+</p>
+
+<h2>3. O que o Ofertio faz</h2>
+<p>O Ofertio é uma ferramenta de produtividade para afiliados. Entre outros recursos, o Serviço permite:</p>
+<ul>
+    <li>gerar e encurtar links de afiliado com o seu identificador em cada Plataforma Parceira;</li>
+    <li>buscar ofertas e produtos usando as APIs oficiais das Plataformas Parceiras;</li>
+    <li>conectar contas de afiliado e de criador por autorização oficial (OAuth);</li>
+    <li>enviar ofertas de forma automatizada em grupos e canais do WhatsApp e do Telegram conectados por você;</li>
+    <li>publicar páginas públicas de conversão de links;</li>
+    <li>acompanhar cliques, comissões estimadas e relatórios.</li>
+</ul>
+<p>
+    O Ofertio não é um marketplace, não vende produtos e não intermedeia compras. Preços, estoque, entrega, trocas e garantias são de
+    responsabilidade das lojas e das Plataformas Parceiras.
+</p>
+
+<h2>4. Conta e acesso</h2>
+<ul>
+    <li>Você deve informar dados verdadeiros, completos e atualizados no cadastro.</li>
+    <li>Você é responsável por manter a sua senha em sigilo e por todas as ações feitas na sua Conta. Avise-nos imediatamente se suspeitar de uso indevido.</li>
+    <li>O acesso pode ser feito com e-mail e senha ou por login social (por exemplo, Google), conforme disponível.</li>
+</ul>
+
+<h2>5. Integrações com Plataformas Parceiras</h2>
+<ul>
+    <li>As conexões com Plataformas Parceiras são feitas somente pelas APIs e pelos fluxos de autorização oficiais de cada uma. O Ofertio não pede nem armazena a senha que você usa nessas plataformas.</li>
+    <li>Ao conectar uma conta, você autoriza o Ofertio a acessar apenas os dados e as funções liberados nessa autorização, para prestar o Serviço a você. Você pode desconectar a conta a qualquer momento no Ofertio ou no painel da própria plataforma.</li>
+    <li>O uso de cada Plataforma Parceira continua sujeito aos termos, políticas e regras do programa de afiliados dela. Você é responsável por cumpri-los.</li>
+    <li>As comissões são apuradas e pagas pelas Plataformas Parceiras, não pelo Ofertio. Não garantimos a aprovação, o valor ou o pagamento de comissões, que dependem exclusivamente das regras de cada programa.</li>
+    <li>O Ofertio não é patrocinado, endossado nem administrado pelas Plataformas Parceiras, salvo quando informado expressamente. As marcas citadas pertencem aos respectivos titulares.</li>
+    <li>As Plataformas Parceiras podem alterar ou interromper suas APIs a qualquer momento, o que pode afetar recursos do Serviço sem que isso caracterize falha do Ofertio.</li>
+</ul>
+
+<h2>6. Uso aceitável e responsabilidades do Usuário</h2>
+<p>Ao usar o Ofertio, você se compromete a:</p>
+<ul>
+    <li>respeitar a legislação brasileira, em especial o Código de Defesa do Consumidor, a Lei Geral de Proteção de Dados (LGPD) e as normas de publicidade, identificando conteúdo publicitário quando exigido;</li>
+    <li>enviar mensagens apenas para grupos, canais e contatos em que você tenha autorização para divulgar ofertas, sem praticar spam;</li>
+    <li>tratar de forma lícita os dados pessoais de terceiros que você eventualmente gerencie pelo Serviço, como participantes de grupos, sendo você o responsável por esse tratamento;</li>
+    <li>não divulgar conteúdo ilegal, enganoso, ofensivo, que viole direitos de terceiros ou que desrespeite as regras das Plataformas Parceiras;</li>
+    <li>não tentar acessar áreas, dados ou contas de outros Usuários, nem contornar limites técnicos, mecanismos de segurança ou de proteção do Serviço e das Plataformas Parceiras;</li>
+    <li>não usar o Serviço para raspagem de dados, engenharia reversa ou para sobrecarregar a infraestrutura do Ofertio ou de terceiros.</li>
+</ul>
+<p>Você é o único responsável pelo Conteúdo do Usuário e pelas ofertas que divulga.</p>
+
+<h2>7. Planos, pagamentos e cancelamento</h2>
+<ul>
+    <li>Os planos, preços, ciclos de cobrança (mensal ou anual), períodos de teste e limites de uso são informados na tela "Meu plano" antes da contratação.</li>
+    <li>A assinatura é renovada automaticamente ao fim de cada ciclo, até que você a cancele. O cancelamento pode ser feito a qualquer momento e produz efeito ao final do ciclo já pago.</li>
+    <li>Na contratação feita pela internet, você pode desistir em até 7 (sete) dias a contar da contratação, com reembolso integral, conforme o art. 49 do Código de Defesa do Consumidor.</li>
+    <li>Reajustes de preço serão comunicados com pelo menos 30 (trinta) dias de antecedência e valerão a partir do ciclo seguinte.</li>
+    <li>Os dados de cartão são processados pelo provedor de pagamento. O Ofertio guarda apenas a bandeira e os 4 últimos dígitos, para identificação.</li>
+</ul>
+
+<h2>8. Propriedade intelectual</h2>
+<p>
+    O software, a marca Ofertio, o layout, os textos e os demais elementos do Serviço pertencem à Empresa ou aos seus licenciantes.
+    Estes Termos concedem a você apenas uma licença pessoal, limitada, não exclusiva e intransferível para usar o Serviço enquanto a sua
+    Conta estiver ativa. O Conteúdo do Usuário continua sendo seu; você nos autoriza a processá-lo somente para prestar o Serviço.
+</p>
+
+<h2>9. Disponibilidade e alterações do Serviço</h2>
+<p>
+    Trabalhamos para manter o Serviço disponível e seguro, mas ele pode passar por interrupções para manutenção, atualizações ou por
+    falhas de terceiros, como provedores de hospedagem e Plataformas Parceiras. Podemos incluir, alterar ou remover funcionalidades para
+    melhorar o Serviço, avisando com antecedência razoável quando a mudança afetar de forma relevante o seu Plano.
+</p>
+
+<h2>10. Suspensão e encerramento</h2>
+<p>
+    Podemos suspender ou encerrar o acesso de uma Conta que viole estes Termos, a lei ou as regras das Plataformas Parceiras, ou que
+    coloque em risco a segurança do Serviço ou de terceiros. Sempre que possível, avisaremos antes e informaremos o motivo. Você pode
+    encerrar a sua Conta a qualquer momento. Após o encerramento, os dados serão tratados conforme a
+    <a href="@LegalRoutes.Privacy">Política de Privacidade</a>.
+</p>
+
+<h2>11. Limitação de responsabilidade</h2>
+<p>
+    Na máxima extensão permitida pela lei, a responsabilidade total da Empresa por danos decorrentes do uso do Serviço fica limitada ao
+    valor efetivamente pago por você ao Ofertio nos 12 (doze) meses anteriores ao fato que originou a reclamação ou, se você não tiver
+    pago nenhum valor, a R$ 500,00 (quinhentos reais).
+</p>
+<p>
+    A Empresa não responde por lucros cessantes, comissões não recebidas, perda de dados de terceiros ou danos indiretos decorrentes de
+    falhas, alterações ou indisponibilidade das Plataformas Parceiras, de bloqueios aplicados por elas à sua conta ou do Conteúdo do Usuário.
+    Nada nestes Termos exclui ou limita direitos que o Código de Defesa do Consumidor garante e que não possam ser afastados por contrato.
+</p>
+
+<h2>12. Serviço fornecido "no estado em que se encontra"</h2>
+<p>
+    Ressalvados os direitos garantidos por lei, o Serviço é oferecido "no estado em que se encontra" e "conforme disponível". Não
+    garantimos que ele atenderá a todas as suas expectativas, que funcionará sem interrupções ou erros, nem que gerará resultados
+    financeiros específicos.
+</p>
+
+<h2>13. Links e serviços de terceiros</h2>
+<p>
+    O Serviço contém links e integrações com sites e serviços de terceiros que não controlamos. Não somos responsáveis pelo conteúdo,
+    pelas políticas ou pelas práticas desses terceiros. Recomendamos ler os termos e as políticas de privacidade de cada um.
+</p>
+
+<h2>14. Privacidade e segurança</h2>
+<p>
+    O tratamento de dados pessoais é descrito na <a href="@LegalRoutes.Privacy">Política de Privacidade</a>, e as medidas de proteção
+    adotadas, na <a href="@LegalRoutes.Security">Política de Segurança da Informação</a>. Ambas fazem parte destes Termos.
+</p>
+
+<h2>15. Alterações destes Termos</h2>
+<p>
+    Podemos atualizar estes Termos. Mudanças relevantes serão comunicadas com pelo menos 30 (trinta) dias de antecedência, pelo Serviço ou
+    por e-mail. Se você continuar usando o Serviço depois que as mudanças entrarem em vigor, estará de acordo com a nova versão. Se não
+    concordar, poderá cancelar a sua Conta.
+</p>
+
+<h2>16. Disposições gerais</h2>
+<ul>
+    <li>Se alguma cláusula for considerada inválida, as demais continuam válidas, e a cláusula inválida será interpretada de forma a preservar ao máximo a sua finalidade.</li>
+    <li>A tolerância com o descumprimento de qualquer obrigação não significa renúncia ao direito de exigi-la depois.</li>
+    <li>Estes Termos são redigidos em português, versão que prevalece em qualquer situação.</li>
+</ul>
+
+<h2>17. Lei aplicável e solução de conflitos</h2>
+<p>
+    Estes Termos são regidos pelas leis da República Federativa do Brasil. Antes de qualquer medida judicial, pedimos que você entre em
+    contato conosco para buscarmos uma solução amigável. Fica eleito o foro da comarca de São Paulo - SP, ressalvado o direito do
+    consumidor de propor a ação no foro do seu domicílio.
+</p>
+
+<h2>18. Contato</h2>
+<p>
+    @LegalRoutes.CompanyName — CNPJ @LegalRoutes.CompanyCnpj — @LegalRoutes.CompanyCity<br />
+    E-mail: <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>
+</p>

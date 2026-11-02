@@ -1,0 +1,121 @@
+﻿@page "/legal/seguranca"
+@layout Ofertio.SharedUi.Components.Layout.LegalLayout
+@attribute [AllowAnonymous]
+@using Ofertio.SharedUi.Services.Navigation
+
+<PageTitle>Política de Segurança da Informação — Ofertio</PageTitle>
+
+<h1>Política de Segurança da Informação</h1>
+<p class="legal-updated">Última atualização: @LegalRoutes.LastUpdated</p>
+
+<h2>1. Objetivo e abrangência</h2>
+<p>
+    Esta Política define as regras e os controles que a @LegalRoutes.CompanyName (CNPJ @LegalRoutes.CompanyCnpj) adota para proteger a
+    confidencialidade, a integridade e a disponibilidade das informações tratadas pelo Ofertio, incluindo dados de usuários, credenciais de
+    integrações e dados recebidos de plataformas parceiras. Ela se aplica a todos os ambientes do Ofertio (homologação e produção), aos
+    seus sistemas, às pessoas com acesso a eles e aos fornecedores que tratam dados em nosso nome.
+</p>
+
+<h2>2. Princípios</h2>
+<ul>
+    <li><strong>Confidencialidade:</strong> a informação só é acessada por quem precisa dela para prestar o serviço.</li>
+    <li><strong>Integridade:</strong> a informação é protegida contra alterações indevidas.</li>
+    <li><strong>Disponibilidade:</strong> o serviço e os dados ficam acessíveis a quem tem direito, quando necessário.</li>
+    <li><strong>Menor privilégio e necessidade:</strong> cada pessoa, sistema e integração recebe apenas o acesso mínimo necessário.</li>
+    <li><strong>Privacidade desde a concepção:</strong> segurança e proteção de dados são consideradas em cada nova funcionalidade, em conformidade com a LGPD.</li>
+</ul>
+
+<h2>3. Governança e responsabilidades</h2>
+<ul>
+    <li>O responsável pela segurança da informação e encarregado de dados (DPO) é <strong>@LegalRoutes.DataProtectionOfficer</strong>.</li>
+    <li>Ele aprova esta Política, acompanha a sua aplicação, trata incidentes e conduz a revisão periódica dos controles.</li>
+    <li>Todas as pessoas com acesso aos sistemas do Ofertio devem conhecer e cumprir esta Política e manter sigilo sobre as informações a que tiverem acesso.</li>
+</ul>
+
+<h2>4. Controle de acesso</h2>
+<ul>
+    <li>O acesso à plataforma exige autenticação individual, com e-mail e senha ou por login social (Google).</li>
+    <li>As senhas são armazenadas apenas em formato de hash irreversível (BCrypt); nunca em texto puro.</li>
+    <li>As permissões são definidas por perfil. Funções administrativas, como o cofre de chaves e as integrações globais, ficam restritas a perfis com permissão específica.</li>
+    <li>Os dados de cada cliente são isolados por inquilino (multi-tenant): um cliente não acessa dados de outro.</li>
+    <li>Acessos administrativos e alterações sensíveis são registrados em trilha de auditoria, com usuário, data, hora e origem.</li>
+    <li>Acessos são revistos e removidos quando deixam de ser necessários.</li>
+</ul>
+
+<h2>5. Proteção de dados e criptografia</h2>
+<ul>
+    <li>Todo o tráfego entre usuários, a plataforma e as APIs externas usa HTTPS (TLS).</li>
+    <li>Tokens de acesso de plataformas parceiras, senhas de integrações, chaves de API e documentos como CPF/CNPJ são criptografados no banco de dados (ASP.NET Core Data Protection e AES-256).</li>
+    <li>Segredos de aplicações (App Key, App Secret, Client Secret) ficam no cofre de chaves da plataforma, criptografados, fora do código-fonte e do repositório.</li>
+    <li>Segredos, tokens e senhas nunca são gravados em logs.</li>
+    <li>Dados de cartão de pagamento não são armazenados: guardamos apenas a bandeira e os 4 últimos dígitos.</li>
+    <li>Coletamos apenas os dados necessários para cada finalidade, conforme a <a href="@LegalRoutes.Privacy">Política de Privacidade</a>.</li>
+</ul>
+
+<h2>6. Integrações com plataformas parceiras</h2>
+<ul>
+    <li>As integrações usam somente APIs oficiais e os fluxos de autorização oficiais (OAuth) de cada plataforma. Não fazemos raspagem de dados nem contornamos mecanismos anti-bot ou captcha.</li>
+    <li>Não pedimos nem armazenamos a senha que o usuário usa nas plataformas parceiras.</li>
+    <li>Solicitamos apenas os escopos necessários para cada funcionalidade.</li>
+    <li>O parâmetro <code>state</code> dos fluxos OAuth é criptografado, vinculado ao usuário, de uso único e com validade curta, o que protege contra falsificação de requisições (CSRF) e reutilização.</li>
+    <li>Os tokens são renovados automaticamente antes de expirar e deixam de ser usados quando o usuário desconecta a conta. O usuário pode revogar o acesso também no painel da própria plataforma.</li>
+    <li>Os dados obtidos das plataformas são usados exclusivamente para prestar o serviço ao usuário que autorizou o acesso, conforme as políticas de cada plataforma.</li>
+</ul>
+
+<h2>7. Desenvolvimento e operação seguros</h2>
+<ul>
+    <li>O código-fonte é mantido em repositório privado com controle de versão e histórico de alterações.</li>
+    <li>Toda mudança passa por compilação e testes automatizados antes de ser publicada.</li>
+    <li>Os ambientes de homologação (dev.ofertio.com.br) e de produção (ofertio.com.br) são separados, com bancos de dados e credenciais distintos.</li>
+    <li>As configurações sensíveis não são versionadas, e as dependências de software são mantidas atualizadas.</li>
+    <li>As validações de entrada e as regras de autorização são aplicadas no servidor.</li>
+</ul>
+
+<h2>8. Registro e monitoramento</h2>
+<ul>
+    <li>A aplicação registra eventos de funcionamento e erros, sem dados sensíveis, para diagnóstico e detecção de falhas.</li>
+    <li>Ações administrativas ficam na trilha de auditoria.</li>
+    <li>Métricas de disponibilidade e desempenho são acompanhadas para identificar comportamentos anormais.</li>
+</ul>
+
+<h2>9. Continuidade e cópias de segurança</h2>
+<ul>
+    <li>O banco de dados de produção e as chaves de criptografia são incluídos em rotina de cópias de segurança, guardadas com acesso restrito.</li>
+    <li>As chaves de criptografia são preservadas em cada atualização, para que os dados protegidos continuem legíveis.</li>
+    <li>Os procedimentos de restauração são documentados e verificados periodicamente.</li>
+</ul>
+
+<h2>10. Gestão de incidentes</h2>
+<ol>
+    <li><strong>Identificação:</strong> qualquer suspeita de incidente deve ser comunicada imediatamente ao responsável pela segurança.</li>
+    <li><strong>Contenção:</strong> o acesso afetado é bloqueado e credenciais e tokens envolvidos são revogados ou trocados.</li>
+    <li><strong>Análise e correção:</strong> a causa é investigada, corrigida e documentada.</li>
+    <li><strong>Comunicação:</strong> quando o incidente puder gerar risco ou dano relevante aos titulares, comunicamos a Autoridade Nacional de Proteção de Dados (ANPD) e os titulares afetados, nos termos do art. 48 da LGPD. As plataformas parceiras afetadas são avisadas conforme as regras de cada uma.</li>
+    <li><strong>Aprendizado:</strong> os controles são revistos para evitar a repetição.</li>
+</ol>
+
+<h2>11. Fornecedores</h2>
+<p>
+    Fornecedores que tratam dados em nome do Ofertio (hospedagem, e-mail, pagamento) são escolhidos considerando as suas práticas de
+    segurança e privacidade e só recebem os dados necessários para o serviço contratado.
+</p>
+
+<h2>12. Comunicação de vulnerabilidades</h2>
+<p>
+    Se você identificar uma possível vulnerabilidade no Ofertio, escreva para
+    <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a> com uma descrição do problema. Pedimos que não acesse, altere
+    ou divulgue dados de terceiros e que nos dê tempo razoável para corrigir antes de qualquer divulgação pública.
+</p>
+
+<h2>13. Revisão</h2>
+<p>
+    Esta Política é revista pelo menos uma vez por ano e sempre que houver mudança relevante no Ofertio, na legislação ou nas exigências
+    das plataformas parceiras.
+</p>
+
+<h2>14. Contato</h2>
+<p>
+    @LegalRoutes.CompanyName — CNPJ @LegalRoutes.CompanyCnpj — @LegalRoutes.CompanyCity<br />
+    Responsável pela segurança da informação e encarregado de dados: @LegalRoutes.DataProtectionOfficer —
+    <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>
+</p>

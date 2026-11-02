@@ -1,0 +1,126 @@
+﻿@page "/legal/privacidade"
+@layout Ofertio.SharedUi.Components.Layout.LegalLayout
+@attribute [AllowAnonymous]
+@using Ofertio.SharedUi.Services.Navigation
+
+<PageTitle>Política de Privacidade — Ofertio</PageTitle>
+
+<h1>Política de Privacidade</h1>
+<p class="legal-updated">Última atualização: @LegalRoutes.LastUpdated</p>
+
+<p>
+    Esta Política explica como o Ofertio coleta, usa, compartilha e protege dados pessoais, em conformidade com a Lei Geral de Proteção
+    de Dados Pessoais (Lei nº 13.709/2018, "LGPD"). Ela se aplica ao site, à plataforma e às páginas públicas do Ofertio.
+</p>
+
+<h2>1. Quem é o controlador</h2>
+<p>
+    O controlador dos dados é a @LegalRoutes.CompanyName, CNPJ @LegalRoutes.CompanyCnpj, com sede em @LegalRoutes.CompanyCity,
+    responsável pelo Ofertio.
+</p>
+<p>
+    Encarregado pelo tratamento de dados pessoais (DPO): <strong>@LegalRoutes.DataProtectionOfficer</strong> —
+    <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>.
+</p>
+
+<h2>2. Dados que coletamos</h2>
+<h3>2.1. Dados que você nos fornece</h3>
+<ul>
+    <li><strong>Cadastro:</strong> nome, e-mail, senha (armazenada apenas em formato de hash irreversível), celular e fuso horário.</li>
+    <li><strong>Dados de cobrança:</strong> tipo de pessoa (física ou jurídica), CPF ou CNPJ, nome completo ou razão social, responsável e endereço de cobrança. O CPF/CNPJ é armazenado de forma criptografada.</li>
+    <li><strong>Pagamento:</strong> os dados do cartão são processados pelo provedor de pagamento; guardamos apenas a bandeira e os 4 últimos dígitos.</li>
+    <li><strong>Identificadores de afiliado:</strong> IDs, tags e apelidos das suas lojas nos programas de afiliados.</li>
+    <li><strong>Conteúdo do Usuário:</strong> links, mensagens, ofertas, grupos e canais que você cadastra ou envia pelo Serviço.</li>
+</ul>
+
+<h3>2.2. Dados recebidos de plataformas que você conecta</h3>
+<ul>
+    <li><strong>Login social (Google):</strong> nome, e-mail e identificador da conta, para autenticar você.</li>
+    <li><strong>Marketplaces e programas de afiliados</strong> (por exemplo, Mercado Livre, Shopee, Amazon, TikTok Shop): tokens de acesso concedidos pela autorização oficial (OAuth), identificador e nome da conta conectada e dados de produtos, ofertas, cliques e comissões necessários para os recursos que você usa.</li>
+    <li><strong>WhatsApp e Telegram:</strong> dados de sessão das contas conectadas por você e a identificação dos grupos e canais escolhidos para envio de ofertas.</li>
+</ul>
+
+<h3>2.3. Dados coletados automaticamente</h3>
+<ul>
+    <li>Registros de acesso à aplicação (endereço IP, data e hora), mantidos conforme o Marco Civil da Internet.</li>
+    <li>Contagem de cliques nos links curtos gerados pelo Serviço, para os seus relatórios.</li>
+    <li>Cookies essenciais de sessão e autenticação. Não usamos cookies de publicidade nem ferramentas de rastreamento de terceiros.</li>
+</ul>
+
+<h2>3. Para que usamos os dados e com qual base legal</h2>
+<ul>
+    <li><strong>Prestar o Serviço</strong> (criar e manter a sua conta, gerar links, buscar ofertas, enviar mensagens automatizadas, exibir relatórios) — execução de contrato (art. 7º, V, da LGPD).</li>
+    <li><strong>Cobrar e emitir documentos fiscais</strong> — execução de contrato e cumprimento de obrigação legal (art. 7º, II e V).</li>
+    <li><strong>Guardar registros de acesso</strong> — cumprimento de obrigação legal (Marco Civil da Internet, art. 15).</li>
+    <li><strong>Garantir a segurança</strong>, prevenir fraudes e abusos e manter a trilha de auditoria — legítimo interesse (art. 7º, IX) e cumprimento de obrigação legal.</li>
+    <li><strong>Melhorar o Serviço</strong> com estatísticas de uso agregadas — legítimo interesse, sempre respeitando os seus direitos.</li>
+    <li><strong>Enviar comunicações</strong> sobre a conta, o plano e mudanças nos documentos legais — execução de contrato. Comunicações promocionais só com o seu consentimento, que pode ser retirado a qualquer momento.</li>
+    <li><strong>Exercer direitos</strong> em processos judiciais, administrativos ou arbitrais — art. 7º, VI.</li>
+</ul>
+
+<h2>4. Com quem compartilhamos</h2>
+<p>Não vendemos dados pessoais. Compartilhamos apenas o necessário com:</p>
+<ul>
+    <li><strong>Plataformas que você conecta</strong> (marketplaces, programas de afiliados, WhatsApp, Telegram, Google), dentro das autorizações que você concedeu;</li>
+    <li><strong>Provedores de infraestrutura</strong> (hospedagem, banco de dados, envio de e-mail) e de pagamento, que atuam como operadores e seguem nossas instruções;</li>
+    <li><strong>Autoridades públicas</strong>, quando houver obrigação legal ou ordem judicial.</li>
+</ul>
+
+<h2>5. Transferência internacional</h2>
+<p>
+    Algumas plataformas conectadas e provedores (como Google, Amazon e TikTok) podem tratar dados fora do Brasil. Nesses casos, a
+    transferência ocorre para cumprir o contrato com você ou mediante as garantias previstas no art. 33 da LGPD.
+</p>
+
+<h2>6. Por quanto tempo guardamos</h2>
+<ul>
+    <li>Dados da conta e do Conteúdo do Usuário: enquanto a conta estiver ativa. Após o encerramento, são eliminados ou anonimizados, salvo o que precisarmos manter por lei.</li>
+    <li>Registros de acesso: no mínimo 6 (seis) meses, conforme o Marco Civil da Internet.</li>
+    <li>Dados fiscais e de cobrança: pelo prazo exigido pela legislação tributária.</li>
+    <li>Tokens de plataformas conectadas: até você desconectar a conta ou até a autorização expirar ou ser revogada.</li>
+</ul>
+
+<h2>7. Segurança</h2>
+<p>
+    Adotamos medidas técnicas e administrativas para proteger os dados, como criptografia em trânsito (HTTPS) e em repouso para tokens e
+    segredos, senhas com hash, controle de acesso por perfil e trilha de auditoria. Os detalhes estão na
+    <a href="@LegalRoutes.Security">Política de Segurança da Informação</a>.
+</p>
+
+<h2>8. Seus direitos</h2>
+<p>Nos termos do art. 18 da LGPD, você pode pedir, a qualquer momento:</p>
+<ul>
+    <li>confirmação de que tratamos os seus dados e acesso a eles;</li>
+    <li>correção de dados incompletos, inexatos ou desatualizados;</li>
+    <li>anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desconformidade com a lei;</li>
+    <li>portabilidade dos dados;</li>
+    <li>eliminação dos dados tratados com base no consentimento e informação sobre a possibilidade de não consentir;</li>
+    <li>informação sobre com quem compartilhamos os seus dados;</li>
+    <li>revogação do consentimento;</li>
+    <li>revisão de decisões tomadas unicamente com base em tratamento automatizado.</li>
+</ul>
+<p>
+    Para exercer esses direitos, escreva para <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>. Responderemos no
+    prazo previsto na LGPD. Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).
+</p>
+
+<h2>9. Como desconectar plataformas</h2>
+<p>
+    Você pode desconectar marketplaces, WhatsApp e Telegram a qualquer momento na área "Minhas Lojas" e nas telas de integração do Ofertio.
+    Também pode revogar o acesso diretamente no painel de cada plataforma. Após a desconexão, o Ofertio deixa de usar o token correspondente.
+</p>
+
+<h2>10. Menores de idade</h2>
+<p>O Ofertio não se destina a menores de 18 anos e não coleta intencionalmente dados de crianças ou adolescentes.</p>
+
+<h2>11. Alterações desta Política</h2>
+<p>
+    Podemos atualizar esta Política. Mudanças relevantes serão comunicadas pelo Serviço ou por e-mail, e a data de atualização no topo
+    desta página será alterada.
+</p>
+
+<h2>12. Contato</h2>
+<p>
+    @LegalRoutes.CompanyName — CNPJ @LegalRoutes.CompanyCnpj — @LegalRoutes.CompanyCity<br />
+    Encarregado (DPO): @LegalRoutes.DataProtectionOfficer — <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>
+</p>

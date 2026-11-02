@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
+@using Ofertio.SharedUi.Services.Navigation
 
 <PageTitle>Ofertio - Inteligência em Ofertas</PageTitle>
 
@@ -16,6 +17,14 @@
         </header>
 
         <UnifiedLoginCard />
+
+        <nav class="legal-links text-center small mt-4" aria-label="Documentos legais">
+            <a href="@LegalRoutes.Terms">Termos de Uso</a>
+            <span class="text-muted mx-1">·</span>
+            <a href="@LegalRoutes.Privacy">Política de Privacidade</a>
+            <span class="text-muted mx-1">·</span>
+            <a href="@LegalRoutes.Security">Segurança da Informação</a>
+        </nav>
     </div>
 </div>
 

@@ -1654,3 +1654,11 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Link de autorização de criador:** "Autorizar TikTok Shop" (Master e Minhas Lojas) passa a abrir `shop.tiktok.com/alliance/creator/auth?app_key=&state=`. O link anterior, `services.tiktokshop.com/open/authorize?service_id=`, é o de vendedor e levava à Central do Vendedor pedindo CNPJ/MEI. A URL gerada é registrada no log da API. O link leva também `service_id` (quando preenchido) e `redirect_uri`, com `Trim()` em App Key e Service ID.
 - [x] **Credencial do link compartilhado:** em Conectar nova loja, o link de produto compartilhado pelo criador (direto ou `vt.tiktok.com`) extrai o ID do criador de `crm_scenario`; antes caía em `utm_source=copy`.
 
+## ⚖️ Documentos legais públicos (`LegalPages`)
+
+- [x] **Páginas sem login:** `/legal/termos`, `/legal/privacidade` e `/legal/seguranca`, em português, com layout próprio (`LegalLayout`) e dados da TECSO TECNOLOGIA DE INFORMATICA LTDA (CNPJ 52.609.371/0001-79, São Paulo - SP).
+- [x] **Termos de Uso:** adaptados do modelo em inglês para o Brasil (CDC, arrependimento de 7 dias, limite de responsabilidade em reais, foro em São Paulo - SP), sem menção a app mobile.
+- [x] **Política de Privacidade (LGPD):** controlador, encarregado de dados (Rony Faria de Araujo), dados coletados, bases legais, compartilhamento, transferência internacional, retenção, direitos do titular e cookies só essenciais.
+- [x] **Política de Segurança da Informação:** controles reais do Ofertio (BCrypt, criptografia de tokens e segredos, cofre, OAuth oficial com state selado, isolamento por inquilino, auditoria, ambientes separados, incidentes conforme o art. 48 da LGPD), para o questionário do TikTok Partner Center.
+- [x] **Login:** links para os três documentos no rodapé da tela de login. Testes garantem rota, layout e acesso anônimo.
+

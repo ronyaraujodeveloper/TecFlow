@@ -1929,6 +1929,18 @@ flowchart TD
   STRAT -->|"sem conta ou falha"| SUBID["shop.tiktok.com/view/product/{id}?sub_id=<br/>+ aviso GenerationWarning"]
 ```
 
+### Páginas legais públicas (`LegalPages`)
+
+Os três documentos são renderizados no servidor (SSR estático), sem login, e servem de URL pública para os questionários das plataformas parceiras (TikTok Partner Center, Mercado Livre e outros).
+
+```mermaid
+flowchart LR
+  LOGIN["Home.razor (login)<br/>links no rodapé"] --> ROUTES["LegalRoutes"]
+  PARTNER["Questionários das plataformas<br/>(TikTok Partner Center)"] --> PAGES
+  ROUTES --> PAGES["TermosDeUso /legal/termos<br/>PoliticaPrivacidade /legal/privacidade<br/>PoliticaSeguranca /legal/seguranca<br/>[AllowAnonymous]"]
+  PAGES --> LAYOUT["LegalLayout<br/>menu + dados da TECSO"]
+```
+
 ### Filtros compactos da Buscar Ofertas (`CompactSearchFilters`)
 
 ```mermaid

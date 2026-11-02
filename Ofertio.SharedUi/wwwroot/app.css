@@ -2481,6 +2481,57 @@ html, body {
     padding: 0.65rem 0 1rem;
 }
 
+.legal-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.legal-header,
+.legal-footer {
+    padding: 0.6rem 0;
+}
+
+.legal-nav a,
+.legal-links a {
+    text-decoration: none;
+}
+
+.legal-main {
+    flex: 1 1 auto;
+    padding: 1.25rem 0.75rem 2rem;
+}
+
+.legal-doc {
+    max-width: 52rem;
+    margin: 0 auto;
+    line-height: 1.65;
+}
+
+.legal-doc h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.legal-doc h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 1.75rem;
+}
+
+.legal-doc h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.legal-doc .legal-updated {
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
 .public-converter-card {
     width: 100%;
     max-width: 640px;

@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+@using Ofertio.SharedUi.Services.Navigation
+
+<div class="legal-shell">
+    <header class="legal-header border-bottom bg-white">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <a href="/" class="fw-bold text-decoration-none text-dark">@LegalRoutes.ProductName</a>
+            <nav class="legal-nav d-flex flex-wrap gap-3 small" aria-label="Documentos legais">
+                <a href="@LegalRoutes.Terms"><i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Termos de Uso</a>
+                <a href="@LegalRoutes.Privacy"><i class="bi bi-person-lock me-1" aria-hidden="true"></i>Privacidade</a>
+                <a href="@LegalRoutes.Security"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Segurança da Informação</a>
+            </nav>
+        </div>
+    </header>
+    <main class="container legal-main">
+        <article class="legal-doc">
+            @Body
+        </article>
+    </main>
+    <footer class="legal-footer border-top bg-white">
+        <div class="container small text-muted">
+            @LegalRoutes.ProductName é um produto da @LegalRoutes.CompanyName, CNPJ @LegalRoutes.CompanyCnpj, @LegalRoutes.CompanyCity.
+            Contato: <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>
+        </div>
+    </footer>
+</div>

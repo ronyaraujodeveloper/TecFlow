@@ -168,3 +168,4 @@
 [2026-11-02 16:58:24] fix(tiktok-shop): inclui service_id e redirect_uri (com Trim) no link de autorizacao de criador
 [2026-11-02 17:09:56] chore(tiktok-shop): loga a URL final de autorizacao de criador antes de devolver ao frontend
 [2026-11-02 17:47:48]feat(legal): adiciona Termos de Uso, Politica de Privacidade e Politica de Seguranca publicas em /legal
+[2026-11-02 18:13:02]docs(legal): adiciona classificacao da informacao (item 5.1) na Politica de Seguranca e corrige data de atualizacao

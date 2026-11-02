@@ -17,5 +17,5 @@ public static class LegalRoutes
     public const string ContactEmail = "rony.araujo@gmail.com";
 
     public const string ProductionUrl = "https://ofertio.com.br";
-    public const string LastUpdated = "27 de outubro de 2026";
+    public const string LastUpdated = "2 de novembro de 2026";
 }

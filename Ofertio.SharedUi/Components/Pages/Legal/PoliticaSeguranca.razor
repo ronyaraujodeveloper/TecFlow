@@ -42,7 +42,32 @@
     <li>Acessos são revistos e removidos quando deixam de ser necessários.</li>
 </ul>
 
-<h2>5. Proteção de dados e criptografia</h2>
+<h2>5. Classificação da informação, proteção de dados e criptografia</h2>
+<h3>5.1. Classificação da informação</h3>
+<p>Toda informação tratada pelo Ofertio é classificada em um dos níveis abaixo, e os controles são aplicados conforme o nível:</p>
+<ul>
+    <li>
+        <strong>Pública:</strong> informação destinada à divulgação, como estas políticas, os Termos de Uso e as páginas públicas do Ofertio.
+        Pode ser publicada sem restrição, mas só é alterada por pessoas autorizadas.
+    </li>
+    <li>
+        <strong>Interna:</strong> informação de operação que não identifica pessoas, como documentação técnica, configurações não sensíveis e
+        métricas agregadas. Acesso restrito à equipe do Ofertio.
+    </li>
+    <li>
+        <strong>Confidencial:</strong> dados pessoais e do negócio dos usuários, como nome, e-mail, celular, endereço de cobrança, lojas
+        conectadas, links, ofertas, cliques e relatórios. Acesso apenas pelo próprio usuário (isolado por inquilino) e pela equipe autorizada,
+        quando necessário para o suporte; tráfego sempre por HTTPS.
+    </li>
+    <li>
+        <strong>Restrita (sensível):</strong> senhas, tokens de acesso e de renovação, segredos de aplicações (App Key, App Secret, Client
+        Secret), chaves de criptografia e documentos como CPF/CNPJ. Criptografada em repouso e em trânsito, nunca exibida por completo
+        nem gravada em logs, com acesso restrito a perfis administrativos específicos e registrado na trilha de auditoria.
+    </li>
+</ul>
+<p>Na dúvida, a informação é tratada pelo nível mais alto aplicável. O número completo do cartão não é armazenado; a bandeira e os 4 últimos dígitos são tratados como Confidencial.</p>
+
+<h3>5.2. Proteção e criptografia</h3>
 <ul>
     <li>Todo o tráfego entre usuários, a plataforma e as APIs externas usa HTTPS (TLS).</li>
     <li>Tokens de acesso de plataformas parceiras, senhas de integrações, chaves de API e documentos como CPF/CNPJ são criptografados no banco de dados (ASP.NET Core Data Protection e AES-256).</li>

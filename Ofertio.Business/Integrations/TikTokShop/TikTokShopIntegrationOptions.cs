@@ -11,12 +11,12 @@ public class TikTokShopIntegrationOptions
     public string AuthorizeUrl { get; set; } = "https://auth.tiktok-shops.com/oauth/authorize";
 
     /// <summary>
-    /// Autorização de criador/afiliado (app Creator collaborations): <c>?app_key=&amp;state=</c>. O TikTok volta para a
-    /// Redirect URL cadastrada no app e os escopos são os habilitados no Partner Center (Manage API).
+    /// Autorização de criador/afiliado (app Creator collaborations):
+    /// <c>?app_key=&amp;service_id=&amp;redirect_uri=&amp;state=</c>. Os escopos são os habilitados no Partner Center (Manage API).
     /// </summary>
     public string CreatorAuthorizeUrl { get; set; } = "https://shop.tiktok.com/alliance/creator/auth";
 
-    /// <summary>Service ID do app no Partner Center. Só a autorização de vendedor usa; o app de criador autoriza por <see cref="CreatorAuthorizeUrl"/>.</summary>
+    /// <summary>Service ID do app no Partner Center; vai no link de criador quando preenchido.</summary>
     public string ServiceId { get; set; } = string.Empty;
 
     /// <summary>Autorização de vendedor (leva à Central do Vendedor); não usada no fluxo de criador.</summary>

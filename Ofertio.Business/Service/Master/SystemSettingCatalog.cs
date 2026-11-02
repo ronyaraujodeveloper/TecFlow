@@ -41,7 +41,7 @@ public static class SystemSettingCatalog
         new("Integrations:AmazonPaApi:PartnerTag", CategoryMarketplaces, "Amazon — Partner Tag", false, "minhaloja-20"),
         new("Integrations:TikTokShop:AppKey", CategoryMarketplaces, "TikTok Shop — App Key", false),
         new("Integrations:TikTokShop:AppSecret", CategoryMarketplaces, "TikTok Shop — App Secret", true),
-        new("Integrations:TikTokShop:ServiceId", CategoryMarketplaces, "TikTok Shop — Service ID (opcional; o app de criador autoriza pela App Key)", false),
+        new("Integrations:TikTokShop:ServiceId", CategoryMarketplaces, "TikTok Shop — Service ID", false),
         new("Integrations:TikTokShop:RedirectUri", CategoryMarketplaces, "TikTok Shop — Redirect URL", false, "https://dev.ofertio.com.br/integracoes/tiktok/callback"),
         new(TikTokShopSearchCacheRules.SettingKey, CategoryMarketplaces, "TikTok Shop — Tempo de Cache de Buscas (minutos)", false, "15"),
 

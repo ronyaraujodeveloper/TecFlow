@@ -6,6 +6,7 @@ using Moq;
 using Ofertio.Business.Integrations.Auth;
 using Ofertio.Business.Integrations.MercadoLivre;
 using Ofertio.Business.Integrations.Shopee;
+using Ofertio.Business.Integrations.TikTokShop;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Core.Entities;
@@ -42,7 +43,7 @@ public class MarketplaceAuthServiceTests
             .ReturnsAsync(new Tenant { Id = tenantId, Name = "Tenant Principal", IsActive = true });
     }
 
-    private MarketplaceAuthService CreateService() =>
+    private MarketplaceAuthService CreateService(IOptions<TikTokShopIntegrationOptions>? tikTokOptions = null) =>
         new(
             _tokenRepository.Object,
             _accountRepository.Object,
@@ -50,7 +51,7 @@ public class MarketplaceAuthServiceTests
             _currentTenant.Object,
             _signatureService,
             _httpClientFactory.Object,
-            MarketplaceTestOptionsFactory.TikTokOptions(),
+            tikTokOptions ?? MarketplaceTestOptionsFactory.TikTokOptions(),
             MarketplaceTestOptionsFactory.ShopeeOptions(),
             NullLogger<MarketplaceAuthService>.Instance,
             _hostEnvironment.Object,
@@ -300,19 +301,38 @@ public class MarketplaceAuthServiceTests
     }
 
     [Fact]
-    public void GenerateAuthorizationUrl_TikTokShop_ShouldUseCreatorAuthorizationLink()
+    public void GenerateAuthorizationUrl_TikTokShop_ShouldUseCreatorLinkWithTrimmedServiceIdAndRedirect()
+    {
+        var options = MarketplaceTestOptionsFactory.TikTokOptions().Value;
+        options.AppKey = " 6lpmld43qe6l4 ";
+        options.ServiceId = " 7703455757279086357 ";
+        options.RedirectUri = "https://dev.ofertio.com.br/integracoes/tiktok/callback";
+
+        var url = CreateService(Options.Create(options)).GenerateAuthorizationUrl(
+            MarketplaceType.TikTokShop,
+            "https://dev.ofertio.com.br/integracoes/oauth/callback",
+            "sealed-state");
+
+        Assert.Equal(
+            "https://shop.tiktok.com/alliance/creator/auth?app_key=6lpmld43qe6l4&service_id=7703455757279086357"
+            + "&redirect_uri=" + Uri.EscapeDataString("https://dev.ofertio.com.br/integracoes/tiktok/callback")
+            + "&state=sealed-state",
+            url);
+        Assert.DoesNotContain("services.tiktokshop.com", url);
+        Assert.DoesNotContain("app_secret", url);
+    }
+
+    [Fact]
+    public void GenerateAuthorizationUrl_TikTokShop_ShouldOmitServiceIdWhenNotConfigured()
     {
         var url = CreateService().GenerateAuthorizationUrl(
             MarketplaceType.TikTokShop,
             "https://dev.ofertio.com.br/integracoes/tiktok/callback",
             "sealed-state");
 
-        Assert.StartsWith("https://shop.tiktok.com/alliance/creator/auth?", url);
-        Assert.Contains("app_key=" + Uri.EscapeDataString(MarketplaceTestOptionsFactory.TikTokAppKey), url);
-        Assert.Contains("state=sealed-state", url);
+        Assert.StartsWith("https://shop.tiktok.com/alliance/creator/auth?app_key=", url);
         Assert.DoesNotContain("service_id", url);
-        Assert.DoesNotContain("services.tiktokshop.com", url);
-        Assert.DoesNotContain("app_secret", url);
+        Assert.Contains("state=sealed-state", url);
     }
 
     [Fact]

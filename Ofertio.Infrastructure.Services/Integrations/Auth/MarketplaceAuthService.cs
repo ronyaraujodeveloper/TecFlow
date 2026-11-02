@@ -473,16 +473,23 @@ public class MarketplaceAuthService : IMarketplaceAuthService
         EnsureTikTokCredentials();
 
         var options = TikTok;
-        var url = AppendQuery(options.CreatorAuthorizeUrl, new Dictionary<string, string?>
+        var appRedirectUri = string.IsNullOrWhiteSpace(options.RedirectUri)
+            ? redirectUri.Trim()
+            : options.RedirectUri.Trim();
+        var query = new Dictionary<string, string?>
         {
-            ["app_key"] = options.AppKey.Trim(),
-            ["state"] = state.Trim()
-        });
+            ["app_key"] = options.AppKey.Trim()
+        };
+        if (!string.IsNullOrWhiteSpace(options.ServiceId))
+        {
+            query["service_id"] = options.ServiceId.Trim();
+        }
 
-        _logger.LogInformation(
-            "[TikTok OAuth] URL de autorização de criador gerada: {AuthorizationUrl} (Redirect URL do app: {RedirectUri})",
-            url,
-            string.IsNullOrWhiteSpace(options.RedirectUri) ? redirectUri : options.RedirectUri);
+        query["redirect_uri"] = appRedirectUri;
+        query["state"] = state.Trim();
+        var url = AppendQuery(options.CreatorAuthorizeUrl, query);
+
+        _logger.LogInformation("[TikTok OAuth] URL de autorização de criador gerada: {AuthorizationUrl}", url);
         return url;
     }
 

@@ -1904,7 +1904,7 @@ flowchart LR
   MASTER["MasterGlobalTikTokShop.razor<br/>/master/integracoes-globais/tiktok-shop"] --> CTRL["MasterGlobalIntegrationsController<br/>(ManageGlobalKeys)"]
   CTRL -->|"authorize-url (state IsMaster)"| TTS["services.tiktokshop.com/open/authorize<br/>service_id + state"]
   STORE["MinhasLojas / MarketplaceStoreCard<br/>Conectar conta de criador"] -->|"api/marketplace-auth/tiktok/authorize-url<br/>(state selado)"| TTS
-  TTS --> WEBUI["WebUi /integracoes/oauth/callback"]
+  TTS --> WEBUI["WebUi /integracoes/tiktok/callback"]
   WEBUI -->|"POST api/marketplace-auth/oauth/sealed-callback"| FLOW["TikTokShopOAuthCallbackFlow"]
   FLOW -->|"state.IsMaster"| GIS["GlobalIntegrationService<br/>rejeita conta de vendedor"]
   FLOW -->|"cliente"| LOJA["IntegracaoLojaService<br/>LinkUniversalAccountAsync"]

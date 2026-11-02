@@ -128,6 +128,16 @@ public static class AffiliateTrackingIdValidator
         @"^@?(?<id>[A-Za-z0-9._]{3,64})$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Link de compartilhamento do TikTok Shop: crm_scenario é base64 de "pdp_creator_{user_id}" (ID do criador que compartilhou).
+    /// </summary>
+    private static readonly Regex TikTokCrmScenarioCreatorRegex = new(
+        @"creator_(?<id>[0-9]{5,32})",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>Parâmetros de campanha do compartilhamento (ex.: utm_source=copy) que nunca são credencial do criador TikTok.</summary>
+    private static readonly string[] TikTokShareTrackingParams = ["utm_source", "utm_campaign", "utm_medium"];
+
     public static string ExtractAffiliateIdFromUrl(string input, string platform)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -160,6 +170,12 @@ public static class AffiliateTrackingIdValidator
             }
 
             if (IsBooleanLiteral(value) || IsIgnoredMagaluUtmSource(marketplace, key, value))
+            {
+                continue;
+            }
+
+            if (marketplace is MarketplaceType.TikTokShop
+                && TikTokShareTrackingParams.Contains(key, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -809,6 +825,11 @@ public static class AffiliateTrackingIdValidator
             return true;
         }
 
+        if (TryReadTikTokCrmScenarioCreator(input, out id))
+        {
+            return true;
+        }
+
         var handle = Regex.Match(
             input,
             @"tiktok\.com/@([A-Za-z0-9._]+)|/@([A-Za-z0-9._]+)",
@@ -932,6 +953,36 @@ public static class AffiliateTrackingIdValidator
 
         id = NormalizeTikTokHandle(value);
         return !string.IsNullOrWhiteSpace(id);
+    }
+
+    private static bool TryReadTikTokCrmScenarioCreator(string input, out string id)
+    {
+        id = string.Empty;
+        if (!TryReadParam(input, "crm_scenario", out var encoded))
+        {
+            return false;
+        }
+
+        var base64 = encoded.Trim().Replace(' ', '+').Replace('-', '+').Replace('_', '/');
+        base64 = base64.PadRight(base64.Length + ((4 - base64.Length % 4) % 4), '=');
+        string scenario;
+        try
+        {
+            scenario = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64));
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        var match = TikTokCrmScenarioCreatorRegex.Match(scenario);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        id = match.Groups["id"].Value;
+        return true;
     }
 
     private static string NormalizeTikTokHandle(string? value)

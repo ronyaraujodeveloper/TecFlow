@@ -163,3 +163,4 @@
 [2026-10-27 21:10:24] feat(conta): Meus dados e Meu plano com escolha de plano, modal de vantagens, pendencias do cadastro e pagamento simulado (sem gravar cartao)
 [2026-10-27 21:27:16] feat(conta): libera conta Master configurada em Billing:MasterCheckoutTestEmails para testar Meu plano como cliente (so homologacao)
 [2026-10-27 22:15:03] feat(tiktok-shop): integra API TikTok Shop (app de criador) nas Integracoes Globais com token Master, busca oficial e link de promocao do criador
+[2026-11-02 15:13:08] fix(tiktok-shop): extrai ID do criador de crm_scenario no link compartilhado e atende redirect /integracoes/tiktok/callback

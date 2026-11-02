@@ -17,6 +17,7 @@ public static class IntegracoesEndpointExtensions
 
         group.MapGet("/oauth/start", StartMarketplaceOAuthAsync);
         group.MapGet("/oauth/callback", FinishMarketplaceOAuthAsync).AllowAnonymous();
+        endpoints.MapGet(OAuthRedirectUriNormalizer.TikTokShopCallbackPath, FinishMarketplaceOAuthAsync).AllowAnonymous();
 
         return endpoints;
     }

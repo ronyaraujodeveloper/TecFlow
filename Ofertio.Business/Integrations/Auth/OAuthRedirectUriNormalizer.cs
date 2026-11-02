@@ -5,6 +5,9 @@ public static class OAuthRedirectUriNormalizer
 {
     public const string CallbackPath = "/integracoes/oauth/callback";
 
+    /// <summary>Redirect URL cadastrada no app TikTok Shop; o TikTok sempre volta para ela (não aceita redirect_uri na URL).</summary>
+    public const string TikTokShopCallbackPath = "/integracoes/tiktok/callback";
+
     private static readonly string[] TunnelHostSuffixes =
     [
         ".ngrok-free.dev",

@@ -15,7 +15,7 @@ public class TikTokShopIntegrationOptions
 
     public string ServiceAuthorizeUrl { get; set; } = "https://services.tiktokshop.com/open/authorize";
 
-    /// <summary>Redirect URL cadastrada no app (ex.: https://dev.ofertio.com.br/integracoes/oauth/callback).</summary>
+    /// <summary>Redirect URL cadastrada no app (ex.: https://dev.ofertio.com.br/integracoes/tiktok/callback).</summary>
     public string RedirectUri { get; set; } = string.Empty;
 
     public string TokenUrl { get; set; } = "https://auth.tiktok-shops.com/api/v2/token/get";

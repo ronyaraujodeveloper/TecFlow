@@ -43,6 +43,32 @@ public class AffiliateTrackingIdSanitizerTests
     }
 
     [Fact]
+    public void Extract_ShouldReadCreatorIdFromTikTokShareCrmScenario()
+    {
+        const string shared =
+            "https://www.tiktok.com/view/product/1737737785840862919?_d=f65lddhh4j935a&_svg=1"
+            + "&crm_scenario=cGRwX2NyZWF0b3JfNzEyOTQ2NjY2NDg4NTg2MzQyOQ%3D%3D&crm_type=share"
+            + "&scene=pdp&share_app_id=1233&share_region=BR&utm_campaign=client_share&utm_source=copy";
+
+        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.TikTokShop, shared);
+
+        Assert.Equal("7129466664885863429", id);
+    }
+
+    [Fact]
+    public void Extract_ShouldNotUseTikTokShareUtmSourceAsCredential()
+    {
+        const string shared =
+            "https://www.tiktok.com/view/product/1737737785840862919?scene=pdp&utm_campaign=client_share&utm_source=copy";
+
+        var id = AffiliateTrackingIdSanitizer.Extract(MarketplaceType.TikTokShop, shared);
+
+        Assert.NotEqual("copy", id);
+        Assert.NotEqual("client_share", id);
+        Assert.False(AffiliateTrackingIdSanitizer.TryNormalize(MarketplaceType.TikTokShop, shared, out _));
+    }
+
+    [Fact]
     public void Extract_ShouldReadMattToolFromMercadoLivreUrl()
     {
         var id = AffiliateTrackingIdSanitizer.Extract(

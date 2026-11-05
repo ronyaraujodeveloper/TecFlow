@@ -72,16 +72,14 @@ public class CampaignsController : ControllerBase
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
             Budget = dto.Budget,
+            LojaId = dto.LojaId,
             OwnerId = userId,
             CreatedAt = DateTime.UtcNow
         };
 
         await _campaignRepository.AddAsync(campaign);
 
-        return CreatedAtAction(
-            nameof(GetByIdAsync),
-            new { id = campaign.Id },
-            new CampaignResponseDto { Status = true, Descricao = "Criada com sucesso.", Data = campaign });
+        return Ok(new CampaignResponseDto { Status = true, Descricao = "Criada com sucesso.", Data = campaign });
     }
 
     [HttpPut("{id:int}")]

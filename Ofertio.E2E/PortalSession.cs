@@ -40,13 +40,22 @@ public sealed class PortalSession : IAsyncDisposable
     {
         await Page.GotoAsync(Settings.LoginUri.AbsoluteUri, new PageGotoOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle
+            WaitUntil = WaitUntilState.DOMContentLoaded
         });
         await Page.Locator("#portal-email").WaitForAsync();
         await Page.FillAsync("#portal-email", Settings.Email);
         await Page.FillAsync("#portal-password", Settings.Password);
-        await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Entrar" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Entrar", Exact = true }).ClickAsync();
         await Page.WaitForURLAsync("**/dashboard", new PageWaitForURLOptions { Timeout = 30_000 });
+    }
+
+    /// <summary>Digita e sai do campo para o Blazor gravar o valor antes do clique.</summary>
+    public static async Task FillAndCommitAsync(ILocator field, string value)
+    {
+        await field.ClickAsync();
+        await field.FillAsync(string.Empty);
+        await field.PressSequentiallyAsync(value, new LocatorPressSequentiallyOptions { Delay = 15 });
+        await field.BlurAsync();
     }
 
     /// <summary>Abre a rota e espera o título visível. Não preenche formulário nem grava dado.</summary>

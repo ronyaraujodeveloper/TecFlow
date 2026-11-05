@@ -52,16 +52,16 @@ public class AccountFlowTests
         await session.ExpectHeadingAsync("/cadastro", "Crie sua conta");
         var page = session.Page;
 
-        await page.Locator("#register-email").FillAsync(AccountPilot.InvalidEmail);
-        await page.Locator("#register-password").FillAsync("senha-a");
-        await page.Locator("#register-confirm-password").FillAsync("senha-a");
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-email"), AccountPilot.InvalidEmail);
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-password"), "senha-a");
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-confirm-password"), "senha-a");
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Concluir cadastro" }).ClickAsync();
         await Assertions.Expect(page.GetByText("E-mail inválido.")).ToBeVisibleAsync(Visible);
         Assert.Contains("/cadastro", page.Url, StringComparison.OrdinalIgnoreCase);
 
-        await page.Locator("#register-email").FillAsync(AccountPilot.UntouchedEmail);
-        await page.Locator("#register-password").FillAsync("senha-a");
-        await page.Locator("#register-confirm-password").FillAsync("senha-b");
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-email"), AccountPilot.UntouchedEmail);
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-password"), "senha-a");
+        await PortalSession.FillAndCommitAsync(page.Locator("#register-confirm-password"), "senha-b");
         await Assertions.Expect(page.GetByText("As senhas informadas não coincidem.")).ToBeVisibleAsync(Visible);
         await Assertions.Expect(page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Concluir cadastro" })).ToBeDisabledAsync();
         Assert.Contains("/cadastro", page.Url, StringComparison.OrdinalIgnoreCase);
@@ -74,12 +74,12 @@ public class AccountFlowTests
         await session.ExpectHeadingAsync("/recuperar-senha", "Recuperar ou alterar senha");
         var page = session.Page;
 
-        await page.Locator("#recovery-email").FillAsync(AccountPilot.InvalidEmail);
+        await PortalSession.FillAndCommitAsync(page.Locator("#recovery-email"), AccountPilot.InvalidEmail);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Enviar instruções" }).ClickAsync();
         await Assertions.Expect(page.GetByText("E-mail inválido.")).ToBeVisibleAsync(Visible);
         await Assertions.Expect(page.GetByText("Recebemos sua solicitação")).ToHaveCountAsync(0);
 
-        await page.Locator("#recovery-email").FillAsync(AccountPilot.UntouchedEmail);
+        await PortalSession.FillAndCommitAsync(page.Locator("#recovery-email"), AccountPilot.UntouchedEmail);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Enviar instruções" }).ClickAsync();
         await Assertions.Expect(page.GetByText("Recebemos sua solicitação")).ToBeVisibleAsync(Visible);
         await Assertions.Expect(page.GetByText("A recuperação automática de senha será habilitada em breve.")).ToBeVisibleAsync(Visible);
@@ -105,12 +105,12 @@ public class AccountFlowTests
 
         await page.Locator("#profile-document").FillAsync(AccountPilot.InvalidCpf);
         await SaveProfileAsync(page);
-        await Assertions.Expect(page.GetByText("CPF inválido.")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(page.GetByText("CPF inválido.").First).ToBeVisibleAsync(Visible);
 
         await page.Locator("#profile-document").FillAsync(document);
         await page.Locator("#profile-cep").FillAsync(AccountPilot.InvalidCep);
         await SaveProfileAsync(page);
-        await Assertions.Expect(page.GetByText("CEP inválido. Use 8 dígitos.")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(page.GetByText("CEP inválido. Use 8 dígitos.").First).ToBeVisibleAsync(Visible);
         await page.Locator("#profile-cep").FillAsync(cep);
 
         await page.Locator("#profile-state").SelectOptionAsync("SP");
@@ -118,9 +118,11 @@ public class AccountFlowTests
         await page.Locator("#profile-state").SelectOptionAsync(state);
 
         await page.Locator("label[for='person-pj']").ClickAsync();
-        await page.Locator("#profile-document").FillAsync(AccountPilot.InvalidCnpj);
+        await Assertions.Expect(page.Locator("#person-pj")).ToBeCheckedAsync();
+        await Assertions.Expect(page.Locator("#profile-document")).ToHaveValueAsync(string.Empty);
+        await PortalSession.FillAndCommitAsync(page.Locator("#profile-document"), AccountPilot.InvalidCnpj);
         await SaveProfileAsync(page);
-        await Assertions.Expect(page.GetByText("CNPJ inválido.")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(page.GetByText("CNPJ inválido.").First).ToBeVisibleAsync(Visible);
 
         if (!wasCompany)
         {
@@ -140,8 +142,8 @@ public class AccountFlowTests
 
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Alterar senha" }).ClickAsync();
         await page.Locator("#new-password").WaitForAsync();
-        await page.Locator("#new-password").FillAsync("senha-a");
-        await page.Locator("#confirm-password").FillAsync("senha-b");
+        await PortalSession.FillAndCommitAsync(page.Locator("#new-password"), "senha-a");
+        await PortalSession.FillAndCommitAsync(page.Locator("#confirm-password"), "senha-b");
         await Assertions.Expect(page.GetByText("A confirmação da nova senha não coincide.")).ToBeVisibleAsync(Visible);
 
         var save = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Salvar nova senha" });
@@ -152,8 +154,8 @@ public class AccountFlowTests
             return;
         }
 
-        await page.Locator("#new-password").FillAsync("senha-igual");
-        await page.Locator("#confirm-password").FillAsync("senha-igual");
+        await PortalSession.FillAndCommitAsync(page.Locator("#new-password"), "senha-igual");
+        await PortalSession.FillAndCommitAsync(page.Locator("#confirm-password"), "senha-igual");
         await Assertions.Expect(save).ToBeEnabledAsync();
         await save.ClickAsync();
         await Assertions.Expect(page.GetByText("Senha atual é obrigatória.")).ToBeVisibleAsync(Visible);

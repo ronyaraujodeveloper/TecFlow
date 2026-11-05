@@ -7,4 +7,7 @@ public class CampaignDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal Budget { get; set; }
+
+    /// <summary>Loja ativa no momento de criar. Nulo quando o painel está em todas as lojas.</summary>
+    public int? LojaId { get; set; }
 }

@@ -8,6 +8,9 @@ public class MarketplaceAccountDto
 {
     public int Id { get; set; }
 
+    /// <summary>Id em IntegracaoLoja. O Id acima é o da conta marketplace e não serve de chave da campanha.</summary>
+    public int? IntegracaoLojaId { get; set; }
+
     public int UserId { get; set; }
 
     public Guid TenantId { get; set; }

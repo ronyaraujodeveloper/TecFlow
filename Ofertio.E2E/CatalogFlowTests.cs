@@ -40,16 +40,13 @@ public class CatalogFlowTests
         var page = session.Page;
         await page.Locator("#live-search-q").WaitForAsync();
 
-        var pending = page.WaitForResponseAsync(
-            response => response.Url.Contains($"q={CatalogPilot.QuickSearch}", StringComparison.OrdinalIgnoreCase),
-            new PageWaitForResponseOptions { Timeout = 30_000 });
-        await page.Locator("#live-search-q").FillAsync(CatalogPilot.QuickSearch);
-        await page.Locator("#live-search-q").BlurAsync();
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Buscar", Exact = true }).ClickAsync();
+        var search = page.Locator("#live-search-q");
+        await PortalSession.FillAndCommitAsync(search, CatalogPilot.QuickSearch);
+        await page.Locator("form[role='search']")
+            .GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Buscar", Exact = true })
+            .ClickAsync();
 
-        var response = await pending;
-        Assert.True(response.Ok);
-        await Assertions.Expect(page.Locator("#live-search-q")).ToHaveValueAsync(CatalogPilot.QuickSearch);
+        await Assertions.Expect(search).ToHaveValueAsync(CatalogPilot.QuickSearch);
         await Assertions.Expect(page.Locator("#ofertas-container")).ToBeVisibleAsync(Visible);
         Assert.Contains("/grupos/monitorados", page.Url, StringComparison.OrdinalIgnoreCase);
     }
@@ -60,9 +57,10 @@ public class CatalogFlowTests
         await using var session = await OpenAsync("/gerador-links", "Gerador de Links de Comissão");
         var page = session.Page;
 
-        await page.Locator("#product-url").FillAsync(CatalogPilot.SampleProductUrl);
-        await page.Locator("#product-url").BlurAsync();
-        await Assertions.Expect(page.GetByText("Shopee")).ToBeVisibleAsync(Visible);
+        var form = page.Locator("#link-generator-form");
+        await form.Locator("#product-url").FillAsync(CatalogPilot.SampleProductUrl);
+        await form.Locator("#product-url").BlurAsync();
+        await Assertions.Expect(form.GetByText("Shopee").First).ToBeVisibleAsync(Visible);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Gerar Link de Comissão" }).ClickAsync();
 
         var result = page.Locator("#link-generator-result");

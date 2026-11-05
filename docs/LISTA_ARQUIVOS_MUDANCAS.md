@@ -2138,3 +2138,11 @@ API / Orquestrador / Worker / WebUi
 - [x] **README.md** — o script de carga fica ao lado do comando do robô.
 - [x] **README.md** — a regra de ouro de UI aponta para o `id` estável do campo.
 - [x] **README.md** — link do plano na documentação de apoio.
+- [x] **Ofertio.E2E/PortalSession.cs** — o login espera o DOM, não a rede ociosa, e clica no botão Entrar exato (não nos botões Google, Apple e Facebook).
+- [x] **Ofertio.E2E/E2EAssembly.cs** (novo) — a suíte do robô roda um teste por vez, para não abrir vários Chromes contra a mesma homologação.
+- [x] **Ofertio.SharedUi/Components/Pages/Dashboard.razor** — `StatusMessage` passa o texto gravado pela API. Sem o `@`, a tela mostrava o nome do campo.
+- [x] **Ofertio.API/Controllers/CampaignsController.cs** — criar campanha responde `200` com "Criada com sucesso.". `CreatedAtAction` quebrava a rota e a tela mostrava "No route matches the supplied values."
+- [x] **docs/DIAGRAMAS_ARQUITETURA.md** — o catálogo de propaganda aponta para a API e para o Orquestrador.
+- [x] **Ofertio.Business/Dto/CampaignDto.cs**, **Ofertio.API/Controllers/CampaignsController.cs** e **Dashboard.razor** — a campanha nova grava a loja ativa. Sem isso a lista filtrada por loja ficava vazia.
+- [x] **MarketplaceAccountDto.cs** e **MarketplaceAccountMapper.cs** — `IntegracaoLojaId` separa a conta marketplace do id usado em campanha, métrica e painel.
+- [x] **Ofertio.Tests/Unit/Mappings/MarketplaceAccountMapperTests.cs** (novo) — a conta 17 continua conta; a campanha usa a integração 22.

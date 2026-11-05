@@ -1040,6 +1040,7 @@ Deep link: ofertio://engajamento/fila
 │       + PagingInfoDto (TotalCount, HasNextPage)                          │
 │  GET  api/Metricas?[MetricFilter&Page&PageSize]    → MetricResponseDto   │
 │  POST api/Campanhas (CampaignDto)     → CampaignResponseDto              │
+│       LojaId = IntegracaoLoja da loja ativa; nulo em todas as lojas      │
 │  POST api/Metricas  (MetricDto)       → MetricResponseDto                │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
@@ -1210,6 +1211,8 @@ erDiagram
 ```
 ProdutosPropaganda.razor (WebUi/SharedUi)
         │ POST/GET api/propaganda/produtos
+        ▼
+Ofertio.API (homologação, porta 5001) e Ofertio.Orquestrador
         ▼
 AdvertisingProductService
         ├── CreateGlobalProductAsync → DB ProdutosPropagandaGlobal

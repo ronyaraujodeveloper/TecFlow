@@ -39,8 +39,21 @@ public class CampaignsControllerBudgetTests
 
         var result = await controller.CreateAsync(new CampaignDto { Name = "E2E", Budget = 0m });
 
-        Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.IsType<OkObjectResult>(result.Result);
         repo.Verify(r => r.AddAsync(It.Is<Campaign>(c => c.Budget == 0m && c.OwnerId == 7)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldPersistTheActiveStore()
+    {
+        var repo = new Mock<ICampaignRepository>();
+        repo.Setup(r => r.AddAsync(It.IsAny<Campaign>())).Returns(Task.CompletedTask);
+        var controller = CreateController(repo);
+
+        var result = await controller.CreateAsync(new CampaignDto { Name = "E2E", Budget = 89.90m, LojaId = 22 });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        repo.Verify(r => r.AddAsync(It.Is<Campaign>(c => c.LojaId == 22 && c.Budget == 89.90m)), Times.Once);
     }
 
     private static CampaignsController CreateController(Mock<ICampaignRepository> repo)

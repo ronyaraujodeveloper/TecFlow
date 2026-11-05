@@ -49,7 +49,7 @@
 
     <CampaignCreateForm Model="_campaignDto"
                         IsBusy="_isSavingCampaign"
-                        StatusMessage="_campaignSaveMessage"
+                        StatusMessage="@_campaignSaveMessage"
                         IsSuccess="_campaignSaveSuccess"
                         OnSubmit="CreateCampaignAsync" />
 
@@ -151,7 +151,7 @@
 
     private void ApplyActiveStoreScope()
     {
-        var lojaId = StoreScope.ActiveStoreId;
+        var lojaId = StoreScope.IsAllStoresScope ? null : StoreScope.ActiveStore?.IntegracaoLojaId;
         _statsFilter.LojaId = lojaId;
         _campaignFilter.LojaId = lojaId;
         _metricFilter.LojaId = lojaId;
@@ -238,6 +238,7 @@
     {
         _isSavingCampaign = true;
         _campaignSaveMessage = null;
+        _campaignDto.LojaId = StoreScope.IsAllStoresScope ? null : StoreScope.ActiveStore?.IntegracaoLojaId;
 
         var result = await DashboardApi.CreateCampaignAsync(_campaignDto);
 

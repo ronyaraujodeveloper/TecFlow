@@ -74,6 +74,24 @@ public class AdvertisingProductServiceTests
         Assert.Contains("tecflow", payload.AffiliateLink, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1000000.01)]
+    public async Task CreateGlobalProductAsync_ShouldRejectPriceOutsideTheAllowedRange(decimal price)
+    {
+        await using var db = CreateDbContext();
+        var service = new AdvertisingProductService(db, NullLogger<AdvertisingProductService>.Instance);
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateGlobalProductAsync(1, new GlobalAdvertisingProductDto
+        {
+            FriendlyName = "Preço inválido",
+            AveragePrice = price
+        }));
+
+        Assert.Equal(Ofertio.Business.Service.Common.MoneyAmountRules.InvalidPriceMessage, error.Message);
+        Assert.Empty(db.GlobalAdvertisingProducts);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var encryption = new Mock<IEncryptionService>();

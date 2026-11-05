@@ -35,19 +35,44 @@
                 @foreach (var plan in _plans)
                 {
                     <tr>
-                        <td><input class="form-control form-control-sm" style="min-width: 110px;" @bind="plan.Name" /><div class="text-muted">@plan.Code</div></td>
-                        <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.MonthlyPrice" /></td>
-                        <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.AnnualPrice" /></td>
-                        <td><input type="number" min="0" class="form-control form-control-sm" @bind="plan.MaxStores" /></td>
-                        <td><input type="number" min="0" class="form-control form-control-sm" @bind="plan.DailyVipQuota" /></td>
-                        <td><input type="number" min="0" class="form-control form-control-sm" title="Disparos de WhatsApp e Telegram somados neste plano. 0 = ilimitado." @bind="plan.MaxDailySchedules" /></td>
-                        <td><input type="checkbox" class="form-check-input" @bind="plan.RadarEnabled" /></td>
-                        <td><input type="checkbox" class="form-check-input" @bind="plan.IsActive" /></td>
+                        <td>
+                            <label class="visually-hidden" for="plan-name-@plan.Code">Nome do plano @plan.Code</label>
+                            <input id="plan-name-@plan.Code" class="form-control form-control-sm" style="min-width: 110px;" @bind="plan.Name" />
+                            <div class="text-muted">@plan.Code</div>
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-monthly-@plan.Code">Mensal do plano @plan.Code</label>
+                            <input id="plan-monthly-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.MonthlyPrice" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-annual-@plan.Code">Anual do plano @plan.Code</label>
+                            <input id="plan-annual-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.AnnualPrice" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-stores-@plan.Code">Lojas do plano @plan.Code</label>
+                            <input id="plan-stores-@plan.Code" type="number" min="0" class="form-control form-control-sm" @bind="plan.MaxStores" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-vip-@plan.Code">Achadinhos por dia do plano @plan.Code</label>
+                            <input id="plan-vip-@plan.Code" type="number" min="0" class="form-control form-control-sm" @bind="plan.DailyVipQuota" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-schedules-@plan.Code">Disparos por dia do plano @plan.Code</label>
+                            <input id="plan-schedules-@plan.Code" type="number" min="0" class="form-control form-control-sm" title="Disparos de WhatsApp e Telegram somados neste plano. 0 = ilimitado." @bind="plan.MaxDailySchedules" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-radar-@plan.Code">Radar do plano @plan.Code</label>
+                            <input id="plan-radar-@plan.Code" type="checkbox" class="form-check-input" @bind="plan.RadarEnabled" />
+                        </td>
+                        <td>
+                            <label class="visually-hidden" for="plan-active-@plan.Code">Ativo do plano @plan.Code</label>
+                            <input id="plan-active-@plan.Code" type="checkbox" class="form-check-input" @bind="plan.IsActive" />
+                        </td>
                         <td class="text-end">@plan.TenantCount</td>
                         <td class="text-end">
                             @if (Can(MasterPermissions.ManagePlans))
                             {
-                                <button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveAsync(plan)"><i class="bi bi-check-circle me-1"></i>Salvar</button>
+                                <button id="plan-save-@plan.Code" type="button" class="btn btn-sm btn-primary" @onclick="() => SaveAsync(plan)"><i class="bi bi-check-circle me-1"></i>Salvar</button>
                             }
                         </td>
                     </tr>

@@ -1,4 +1,6 @@
-﻿<div class="card border-0 shadow-sm mb-3">
+﻿@using Ofertio.Business.Service.Common
+
+<div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-white border-0 pt-3 px-3">
         <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" @onclick="Toggle">
             @(IsExpanded ? "Ocultar" : "Nova campanha")
@@ -11,30 +13,34 @@
                 <DataAnnotationsValidator />
                 <div class="row g-2">
                     <div class="col-12 col-md-4">
-                        <label class="form-label small">Nome</label>
-                        <InputText class="form-control form-control-sm" @bind-Value="Model.Name" />
+                        <label class="form-label small" for="campaign-name">Nome</label>
+                        <InputText id="campaign-name" class="form-control form-control-sm" @bind-Value="Model.Name" />
                     </div>
                     <div class="col-12 col-md-4">
-                        <label class="form-label small">Descrição</label>
-                        <InputText class="form-control form-control-sm" @bind-Value="Model.Description" />
+                        <label class="form-label small" for="campaign-description">Descrição</label>
+                        <InputText id="campaign-description" class="form-control form-control-sm" @bind-Value="Model.Description" />
                     </div>
                     <div class="col-12 col-sm-6 col-md-2">
-                        <label class="form-label small">Orçamento</label>
-                        <InputNumber class="form-control form-control-sm" @bind-Value="Model.Budget" />
+                        <label class="form-label small" for="campaign-budget">Orçamento</label>
+                        <input id="campaign-budget" inputmode="decimal" autocomplete="off" class="form-control form-control-sm" @bind="_budgetText" @bind:event="oninput" />
                     </div>
                     <div class="col-12 col-sm-6 col-md-2">
-                        <label class="form-label small">Início</label>
-                        <InputDate class="form-control form-control-sm" @bind-Value="Model.StartDate" />
+                        <label class="form-label small" for="campaign-start">Início</label>
+                        <InputDate id="campaign-start" class="form-control form-control-sm" @bind-Value="Model.StartDate" />
                     </div>
                     <div class="col-12 col-sm-6 col-md-2">
-                        <label class="form-label small">Fim</label>
-                        <InputDate class="form-control form-control-sm" @bind-Value="Model.EndDate" />
+                        <label class="form-label small" for="campaign-end">Fim</label>
+                        <InputDate id="campaign-end" class="form-control form-control-sm" @bind-Value="Model.EndDate" />
                     </div>
                     <div class="col-12 col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100 btn-touch" disabled="@IsBusy">Salvar</button>
+                        <button id="campaign-save" type="submit" class="btn btn-success w-100 btn-touch" disabled="@IsBusy">Salvar</button>
                     </div>
                 </div>
-                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                @if (!string.IsNullOrWhiteSpace(_budgetError))
+                {
+                    <p class="small mt-2 mb-0 text-danger" role="alert">@_budgetError</p>
+                }
+                else if (!string.IsNullOrWhiteSpace(StatusMessage))
                 {
                     <p class="small mt-2 mb-0 @(IsSuccess ? "text-success" : "text-danger")">@StatusMessage</p>
                 }
@@ -57,7 +63,35 @@
 
     private bool IsExpanded { get; set; }
 
+    private string _budgetText = string.Empty;
+
+    private string? _budgetError;
+
+    private bool _sawBusy;
+
+    protected override void OnParametersSet()
+    {
+        if (_sawBusy && !IsBusy && IsSuccess)
+        {
+            _budgetText = string.Empty;
+            _budgetError = null;
+        }
+
+        _sawBusy = IsBusy;
+    }
+
     private void Toggle() => IsExpanded = !IsExpanded;
 
-    private Task HandleSubmit() => OnSubmit.InvokeAsync();
+    private Task HandleSubmit()
+    {
+        if (!MoneyAmountRules.TryParse(_budgetText, out var budget))
+        {
+            _budgetError = MoneyAmountRules.InvalidBudgetMessage;
+            return Task.CompletedTask;
+        }
+
+        _budgetError = null;
+        Model.Budget = budget;
+        return OnSubmit.InvokeAsync();
+    }
 }

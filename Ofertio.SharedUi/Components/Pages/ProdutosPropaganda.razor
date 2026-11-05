@@ -1,8 +1,10 @@
 ﻿@page "/propaganda/produtos"
 @page "/produtos-propaganda"
 @attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using System.Globalization
 @using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Common
 @using Ofertio.Core.Entities
 @using Ofertio.Core.Enums
 @using Ofertio.SharedUi.Services.Advertising
@@ -17,7 +19,7 @@
             <h1 class="h3 fw-bold mb-1">Produtos de propaganda</h1>
             <p class="text-muted small mb-0">Catálogo global com links Shopee e TikTok Shop parametrizados.</p>
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-touch" @onclick="ToggleForm">
+        <button id="propaganda-toggle-form" type="button" class="btn btn-outline-secondary btn-touch" @onclick="ToggleForm">
             @(_showForm ? "Fechar formulário" : "Novo produto")
         </button>
     </div>
@@ -34,49 +36,49 @@
                 <h2 class="h6 fw-semibold mb-3">Cadastro</h2>
                 <div class="row g-3 propaganda-form-grid">
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small fw-semibold">Nome amigável</label>
-                        <input class="form-control btn-touch" @bind="_form.FriendlyName" />
+                        <label class="form-label small fw-semibold" for="propaganda-nome">Nome amigável</label>
+                        <input id="propaganda-nome" class="form-control btn-touch" @bind="_form.FriendlyName" />
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small fw-semibold">Categoria global</label>
-                        <input class="form-control btn-touch" @bind="_form.GlobalCategory" placeholder="Beleza, Tech..." />
+                        <label class="form-label small fw-semibold" for="propaganda-categoria">Categoria global</label>
+                        <input id="propaganda-categoria" class="form-control btn-touch" @bind="_form.GlobalCategory" placeholder="Beleza, Tech..." />
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small fw-semibold">Preço médio (R$)</label>
-                        <input type="number" step="0.01" min="0" class="form-control btn-touch" @bind="_form.AveragePrice" />
+                        <label class="form-label small fw-semibold" for="propaganda-preco">Preço médio (R$)</label>
+                        <input id="propaganda-preco" inputmode="decimal" autocomplete="off" class="form-control btn-touch" @bind="_averagePriceText" @bind:event="oninput" />
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small fw-semibold">URL imagem principal</label>
-                        <input class="form-control btn-touch" @bind="_form.MainImageUrl" placeholder="https://..." />
+                        <label class="form-label small fw-semibold" for="propaganda-imagem">URL imagem principal</label>
+                        <input id="propaganda-imagem" class="form-control btn-touch" @bind="_form.MainImageUrl" placeholder="https://..." />
                     </div>
                     <div class="col-12">
-                        <label class="form-label small fw-semibold">Descrição</label>
-                        <textarea class="form-control btn-touch" rows="3" @bind="_form.Description"></textarea>
+                        <label class="form-label small fw-semibold" for="propaganda-descricao">Descrição</label>
+                        <textarea id="propaganda-descricao" class="form-control btn-touch" rows="3" @bind="_form.Description"></textarea>
                     </div>
                     <div class="col-12">
                         <h3 class="h6 fw-semibold mt-2">Shopee</h3>
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small">URL produto Shopee</label>
-                        <input class="form-control btn-touch" @bind="_shopeeUrl" placeholder="https://shopee..." />
+                        <label class="form-label small" for="propaganda-shopee-url">URL produto Shopee</label>
+                        <input id="propaganda-shopee-url" class="form-control btn-touch" @bind="_shopeeUrl" placeholder="https://shopee..." />
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small">ID produto / sub-id campanha</label>
-                        <input class="form-control btn-touch" @bind="_shopeeProductId" placeholder="item_id ou JSON tracking" />
+                        <label class="form-label small" for="propaganda-shopee-id">ID produto / sub-id campanha</label>
+                        <input id="propaganda-shopee-id" class="form-control btn-touch" @bind="_shopeeProductId" placeholder="item_id ou JSON tracking" />
                     </div>
                     <div class="col-12">
                         <h3 class="h6 fw-semibold mt-2">TikTok Shop</h3>
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small">URL produto TikTok</label>
-                        <input class="form-control btn-touch" @bind="_tikTokUrl" placeholder="https://..." />
+                        <label class="form-label small" for="propaganda-tiktok-url">URL produto TikTok</label>
+                        <input id="propaganda-tiktok-url" class="form-control btn-touch" @bind="_tikTokUrl" placeholder="https://..." />
                     </div>
                     <div class="col-12 col-lg-6">
-                        <label class="form-label small">ID produto / sub-id campanha</label>
-                        <input class="form-control btn-touch" @bind="_tikTokProductId" />
+                        <label class="form-label small" for="propaganda-tiktok-id">ID produto / sub-id campanha</label>
+                        <input id="propaganda-tiktok-id" class="form-control btn-touch" @bind="_tikTokProductId" />
                     </div>
                     <div class="col-12">
-                        <button type="button" class="btn btn-primary btn-touch w-100 w-md-auto" disabled="@_saving" @onclick="SaveAsync">
+                        <button id="propaganda-salvar" type="button" class="btn btn-primary btn-touch w-100 w-md-auto" disabled="@_saving" @onclick="SaveAsync">
                             @(_saving ? "A guardar…" : "Salvar produto global")
                         </button>
                     </div>
@@ -156,6 +158,7 @@
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
 
     private readonly GlobalAdvertisingProductDto _form = new();
+    private string _averagePriceText = string.Empty;
     private string _shopeeUrl = string.Empty;
     private string _shopeeProductId = string.Empty;
     private string _tikTokUrl = string.Empty;
@@ -197,6 +200,14 @@
     {
         _saving = true;
         _errorMessage = null;
+        if (!MoneyAmountRules.TryParse(_averagePriceText, out var price))
+        {
+            _saving = false;
+            _errorMessage = MoneyAmountRules.InvalidPriceMessage;
+            return;
+        }
+
+        _form.AveragePrice = price;
         _form.MarketplaceLinks = [];
 
         if (!string.IsNullOrWhiteSpace(_shopeeUrl))
@@ -235,6 +246,7 @@
         _form.GlobalCategory = string.Empty;
         _form.MainImageUrl = null;
         _form.AveragePrice = 0;
+        _averagePriceText = string.Empty;
         _shopeeUrl = _shopeeProductId = _tikTokUrl = _tikTokProductId = string.Empty;
         _showForm = false;
         await LoadAsync();

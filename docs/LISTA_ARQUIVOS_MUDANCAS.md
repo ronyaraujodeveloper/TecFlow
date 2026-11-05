@@ -2087,3 +2087,54 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Components/Pages/Legal/PoliticaSeguranca.razor** (novo) — Política de Segurança da Informação exigida pelo questionário do TikTok Partner Center; item 5.1 com a classificação da informação (Pública, Interna, Confidencial e Restrita), sem renumerar os demais itens citados no questionário.
 - [x] **Ofertio.SharedUi/Components/Pages/Home.razor** e **wwwroot/app.css** — links para os três documentos na tela de login e estilos `.legal-*`.
 - [x] **Ofertio.Tests/Unit/SharedUi/LegalPagesTests.cs** (novo) — páginas sem login (`[AllowAnonymous]`), rota e layout esperados.
+
+### RpaE2E - Plano de testes pela tela (nov/2026)
+
+- [x] **docs/PLANO_RPA.md** (novo) — fases 1 a 9 do robô Playwright (ids, regras de campo, projeto, fumaça, piloto numérico, conta, master, catálogo e o que fica fora). A fase 1 permanece aberta.
+- [x] **docs/CHECKLIST_ATIVO.md** — seção `RpaE2E` com a fase 1 em aberto (convenção e ondas A, B e C). A onda A está concluída.
+- [x] **Ofertio.SharedUi/Components/Pages/ProdutosPropaganda.razor** — ids `propaganda-*` nos 9 campos e nos botões de abrir o formulário e salvar, com `<label for>`.
+- [x] **Ofertio.SharedUi/Components/Dashboard/CampaignCreateForm.razor** — ids `campaign-name`, `campaign-description`, `campaign-budget`, `campaign-start`, `campaign-end` e `campaign-save`, com `<label for>`.
+- [x] **docs/rules/frontend-ui.md** — seção "Ids estáveis para testes pela tela" (`{tela}-{campo}`, chave na linha repetida, `<label for>`, botão repetido com id).
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterOperators.razor** — `operator-name`, `operator-email`, `operator-role`, `operator-password`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterPlans.razor** — `plan-name|monthly|annual|stores|vip|schedules|radar|active|save-{code}`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterTenants.razor** — `tenant-search`, `tenant-status`, `tenant-plan`, `tenant-renewal`, `tenant-disk`, `tenant-action`, `tenant-trial-days`, `tenant-reason`, `tenant-plan-code`, `tenant-cycle`, `tenant-credits`, `tenant-credits-reason`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterAudit.razor** — `audit-action`, `audit-actor`, `audit-from`, `audit-to`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterDeveloperAccounts.razor** — `dev-*` no formulário, mantendo `dev-active`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterCommunication.razor** — `banner-*`, `comm-*` e `changelog-*`, mantendo `banner-active` e `changelog-published`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterSettings.razor** — `vault-{chave}` e `vault-show-{chave}`.
+- [x] **Ofertio.SharedUi/Components/Pages/Inteligencia/EstudioMidia.razor** — `studio-image`, `studio-page`.
+- [x] **Ofertio.SharedUi/Components/LinkGenerator/HistoricoLinks.razor** — nome e preço no cartão e na tabela, com o id do link.
+- [x] **Ofertio.SharedUi/Components/LinkGenerator/LinkGeneratorResultPanel.razor** — `generated-product-name`, `generated-product-price`.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterMenuPermissions.razor** — `menu-active-{id}` e `menu-plan-{id}-{plano}`.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 1 fechada; a fase 2 ficou aberta no checklist.
+- [x] **Ofertio.Business/Service/Common/MoneyAmountRules.cs** (novo) — faixa 0 a 1.000.000,00, parse pt-BR/ponto e matriz `Samples`.
+- [x] **Ofertio.Business/Dto/NewCampaignDto.cs** — `[Range]` no orçamento; nome continua obrigatório com no máximo 100 caracteres.
+- [x] **Ofertio.Infrastructure.Services/Advertising/AdvertisingProductService.cs** — recusa preço médio fora da faixa antes de gravar.
+- [x] **Ofertio.API/Controllers/CampaignsController.cs** — recusa orçamento fora da faixa no criar e no alterar.
+- [x] **Ofertio.Tests/Unit/Common/MoneyAmountRulesTests.cs** (novo), **AdvertisingProductServiceTests.cs** e **Ofertio.Tests/Unit/Controllers/CampaignsControllerBudgetTests.cs** (novo).
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 2 fechada; a fase 3 ficou aberta no checklist.
+- [x] **Ofertio.E2E/Ofertio.E2E.csproj** (novo) — xUnit + Playwright, User Secrets, fora do `Ofertio.Tests`.
+- [x] **Ofertio.E2E/E2ESettings.cs**, **PortalSession.cs**, **PortalLoginTests.cs**, **RequiresE2EFactAttribute.cs** (novos) — login único, locale pt-BR e prefixo `E2E-`.
+- [x] **Ofertio.E2E/appsettings.example.json** (novo) — chaves sem senha. **.gitignore** — `Ofertio.E2E/appsettings.json`.
+- [x] **README.md** — comandos do robô, separados do `dotnet test` unitário.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 3 fechada; a fase 4 ficou aberta no checklist.
+- [x] **Ofertio.E2E/SmokeRoutes.cs** e **MenuSmokeTests.cs** (novos) — fumaça das seis telas internas e do master quando a rota permanece.
+- [x] **Ofertio.E2E/PortalSession.cs** — `ExpectHeadingAsync` e `ExpectMasterHeadingWhenAllowedAsync`, sem gravar dado.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 4 fechada; a fase 5 ficou aberta no checklist.
+- [x] **Ofertio.SharedUi/Components/Pages/ProdutosPropaganda.razor** — preço em texto (`89,90`, letra, negativo) e render interativo.
+- [x] **Ofertio.SharedUi/Components/Dashboard/CampaignCreateForm.razor** — orçamento em texto, com a mesma regra, antes de gravar.
+- [x] **Ofertio.E2E/MoneyPilot.cs** e **PricePilotTests.cs** (novos) — piloto reutiliza `89,90`, `abc` e `-1` de `MoneyAmountRules.Samples`.
+- [x] **Ofertio.E2E/Ofertio.E2E.csproj** — referência a `Ofertio.Business` para a matriz de valores.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 5 fechada; a fase 6 ficou aberta no checklist.
+- [x] **Ofertio.E2E/AccountPilot.cs** e **AccountFlowTests.cs** (novos) — cadastro, recuperação, meus dados, senha e cartão de teste, sem cobrança real.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 6 fechada; a fase 7 ficou aberta no checklist.
+- [x] **Ofertio.E2E/MasterPilot.cs** e **MasterFlowTests.cs** (novos) — operador `E2E-` desativado, plano restaurado e filtros só de leitura.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 7 fechada; a fase 8 ficou aberta no checklist.
+- [x] **Ofertio.E2E/CatalogPilot.cs** e **CatalogFlowTests.cs** (novos) — faixa de preço, busca rápida dos grupos e gerador sem OAuth.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 8 fechada; a fase 9 ficou aberta no checklist.
+- [x] **Ofertio.E2E/RobotBoundary.cs** e **RobotBoundaryTests.cs** (novos) — o robô não cita autorização ao vivo, QR, código de bot, webhook nem cobrança ASAAS.
+- [x] **scripts/carga-homolog-rpa.sql** (novo) — 200 campanhas e 200 produtos `CARGA-`; limpeza só do prefixo `E2E-`, desligada por padrão.
+- [x] **docs/HISTORICO_FASES_CONCLUIDAS.md** / **docs/CHECKLIST_ATIVO.md** / **docs/PLANO_RPA.md** — fase 9 fechada. O plano do robô não tem fase aberta.
+- [x] **README.md** — o script de carga fica ao lado do comando do robô.
+- [x] **README.md** — a regra de ouro de UI aponta para o `id` estável do campo.
+- [x] **README.md** — link do plano na documentação de apoio.

@@ -144,7 +144,9 @@
                             }
                             else
                             {
-                                <input type="text"
+                                <label class="visually-hidden" for="history-name-card-@item.AffiliateLinkId">Nome do produto</label>
+                                <input id="history-name-card-@item.AffiliateLinkId"
+                                       type="text"
                                        class="form-control form-control-sm mb-1"
                                        placeholder="Digite o nome do produto..."
                                        value="@GetNameDraft(item)"
@@ -158,7 +160,9 @@
                             {
                                 <div class="input-group input-group-sm mb-2" style="max-width: 160px;">
                                     <span class="input-group-text">R$</span>
-                                    <input type="number"
+                                    <label class="visually-hidden" for="history-price-card-@item.AffiliateLinkId">Preço do produto</label>
+                                    <input id="history-price-card-@item.AffiliateLinkId"
+                                           type="number"
                                            class="form-control"
                                            placeholder="0,00"
                                            min="0"
@@ -257,7 +261,9 @@
                                     }
                                     else if (item is not null)
                                     {
-                                        <input type="text"
+                                        <label class="visually-hidden" for="history-name-table-@item.AffiliateLinkId">Nome do produto</label>
+                                        <input id="history-name-table-@item.AffiliateLinkId"
+                                               type="text"
                                                class="form-control form-control-sm"
                                                placeholder="Digite o nome do produto..."
                                                value="@GetNameDraft(item)"
@@ -275,7 +281,9 @@
                                     {
                                         <div class="input-group input-group-sm" style="max-width: 140px;">
                                             <span class="input-group-text">R$</span>
-                                            <input type="number"
+                                            <label class="visually-hidden" for="history-price-table-@item.AffiliateLinkId">Preço do produto</label>
+                                            <input id="history-price-table-@item.AffiliateLinkId"
+                                                   type="number"
                                                    class="form-control"
                                                    placeholder="0,00"
                                                    min="0"

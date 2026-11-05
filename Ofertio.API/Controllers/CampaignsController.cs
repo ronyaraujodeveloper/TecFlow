@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Repositories;
+using Ofertio.Business.Service.Common;
 using Ofertio.Core.Entities;
 using Ofertio.Database.Filter;
 using Ofertio.Database.Pagin;
@@ -59,6 +60,10 @@ public class CampaignsController : ControllerBase
     public async Task<ActionResult<CampaignResponseDto>> CreateAsync([FromBody] CampaignDto dto)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        if (RejectBudget(dto.Budget) is { } invalidBudget)
+        {
+            return invalidBudget;
+        }
 
         var campaign = new Campaign
         {
@@ -99,6 +104,11 @@ public class CampaignsController : ControllerBase
             return Forbid();
         }
 
+        if (RejectBudget(dto.Budget) is { } invalidBudget)
+        {
+            return invalidBudget;
+        }
+
         campaign.Name = dto.Name;
         campaign.Description = dto.Description;
         campaign.Budget = dto.Budget;
@@ -109,6 +119,11 @@ public class CampaignsController : ControllerBase
         await _campaignRepository.UpdateAsync(campaign);
         return Ok(new CampaignResponseDto { Status = true, Descricao = "Atualizada com sucesso.", Data = campaign });
     }
+
+    private BadRequestObjectResult? RejectBudget(decimal budget) =>
+        MoneyAmountRules.IsAllowed(budget)
+            ? null
+            : BadRequest(new CampaignResponseDto { Status = false, Descricao = MoneyAmountRules.InvalidBudgetMessage });
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteAsync(int id)

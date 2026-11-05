@@ -21,17 +21,24 @@
                 <div class="card-header fw-semibold">Avisos globais (banners)</div>
                 <div class="card-body">
                     <div class="row g-2 mb-3">
-                        <div class="col-8"><input class="form-control form-control-sm" placeholder="Título" @bind="_banner.Title" /></div>
+                        <div class="col-8">
+                            <label class="visually-hidden" for="banner-title">Título do aviso</label>
+                            <input id="banner-title" class="form-control form-control-sm" placeholder="Título" @bind="_banner.Title" />
+                        </div>
                         <div class="col-4">
-                            <select class="form-select form-select-sm" @bind="_banner.Severity">
+                            <label class="visually-hidden" for="banner-severity">Gravidade do aviso</label>
+                            <select id="banner-severity" class="form-select form-select-sm" @bind="_banner.Severity">
                                 <option value="info">Informativo</option>
                                 <option value="warning">Atenção</option>
                                 <option value="maintenance">Manutenção</option>
                             </select>
                         </div>
-                        <div class="col-12"><textarea class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_banner.Message"></textarea></div>
-                        <div class="col-6"><label class="form-label small mb-0">Início</label><input type="datetime-local" class="form-control form-control-sm" @bind="_banner.StartsAt" /></div>
-                        <div class="col-6"><label class="form-label small mb-0">Fim (opcional)</label><input type="datetime-local" class="form-control form-control-sm" @bind="_banner.EndsAt" /></div>
+                        <div class="col-12">
+                            <label class="visually-hidden" for="banner-message">Mensagem do aviso</label>
+                            <textarea id="banner-message" class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_banner.Message"></textarea>
+                        </div>
+                        <div class="col-6"><label class="form-label small mb-0" for="banner-start">Início</label><input id="banner-start" type="datetime-local" class="form-control form-control-sm" @bind="_banner.StartsAt" /></div>
+                        <div class="col-6"><label class="form-label small mb-0" for="banner-end">Fim (opcional)</label><input id="banner-end" type="datetime-local" class="form-control form-control-sm" @bind="_banner.EndsAt" /></div>
                         <div class="col-12 d-flex gap-2 align-items-center">
                             <div class="form-check me-auto">
                                 <input type="checkbox" class="form-check-input" id="banner-active" @bind="_banner.IsActive" />
@@ -69,7 +76,8 @@
                 <div class="card-header fw-semibold">Notificação segmentada</div>
                 <div class="card-body row g-2">
                     <div class="col-6">
-                        <select class="form-select form-select-sm" @bind="_segmentKind">
+                        <label class="visually-hidden" for="comm-segment-kind">Segmento da notificação</label>
+                        <select id="comm-segment-kind" class="form-select form-select-sm" @bind="_segmentKind">
                             <option value="todos">Todos os inquilinos</option>
                             <option value="status">Por status</option>
                             <option value="plano">Por plano</option>
@@ -79,7 +87,8 @@
                     <div class="col-6">
                         @if (_segmentKind == "status")
                         {
-                            <select class="form-select form-select-sm" @bind="_segmentValue">
+                            <label class="visually-hidden" for="comm-segment-value">Valor do segmento</label>
+                            <select id="comm-segment-value" class="form-select form-select-sm" @bind="_segmentValue">
                                 @foreach (var status in TenantStatuses.All)
                                 {
                                     <option value="@status">@status</option>
@@ -88,7 +97,8 @@
                         }
                         else if (_segmentKind == "plano")
                         {
-                            <select class="form-select form-select-sm" @bind="_segmentValue">
+                            <label class="visually-hidden" for="comm-segment-value">Valor do segmento</label>
+                            <select id="comm-segment-value" class="form-select form-select-sm" @bind="_segmentValue">
                                 @foreach (var plan in SaasPlanCodes.All)
                                 {
                                     <option value="@plan">@plan</option>
@@ -97,11 +107,18 @@
                         }
                         else if (_segmentKind == "tenant")
                         {
-                            <input class="form-control form-control-sm" placeholder="GUID do tenant" @bind="_segmentValue" />
+                            <label class="visually-hidden" for="comm-segment-value">Valor do segmento</label>
+                            <input id="comm-segment-value" class="form-control form-control-sm" placeholder="GUID do tenant" @bind="_segmentValue" />
                         }
                     </div>
-                    <div class="col-12"><input class="form-control form-control-sm" placeholder="Título" @bind="_notification.Title" /></div>
-                    <div class="col-12"><textarea class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_notification.Message"></textarea></div>
+                    <div class="col-12">
+                        <label class="visually-hidden" for="comm-title">Título da notificação</label>
+                        <input id="comm-title" class="form-control form-control-sm" placeholder="Título" @bind="_notification.Title" />
+                    </div>
+                    <div class="col-12">
+                        <label class="visually-hidden" for="comm-message">Mensagem da notificação</label>
+                        <textarea id="comm-message" class="form-control form-control-sm" rows="2" placeholder="Mensagem" @bind="_notification.Message"></textarea>
+                    </div>
                     <div class="col-12 text-end"><button type="button" class="btn btn-sm btn-primary" @onclick="NotifyAsync">Enviar notificação</button></div>
                 </div>
             </div>
@@ -110,9 +127,18 @@
                 <div class="card-header fw-semibold">Changelog / O que há de novo</div>
                 <div class="card-body">
                     <div class="row g-2 mb-3">
-                        <div class="col-4"><input class="form-control form-control-sm" placeholder="Versão" @bind="_changelog.Version" /></div>
-                        <div class="col-8"><input class="form-control form-control-sm" placeholder="Título" @bind="_changelog.Title" /></div>
-                        <div class="col-12"><textarea class="form-control form-control-sm" rows="3" placeholder="Descrição (uma novidade por linha)" @bind="_changelog.Body"></textarea></div>
+                        <div class="col-4">
+                            <label class="visually-hidden" for="changelog-version">Versão</label>
+                            <input id="changelog-version" class="form-control form-control-sm" placeholder="Versão" @bind="_changelog.Version" />
+                        </div>
+                        <div class="col-8">
+                            <label class="visually-hidden" for="changelog-title">Título da novidade</label>
+                            <input id="changelog-title" class="form-control form-control-sm" placeholder="Título" @bind="_changelog.Title" />
+                        </div>
+                        <div class="col-12">
+                            <label class="visually-hidden" for="changelog-body">Descrição da novidade</label>
+                            <textarea id="changelog-body" class="form-control form-control-sm" rows="3" placeholder="Descrição (uma novidade por linha)" @bind="_changelog.Body"></textarea>
+                        </div>
                         <div class="col-12 d-flex gap-2 align-items-center">
                             <div class="form-check me-auto">
                                 <input type="checkbox" class="form-check-input" id="changelog-published" @bind="_changelog.IsPublished" />

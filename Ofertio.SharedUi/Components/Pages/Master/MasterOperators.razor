@@ -23,16 +23,16 @@
                 <h2 class="h6 fw-semibold mb-3">@(_editingId is null ? "Novo operador" : "Editar operador")</h2>
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-md-3">
-                        <label class="form-label small mb-1">Nome</label>
-                        <input class="form-control" @bind="_form.Name" />
+                        <label class="form-label small mb-1" for="operator-name">Nome</label>
+                        <input id="operator-name" class="form-control" @bind="_form.Name" />
                     </div>
                     <div class="col-12 col-md-3">
-                        <label class="form-label small mb-1">E-mail</label>
-                        <input type="email" class="form-control" @bind="_form.Email" />
+                        <label class="form-label small mb-1" for="operator-email">E-mail</label>
+                        <input id="operator-email" type="email" class="form-control" @bind="_form.Email" />
                     </div>
                     <div class="col-6 col-md-2">
-                        <label class="form-label small mb-1">Papel</label>
-                        <select class="form-select" @bind="_form.Role">
+                        <label class="form-label small mb-1" for="operator-role">Papel</label>
+                        <select id="operator-role" class="form-select" @bind="_form.Role">
                             @foreach (var role in MasterRoles.MasterRoleList)
                             {
                                 <option value="@role">@MasterRoles.Label(role)</option>
@@ -40,8 +40,8 @@
                         </select>
                     </div>
                     <div class="col-6 col-md-2">
-                        <label class="form-label small mb-1">Senha @(_editingId is null ? string.Empty : "(opcional)")</label>
-                        <input type="password" class="form-control" autocomplete="new-password" @bind="_form.Password" />
+                        <label class="form-label small mb-1" for="operator-password">Senha @(_editingId is null ? string.Empty : "(opcional)")</label>
+                        <input id="operator-password" type="password" class="form-control" autocomplete="new-password" @bind="_form.Password" />
                     </div>
                     <div class="col-12 col-md-2 d-flex gap-2">
                         <button type="button" class="btn btn-primary flex-grow-1" @onclick="SaveAsync">Salvar</button>

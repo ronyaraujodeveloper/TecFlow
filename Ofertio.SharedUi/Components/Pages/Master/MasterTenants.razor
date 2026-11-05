@@ -18,12 +18,12 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body row g-2 align-items-end">
             <div class="col-12 col-md-3">
-                <label class="form-label small mb-1">Buscar</label>
-                <input class="form-control" placeholder="Nome ou e-mail" @bind="_query.Search" />
+                <label class="form-label small mb-1" for="tenant-search">Buscar</label>
+                <input id="tenant-search" class="form-control" placeholder="Nome ou e-mail" @bind="_query.Search" />
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">Status</label>
-                <select class="form-select" @bind="_query.Status">
+                <label class="form-label small mb-1" for="tenant-status">Status</label>
+                <select id="tenant-status" class="form-select" @bind="_query.Status">
                     <option value="">Todos</option>
                     @foreach (var status in TenantStatuses.All)
                     {
@@ -32,8 +32,8 @@
                 </select>
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">Plano</label>
-                <select class="form-select" @bind="_query.Plan">
+                <label class="form-label small mb-1" for="tenant-plan">Plano</label>
+                <select id="tenant-plan" class="form-select" @bind="_query.Plan">
                     <option value="">Todos</option>
                     @foreach (var plan in SaasPlanCodes.All)
                     {
@@ -42,12 +42,12 @@
                 </select>
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">Renova até</label>
-                <input type="date" class="form-control" @bind="_query.RenewalBefore" />
+                <label class="form-label small mb-1" for="tenant-renewal">Renova até</label>
+                <input id="tenant-renewal" type="date" class="form-control" @bind="_query.RenewalBefore" />
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">Disco mínimo (MB)</label>
-                <input type="number" min="0" class="form-control" @bind="_minDiskMb" />
+                <label class="form-label small mb-1" for="tenant-disk">Disco mínimo (MB)</label>
+                <input id="tenant-disk" type="number" min="0" class="form-control" @bind="_minDiskMb" />
             </div>
             <div class="col-12 col-md-1 d-grid">
                 <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="LoadAsync">Filtrar</button>
@@ -120,7 +120,8 @@
                         <h2 class="h6 fw-semibold">Ciclo de vida</h2>
                         <div class="row g-2">
                             <div class="col-6">
-                                <select class="form-select form-select-sm" @bind="_lifecycle.Action">
+                                <label class="visually-hidden" for="tenant-action">Ação do ciclo de vida</label>
+                                <select id="tenant-action" class="form-select form-select-sm" @bind="_lifecycle.Action">
                                     <option value="">Selecione a ação</option>
                                     <option value="@TenantLifecycleActions.Pausar">Pausar</option>
                                     <option value="@TenantLifecycleActions.Suspender">Suspender</option>
@@ -133,11 +134,13 @@
                             <div class="col-6">
                                 @if (_lifecycle.Action == TenantLifecycleActions.EstenderTrial)
                                 {
-                                    <input type="number" min="1" max="90" class="form-control form-control-sm" placeholder="Dias" @bind="_lifecycle.TrialDays" />
+                                    <label class="visually-hidden" for="tenant-trial-days">Dias de trial</label>
+                                    <input id="tenant-trial-days" type="number" min="1" max="90" class="form-control form-control-sm" placeholder="Dias" @bind="_lifecycle.TrialDays" />
                                 }
                             </div>
                             <div class="col-12">
-                                <textarea class="form-control form-control-sm" rows="2" placeholder="Motivo (obrigatório para pausar, suspender e cancelar)" @bind="_lifecycle.Reason"></textarea>
+                                <label class="visually-hidden" for="tenant-reason">Motivo da ação</label>
+                                <textarea id="tenant-reason" class="form-control form-control-sm" rows="2" placeholder="Motivo (obrigatório para pausar, suspender e cancelar)" @bind="_lifecycle.Reason"></textarea>
                             </div>
                             <div class="col-12">
                                 <button type="button" class="btn btn-sm btn-danger" disabled="@string.IsNullOrEmpty(_lifecycle.Action)" @onclick="ApplyLifecycleAsync">Aplicar ação</button>
@@ -152,7 +155,8 @@
                         <h2 class="h6 fw-semibold">Plano e assinatura</h2>
                         <div class="row g-2">
                             <div class="col-6">
-                                <select class="form-select form-select-sm" @bind="_plan.PlanCode">
+                                <label class="visually-hidden" for="tenant-plan-code">Plano do inquilino</label>
+                                <select id="tenant-plan-code" class="form-select form-select-sm" @bind="_plan.PlanCode">
                                     @foreach (var plan in SaasPlanCodes.All)
                                     {
                                         <option value="@plan">@plan</option>
@@ -160,7 +164,8 @@
                                 </select>
                             </div>
                             <div class="col-6">
-                                <select class="form-select form-select-sm" @bind="_plan.BillingCycle">
+                                <label class="visually-hidden" for="tenant-cycle">Ciclo de cobrança</label>
+                                <select id="tenant-cycle" class="form-select form-select-sm" @bind="_plan.BillingCycle">
                                     <option value="@SaasMetricsRules.CycleMonthly">Mensal</option>
                                     <option value="@SaasMetricsRules.CycleAnnual">Anual</option>
                                 </select>
@@ -184,10 +189,12 @@
                         <h2 class="h6 fw-semibold">Créditos de Achadinhos (saldo: @_selected.CreditBalance)</h2>
                         <div class="row g-2">
                             <div class="col-4">
-                                <input type="number" class="form-control form-control-sm" placeholder="+/- créditos" @bind="_credits.Amount" />
+                                <label class="visually-hidden" for="tenant-credits">Quantidade de créditos</label>
+                                <input id="tenant-credits" type="number" class="form-control form-control-sm" placeholder="+/- créditos" @bind="_credits.Amount" />
                             </div>
                             <div class="col-8">
-                                <input class="form-control form-control-sm" placeholder="Motivo (ex.: cortesia, compensação)" @bind="_credits.Reason" />
+                                <label class="visually-hidden" for="tenant-credits-reason">Motivo do ajuste de créditos</label>
+                                <input id="tenant-credits-reason" class="form-control form-control-sm" placeholder="Motivo (ex.: cortesia, compensação)" @bind="_credits.Reason" />
                             </div>
                             <div class="col-12">
                                 <button type="button" class="btn btn-sm btn-outline-primary" disabled="@(_credits.Amount == 0)" @onclick="AdjustCreditsAsync">Lançar ajuste</button>

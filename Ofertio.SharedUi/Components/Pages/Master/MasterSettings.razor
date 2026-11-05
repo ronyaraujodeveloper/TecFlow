@@ -62,7 +62,7 @@
                 @foreach (var item in group)
                 {
                     <div class="col-12 col-md-6">
-                        <label class="form-label small mb-1">
+                        <label class="form-label small mb-1" for="@VaultFieldId(item.Key)">
                             @item.Label
                             @if (item.IsSecret)
                             {
@@ -70,7 +70,8 @@
                             }
                         </label>
                         <div class="input-group">
-                            <input type="@(item.IsSecret && !IsSecretVisible(item.Key) ? "password" : "text")"
+                            <input id="@VaultFieldId(item.Key)"
+                                   type="@(item.IsSecret && !IsSecretVisible(item.Key) ? "password" : "text")"
                                    class="form-control @(IsChanged(item.Key) ? "border-warning" : null)"
                                    autocomplete="@(item.IsSecret ? "new-password" : "off")"
                                    spellcheck="false"
@@ -82,7 +83,8 @@
                             @if (item.IsSecret)
                             {
                                 var visible = IsSecretVisible(item.Key);
-                                <button type="button"
+                                <button id="@VaultToggleId(item.Key)"
+                                        type="button"
                                         class="btn btn-outline-secondary"
                                         title="@(visible ? "Ocultar chave" : "Mostrar chave")"
                                         aria-label="@(visible ? "Ocultar chave" : "Mostrar chave")"
@@ -167,6 +169,16 @@
     private async Task RestartAsync()
     {
         AcceptOperation(await Api.RestartApiAsync());
+    }
+
+    private static string VaultFieldId(string key) => "vault-" + VaultToken(key);
+
+    private static string VaultToggleId(string key) => "vault-show-" + VaultToken(key);
+
+    private static string VaultToken(string key)
+    {
+        var chars = key.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        return new string(chars).Trim('-');
     }
 
     private async Task CheckKeysAsync()

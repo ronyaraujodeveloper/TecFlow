@@ -1120,6 +1120,85 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 
 ---
 
+### 🤖 Fase RPA 1: Ids estáveis para o robô (`RpaTestIds`)
+
+- [x] **1.1. Convenção:**
+  - Regra permanente na seção "Ids estáveis para testes pela tela" de `docs/rules/frontend-ui.md`: `{tela}-{campo}`, chave na linha repetida, `<label for>` igual ao `id`, botão de texto único no nome acessível e botão repetido com `id`.
+- [x] **1.2. Inventário preservado:**
+  - Nenhum id já publicado foi renomeado (`portal-email`, `register-*`, `profile-*`, `card-*`, `busca-min`, `wa-*`, `tg-*`, `product-url`, `friendly-name` e os demais do plano).
+- [x] **1.3. Onda A:**
+  - `ProdutosPropaganda.razor` com `propaganda-*` e `CampaignCreateForm.razor` com `campaign-*`.
+- [x] **1.4. Onda B — Master:**
+  - Operadores (`operator-*`), planos (`plan-*-{code}`, inclusive `plan-save-{code}`), inquilinos (`tenant-*`), auditoria (`audit-*`), contas de teste (`dev-*`, mantendo `dev-active`), comunicação (`banner-*`, `comm-*`, `changelog-*`, mantendo `banner-active` e `changelog-published`) e cofre (`vault-{chave}` / `vault-show-{chave}`).
+- [x] **1.5. Onda C:**
+  - Estúdio (`studio-image`, `studio-page`), histórico de links (`history-name|price-card|table-{id}`), painel do gerador (`generated-product-name`, `generated-product-price`) e matriz de menu (`menu-active-{id}`, `menu-plan-{id}-{plano}`). Os checkboxes de `BotConversor` e `WhatsAppConexao` já tinham `bot-wa-*` e `wa-bot-*`.
+
+---
+
+### 🤖 Fase RPA 2: Regra do campo no servidor (`RpaFieldRules`)
+
+- [x] **2.1. Preço e orçamento:**
+  - `MoneyAmountRules` aceita 0 até 1.000.000,00, inclusive `89,90` e `89.90`, e recusa vazio, letra, negativo e acima do teto. `AdvertisingProductService` devolve `Preço médio inválido...` antes de gravar. `CampaignsController` recusa o orçamento no criar e no alterar com `Orçamento inválido...`. `NewCampaignDto` mantém `[Required]` e `[StringLength(100)]` no nome e ganhou `[Range]` no orçamento.
+- [x] **2.2. Matriz compartilhada:**
+  - `MoneyAmountRules.Samples` alimenta `MoneyAmountRulesTests`. O serviço de propaganda e o controller de campanha cobrem negativo, zero e acima do teto. A fase 5 do Playwright reutiliza essa lista.
+
+---
+
+### 🤖 Fase RPA 3: Projeto Playwright (`RpaPlaywright`)
+
+- [x] **3.1. Projeto `Ofertio.E2E`:**
+  - xUnit + `Microsoft.Playwright`, separado do `Ofertio.Tests`. Credenciais só em User Secrets ou nas variáveis `OFERTIO_E2E_*`. `appsettings.example.json` documenta as chaves sem senha; `appsettings.json` local fica de fora do git.
+- [x] **3.2. Login único:**
+  - `PortalSession` abre a página inicial em `pt-BR`, preenche `#portal-email` e `#portal-password` e espera `/dashboard`. O nome dos registros do robô começa com `E2E-`. Sem credencial, o teste de login é ignorado.
+
+---
+
+### 🤖 Fase RPA 4: Fumaça de navegação (`RpaSmoke`)
+
+- [x] **4.1. Menu autenticado:**
+  - Depois do login, a fumaça abre painel, meus dados, produtos de propaganda, busca, grupos monitorados e minhas lojas e espera o `h1` de cada uma. `/master` confirma "Dashboard executivo SaaS" só quando a rota permanece; operador que não é master é devolvido à entrada e o teste segue. Nenhum formulário é preenchido.
+
+---
+
+### 🤖 Fase RPA 5: Piloto numérico (`RpaPilotPrice`)
+
+- [x] **5.1. Produtos de propaganda:**
+  - O preço deixou de ser `type="number"` e a página ficou interativa. `89,90` grava um produto `E2E-` e o card mostra o valor em `C2` pt-BR. `abc` e `-1` mostram a mensagem de preço inválido e não criam card. A tela continua só incluindo e listando.
+- [x] **5.2. Nova campanha:**
+  - O orçamento aceita o mesmo texto. `89,90` cria a campanha `E2E-` e a linha filtrada pelo nome mostra `89,90`. Letra e negativo mostram a mensagem de orçamento inválido. A listagem não oferece alterar nem excluir, então o robô não clica nessas ações.
+
+---
+
+### 🤖 Fase RPA 6: Conta (`RpaAccount`)
+
+- [x] **6.1. Telas que já têm id:**
+  - Cadastro recusa e-mail inválido e senhas diferentes, sem criar usuário. Recuperar senha aceita o pedido na tela e não envia senha nova. Meus dados recusa CPF, CNPJ e CEP inválidos sem gravar, e a UF volta ao valor anterior. Minha conta não troca a senha quando a confirmação difere ou a senha atual fica vazia. O cartão `4111…` só fecha o pedido no modo de teste, em que nenhuma cobrança é feita.
+
+---
+
+### 🤖 Fase RPA 7: Master (`RpaMaster`)
+
+- [x] **7.1. Depois da onda B:**
+  - O robô cria um operador `E2E-` e desativa, que é a remoção oferecida pela tela. Altera as vantagens de um plano e grava de novo o texto anterior. Os filtros de auditoria e de inquilinos só leem. Créditos e suspensão de tenant não são acionados. Sem papel master, a visita não falha.
+
+---
+
+### 🤖 Fase RPA 8: Busca, grupos e links (`RpaCatalog`)
+
+- [x] **8.1. Filtros e um fluxo de link:**
+  - A busca recusa preço mínimo maior que o máximo e não dispara a consulta às lojas. Grupos Monitorados aplica a busca rápida. O gerador recebe um link de produto e confere o painel ou o aviso, sem abrir autorização de marketplace.
+
+---
+
+### 🤖 Fase RPA 9: Fora do robô de tela (`RpaForaDeEscopo`)
+
+- [x] **9.1. Não automatizar clique:**
+  - `RobotBoundary` guarda os textos de autorização de loja, QR e sessão de WhatsApp, código do Telegram, webhook e assinatura ASAAS. O teste lê os demais `.cs` do projeto e recusa esses textos. O botão Assinar continua só no arquivo que também exige o aviso de cobrança simulada.
+- [x] **9.2. Carga de dados:**
+  - `scripts/carga-homolog-rpa.sql` insere 200 campanhas e 200 produtos `CARGA-` no dono indicado. Com a limpeza ligada, apaga campanhas e produtos `E2E-` desse dono e desativa operadores `E2E-`. `CARGA-` permanece. O script não foi executado.
+
+---
+
 # 📦 Checklist detalhado migrado do README (21/10/2026)
 
 > Blocos que estavam no `README.md` até a modularização das regras em `docs/rules/`, mantidos sem edição como registro. Pendências abertas: [`CHECKLIST_ATIVO.md`](./CHECKLIST_ATIVO.md).

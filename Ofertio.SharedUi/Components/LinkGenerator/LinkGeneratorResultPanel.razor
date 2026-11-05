@@ -47,7 +47,9 @@
                         }
                         else
                         {
-                            <input type="text"
+                            <label class="visually-hidden" for="generated-product-name">Nome do produto</label>
+                            <input id="generated-product-name"
+                                   type="text"
                                    class="form-control form-control-sm product-preview-title"
                                    placeholder="Digite o nome do produto..."
                                    value="@NameDraft"
@@ -61,7 +63,9 @@
                         {
                             <div class="input-group input-group-sm product-preview-price-input">
                                 <span class="input-group-text">R$</span>
-                                <input type="number"
+                                <label class="visually-hidden" for="generated-product-price">Preço do produto</label>
+                                <input id="generated-product-price"
+                                       type="number"
                                        class="form-control"
                                        placeholder="0,00"
                                        min="0"

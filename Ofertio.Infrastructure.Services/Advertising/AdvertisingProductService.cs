@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Common;
 using Ofertio.Core.Entities;
 using Ofertio.Core.Enums;
 using Ofertio.Database;
@@ -31,6 +32,11 @@ public class AdvertisingProductService : IAdvertisingProductService
         if (string.IsNullOrWhiteSpace(dto.FriendlyName))
         {
             throw new ArgumentException("FriendlyName é obrigatório.");
+        }
+
+        if (!MoneyAmountRules.IsAllowed(dto.AveragePrice))
+        {
+            throw new ArgumentException(MoneyAmountRules.InvalidPriceMessage);
         }
 
         var product = new GlobalAdvertisingProduct

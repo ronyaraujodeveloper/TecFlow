@@ -83,3 +83,17 @@ Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conve
 
 - `app.css` e `app-interop.js` do SharedUi são servidos em `_content/Ofertio.SharedUi/` com `?v=` (versão do build) no `App.razor`, para o navegador não usar cópia antiga do cache.
 - Interface em `pt-BR` (textos, datas e moeda); regras de cultura e encoding em [encoding-standards.md](./encoding-standards.md).
+
+## 10. Ids estáveis para testes pela tela
+
+Todo campo preenchível (`input`, `select`, `textarea`, `InputText`, `InputNumber`, `InputDate` e equivalentes) ganha `id` em kebab-case, com prefixo da tela. O `<label for>` usa o mesmo valor.
+
+| Situação | Forma | Exemplo |
+| :--- | :--- | :--- |
+| Um campo na tela | `{tela}-{campo}` | `propaganda-preco`, `campaign-budget` |
+| Linha que se repete | `{tela}-{campo}-{chave}` | `plan-monthly-starter`, `vault-{chave}` |
+| Botão com o mesmo texto em várias linhas | `{tela}-{ação}-{chave}` | `plan-save-starter`, `propaganda-salvar` |
+
+- Botão cujo texto aparece uma única vez na tela fica no nome acessível (o rótulo visível). Não precisa de `id`.
+- Id já em uso não muda de nome. A lista fechada está no item 1.2 de [`PLANO_RPA.md`](../PLANO_RPA.md) (`portal-email`, `profile-*`, `busca-min`, `wa-*`, `tg-*` e os demais citados lá).
+- Referência aplicada: `ProdutosPropaganda.razor` (`propaganda-*`) e `CampaignCreateForm.razor` (`campaign-*`).

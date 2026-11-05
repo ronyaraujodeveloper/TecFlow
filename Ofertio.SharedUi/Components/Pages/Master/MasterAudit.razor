@@ -18,20 +18,20 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body row g-2 align-items-end">
             <div class="col-6 col-md-3">
-                <label class="form-label small mb-1">Ação</label>
-                <input class="form-control" placeholder="ex.: tenant.suspender" @bind="_query.Action" />
+                <label class="form-label small mb-1" for="audit-action">Ação</label>
+                <input id="audit-action" class="form-control" placeholder="ex.: tenant.suspender" @bind="_query.Action" />
             </div>
             <div class="col-6 col-md-3">
-                <label class="form-label small mb-1">Operador</label>
-                <input class="form-control" placeholder="e-mail" @bind="_query.Actor" />
+                <label class="form-label small mb-1" for="audit-actor">Operador</label>
+                <input id="audit-actor" class="form-control" placeholder="e-mail" @bind="_query.Actor" />
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">De</label>
-                <input type="date" class="form-control" @bind="_query.From" />
+                <label class="form-label small mb-1" for="audit-from">De</label>
+                <input id="audit-from" type="date" class="form-control" @bind="_query.From" />
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small mb-1">Até</label>
-                <input type="date" class="form-control" @bind="_query.To" />
+                <label class="form-label small mb-1" for="audit-to">Até</label>
+                <input id="audit-to" type="date" class="form-control" @bind="_query.To" />
             </div>
             <div class="col-12 col-md-2 d-grid">
                 <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="LoadAsync">Filtrar</button>

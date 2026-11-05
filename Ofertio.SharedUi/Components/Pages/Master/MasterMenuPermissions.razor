@@ -104,14 +104,16 @@
                                 }
                             </td>
                             <td class="text-center">
-                                <input type="checkbox" class="form-check-input" checked="@row.IsActive" disabled="@(!_canManage)"
+                                <label class="visually-hidden" for="menu-active-@row.MenuItemId">Ativo: @row.Title</label>
+                                <input id="menu-active-@row.MenuItemId" type="checkbox" class="form-check-input" checked="@row.IsActive" disabled="@(!_canManage)"
                                        @onchange="args => ToggleActive(row, (bool)args.Value!)" />
                             </td>
                             @foreach (var plan in _matrix.Plans)
                             {
                                 var blockedByFeature = !IsFeatureEnabled(row, plan.Id);
                                 <td class="text-center" title="@(blockedByFeature ? $"Oculto: {row.RequiresFeatureTitle} desligada neste plano" : null)">
-                                    <input type="checkbox" class="form-check-input" checked="@(IsVisible(row, plan.Id) && !blockedByFeature)" disabled="@(!_canManage || !row.IsActive || blockedByFeature)"
+                                    <label class="visually-hidden" for="menu-plan-@row.MenuItemId-@plan.Id">@row.Title no plano @plan.Name</label>
+                                    <input id="menu-plan-@row.MenuItemId-@plan.Id" type="checkbox" class="form-check-input" checked="@(IsVisible(row, plan.Id) && !blockedByFeature)" disabled="@(!_canManage || !row.IsActive || blockedByFeature)"
                                            aria-label="@($"{row.Title} no plano {plan.Name}")"
                                            @onchange="args => ToggleCell(row, plan.Id, (bool)args.Value!)" />
                                     @if (blockedByFeature)

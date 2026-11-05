@@ -28,7 +28,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 - **Idioma:** código em inglês; comentários e documentação em português. ➔ [encoding-standards](./docs/rules/encoding-standards.md)
 - **Dados:** cada entidade tem só `Filter`, `Dto` e `ResponseDto`; listagens paginadas em no máximo 30. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 - **Segredos:** senhas e tokens são criptografados no banco e nunca vão para o repositório nem para os logs. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
-- **UI:** todo botão tem ícone `bi bi-*`; combos seguem o padrão global (busca só com mais de 6 itens). ➔ [frontend-ui](./docs/rules/frontend-ui.md)
+- **UI:** todo botão tem ícone `bi bi-*`; combos seguem o padrão global (busca só com mais de 6 itens); campo preenchível tem `id` estável (`{tela}-{campo}`) e `<label for>` igual. ➔ [frontend-ui](./docs/rules/frontend-ui.md)
 - **Marketplaces:** só API oficial com Bearer token; sem raspagem nem contorno de anti-bot ou captcha. ➔ [marketplaces-oauth](./docs/rules/marketplaces-oauth.md)
 - **Preservação:** não remova validações nem regras existentes ao refatorar. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 
@@ -46,6 +46,17 @@ $WarningPreference='SilentlyContinue'; .\NormalizarEncodingPrecoce.ps1 *> $null
 dotnet build .\Ofertio.sln -c Release
 dotnet test .\Ofertio.Tests\Ofertio.Tests.csproj
 dotnet test .\Ofertio.Tests\Ofertio.Tests.csproj --filter "FullyQualifiedName~Radar"
+
+# Robô de tela (projeto separado; a senha fica nos User Secrets, nunca no git)
+dotnet user-secrets set "E2E:BaseUrl" "https://dev.ofertio.com.br" --project .\Ofertio.E2E\Ofertio.E2E.csproj
+dotnet user-secrets set "E2E:Email" "e2e@ofertio.local" --project .\Ofertio.E2E\Ofertio.E2E.csproj
+dotnet user-secrets set "E2E:Password" "<senha>" --project .\Ofertio.E2E\Ofertio.E2E.csproj
+dotnet build .\Ofertio.E2E\Ofertio.E2E.csproj
+pwsh .\Ofertio.E2E\bin\Debug\net8.0\playwright.ps1 install
+dotnet test .\Ofertio.E2E\Ofertio.E2E.csproj
+
+# Carga de homologação (não rode na produção). Preencha o e-mail do dono no script:
+# scripts/carga-homolog-rpa.sql
 
 Execute a FASE 2: Publicação e Deploy Limpo no IIS do arquivo ./docs/EXECUCAO_HOMOLOGACAO.md
 
@@ -70,6 +81,7 @@ A VPS usa Docker, não o IIS. A configuração está em [`docs/CONFIGURACAO_PROD
 
 ## 🗂️ Documentação de Apoio
 - ✅ [Checklist Ativo (pendências)](./docs/CHECKLIST_ATIVO.md)
+- 🤖 [Plano RPA — testes pela tela](./docs/PLANO_RPA.md)
 - 📜 [Histórico de Fases Concluídas](./docs/HISTORICO_FASES_CONCLUIDAS.md): detalhes de cada entrega já feita.
 - 📁 [Lista de Mudanças de Arquivos](./docs/LISTA_ARQUIVOS_MUDANCAS.md)
 - 🧭 [Diagramas de Arquitetura](./docs/DIAGRAMAS_ARQUITETURA.md)

@@ -29,8 +29,8 @@
             <div class="card-header fw-semibold">@(_form.Id > 0 ? "Editar conta" : "Nova conta")</div>
             <div class="card-body row g-2">
                 <div class="col-6 col-md-3">
-                    <label class="form-label small mb-1">Plataforma</label>
-                    <select class="form-select form-select-sm" @bind="_form.Platform">
+                    <label class="form-label small mb-1" for="dev-platform">Plataforma</label>
+                    <select id="dev-platform" class="form-select form-select-sm" @bind="_form.Platform">
                         @foreach (var platform in DeveloperPlatforms.All)
                         {
                             <option value="@platform">@DeveloperPlatforms.Label(platform)</option>
@@ -38,50 +38,50 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
-                    <label class="form-label small mb-1">Tipo</label>
-                    <select class="form-select form-select-sm" @bind="_form.Kind">
+                    <label class="form-label small mb-1" for="dev-kind">Tipo</label>
+                    <select id="dev-kind" class="form-select form-select-sm" @bind="_form.Kind">
                         <option value="@DeveloperAccountKinds.Test">Conta de teste (login)</option>
                         <option value="@DeveloperAccountKinds.App">App de desenvolvimento</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
-                    <label class="form-label small mb-1">Ambiente</label>
-                    <select class="form-select form-select-sm" @bind="_form.Environment">
+                    <label class="form-label small mb-1" for="dev-environment">Ambiente</label>
+                    <select id="dev-environment" class="form-select form-select-sm" @bind="_form.Environment">
                         <option value="@DeveloperEnvironments.Sandbox">Sandbox</option>
                         <option value="@DeveloperEnvironments.Production">Produção</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
-                    <label class="form-label small mb-1">Nome</label>
-                    <input class="form-control form-control-sm" placeholder="ex.: Comprador QA Shopee" @bind="_form.Label" />
+                    <label class="form-label small mb-1" for="dev-label">Nome</label>
+                    <input id="dev-label" class="form-control form-control-sm" placeholder="ex.: Comprador QA Shopee" @bind="_form.Label" />
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small mb-1">@ClientIdLabel</label>
-                    <input class="form-control form-control-sm" autocomplete="off" @bind="_form.ClientId" />
+                    <label class="form-label small mb-1" for="dev-client-id">@ClientIdLabel</label>
+                    <input id="dev-client-id" class="form-control form-control-sm" autocomplete="off" @bind="_form.ClientId" />
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small mb-1">@SecretLabel</label>
-                    <input type="password" class="form-control form-control-sm" autocomplete="new-password"
+                    <label class="form-label small mb-1" for="dev-secret">@SecretLabel</label>
+                    <input id="dev-secret" type="password" class="form-control form-control-sm" autocomplete="new-password"
                            placeholder="@(_form.HasSecret ? "Mantém o atual se ficar como está" : string.Empty)" @bind="_form.ClientSecret" />
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small mb-1">@ExtraLabel</label>
-                    <input class="form-control form-control-sm" @bind="_form.Extra" disabled="@(_form.Platform == DeveloperPlatforms.Shopee)" />
+                    <label class="form-label small mb-1" for="dev-extra">@ExtraLabel</label>
+                    <input id="dev-extra" class="form-control form-control-sm" @bind="_form.Extra" disabled="@(_form.Platform == DeveloperPlatforms.Shopee)" />
                 </div>
                 @if (_form.Kind == DeveloperAccountKinds.Test)
                 {
                     <div class="col-12 col-md-4">
-                        <label class="form-label small mb-1">Usuário de teste</label>
-                        <input class="form-control form-control-sm" autocomplete="off" @bind="_form.TestUsername" />
+                        <label class="form-label small mb-1" for="dev-test-user">Usuário de teste</label>
+                        <input id="dev-test-user" class="form-control form-control-sm" autocomplete="off" @bind="_form.TestUsername" />
                     </div>
                     <div class="col-12 col-md-4">
-                        <label class="form-label small mb-1">Senha de teste</label>
-                        <input type="password" class="form-control form-control-sm" autocomplete="new-password" @bind="_form.TestPassword" />
+                        <label class="form-label small mb-1" for="dev-test-password">Senha de teste</label>
+                        <input id="dev-test-password" type="password" class="form-control form-control-sm" autocomplete="new-password" @bind="_form.TestPassword" />
                     </div>
                 }
                 <div class="col-6 col-md-2">
-                    <label class="form-label small mb-1">Segredo vence em</label>
-                    <input type="date" class="form-control form-control-sm" @bind="_form.SecretExpiresAt" />
+                    <label class="form-label small mb-1" for="dev-secret-expires">Segredo vence em</label>
+                    <input id="dev-secret-expires" type="date" class="form-control form-control-sm" @bind="_form.SecretExpiresAt" />
                 </div>
                 <div class="col-6 col-md-2 d-flex align-items-end">
                     <div class="form-check">
@@ -90,7 +90,8 @@
                     </div>
                 </div>
                 <div class="col-12">
-                    <textarea class="form-control form-control-sm" rows="2" placeholder="Observações (escopos, dono da conta, link do painel do desenvolvedor...)" @bind="_form.Notes"></textarea>
+                    <label class="visually-hidden" for="dev-notes">Observações</label>
+                    <textarea id="dev-notes" class="form-control form-control-sm" rows="2" placeholder="Observações (escopos, dono da conta, link do painel do desenvolvedor...)" @bind="_form.Notes"></textarea>
                 </div>
                 <div class="col-12 d-flex gap-2 justify-content-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _form = null">Cancelar</button>

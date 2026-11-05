@@ -170,3 +170,4 @@
 [2026-11-02 17:47:48]feat(legal): adiciona Termos de Uso, Politica de Privacidade e Politica de Seguranca publicas em /legal
 [2026-11-02 18:13:02]docs(legal): adiciona classificacao da informacao (item 5.1) na Politica de Seguranca e corrige data de atualizacao
 [2026-11-02 18:35:39]docs(legal): informa hospedagem de producao na Hetzner (Alemanha) na Politica de Privacidade e registra deploy de producao pendente
+[2026-11-04 23:15:24]feat(rpa): adiciona o robô Playwright de homologação, ids estáveis e a validação de preço e orçamento

@@ -2,6 +2,10 @@
 
 > Só o que ainda falta fazer ou validar. Ao concluir, marque `[x]` e mova o item para [`HISTORICO_FASES_CONCLUIDAS.md`](./HISTORICO_FASES_CONCLUIDAS.md). O detalhamento de cada entrega (código entre parênteses) está no histórico.
 
+## 🤖 Testes pela tela (`RpaE2E`)
+
+Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plano está em [`PLANO_RPA.md`](./PLANO_RPA.md).
+
 ## 🛒 Mercado Livre: app, OAuth e homologação
 
 - [ ] **Cadastro no app do ML (`MercadoLivreEndpoints`, `MercadoLivreOAuthPublicCallback`):** Redirect URI = `https://dev.ofertio.com.br/api/mercadolivre/callback` (idêntica a `Integrations:MercadoLivre:RedirectUri`) e notificações = `https://dev.ofertio.com.br/api/mercadolivre/notifications`.

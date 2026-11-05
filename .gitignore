@@ -1,4 +1,4 @@
-.vs/
+﻿.vs/
 bin/
 obj/
 artifacts/
@@ -8,3 +8,5 @@ App_Data/telegram-sessions/
 App_Data/OfertioDataProtectionKeys/
 App_Data/OfertioDevKeys/
 *.pfx
+Ofertio.E2E/appsettings.json
+Ofertio.E2E/appsettings.*.local.json

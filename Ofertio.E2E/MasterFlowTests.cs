@@ -161,9 +161,9 @@ public class MasterFlowTests
             await Assertions.Expect(page.GetByText("Informe o texto do documento.")).ToBeVisibleAsync(Visible);
 
             await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "<p>E2E- termos do robô</p>");
+            published = true;
             await page.Locator("#terms-publish").ClickAsync();
             await Assertions.Expect(page.GetByText(PublishedVersion)).ToBeVisibleAsync(Visible);
-            published = true;
 
             await visit.Session.ExpectHeadingAsync("/minhas-lojas", "Minhas Lojas / Integrações");
             await visit.Session.AcceptTermsDialogAsync("terms-reaccept", required: true);
@@ -247,7 +247,7 @@ public class MasterFlowTests
 
     private static LocatorAssertionsToBeVisibleOptions Visible => new() { Timeout = 30_000 };
 
-    private static Regex PublishedVersion => new(@"Versão \d+\.\d+ publicada\.", RegexOptions.CultureInvariant);
+    private static Regex PublishedVersion => new(@"Versão \d+\.\d+ publicada\.");
 
     private sealed class MasterVisit(PortalSession session, bool allowed) : IAsyncDisposable
     {

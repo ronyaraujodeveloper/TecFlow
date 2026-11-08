@@ -1,0 +1,46 @@
+﻿@inject IJSRuntime Js
+
+<div id="@Id"
+     class="legal-editor"
+     contenteditable="true"
+     role="textbox"
+     aria-multiline="true"
+     aria-labelledby="@LabelId"
+     data-placeholder="Escreva ou cole o texto aqui"
+     spellcheck="true"></div>
+
+@code {
+    [Parameter] public string Id { get; set; } = "terms-content";
+
+    [Parameter] public string LabelId { get; set; } = "terms-content-label";
+
+    private bool _ready;
+
+    protected override bool ShouldRender() => !_ready;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _ready = true;
+        await Js.InvokeVoidAsync("ofertioLegalEditor.bind", Id);
+    }
+
+    public async Task SetHtmlAsync(string? html)
+    {
+        await Js.InvokeVoidAsync("ofertioLegalEditor.write", Id, html ?? string.Empty);
+    }
+
+    public async Task<string> GetHtmlAsync()
+    {
+        return await Js.InvokeAsync<string>("ofertioLegalEditor.read", Id);
+    }
+
+    public async Task FormatAsync(string command, string? url = null)
+    {
+        await Js.InvokeVoidAsync("ofertioLegalEditor.format", Id, command, url);
+    }
+}

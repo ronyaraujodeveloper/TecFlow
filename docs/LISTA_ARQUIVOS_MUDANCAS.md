@@ -2165,9 +2165,9 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.SharedUi/Services/Http/ClientIpForwardingHandler.cs** (novo) e **Extensions/ServiceCollectionExtensions.cs** — o Blazor repassa o IP de quem está no navegador.
 - [x] **Ofertio.SharedUi/Services/Legal/TermsApiService.cs** (novo) e **Services/Master/MasterApiService.cs**.
 - [x] **Ofertio.SharedUi/Components/Legal/CookieConsentBanner.razor**, **TermsConsentDialog.razor**, **TermsReacceptanceHost.razor** e **LegalDocumentView.razor** (novos).
-- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterTerms.razor** (novo) — editor, pré-visualização e publicação da próxima versão.
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterTerms.razor** (novo) e **Components/Legal/LegalRichEditor.razor** (novo) — editor no estilo Word, com colagem formatada, e publicação da próxima versão.
 - [x] **Ofertio.SharedUi/Components/Pages/Register.razor**, **Home.razor**, **RecuperarSenha.razor**, **Legal/TermosDeUso.razor**, **Legal/PoliticaPrivacidade.razor**, **MinhasLojas.razor** e os layouts público, legal, principal e Master.
-- [x] **Ofertio.SharedUi/wwwroot/app.css** e **app-interop.js** — faixa de cookies e atalhos do editor.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** e **app-interop.js** — faixa de cookies e editor visual, com limpeza do HTML colado do Word.
 - [x] **Ofertio.Tests/Unit/Legal/TermsDocumentRulesTests.cs** (novo) e **Ofertio.Tests/Unit/Controllers/AuthControllerSecurityTests.cs**.
 - [x] **Ofertio.E2E/AccountFlowTests.cs**, **MasterFlowTests.cs** e **PortalSession.cs** — cookies, caixa do cadastro, publicação `E2E-` com restauração do texto, reaceite, consentimento ao conectar loja e fumaça de `/master/termos`.
 - [x] **docs/rules/backend-architecture.md** e **docs/rules/frontend-ui.md** — aceite, IP e caixa desmarcada.

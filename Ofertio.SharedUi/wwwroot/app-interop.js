@@ -411,25 +411,173 @@ window.ofertioCookieConsent = {
 };
 
 window.ofertioLegalEditor = {
-    wrap: function (id, before, after) {
+    bind: function (id) {
+        var field = document.getElementById(id);
+        if (!field || field.__ofertioLegalBound) {
+            return;
+        }
+
+        field.__ofertioLegalBound = true;
+        field.addEventListener("paste", function (event) {
+            if (!event.clipboardData) {
+                return;
+            }
+
+            var html = event.clipboardData.getData("text/html");
+            var text = event.clipboardData.getData("text/plain");
+            if (!html && !text) {
+                return;
+            }
+
+            event.preventDefault();
+            var clean = html ? cleanWordHtml(html) : "";
+            if (!clean) {
+                clean = plainToHtml(text || "");
+            }
+
+            field.focus();
+            document.execCommand("insertHTML", false, clean);
+        });
+    },
+
+    write: function (id, html) {
         var field = document.getElementById(id);
         if (!field) {
-            return (before || "") + (after || "");
+            return;
         }
 
-        var start = field.selectionStart || 0;
-        var end = field.selectionEnd || 0;
-        var value = field.value || "";
-        var selected = value.slice(start, end);
-        var next = value.slice(0, start) + (before || "") + selected + (after || "") + value.slice(end);
-        field.value = next;
+        this.bind(id);
+        field.innerHTML = html || "";
+    },
+
+    read: function (id) {
+        var field = document.getElementById(id);
+        return field ? field.innerHTML : "";
+    },
+
+    format: function (id, command, url) {
+        var field = document.getElementById(id);
+        if (!field) {
+            return "";
+        }
+
+        this.bind(id);
         field.focus();
-        var cursor = start + (before || "").length + selected.length;
-        if (typeof field.setSelectionRange === "function") {
-            field.setSelectionRange(cursor, cursor);
+        if (command === "bold") {
+            document.execCommand("bold");
+        } else if (command === "italic") {
+            document.execCommand("italic");
+        } else if (command === "heading") {
+            document.execCommand("formatBlock", false, "h2");
+        } else if (command === "list") {
+            document.execCommand("insertUnorderedList");
+        } else if (command === "link") {
+            var href = (url || "").trim();
+            if (!/^https?:\/\//i.test(href) && !/^mailto:/i.test(href) && href.indexOf("/legal/") !== 0) {
+                href = "https://";
+            }
+
+            document.execCommand("createLink", false, href);
         }
 
-        field.dispatchEvent(new Event("input", { bubbles: true }));
-        return next;
+        field.innerHTML = field.innerHTML
+            .replace(/<b(\s|>)/gi, "<strong$1")
+            .replace(/<\/b>/gi, "</strong>")
+            .replace(/<i(\s|>)/gi, "<em$1")
+            .replace(/<\/i>/gi, "</em>");
+        return field.innerHTML;
     }
 };
+
+function cleanWordHtml(html) {
+    var withoutComments = String(html || "").replace(/<!--[\s\S]*?-->/gi, "");
+    var doc = new DOMParser().parseFromString(withoutComments, "text/html");
+    groupWordLists(doc.body);
+    return serializeLegal(doc.body);
+}
+
+function plainToHtml(text) {
+    return String(text || "").split(/\n{2,}/).map(function (block) {
+        return "<p>" + block.split(/\n/).map(escapeLegalText).join("<br>") + "</p>";
+    }).join("");
+}
+
+function groupWordLists(root) {
+    var nodes = Array.prototype.slice.call(root.childNodes);
+    var index = 0;
+    while (index < nodes.length) {
+        if (!isWordListParagraph(nodes[index])) {
+            index += 1;
+            continue;
+        }
+
+        var list = root.ownerDocument.createElement("ul");
+        root.insertBefore(list, nodes[index]);
+        while (index < nodes.length && isWordListParagraph(nodes[index])) {
+            var item = root.ownerDocument.createElement("li");
+            while (nodes[index].firstChild) {
+                item.appendChild(nodes[index].firstChild);
+            }
+
+            list.appendChild(item);
+            var remove = nodes[index];
+            index += 1;
+            remove.remove();
+        }
+    }
+}
+
+function isWordListParagraph(node) {
+    if (!node || node.nodeType !== 1 || node.tagName.toLowerCase() !== "p") {
+        return false;
+    }
+
+    var blob = (node.getAttribute("class") || "") + " " + (node.getAttribute("style") || "");
+    return /mso-list|MsoList/i.test(blob);
+}
+
+function serializeLegal(node) {
+    var allowed = { p: 1, br: 1, strong: 1, em: 1, u: 1, h1: 1, h2: 1, h3: 1, ul: 1, ol: 1, li: 1, a: 1, blockquote: 1, hr: 1 };
+    var out = "";
+    node.childNodes.forEach(function (child) {
+        if (child.nodeType === 3) {
+            out += escapeLegalText(child.textContent || "");
+            return;
+        }
+
+        if (child.nodeType !== 1) {
+            return;
+        }
+
+        var raw = child.tagName.toLowerCase();
+        if (raw === "script" || raw === "style" || raw === "meta" || raw === "link" || raw === "title" || raw.indexOf(":") >= 0) {
+            return;
+        }
+
+        var name = raw === "b" ? "strong" : raw === "i" ? "em" : raw;
+        if (!allowed[name]) {
+            out += serializeLegal(child);
+            return;
+        }
+
+        if (name === "br" || name === "hr") {
+            out += "<" + name + ">";
+            return;
+        }
+
+        var attrs = "";
+        if (name === "a") {
+            var href = (child.getAttribute("href") || "").trim();
+            if (/^(https?:\/\/|mailto:|\/legal\/)/i.test(href)) {
+                attrs = " href=\"" + href.replace(/"/g, "") + "\"";
+            }
+        }
+
+        out += "<" + name + attrs + ">" + serializeLegal(child) + "</" + name + ">";
+    });
+    return out;
+}
+
+function escapeLegalText(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}

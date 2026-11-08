@@ -71,6 +71,18 @@ public class TermsDocumentRulesTests
     }
 
     [Fact]
+    public void Sanitize_DropsWordStylesAndKeepsTheWords()
+    {
+        var html = TermsDocumentRules.Sanitize(
+            "<p class=\"MsoNormal\" style=\"margin:0;font-family:Calibri\"><b>Negrito</b> <span style=\"color:red\">texto</span> <a href=\"https://ofertio.com.br\">site</a></p><o:p></o:p>");
+
+        Assert.Contains("<p><b>Negrito</b> <span>texto</span> <a href=\"https://ofertio.com.br\">site</a></p>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("MsoNormal", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Calibri", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("o:p", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MasterMenu_ExposesTermsOnlyToTheLegalPermission()
     {
         var link = MasterRoutes.Links.Single(item => item.Href == MasterRoutes.Terms);

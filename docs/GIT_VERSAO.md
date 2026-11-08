@@ -175,3 +175,4 @@
 [2026-11-08 17:53:50] feat(legal): versiona termos e privacidade com aceite, IP e reaceite no Master
 [2026-11-08 18:14:51] test(rpa): cobre cookies, publicação de termos e consentimento com ids estáveis
 [2026-11-08 18:24:09] fix(rpa): reconhece a mensagem de versão publicada e restaura o texto dos termos
+[2026-11-08 19:40:41] feat(legal): troca o editor de termos por um texto no estilo Word

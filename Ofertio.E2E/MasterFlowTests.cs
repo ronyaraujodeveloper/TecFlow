@@ -135,8 +135,20 @@ public class MasterFlowTests
 
         var page = visit.Page;
         await Assertions.Expect(page.Locator("#terms-kind")).ToBeVisibleAsync(Visible);
-        var restore = await page.Locator("#terms-content").InputValueAsync();
-        if (string.IsNullOrWhiteSpace(restore))
+        await page.Locator("#terms-content").WaitForAsync();
+        try
+        {
+            await page.WaitForFunctionAsync(
+                "() => { const field = document.getElementById('terms-content'); return !!field && (field.innerText || '').trim().length > 20; }",
+                null,
+                new PageWaitForFunctionOptions { Timeout = 8_000 });
+        }
+        catch (TimeoutException)
+        {
+        }
+
+        var restore = await ReadEditorHtmlAsync(page);
+        if (string.IsNullOrWhiteSpace(restore) || restore == "<br>")
         {
             restore = await ReadPublicTermsHtmlAsync(visit.Session);
             await visit.Session.ExpectHeadingAsync("/master/termos", "Termos e privacidade");
@@ -148,19 +160,20 @@ public class MasterFlowTests
         try
         {
             await WrapSampleAsync(page, "#terms-bold", "<strong>");
+            await WrapSampleAsync(page, "#terms-italic", "<em>");
             await WrapSampleAsync(page, "#terms-heading", "<h2>");
             await WrapSampleAsync(page, "#terms-list", "<ul>");
             await WrapSampleAsync(page, "#terms-link", "href=\"https://\"");
 
-            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), string.Empty);
+            await WriteEditorHtmlAsync(page, string.Empty);
             await page.Locator("#terms-publish").ClickAsync();
             await Assertions.Expect(page.GetByText("Informe o texto do documento.")).ToBeVisibleAsync(Visible);
 
-            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "<script>alert(1)</script>");
+            await WriteEditorHtmlAsync(page, "<script>alert(1)</script>");
             await page.Locator("#terms-publish").ClickAsync();
             await Assertions.Expect(page.GetByText("Informe o texto do documento.")).ToBeVisibleAsync(Visible);
 
-            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "<p>E2E- termos do robô</p>");
+            await WriteEditorHtmlAsync(page, "<p>E2E- termos do robô</p>");
             published = true;
             await page.Locator("#terms-publish").ClickAsync();
             await Assertions.Expect(page.GetByText(PublishedVersion)).ToBeVisibleAsync(Visible);
@@ -179,7 +192,7 @@ public class MasterFlowTests
             {
                 await visit.Session.ExpectHeadingAsync("/master/termos", "Termos e privacidade");
                 await visit.Session.AcceptTermsDialogAsync("terms-reaccept", required: false);
-                await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), restore);
+                await WriteEditorHtmlAsync(page, restore);
                 await page.Locator("#terms-publish").ClickAsync();
                 await Assertions.Expect(page.GetByText(PublishedVersion)).ToBeVisibleAsync(Visible);
             }
@@ -188,14 +201,32 @@ public class MasterFlowTests
 
     private static async Task WrapSampleAsync(IPage page, string buttonId, string expectedFragment)
     {
-        await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "E2E- texto");
-        await page.Locator("#terms-content").EvaluateAsync("el => el.setSelectionRange(0, el.value.length)");
+        await WriteEditorHtmlAsync(page, "E2E- texto");
+        await page.Locator("#terms-content").EvaluateAsync(
+            """
+            el => {
+              el.focus();
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              const selection = window.getSelection();
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            """);
         await page.Locator(buttonId).ClickAsync();
         await page.WaitForFunctionAsync(
-            "fragment => { const field = document.getElementById('terms-content'); return !!field && field.value.includes(fragment); }",
+            "fragment => { const field = document.getElementById('terms-content'); return !!field && field.innerHTML.includes(fragment); }",
             expectedFragment);
-        await Assertions.Expect(page.Locator("#terms-preview")).ToContainTextAsync("E2E- texto");
+        await Assertions.Expect(page.Locator("#terms-content")).ToContainTextAsync("E2E- texto");
     }
+
+    private static async Task<string> ReadEditorHtmlAsync(IPage page) =>
+        await page.Locator("#terms-content").EvaluateAsync<string>("el => el.innerHTML || ''");
+
+    private static async Task WriteEditorHtmlAsync(IPage page, string html) =>
+        await page.Locator("#terms-content").EvaluateAsync(
+            "(el, value) => { el.innerHTML = value || ''; }",
+            html);
 
     private static async Task<string> ReadPublicTermsHtmlAsync(PortalSession session)
     {

@@ -5,7 +5,6 @@
 @inherits MasterPageBase
 @using Ofertio.Business.Service.Common
 @inject IMasterApiService Api
-@inject IJSRuntime Js
 
 <PageTitle>Termos e privacidade — Painel Master</PageTitle>
 
@@ -44,48 +43,41 @@
     }
     else
     {
-        <div class="row g-3">
-            <div class="col-12 col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
-                        <label class="form-label fw-semibold" for="terms-kind">Documento</label>
-                        <select id="terms-kind" class="form-select mb-3" @bind="_kind" @bind:after="OnKindChanged">
-                            <option value="@TermsDocumentRules.Terms">Termos de Uso</option>
-                            <option value="@TermsDocumentRules.Privacy">Política de Privacidade</option>
-                        </select>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <label class="form-label fw-semibold" for="terms-kind">Documento</label>
+                <select id="terms-kind" class="form-select mb-3" @bind="_kind" @bind:after="OnKindChanged">
+                    <option value="@TermsDocumentRules.Terms">Termos de Uso</option>
+                    <option value="@TermsDocumentRules.Privacy">Política de Privacidade</option>
+                </select>
 
-                        <div class="d-flex flex-wrap gap-2 mb-2" aria-label="Formatação">
-                            <button type="button" id="terms-bold" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<strong>", "</strong>")'>
-                                <i class="bi bi-type-bold me-1" aria-hidden="true"></i>Negrito
-                            </button>
-                            <button type="button" id="terms-heading" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<h2>", "</h2>")'>
-                                <i class="bi bi-type-h2 me-1" aria-hidden="true"></i>Título
-                            </button>
-                            <button type="button" id="terms-list" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<ul><li>", "</li></ul>")'>
-                                <i class="bi bi-list-ul me-1" aria-hidden="true"></i>Lista
-                            </button>
-                            <button type="button" id="terms-link" class="btn btn-outline-secondary btn-sm" @onclick="InsertLinkAsync">
-                                <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Link
-                            </button>
+                <div class="d-flex flex-wrap align-items-end gap-2 mb-2" aria-label="Formatação">
+                    <button type="button" id="terms-bold" class="btn btn-outline-secondary btn-sm" @onmousedown:preventDefault="true" @onclick='() => FormatAsync("bold")'>
+                        <i class="bi bi-type-bold me-1" aria-hidden="true"></i>Negrito
+                    </button>
+                    <button type="button" id="terms-italic" class="btn btn-outline-secondary btn-sm" @onmousedown:preventDefault="true" @onclick='() => FormatAsync("italic")'>
+                        <i class="bi bi-type-italic me-1" aria-hidden="true"></i>Itálico
+                    </button>
+                    <button type="button" id="terms-heading" class="btn btn-outline-secondary btn-sm" @onmousedown:preventDefault="true" @onclick='() => FormatAsync("heading")'>
+                        <i class="bi bi-type-h2 me-1" aria-hidden="true"></i>Título
+                    </button>
+                    <button type="button" id="terms-list" class="btn btn-outline-secondary btn-sm" @onmousedown:preventDefault="true" @onclick='() => FormatAsync("list")'>
+                        <i class="bi bi-list-ul me-1" aria-hidden="true"></i>Lista
+                    </button>
+                    <div class="d-flex flex-wrap align-items-end gap-2">
+                        <div>
+                            <label class="form-label small mb-1" for="terms-link-url">Endereço do link</label>
+                            <input id="terms-link-url" class="form-control form-control-sm" type="url" placeholder="https://" @bind="_linkUrl" @bind:event="oninput" />
                         </div>
+                        <button type="button" id="terms-link" class="btn btn-outline-secondary btn-sm" @onmousedown:preventDefault="true" @onclick="InsertLinkAsync">
+                            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Link
+                        </button>
+                    </div>
+                </div>
 
-                        <label class="form-label fw-semibold" for="terms-content">Texto (HTML)</label>
-                        <textarea id="terms-content"
-                                  class="form-control legal-editor"
-                                  rows="14"
-                                  @bind="_content"
-                                  @bind:event="oninput"></textarea>
-                        <div class="form-text">A publicação remove script, eventos e links que não sejam http, https ou mailto.</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header fw-semibold">Pré-visualização</div>
-                    <div id="terms-preview" class="card-body legal-doc legal-published">
-                        @((MarkupString)TermsDocumentRules.Sanitize(_content))
-                    </div>
-                </div>
+                <label id="terms-content-label" class="form-label fw-semibold" for="terms-content">Texto</label>
+                <LegalRichEditor @ref="_editor" Id="terms-content" LabelId="terms-content-label" />
+                <div class="form-text">Escreva como no Word. Pode colar um texto do Word: negrito, título, lista e link permanecem. Cor e fonte do Word não vão para o site.</div>
             </div>
         </div>
 
@@ -135,8 +127,10 @@
 
 @code {
     private readonly List<TermsVersion> _versions = [];
+    private LegalRichEditor? _editor;
     private string _kind = TermsDocumentRules.Terms;
     private string _content = string.Empty;
+    private string _linkUrl = string.Empty;
 
     protected override async Task LoadAsync()
     {
@@ -155,9 +149,22 @@
         _versions.Clear();
         _versions.AddRange(result.Data?.DataList ?? []);
         LoadEditorFromActive();
+        await PushEditorAsync();
     }
 
-    private void OnKindChanged() => LoadEditorFromActive(replace: true);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await PushEditorAsync();
+        }
+    }
+
+    private async Task OnKindChanged()
+    {
+        LoadEditorFromActive(replace: true);
+        await PushEditorAsync();
+    }
 
     private void LoadEditorFromActive(bool replace = false)
     {
@@ -171,18 +178,21 @@
         _content = active?.Content ?? string.Empty;
     }
 
-    private Task InsertLinkAsync() => WrapAsync("<a href=\"https://\">", "</a>");
-
-    private async Task WrapAsync(string before, string after)
+    private async Task PushEditorAsync()
     {
-        try
+        if (_editor is not null)
         {
-            _content = await Js.InvokeAsync<string>("ofertioLegalEditor.wrap", "terms-content", before, after);
+            await _editor.SetHtmlAsync(_content);
         }
-        catch (Exception)
-        {
-            _content += before + after;
-        }
+    }
+
+    private Task FormatAsync(string command) =>
+        _editor?.FormatAsync(command) ?? Task.CompletedTask;
+
+    private Task InsertLinkAsync()
+    {
+        var url = string.IsNullOrWhiteSpace(_linkUrl) ? "https://" : _linkUrl.Trim();
+        return _editor?.FormatAsync("link", url) ?? Task.CompletedTask;
     }
 
     private async Task PublishAsync()
@@ -192,6 +202,11 @@
         Busy = true;
         try
         {
+            if (_editor is not null)
+            {
+                _content = await _editor.GetHtmlAsync();
+            }
+
             var result = await Api.PublishTermsAsync(new TermsVersionDto
             {
                 DocumentKind = _kind,

@@ -1753,7 +1753,7 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **48.3.2.** Em `/cadastro`, a caixa `register-terms` nasce desmarcada, com links para os Termos e a Privacidade. "Concluir cadastro" fica desabilitado até a marcação.
 - [x] **48.3.3.** Modal de reaceite que não fecha sozinho quando há versão nova. O mesmo modal aparece no primeiro "Conectar nova loja" e no OAuth de Mercado Livre, Shopee ou TikTok Shop.
 - [x] **48.3.4.** Aviso de cookies essenciais no login, no cadastro, na recuperação de senha, nas páginas legais e no conversor público.
-- [x] **48.4.1.** Tela `/master/termos` com negrito, título, lista, link e pré-visualização do HTML.
+- [x] **48.4.1.** Tela `/master/termos` com editor visual (negrito, itálico, título, lista e link). Colar do Word mantém essa formatação. O campo de HTML e a pré-visualização ao lado saíram: o editor já mostra o texto que o site publica.
 - [x] **48.4.2.** Salvar gera a próxima versão (1.0 é o texto do sistema; a primeira publicação é 1.1), ativa essa versão e desativa a anterior.
 - [x] **Testes:** regras de versão, IP, HTML e reaceite; publicação e aceite com InMemory. O robô marca `register-terms`, dispensa o aviso de cookies, publica um parágrafo `E2E-` em `/master/termos`, aceita o reaceite e o consentimento ao conectar loja, devolve o texto anterior e visita o `h1` na fumaça do Master.
 

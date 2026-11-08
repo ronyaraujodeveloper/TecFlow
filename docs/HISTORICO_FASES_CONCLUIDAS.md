@@ -1755,5 +1755,5 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **48.3.4.** Aviso de cookies essenciais no login, no cadastro, na recuperação de senha, nas páginas legais e no conversor público.
 - [x] **48.4.1.** Tela `/master/termos` com negrito, título, lista, link e pré-visualização do HTML.
 - [x] **48.4.2.** Salvar gera a próxima versão (1.0 é o texto do sistema; a primeira publicação é 1.1), ativa essa versão e desativa a anterior.
-- [x] **Testes:** regras de versão, IP, HTML e reaceite; publicação e aceite com InMemory; o robô marca `register-terms` antes de concluir e abre `/master/termos` sem publicar.
+- [x] **Testes:** regras de versão, IP, HTML e reaceite; publicação e aceite com InMemory. O robô marca `register-terms`, dispensa o aviso de cookies, publica um parágrafo `E2E-` em `/master/termos`, aceita o reaceite e o consentimento ao conectar loja, devolve o texto anterior e visita o `h1` na fumaça do Master.
 

@@ -63,6 +63,7 @@ public sealed class PortalSession : IAsyncDisposable
             WaitUntil = WaitUntilState.DOMContentLoaded
         });
         await Page.Locator("#portal-email").WaitForAsync();
+        await AcceptCookieBannerAsync();
         await Page.FillAsync("#portal-email", Settings.Email);
         await Page.FillAsync("#portal-password", Settings.Password);
         await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Entrar", Exact = true }).ClickAsync();
@@ -71,6 +72,49 @@ public sealed class PortalSession : IAsyncDisposable
             Timeout = 30_000,
             WaitUntil = WaitUntilState.Commit
         });
+        await AcceptTermsDialogAsync("terms-reaccept", required: false);
+    }
+
+    /// <summary>Clica em Entendi e espera o aviso sumir. A página ainda não gravou o aceite.</summary>
+    public async Task AcceptCookieBannerAsync()
+    {
+        var accept = Page.Locator("#cookie-accept");
+        await accept.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 15_000
+        });
+        await Assertions.Expect(Page.Locator("#cookie-banner-title")).ToBeVisibleAsync();
+        await accept.ClickAsync();
+        await Assertions.Expect(accept).ToBeHiddenAsync();
+    }
+
+    /// <summary>
+    /// Marca a caixa e confirma. Com required falso, segue se o modal não abrir.
+    /// O botão permanece desabilitado até a marcação.
+    /// </summary>
+    public async Task AcceptTermsDialogAsync(string fieldId, bool required)
+    {
+        var box = Page.Locator("#" + fieldId);
+        var confirm = Page.Locator("#" + fieldId + "-confirm");
+        try
+        {
+            await box.WaitForAsync(new LocatorWaitForOptions
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = required ? 20_000 : 5_000
+            });
+        }
+        catch (TimeoutException) when (!required)
+        {
+            return;
+        }
+
+        await Assertions.Expect(confirm).ToBeDisabledAsync();
+        await box.CheckAsync();
+        await Assertions.Expect(confirm).ToBeEnabledAsync();
+        await confirm.ClickAsync();
+        await Assertions.Expect(box).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 20_000 });
     }
 
     /// <summary>Grava o valor de uma vez e espera o Blazor confirmar, antes do próximo clique.</summary>
@@ -129,7 +173,18 @@ public sealed class PortalSession : IAsyncDisposable
     /// </summary>
     public async Task ExpectMasterHeadingWhenAllowedAsync()
     {
-        var target = new Uri(Settings.BaseUrl, "/master");
+        var entered = await WaitForHeadingAsync("/master", "Dashboard executivo SaaS", required: false);
+        if (!entered)
+        {
+            return;
+        }
+
+        await ExpectHeadingAsync("/master/termos", "Termos e privacidade");
+    }
+
+    private async Task<bool> WaitForHeadingAsync(string path, string heading, bool required)
+    {
+        var target = new Uri(Settings.BaseUrl, path);
         await Page.GotoAsync(target.AbsoluteUri, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded
@@ -137,7 +192,7 @@ public sealed class PortalSession : IAsyncDisposable
 
         var title = Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions
         {
-            Name = "Dashboard executivo SaaS",
+            Name = heading,
             Level = 1,
             Exact = true
         });
@@ -148,13 +203,16 @@ public sealed class PortalSession : IAsyncDisposable
                 State = WaitForSelectorState.Visible,
                 Timeout = 15_000
             });
+            return true;
         }
-        catch (TimeoutException)
+        catch (TimeoutException) when (!required)
         {
             if (Page.Url.Contains("/master", StringComparison.OrdinalIgnoreCase))
             {
                 throw;
             }
+
+            return false;
         }
     }
 

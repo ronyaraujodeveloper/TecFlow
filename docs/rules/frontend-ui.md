@@ -78,7 +78,7 @@ Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conve
 - **Horários:** o banco guarda UTC. Nas telas do cliente use `IUserClock` (`ToLocal`, `ToUtc`, `Now`, fuso do estado em Minha Conta); no Painel Master use `ToBrasilia`/`FromBrasilia` do `MasterPageBase`. Nunca use `ToLocalTime()`, `DateTime.Now` ou `DateTimeKind.Local`: no Docker o servidor roda em UTC.
 - **Meu plano e pagamento:** escolher plano com cadastro incompleto abre o `ConfirmAsync` "Completar meus dados" (leva a `/meus-dados?plano=…`), nunca bloqueia em silêncio. Campos do cartão usam `autocomplete` `cc-number`/`cc-name`/`cc-exp`/`cc-csc`, CVV como `password`, e são limpos depois do envio. Enquanto o gateway for simulado, as telas mostram o aviso de modo de teste.
 - **Imagens de produto:** a conversão de links grava `og:image` em `ProductImageUrl` (editável); o agendador preenche "URL da imagem (opcional)" ao escolher o link, e o campo tem preview de 80x80 px.
-- **Cadastro e termos:** a caixa de `/cadastro` (`register-terms`) nasce desmarcada e o botão só habilita depois dela. Uma versão nova abre um modal que permanece até o aceite. As páginas públicas mostram o aviso de cookies essenciais.
+- **Cadastro e termos:** a caixa de `/cadastro` (`register-terms`) nasce desmarcada e o botão só habilita depois dela. O reaceite usa `terms-reaccept` e `terms-reaccept-confirm`. O primeiro vínculo de loja usa `terms-api-consent` e `terms-api-consent-confirm`. O aviso de cookies tem `cookie-banner-title` e `cookie-accept`. O editor Master usa `terms-kind`, `terms-content`, `terms-preview`, `terms-bold`, `terms-heading`, `terms-list`, `terms-link` e `terms-publish`. O documento público fica em `legal-document`.
 
 ## 9. Assets estáticos e localização
 
@@ -99,9 +99,11 @@ Todo campo preenchível (`input`, `select`, `textarea`, `InputText`, `InputNumbe
 - Id já em uso não muda de nome. A lista fechada está no item 1.2 de [`PLANO_RPA.md`](../PLANO_RPA.md) (`portal-email`, `profile-*`, `busca-min`, `wa-*`, `tg-*` e os demais citados lá).
 - Referência aplicada: `ProdutosPropaganda.razor` (`propaganda-*`) e `CampaignCreateForm.razor` (`campaign-*`).
 
-Tela, campo ou botão novo entra em `Ofertio.E2E` no mesmo passo em que o comportamento ganha teste em `Ofertio.Tests`. Não fica para uma fase seguinte.
+Tela, campo, botão, aviso ou modal novo entra em `Ofertio.E2E` no mesmo passo em que o comportamento ganha teste em `Ofertio.Tests`. O checklist que não pode ficar de fora está no [README](../../README.md#-regras-de-ouro-resumo).
 
-- Tela nova no menu: uma visita em `MenuSmokeTests`, conferindo o `h1`.
-- Campo novo: o teste preenche o `id`, recusa o valor inválido e só grava o caminho válido com prefixo `E2E-`.
-- Botão novo: o teste clica e confere o resultado visível.
+- Campo preenchível, inclusive checkbox: `id` `{tela}-{campo}` e `<label for>` igual. O teste preenche esse `id`, recusa o valor inválido e só grava o caminho válido com prefixo `E2E-`.
+- Botão que libera a tela, inclusive em aviso e modal: `id` estável quando o texto se repete. O teste clica e confere o que a tela mostra. O confirmar de um aceite fica desabilitado até a caixa ser marcada.
+- Tela nova no menu do cliente: visita em `MenuSmokeTests`, conferindo o `h1`. Tela nova no menu Master: a mesma visita, quando a sessão permanece em `/master`.
+- Aviso e modal que travam o próximo passo são dispensados no fluxo (`cookie-accept`, `terms-reaccept`, `terms-api-consent`). O login faz isso quando eles aparecem.
+- Publicação global, como os termos, grava um trecho `E2E-`, confere a mensagem e devolve o texto que estava no editor.
 - Ficam de fora do robô, como na fase 9 do [PLANO_RPA.md](../PLANO_RPA.md): OAuth, sessão real de WhatsApp/Telegram, QR, webhook e cobrança ASAAS. O `RobotBoundaryTests` continua falhando se um teste de tela citar esses cliques.

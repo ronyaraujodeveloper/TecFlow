@@ -79,5 +79,5 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 
 - Todo comportamento novo ou corrigido ganha teste em `Ofertio.Tests` (xUnit + Moq; EF Core InMemory para serviços com banco).
 - Telas Blazor são validadas pelos serviços HTTP e helpers extraídos (sem bUnit).
-- O que a pessoa faz na tela também entra em `Ofertio.E2E`, no mesmo passo do teste de unidade. A regra do robô está em [frontend-ui.md](./frontend-ui.md#10-ids-estáveis-para-testes-pela-tela) e no [PLANO_RPA.md](../PLANO_RPA.md).
+- O que a pessoa faz na tela também entra em `Ofertio.E2E`, no mesmo passo do teste de unidade. O checklist (id, rótulo, fumaça do menu, valor inválido, gravação `E2E-`, aviso, modal e botão) está no [README](../../README.md#-regras-de-ouro-resumo), em [frontend-ui.md](./frontend-ui.md#10-ids-estáveis-para-testes-pela-tela) e no [PLANO_RPA.md](../PLANO_RPA.md).
 - Comandos de execução e filtros: [README](../../README.md#-comandos-principais).

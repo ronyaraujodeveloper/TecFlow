@@ -50,6 +50,7 @@ public class AccountFlowTests
     {
         await using var session = await OpenAnonymousAsync();
         await session.ExpectHeadingAsync("/cadastro", "Crie sua conta");
+        await session.AcceptCookieBannerAsync();
         var page = session.Page;
 
         await PortalSession.FillAndCommitAsync(page.Locator("#register-email"), AccountPilot.InvalidEmail);
@@ -76,6 +77,7 @@ public class AccountFlowTests
     {
         await using var session = await OpenAnonymousAsync();
         await session.ExpectHeadingAsync("/recuperar-senha", "Recuperar ou alterar senha");
+        await session.AcceptCookieBannerAsync();
         var page = session.Page;
         await PortalSession.FillAndCommitAsync(page.Locator("#recovery-email"), AccountPilot.InvalidEmail);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Enviar instruções" }).ClickAsync();

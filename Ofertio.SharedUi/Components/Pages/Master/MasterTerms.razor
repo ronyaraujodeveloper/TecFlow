@@ -55,16 +55,16 @@
                         </select>
 
                         <div class="d-flex flex-wrap gap-2 mb-2" aria-label="Formatação">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<strong>", "</strong>")'>
+                            <button type="button" id="terms-bold" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<strong>", "</strong>")'>
                                 <i class="bi bi-type-bold me-1" aria-hidden="true"></i>Negrito
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<h2>", "</h2>")'>
+                            <button type="button" id="terms-heading" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<h2>", "</h2>")'>
                                 <i class="bi bi-type-h2 me-1" aria-hidden="true"></i>Título
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<ul><li>", "</li></ul>")'>
+                            <button type="button" id="terms-list" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<ul><li>", "</li></ul>")'>
                                 <i class="bi bi-list-ul me-1" aria-hidden="true"></i>Lista
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="InsertLinkAsync">
+                            <button type="button" id="terms-link" class="btn btn-outline-secondary btn-sm" @onclick="InsertLinkAsync">
                                 <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Link
                             </button>
                         </div>
@@ -82,7 +82,7 @@
             <div class="col-12 col-lg-6">
                 <div class="card shadow-sm h-100">
                     <div class="card-header fw-semibold">Pré-visualização</div>
-                    <div class="card-body legal-doc legal-published">
+                    <div id="terms-preview" class="card-body legal-doc legal-published">
                         @((MarkupString)TermsDocumentRules.Sanitize(_content))
                     </div>
                 </div>

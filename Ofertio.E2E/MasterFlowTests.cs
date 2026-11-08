@@ -1,4 +1,5 @@
-﻿using Microsoft.Playwright;
+﻿using System.Text.RegularExpressions;
+using Microsoft.Playwright;
 
 namespace Ofertio.E2E;
 
@@ -124,7 +125,7 @@ public class MasterFlowTests
     }
 
     [RequiresE2EFact]
-    public async Task Terms_ScreenOpensWithoutPublishingAVersion()
+    public async Task Terms_RejectsEmptyTextPublishesAnE2EParagraphAndRestoresThePreviousText()
     {
         await using var visit = await OpenMasterAsync("/master/termos", "Termos e privacidade");
         if (!visit.Allowed || await visit.Page.Locator("#terms-content").CountAsync() == 0)
@@ -132,9 +133,78 @@ public class MasterFlowTests
             return;
         }
 
-        await Assertions.Expect(visit.Page.Locator("#terms-kind")).ToBeVisibleAsync(Visible);
-        await Assertions.Expect(visit.Page.Locator("#terms-publish")).ToBeVisibleAsync(Visible);
-        await Assertions.Expect(visit.Page.GetByText("Versão 1.1 publicada.")).ToHaveCountAsync(0);
+        var page = visit.Page;
+        await Assertions.Expect(page.Locator("#terms-kind")).ToBeVisibleAsync(Visible);
+        var restore = await page.Locator("#terms-content").InputValueAsync();
+        if (string.IsNullOrWhiteSpace(restore))
+        {
+            restore = await ReadPublicTermsHtmlAsync(visit.Session);
+            await visit.Session.ExpectHeadingAsync("/master/termos", "Termos e privacidade");
+            await visit.Session.AcceptTermsDialogAsync("terms-reaccept", required: false);
+        }
+
+        Assert.False(string.IsNullOrWhiteSpace(restore));
+        var published = false;
+        try
+        {
+            await WrapSampleAsync(page, "#terms-bold", "<strong>");
+            await WrapSampleAsync(page, "#terms-heading", "<h2>");
+            await WrapSampleAsync(page, "#terms-list", "<ul>");
+            await WrapSampleAsync(page, "#terms-link", "href=\"https://\"");
+
+            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), string.Empty);
+            await page.Locator("#terms-publish").ClickAsync();
+            await Assertions.Expect(page.GetByText("Informe o texto do documento.")).ToBeVisibleAsync(Visible);
+
+            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "<script>alert(1)</script>");
+            await page.Locator("#terms-publish").ClickAsync();
+            await Assertions.Expect(page.GetByText("Informe o texto do documento.")).ToBeVisibleAsync(Visible);
+
+            await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "<p>E2E- termos do robô</p>");
+            await page.Locator("#terms-publish").ClickAsync();
+            await Assertions.Expect(page.GetByText(PublishedVersion)).ToBeVisibleAsync(Visible);
+            published = true;
+
+            await visit.Session.ExpectHeadingAsync("/minhas-lojas", "Minhas Lojas / Integrações");
+            await visit.Session.AcceptTermsDialogAsync("terms-reaccept", required: true);
+            await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Conectar nova loja" }).ClickAsync();
+            await visit.Session.AcceptTermsDialogAsync("terms-api-consent", required: true);
+            await Assertions.Expect(page.Locator("#connect-store-title")).ToBeVisibleAsync(Visible);
+            await page.Locator(".marketplace-connect-modal").GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Cancelar", Exact = true }).ClickAsync();
+            await Assertions.Expect(page.Locator("#connect-store-title")).ToBeHiddenAsync();
+        }
+        finally
+        {
+            if (published)
+            {
+                await visit.Session.ExpectHeadingAsync("/master/termos", "Termos e privacidade");
+                await visit.Session.AcceptTermsDialogAsync("terms-reaccept", required: false);
+                await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), restore);
+                await page.Locator("#terms-publish").ClickAsync();
+                await Assertions.Expect(page.GetByText(PublishedVersion)).ToBeVisibleAsync(Visible);
+            }
+        }
+    }
+
+    private static async Task WrapSampleAsync(IPage page, string buttonId, string expectedFragment)
+    {
+        await PortalSession.FillAndCommitAsync(page.Locator("#terms-content"), "E2E- texto");
+        await page.Locator("#terms-content").EvaluateAsync("el => el.setSelectionRange(0, el.value.length)");
+        await page.Locator(buttonId).ClickAsync();
+        await page.WaitForFunctionAsync(
+            "fragment => { const field = document.getElementById('terms-content'); return !!field && field.value.includes(fragment); }",
+            expectedFragment);
+        await Assertions.Expect(page.Locator("#terms-preview")).ToContainTextAsync("E2E- texto");
+    }
+
+    private static async Task<string> ReadPublicTermsHtmlAsync(PortalSession session)
+    {
+        var target = new Uri(session.Settings.BaseUrl, "/legal/termos");
+        await session.Page.GotoAsync(target.AbsoluteUri, new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded
+        });
+        return await session.Page.Locator("#legal-document").InnerHTMLAsync();
     }
 
     private static async Task<MasterVisit> OpenMasterAsync(string path, string heading)
@@ -177,9 +247,13 @@ public class MasterFlowTests
 
     private static LocatorAssertionsToBeVisibleOptions Visible => new() { Timeout = 30_000 };
 
+    private static Regex PublishedVersion => new(@"Versão \d+\.\d+ publicada\.", RegexOptions.CultureInvariant);
+
     private sealed class MasterVisit(PortalSession session, bool allowed) : IAsyncDisposable
     {
         public bool Allowed { get; } = allowed;
+
+        public PortalSession Session => session;
 
         public IPage Page => session.Page;
 

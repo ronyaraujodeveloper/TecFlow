@@ -35,7 +35,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary btn-touch" disabled="@(!_accepted || _busy)" @onclick="AcceptAsync">
+                    <button type="button" id="@(FieldId)-confirm" class="btn btn-primary btn-touch" disabled="@(!_accepted || _busy)" @onclick="AcceptAsync">
                         @if (_busy)
                         {
                             <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>

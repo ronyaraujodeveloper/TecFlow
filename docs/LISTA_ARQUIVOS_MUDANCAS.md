@@ -2146,3 +2146,28 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Business/Dto/CampaignDto.cs**, **Ofertio.API/Controllers/CampaignsController.cs** e **Dashboard.razor** — a campanha nova grava a loja ativa. Sem isso a lista filtrada por loja ficava vazia.
 - [x] **MarketplaceAccountDto.cs** e **MarketplaceAccountMapper.cs** — `IntegracaoLojaId` separa a conta marketplace do id usado em campanha, métrica e painel.
 - [x] **Ofertio.Tests/Unit/Mappings/MarketplaceAccountMapperTests.cs** (novo) — a conta 17 continua conta; a campanha usa a integração 22.
+- [x] **Ofertio.E2E/PortalSession.cs** — o login em `https://localhost:7002` aceita o certificado local e segue assim que o endereço do painel responde. O preenchimento espera o circuito do Blazor confirmar o campo antes do próximo clique.
+- [x] **Ofertio.E2E/MasterFlowTests.cs** — a auditoria fecha o navegador antes de abrir a central de inquilinos. Os dois Chromes juntos seguravam o login.
+- [x] **Ofertio.SharedUi/Components/Pages/RecuperarSenha.razor** — o botão de enviar valida o e-mail no clique. O envio do formulário não chegava a mostrar "E-mail inválido."
+
+### Fase 48 — Conformidade, LGPD e Termos de Uso (nov/2026)
+
+- [x] **Ofertio.Core/Entities/TermsVersion.cs** (novo) e **UserTermsAcceptance.cs** (novo) — versão publicada e cada aceite (cadastro, reaceite ou API externa).
+- [x] **Ofertio.Core/Entities/UserAccount.cs** — `TermsAcceptedVersion`, `TermsAcceptedAt` e `TermsAcceptedIp`.
+- [x] **Ofertio.Database/AppDbContext.cs** e **Ofertio.Data/Migrations/20261108203538_AddTermsVersionsAndAcceptance.cs** (novo, + Designer e snapshot) — tabelas `TermsVersions` e `UserTermsAcceptances`; uma versão ativa por documento.
+- [x] **Ofertio.Database/Filter/TermsVersionFilter.cs** (novo) e **UserTermsAcceptanceFilter.cs** (novo).
+- [x] **Ofertio.Business/Dto/TermsVersionDto.cs**, **TermsVersionResponseDto.cs**, **UserTermsAcceptanceDto.cs** e **UserTermsAcceptanceResponseDto.cs** (novos).
+- [x] **Ofertio.Business/Service/Legal/TermsDocumentRules.cs** (novo) — próxima versão, reaceite, IP (Cloudflare e encaminhado), plataformas Mercado Livre/Shopee/TikTok e limpeza do HTML.
+- [x] **Ofertio.Business/Interfaces/Services/ITermsDocumentService.cs** (novo) e **Ofertio.Infrastructure.Services/Legal/TermsDocumentService.cs** (novo).
+- [x] **Ofertio.Business/Dto/UserDto.cs**, **AuthTokenDto.cs**, **IPlatformAuthService.cs** e **Ofertio.Infrastructure.Services/Security/PlatformAuthService.cs** — o cadastro exige o aceite e o login informa se a versão publicada está pendente.
+- [x] **Ofertio.API/Controllers/AuthController.cs** e **LegalDocumentsController.cs** (novo) — IP real no registro; versão ativa pública; aceite e histórico do próprio usuário.
+- [x] **Ofertio.API/Controllers/Master/MasterTermsController.cs** (novo), **Ofertio.Business/Service/Master/MasterRbac.cs** e **Ofertio.SharedUi/Services/Navigation/MasterRoutes.cs** — permissão `ManageLegal` e rota `/master/termos`.
+- [x] **Ofertio.SharedUi/Services/Http/ClientIpForwardingHandler.cs** (novo) e **Extensions/ServiceCollectionExtensions.cs** — o Blazor repassa o IP de quem está no navegador.
+- [x] **Ofertio.SharedUi/Services/Legal/TermsApiService.cs** (novo) e **Services/Master/MasterApiService.cs**.
+- [x] **Ofertio.SharedUi/Components/Legal/CookieConsentBanner.razor**, **TermsConsentDialog.razor**, **TermsReacceptanceHost.razor** e **LegalDocumentView.razor** (novos).
+- [x] **Ofertio.SharedUi/Components/Pages/Master/MasterTerms.razor** (novo) — editor, pré-visualização e publicação da próxima versão.
+- [x] **Ofertio.SharedUi/Components/Pages/Register.razor**, **Home.razor**, **RecuperarSenha.razor**, **Legal/TermosDeUso.razor**, **Legal/PoliticaPrivacidade.razor**, **MinhasLojas.razor** e os layouts público, legal, principal e Master.
+- [x] **Ofertio.SharedUi/wwwroot/app.css** e **app-interop.js** — faixa de cookies e atalhos do editor.
+- [x] **Ofertio.Tests/Unit/Legal/TermsDocumentRulesTests.cs** (novo) e **Ofertio.Tests/Unit/Controllers/AuthControllerSecurityTests.cs**.
+- [x] **Ofertio.E2E/AccountFlowTests.cs** e **MasterFlowTests.cs** — a caixa do cadastro e a tela do Master sem publicar.
+- [x] **docs/rules/backend-architecture.md** e **docs/rules/frontend-ui.md** — aceite, IP e caixa desmarcada.

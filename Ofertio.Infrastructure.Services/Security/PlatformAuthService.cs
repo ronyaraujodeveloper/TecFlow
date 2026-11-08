@@ -6,6 +6,7 @@ using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Security;
 using Ofertio.Business.Service.Common;
+using Ofertio.Business.Service.Legal;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Infrastructure.Security;
@@ -22,6 +23,7 @@ public class PlatformAuthService : IPlatformAuthService
     private readonly JwtTokenService _jwtTokenService;
     private readonly ITenantProvisioningService _tenantProvisioningService;
     private readonly ILogger<PlatformAuthService> _logger;
+    private readonly ITermsDocumentService _termsDocuments;
     private readonly ITenantAccessReader? _tenantAccessReader;
 
     public PlatformAuthService(
@@ -32,6 +34,7 @@ public class PlatformAuthService : IPlatformAuthService
         JwtTokenService jwtTokenService,
         ITenantProvisioningService tenantProvisioningService,
         ILogger<PlatformAuthService> logger,
+        ITermsDocumentService termsDocuments,
         ITenantAccessReader? tenantAccessReader = null)
     {
         _userAccountRepository = userAccountRepository;
@@ -41,6 +44,7 @@ public class PlatformAuthService : IPlatformAuthService
         _jwtTokenService = jwtTokenService;
         _tenantProvisioningService = tenantProvisioningService;
         _logger = logger;
+        _termsDocuments = termsDocuments;
         _tenantAccessReader = tenantAccessReader;
     }
 
@@ -63,7 +67,7 @@ public class PlatformAuthService : IPlatformAuthService
             }
         }
 
-        return (true, BuildAuthToken(user, platform), null, null);
+        return (true, await BuildAuthTokenAsync(user, platform, cancellationToken), null, null);
     }
 
     public async Task<(bool Success, AuthTokenDto? Token, string? ErrorMessage, string? ErrorCode)> LoginAsync(
@@ -235,8 +239,14 @@ public class PlatformAuthService : IPlatformAuthService
 
     public async Task<UserResponseDto> RegisterAsync(
         UserDto request,
+        string? clientIp = null,
         CancellationToken cancellationToken = default)
     {
+        if (!request.AcceptedTerms)
+        {
+            return FailRegister(TermsDocumentRules.AcceptanceRequiredMessage);
+        }
+
         if (string.IsNullOrWhiteSpace(request.Email))
         {
             return FailRegister("E-mail é obrigatório.");
@@ -287,6 +297,7 @@ public class PlatformAuthService : IPlatformAuthService
         user.TenantId = tenant.Id;
 
         await _userAccountRepository.AddAsync(user);
+        await _termsDocuments.RecordRegistrationAsync(user, clientIp, cancellationToken);
 
         return new UserResponseDto
         {
@@ -435,7 +446,18 @@ public class PlatformAuthService : IPlatformAuthService
         await _userAccountRepository.AddAsync(newUser);
         await _userManager.AddLoginAsync(newUser, new UserLoginInfo(provider, payload.ProviderKey, provider));
 
-        return (true, BuildAuthToken(newUser, platform), null, null);
+        return (true, await BuildAuthTokenAsync(newUser, platform, cancellationToken), null, null);
+    }
+
+    private async Task<AuthTokenDto> BuildAuthTokenAsync(
+        UserAccount user,
+        string platform,
+        CancellationToken cancellationToken)
+    {
+        var token = BuildAuthToken(user, platform);
+        var status = await _termsDocuments.GetStatusAsync(user.Id, cancellationToken);
+        token.RequiresTermsAcceptance = status.RequiresReacceptance;
+        return token;
     }
 
     private AuthTokenDto BuildAuthToken(UserAccount user, string platform) =>

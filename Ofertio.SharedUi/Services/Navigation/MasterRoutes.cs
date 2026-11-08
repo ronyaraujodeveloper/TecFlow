@@ -30,6 +30,7 @@ public static class MasterRoutes
     public const string Users = "/master/usuarios";
     public const string Audit = "/master/auditoria";
     public const string Communication = "/master/comunicacao";
+    public const string Terms = "/master/termos";
 
     /// <summary>Saída da emulação: chamada com a sessão do tenant emulado (papel TenantUser).</summary>
     public const string ImpersonationExit = "/master/emular/sair";
@@ -49,7 +50,8 @@ public static class MasterRoutes
         new(DeveloperAccounts, "Contas de teste / dev", "bi-person-badge", MasterPermissions.ManageGlobalKeys),
         new(Operators, "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators),
         new(Audit, "Trilha de auditoria", "bi-journal-lock", MasterPermissions.ViewAudit),
-        new(Communication, "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication)
+        new(Communication, "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication),
+        new(Terms, "Termos e privacidade", "bi-file-earmark-text", MasterPermissions.ManageLegal)
     ];
 
     public static bool IsMasterRoute(string? path)

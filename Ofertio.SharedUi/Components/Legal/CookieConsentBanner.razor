@@ -1,0 +1,57 @@
+﻿@inject IJSRuntime Js
+
+@if (_visible)
+{
+    <div class="cookie-banner" role="dialog" aria-labelledby="cookie-banner-title">
+        <div class="cookie-banner-inner">
+            <div>
+                <strong id="cookie-banner-title">Cookies essenciais</strong>
+                <p class="mb-0 small">
+                    Usamos apenas cookies essenciais para manter sua sessão. Saiba mais na
+                    <a href="@LegalRoutes.Privacy">Política de Privacidade</a>.
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary btn-touch" @onclick="AcceptAsync">
+                <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Entendi
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _visible;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            var value = await Js.InvokeAsync<string?>("ofertioCookieConsent.read");
+            _visible = !string.Equals(value, "accepted", StringComparison.Ordinal);
+        }
+        catch (Exception)
+        {
+            _visible = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task AcceptAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("ofertioCookieConsent.write");
+        }
+        catch (Exception)
+        {
+            // O aviso some nesta visita mesmo se o navegador bloquear o armazenamento.
+        }
+
+        _visible = false;
+    }
+}

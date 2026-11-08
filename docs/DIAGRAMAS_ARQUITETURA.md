@@ -2184,6 +2184,25 @@ flowchart LR
   GUARD[TenantAccessGuardMiddleware] -->|libera /api/conta ao bloqueado| CTRL
 ```
 
+### Termos, aceite e cookies (`TermsAcceptance`)
+
+A versão 1.0 mora no código. O Master publica a próxima. O aceite guarda versão, data em UTC e IP. Sem versão publicada, ninguém é bloqueado no login; o primeiro vínculo de loja pede o aceite da API externa.
+
+```mermaid
+flowchart LR
+  CAD["/cadastro: caixa desmarcada"] -->|POST api/auth/register + IP| AUTH[AuthController]
+  AUTH --> PAS[PlatformAuthService]
+  PAS --> DOC[TermsDocumentService]
+  DOC --> VERSOES[("TermsVersions")]
+  DOC --> ACEITE[("UserTermsAcceptances")]
+  DOC --> USU[("Usuarios: versão, data e IP")]
+  LOGIN[Login] -->|RequiresTermsAcceptance| MODAL[Modal de reaceite]
+  MODAL -->|POST api/legal/acceptance| DOC
+  LOJA["Conectar loja ML, Shopee ou TikTok"] -->|finalidade ExternalApi| MODAL
+  MASTER["/master/termos"] -->|POST api/master/termos| DOC
+  DOC -->|nova versão ativa| PUBLICO["/legal/termos e /legal/privacidade"]
+```
+
 ---
 
 **FIM DOS DIAGRAMAS**

@@ -29,6 +29,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 - **Dados:** cada entidade tem só `Filter`, `Dto` e `ResponseDto`; listagens paginadas em no máximo 30. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 - **Segredos:** senhas e tokens são criptografados no banco e nunca vão para o repositório nem para os logs. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 - **UI:** todo botão tem ícone `bi bi-*`; combos seguem o padrão global (busca só com mais de 6 itens); campo preenchível tem `id` estável (`{tela}-{campo}`) e `<label for>` igual. ➔ [frontend-ui](./docs/rules/frontend-ui.md)
+- **Testes e RPA:** comportamento novo ou corrigido ganha teste em `Ofertio.Tests`. Tela, campo ou botão novo entra no mesmo passo em `Ofertio.E2E`. OAuth, sessão real de WhatsApp/Telegram e cobrança ASAAS ficam fora do robô. ➔ [backend-architecture](./docs/rules/backend-architecture.md) e [PLANO_RPA](./docs/PLANO_RPA.md)
 - **Marketplaces:** só API oficial com Bearer token; sem raspagem nem contorno de anti-bot ou captcha. ➔ [marketplaces-oauth](./docs/rules/marketplaces-oauth.md)
 - **Preservação:** não remova validações nem regras existentes ao refatorar. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 
@@ -52,7 +53,7 @@ dotnet user-secrets set "E2E:BaseUrl" "https://dev.ofertio.com.br" --project .\O
 dotnet user-secrets set "E2E:Email" "e2e@ofertio.local" --project .\Ofertio.E2E\Ofertio.E2E.csproj
 dotnet user-secrets set "E2E:Password" "<senha>" --project .\Ofertio.E2E\Ofertio.E2E.csproj
 dotnet build .\Ofertio.E2E\Ofertio.E2E.csproj
-pwsh .\Ofertio.E2E\bin\Debug\net8.0\playwright.ps1 install
+powershell -File .\Ofertio.E2E\bin\Debug\net8.0\playwright.ps1 install
 dotnet test .\Ofertio.E2E\Ofertio.E2E.csproj
 
 # Carga de homologação (não rode na produção). Preencha o e-mail do dono no script:

@@ -395,3 +395,41 @@ window.ofertioMultiSelect = (function () {
         }
     };
 })();
+
+window.ofertioCookieConsent = {
+    read: function () {
+        try {
+            return window.localStorage.getItem("ofertio.cookie-consent");
+        } catch (error) {
+            return null;
+        }
+    },
+    write: function () {
+        window.localStorage.setItem("ofertio.cookie-consent", "accepted");
+        return true;
+    }
+};
+
+window.ofertioLegalEditor = {
+    wrap: function (id, before, after) {
+        var field = document.getElementById(id);
+        if (!field) {
+            return (before || "") + (after || "");
+        }
+
+        var start = field.selectionStart || 0;
+        var end = field.selectionEnd || 0;
+        var value = field.value || "";
+        var selected = value.slice(start, end);
+        var next = value.slice(0, start) + (before || "") + selected + (after || "") + value.slice(end);
+        field.value = next;
+        field.focus();
+        var cursor = start + (before || "").length + selected.length;
+        if (typeof field.setSelectionRange === "function") {
+            field.setSelectionRange(cursor, cursor);
+        }
+
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        return next;
+    }
+};

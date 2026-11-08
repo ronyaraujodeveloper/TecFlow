@@ -8,4 +8,7 @@ public class AuthTokenDto
     public string? UserId { get; set; }
     public string? DisplayName { get; set; }
     public string Platform { get; set; } = string.Empty;
+
+    /// <summary>A sessão foi emitida, mas a versão publicada dos termos ainda não foi aceita.</summary>
+    public bool RequiresTermsAcceptance { get; set; }
 }

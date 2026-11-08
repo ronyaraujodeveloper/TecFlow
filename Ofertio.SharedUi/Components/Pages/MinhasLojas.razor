@@ -13,6 +13,7 @@
 @inject ILogger<MinhasLojas> Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IAuthCookieService AuthCookie
+@inject ITermsApiService TermsApi
 
 <PageTitle>Minhas Lojas / Integrações — Ofertio</PageTitle>
 
@@ -86,6 +87,11 @@
         </section>
     }
 </div>
+
+<TermsConsentDialog Visible="_apiConsentVisible"
+                    FieldId="terms-api-consent"
+                    Purpose="@TermsDocumentRules.PurposeExternalApi"
+                    Accepted="ContinueAfterApiConsentAsync" />
 
 <ConnectStoreModal Visible="@_connectModalVisible"
                    IsBusy="@_isBusy"
@@ -222,12 +228,56 @@
         await ObterLojasAsync();
     }
 
-    private void OpenConnectModal()
+    private bool _apiConsentVisible;
+    private Func<Task>? _afterApiConsent;
+
+    private async Task OpenConnectModal()
+    {
+        if (await HoldForApiConsentAsync(OpenConnectModalCoreAsync))
+        {
+            return;
+        }
+
+        OpenConnectModalCore();
+    }
+
+    private Task OpenConnectModalCoreAsync()
+    {
+        OpenConnectModalCore();
+        return Task.CompletedTask;
+    }
+
+    private void OpenConnectModalCore()
     {
         _editingStore = null;
         _connectPreferredPlatform = null;
         _connectModalError = null;
         _connectModalVisible = true;
+    }
+
+    private async Task<bool> HoldForApiConsentAsync(Func<Task> next)
+    {
+        var status = await TermsApi.GetStatusAsync();
+        if (status.Success && status.Data is { RequiresReacceptance: false, RequiresExternalApiConsent: true })
+        {
+            _afterApiConsent = next;
+            _apiConsentVisible = true;
+            await InvokeAsync(StateHasChanged);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task ContinueAfterApiConsentAsync()
+    {
+        _apiConsentVisible = false;
+        var next = _afterApiConsent;
+        _afterApiConsent = null;
+        if (next is not null)
+        {
+            await next();
+        }
     }
 
     private void OpenEditModal(MarketplaceAccountDto store)
@@ -255,6 +305,12 @@
 
     private async Task StartOAuthAsync((MarketplaceType Platform, string FriendlyName) payload)
     {
+        if (TermsDocumentRules.IsExternalApiPlatform(payload.Platform)
+            && await HoldForApiConsentAsync(() => StartOAuthAsync(payload)))
+        {
+            return;
+        }
+
         _isBusy = true;
         _connectModalError = null;
         ClearPageMessage();

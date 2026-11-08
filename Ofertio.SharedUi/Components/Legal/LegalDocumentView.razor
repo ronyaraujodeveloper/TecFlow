@@ -1,0 +1,50 @@
+﻿@inject ITermsApiService TermsApi
+
+@if (_html is not null)
+{
+    <h1>@Title</h1>
+    <p class="legal-updated">Versão @_version</p>
+    <div class="legal-published">@((MarkupString)_html)</div>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public string Kind { get; set; } = TermsDocumentRules.Terms;
+    [Parameter] public string Title { get; set; } = "Documento";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string? _html;
+    private string? _version;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await TermsApi.GetActiveAsync();
+            var published = result.Success
+                ? result.Data?.DataList?.FirstOrDefault(item =>
+                    item.IsActive && string.Equals(item.DocumentKind, Kind, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (published is null || string.IsNullOrWhiteSpace(published.Content))
+            {
+                return;
+            }
+
+            var sanitized = TermsDocumentRules.Sanitize(published.Content);
+            if (string.IsNullOrWhiteSpace(TermsDocumentRules.VisibleText(sanitized)))
+            {
+                return;
+            }
+
+            _html = sanitized;
+            _version = published.Version;
+        }
+        catch (Exception)
+        {
+            _html = null;
+        }
+    }
+}

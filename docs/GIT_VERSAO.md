@@ -172,3 +172,4 @@
 [2026-11-02 18:35:39]docs(legal): informa hospedagem de producao na Hetzner (Alemanha) na Politica de Privacidade e registra deploy de producao pendente
 [2026-11-04 23:15:24]feat(rpa): adiciona o robô Playwright de homologação, ids estáveis e a validação de preço e orçamento
 [2026-11-05 19:41:41]fix(homolog): alinha campanha e propaganda para o robô concluir preço e orçamento
+[2026-11-08 17:53:50] feat(legal): versiona termos e privacidade com aceite, IP e reaceite no Master

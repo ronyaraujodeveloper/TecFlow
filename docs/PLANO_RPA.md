@@ -4,6 +4,15 @@
 >
 > Pendência aberta: [`CHECKLIST_ATIVO.md`](./CHECKLIST_ATIVO.md). Ao concluir uma fase, o bloco vai para [`HISTORICO_FASES_CONCLUIDAS.md`](./HISTORICO_FASES_CONCLUIDAS.md).
 
+### Regra permanente
+
+As fases 1 a 9 estão fechadas. O que for novo continua entrando em `Ofertio.E2E` no mesmo passo do `Ofertio.Tests`, sem abrir fase nova:
+
+- Tela nova no menu: visita em `MenuSmokeTests`, conferindo o `h1`.
+- Campo preenchível novo: `id` estável, como em [`frontend-ui.md`](./rules/frontend-ui.md#10-ids-estáveis-para-testes-pela-tela). O robô preenche, recusa o valor inválido e só grava o caminho válido com prefixo `E2E-`.
+- Botão novo: o robô clica e confere o que a tela mostra.
+- OAuth, sessão real de WhatsApp/Telegram, QR, webhook e cobrança ASAAS continuam fora. O `RobotBoundaryTests` barra esses cliques.
+
 ### Fase 1: Ids estáveis para o robô (`RpaTestIds`)
 
 - [x] **1.1. Convenção:**

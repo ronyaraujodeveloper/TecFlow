@@ -41,11 +41,12 @@ public static class MasterPermissions
     public const string Impersonate = "Impersonate";
     public const string ViewMetrics = "ViewMetrics";
     public const string ManageCommunication = "ManageCommunication";
+    public const string ManageLegal = "ManageLegal";
 
     public static readonly IReadOnlyList<string> All =
     [
         ManageOperators, ViewAudit, ManageGlobalKeys, ManagePlans, ManageBilling, AdjustCredits,
-        ManageTenants, ViewTenants, Impersonate, ViewMetrics, ManageCommunication
+        ManageTenants, ViewTenants, Impersonate, ViewMetrics, ManageCommunication, ManageLegal
     ];
 
     public static string PolicyName(string permission) => "master:" + permission;
@@ -63,6 +64,7 @@ public static class MasterPermissions
         Impersonate => "Emular tenant (impersonation)",
         ViewMetrics => "Ver métricas executivas",
         ManageCommunication => "Avisos, notificações e changelog",
+        ManageLegal => "Publicar termos e política de privacidade",
         _ => permission
     };
 }
@@ -83,6 +85,7 @@ public static class MasterPolicies
     public const string Impersonate = Prefix + MasterPermissions.Impersonate;
     public const string ViewMetrics = Prefix + MasterPermissions.ViewMetrics;
     public const string ManageCommunication = Prefix + MasterPermissions.ManageCommunication;
+    public const string ManageLegal = Prefix + MasterPermissions.ManageLegal;
 }
 
 /// <summary>Matriz de permissões por papel do backoffice (RBAC).</summary>

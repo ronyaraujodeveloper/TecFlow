@@ -1,0 +1,223 @@
+﻿@page "/master/termos"
+@attribute [Authorize(Roles = MasterRoles.AnyMaster)]
+@layout Ofertio.SharedUi.Components.Layout.MasterMainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inherits MasterPageBase
+@using Ofertio.Business.Service.Common
+@inject IMasterApiService Api
+@inject IJSRuntime Js
+
+<PageTitle>Termos e privacidade — Painel Master</PageTitle>
+
+<div class="dashboard-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Termos e privacidade</h1>
+            <p class="text-muted small mb-0">
+                A versão 1.0 é o texto que acompanha o sistema. Salvar publica a próxima versão, desativa a anterior
+                e pede um novo aceite a quem ainda está na versão antiga.
+            </p>
+        </div>
+        <button type="button"
+                id="terms-publish"
+                class="btn btn-primary btn-touch"
+                disabled="@(!Can(MasterPermissions.ManageLegal) || Busy)"
+                @onclick="PublishAsync">
+            @if (Busy)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                <span>Publicando...</span>
+            }
+            else
+            {
+                <i class="bi bi-cloud-upload me-1" aria-hidden="true"></i>
+                <span>Publicar nova versão</span>
+            }
+        </button>
+    </div>
+
+    <MasterAlerts Error="@Error" Info="@Info" />
+
+    @if (!Can(MasterPermissions.ManageLegal))
+    {
+        <div class="alert alert-warning" role="alert">Sua função não publica documentos legais.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <label class="form-label fw-semibold" for="terms-kind">Documento</label>
+                        <select id="terms-kind" class="form-select mb-3" @bind="_kind" @bind:after="OnKindChanged">
+                            <option value="@TermsDocumentRules.Terms">Termos de Uso</option>
+                            <option value="@TermsDocumentRules.Privacy">Política de Privacidade</option>
+                        </select>
+
+                        <div class="d-flex flex-wrap gap-2 mb-2" aria-label="Formatação">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<strong>", "</strong>")'>
+                                <i class="bi bi-type-bold me-1" aria-hidden="true"></i>Negrito
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<h2>", "</h2>")'>
+                                <i class="bi bi-type-h2 me-1" aria-hidden="true"></i>Título
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick='() => WrapAsync("<ul><li>", "</li></ul>")'>
+                                <i class="bi bi-list-ul me-1" aria-hidden="true"></i>Lista
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="InsertLinkAsync">
+                                <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Link
+                            </button>
+                        </div>
+
+                        <label class="form-label fw-semibold" for="terms-content">Texto (HTML)</label>
+                        <textarea id="terms-content"
+                                  class="form-control legal-editor"
+                                  rows="14"
+                                  @bind="_content"
+                                  @bind:event="oninput"></textarea>
+                        <div class="form-text">A publicação remove script, eventos e links que não sejam http, https ou mailto.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header fw-semibold">Pré-visualização</div>
+                    <div class="card-body legal-doc legal-published">
+                        @((MarkupString)TermsDocumentRules.Sanitize(_content))
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-header fw-semibold">Versões</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Versão</th>
+                            <th>Publicada em</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_versions.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-muted text-center py-3">Nenhuma versão publicada. O site mostra o texto 1.0 que acompanha o sistema.</td>
+                            </tr>
+                        }
+                        @foreach (var item in _versions)
+                        {
+                            <tr>
+                                <td>@Label(item.DocumentKind)</td>
+                                <td>@item.Version</td>
+                                <td>@When(item.CreatedAt)</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge text-bg-success">Ativa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Arquivada</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<TermsVersion> _versions = [];
+    private string _kind = TermsDocumentRules.Terms;
+    private string _content = string.Empty;
+
+    protected override async Task LoadAsync()
+    {
+        if (!Can(MasterPermissions.ManageLegal))
+        {
+            return;
+        }
+
+        var result = await Api.TermsAsync(new TermsVersionFilter { Page = 1, PageSize = 20 });
+        if (!Accept(result) || result.Data?.Status == false)
+        {
+            Error = result.Data?.Descricao ?? Error;
+            return;
+        }
+
+        _versions.Clear();
+        _versions.AddRange(result.Data?.DataList ?? []);
+        LoadEditorFromActive();
+    }
+
+    private void OnKindChanged() => LoadEditorFromActive(replace: true);
+
+    private void LoadEditorFromActive(bool replace = false)
+    {
+        if (!replace && !string.IsNullOrWhiteSpace(_content))
+        {
+            return;
+        }
+
+        var active = _versions.FirstOrDefault(item =>
+            item.IsActive && string.Equals(item.DocumentKind, _kind, StringComparison.OrdinalIgnoreCase));
+        _content = active?.Content ?? string.Empty;
+    }
+
+    private Task InsertLinkAsync() => WrapAsync("<a href=\"https://\">", "</a>");
+
+    private async Task WrapAsync(string before, string after)
+    {
+        try
+        {
+            _content = await Js.InvokeAsync<string>("ofertioLegalEditor.wrap", "terms-content", before, after);
+        }
+        catch (Exception)
+        {
+            _content += before + after;
+        }
+    }
+
+    private async Task PublishAsync()
+    {
+        Error = null;
+        Info = null;
+        Busy = true;
+        try
+        {
+            var result = await Api.PublishTermsAsync(new TermsVersionDto
+            {
+                DocumentKind = _kind,
+                Content = _content
+            });
+            if (!Accept(result) || result.Data is not { Status: true })
+            {
+                Error = result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível publicar.";
+                return;
+            }
+
+            Info = result.Data.Descricao;
+            _content = string.Empty;
+            await LoadAsync();
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private static string Label(string kind) =>
+        string.Equals(kind, TermsDocumentRules.Privacy, StringComparison.OrdinalIgnoreCase)
+            ? "Política de Privacidade"
+            : "Termos de Uso";
+
+    private static string When(DateTime utc) =>
+        BrazilTimeZoneRules.ToLocal(utc, "SP").ToString("dd/MM/yyyy HH:mm", PtBr) + " (Brasília)";
+}

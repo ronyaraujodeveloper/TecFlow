@@ -90,17 +90,19 @@ public class MasterFlowTests
     [RequiresE2EFact]
     public async Task AuditAndTenants_OnlyReadTheFilters()
     {
-        await using var audit = await OpenMasterAsync("/master/auditoria", "Trilha de auditoria imutável");
-        if (audit.Allowed)
+        await using (var audit = await OpenMasterAsync("/master/auditoria", "Trilha de auditoria imutável"))
         {
-            var page = audit.Page;
-            var filter = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Filtrar" });
-            await Assertions.Expect(filter).ToBeEnabledAsync();
-            await page.Locator("#audit-action").FillAsync("e2e.leitura");
-            await page.Locator("#audit-action").BlurAsync();
-            await filter.ClickAsync();
-            await Assertions.Expect(page.GetByText("Nenhum registro.")).ToBeVisibleAsync(Visible);
-            Assert.Contains("/master/auditoria", page.Url, StringComparison.OrdinalIgnoreCase);
+            if (audit.Allowed)
+            {
+                var page = audit.Page;
+                var filter = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Filtrar" });
+                await Assertions.Expect(filter).ToBeEnabledAsync();
+                await page.Locator("#audit-action").FillAsync("e2e.leitura");
+                await page.Locator("#audit-action").BlurAsync();
+                await filter.ClickAsync();
+                await Assertions.Expect(page.GetByText("Nenhum registro.")).ToBeVisibleAsync(Visible);
+                Assert.Contains("/master/auditoria", page.Url, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         await using var tenants = await OpenMasterAsync("/master/tenants", "Central de inquilinos (Tenant 360°)");
@@ -119,6 +121,20 @@ public class MasterFlowTests
         await Assertions.Expect(tenantPage.Locator("#tenant-credits")).ToHaveCountAsync(0);
         await Assertions.Expect(tenantPage.Locator("#tenant-action")).ToHaveCountAsync(0);
         await Assertions.Expect(tenantPage.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Aplicar ação" })).ToHaveCountAsync(0);
+    }
+
+    [RequiresE2EFact]
+    public async Task Terms_ScreenOpensWithoutPublishingAVersion()
+    {
+        await using var visit = await OpenMasterAsync("/master/termos", "Termos e privacidade");
+        if (!visit.Allowed || await visit.Page.Locator("#terms-content").CountAsync() == 0)
+        {
+            return;
+        }
+
+        await Assertions.Expect(visit.Page.Locator("#terms-kind")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(visit.Page.Locator("#terms-publish")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(visit.Page.GetByText("Versão 1.1 publicada.")).ToHaveCountAsync(0);
     }
 
     private static async Task<MasterVisit> OpenMasterAsync(string path, string heading)

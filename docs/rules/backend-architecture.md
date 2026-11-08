@@ -60,6 +60,7 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 - **Logs:** nunca registrar tokens, senhas, `client_secret`, `code` do OAuth ou `code_verifier`.
 - **Cartão de crédito:** número, CVV e validade só trafegam na requisição (`CreditCardDto`) até o `IPlanPaymentGateway`; nunca são gravados, logados nem devolvidos. O pedido (`PedidosAssinatura`) guarda apenas bandeira e 4 últimos dígitos. CPF/CNPJ do cadastro (`PerfisCadastrais.Document`) fica criptografado.
 - **Troca de plano:** o checkout (`MyPlanService`) registra o pedido e nunca altera `Tenant.PlanCode`/`BillingCycle`; quem troca o plano é o webhook do gateway ao confirmar o pagamento.
+- **Termos e privacidade:** a versão 1.0 é o texto que acompanha o sistema. Publicar no Master gera a próxima, desativa a anterior e grava o aceite com versão, data em UTC e IP (`CF-Connecting-IP`, depois o primeiro `X-Forwarded-For`). O IP não vem do corpo do cadastro. Quem está numa versão antiga aceita de novo no login. O primeiro vínculo de loja (Mercado Livre, Shopee ou TikTok Shop) pede o aceite da finalidade de API externa.
 
 ## 7. Registro de telas e árvore dinâmica de menus
 
@@ -78,4 +79,5 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 
 - Todo comportamento novo ou corrigido ganha teste em `Ofertio.Tests` (xUnit + Moq; EF Core InMemory para serviços com banco).
 - Telas Blazor são validadas pelos serviços HTTP e helpers extraídos (sem bUnit).
+- O que a pessoa faz na tela também entra em `Ofertio.E2E`, no mesmo passo do teste de unidade. A regra do robô está em [frontend-ui.md](./frontend-ui.md#10-ids-estáveis-para-testes-pela-tela) e no [PLANO_RPA.md](../PLANO_RPA.md).
 - Comandos de execução e filtros: [README](../../README.md#-comandos-principais).

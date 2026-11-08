@@ -55,7 +55,11 @@ public class AccountFlowTests
         await PortalSession.FillAndCommitAsync(page.Locator("#register-email"), AccountPilot.InvalidEmail);
         await PortalSession.FillAndCommitAsync(page.Locator("#register-password"), "senha-a");
         await PortalSession.FillAndCommitAsync(page.Locator("#register-confirm-password"), "senha-a");
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Concluir cadastro" }).ClickAsync();
+        var submit = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Concluir cadastro" });
+        await Assertions.Expect(submit).ToBeDisabledAsync();
+        await page.Locator("#register-terms").CheckAsync();
+        await Assertions.Expect(submit).ToBeEnabledAsync();
+        await submit.ClickAsync();
         await Assertions.Expect(page.GetByText("E-mail inválido.")).ToBeVisibleAsync(Visible);
         Assert.Contains("/cadastro", page.Url, StringComparison.OrdinalIgnoreCase);
 
@@ -73,7 +77,6 @@ public class AccountFlowTests
         await using var session = await OpenAnonymousAsync();
         await session.ExpectHeadingAsync("/recuperar-senha", "Recuperar ou alterar senha");
         var page = session.Page;
-
         await PortalSession.FillAndCommitAsync(page.Locator("#recovery-email"), AccountPilot.InvalidEmail);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Enviar instruções" }).ClickAsync();
         await Assertions.Expect(page.GetByText("E-mail inválido.")).ToBeVisibleAsync(Visible);

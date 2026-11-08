@@ -1,0 +1,114 @@
+﻿@inject ITermsApiService TermsApi
+
+@if (Visible)
+{
+    <div class="modal fade show d-block terms-consent-host" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@TitleId">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="@TitleId">
+                        <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Aceite dos termos
+                    </h2>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Para continuar, leia e aceite a versão atual dos
+                        <a href="@LegalRoutes.Terms" target="_blank" rel="noopener">Termos de Uso</a>
+                        e da
+                        <a href="@LegalRoutes.Privacy" target="_blank" rel="noopener">Política de Privacidade</a>.
+                    </p>
+                    @if (IsExternalApi)
+                    {
+                        <p class="small text-muted">
+                            Este aceite também cobre o primeiro vínculo com Mercado Livre, Shopee ou TikTok Shop.
+                        </p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <div class="alert alert-danger small py-2" role="alert">@_error</div>
+                    }
+                    <div class="form-check">
+                        <input id="@FieldId" class="form-check-input" type="checkbox" @bind="_accepted" />
+                        <label class="form-check-label" for="@FieldId">
+                            Li e aceito os Termos de Uso e a Política de Privacidade.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary btn-touch" disabled="@(!_accepted || _busy)" @onclick="AcceptAsync">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            <span>Registrando...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                            <span>Aceitar e continuar</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string FieldId { get; set; } = "terms-reaccept";
+    [Parameter] public string Purpose { get; set; } = TermsDocumentRules.PurposeAccount;
+    [Parameter] public EventCallback Accepted { get; set; }
+
+    private bool _accepted;
+    private bool _busy;
+    private bool _wasVisible;
+    private string? _error;
+
+    private string TitleId => FieldId + "-title";
+
+    private bool IsExternalApi =>
+        string.Equals(Purpose, TermsDocumentRules.PurposeExternalApi, StringComparison.Ordinal);
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_wasVisible)
+        {
+            _accepted = false;
+            _error = null;
+        }
+
+        _wasVisible = Visible;
+    }
+
+    private async Task AcceptAsync()
+    {
+        if (!_accepted || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await TermsApi.AcceptAsync(new UserTermsAcceptanceDto
+            {
+                Accepted = true,
+                Purpose = Purpose
+            });
+            if (!result.Success || result.Data is not { Status: true })
+            {
+                _error = result.Data?.Descricao
+                    ?? result.ErrorMessage
+                    ?? "Não foi possível registrar o aceite.";
+                return;
+            }
+
+            await Accepted.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

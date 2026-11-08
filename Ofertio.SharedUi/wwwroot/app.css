@@ -3367,3 +3367,40 @@ html, body {
         max-width: none;
     }
 }
+
+.cookie-banner {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1080;
+    padding: 0.75rem;
+    background: #fff;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -0.25rem 1rem rgba(0, 0, 0, 0.08);
+}
+
+.cookie-banner-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    max-width: 72rem;
+    margin: 0 auto;
+}
+
+.terms-consent-host {
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1090;
+}
+
+.legal-editor {
+    min-height: 16rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+}
+
+.legal-published {
+    overflow-wrap: anywhere;
+}

@@ -1741,3 +1741,19 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **Política de Segurança da Informação:** controles reais do Ofertio (BCrypt, criptografia de tokens e segredos, cofre, OAuth oficial com state selado, isolamento por inquilino, auditoria, ambientes separados, incidentes conforme o art. 48 da LGPD), para o questionário do TikTok Partner Center. Item 5.1 classifica a informação em Pública, Interna, Confidencial e Restrita, com os controles de cada nível.
 - [x] **Login:** links para os três documentos no rodapé da tela de login. Testes garantem rota, layout e acesso anônimo.
 
+## ⚖️ Fase 48 — Conformidade, LGPD e Termos de Uso (`TermsAcceptance`)
+
+- [x] **48.1.1.** Tabela `TermsVersions`: Id, versão, conteúdo HTML, `CreatedAt` e `IsActive`, com o tipo do documento (Termos ou Privacidade). Uma versão ativa por documento.
+- [x] **48.1.2.** Em `Usuarios`: `TermsAcceptedVersion`, `TermsAcceptedAt` e `TermsAcceptedIp`. O histórico de cada aceite fica em `UserTermsAcceptances` (versão, data, IP e finalidade). Migration `AddTermsVersionsAndAcceptance`, aplicada em `localhost\SQLEXPRESS` / `Ofertio`.
+- [x] **48.2.1.** `GET api/legal/active` devolve a versão ativa dos Termos de Uso e da Política de Privacidade, sem login.
+- [x] **48.2.2.** O registro exige o aceite e grava a versão, a data em UTC e o IP real (`CF-Connecting-IP`, senão o primeiro `X-Forwarded-For`). O Blazor encaminha o IP de quem está no navegador. O IP não vem do corpo do cadastro.
+- [x] **48.2.3.** `GET` e `POST api/master/termos`, só com a permissão `ManageLegal` (Super Admin). Publicar registra a trilha de auditoria.
+- [x] **48.2.4.** No login, a API informa se a versão publicada é outra. Mercado Livre, Shopee e TikTok Shop exigem o aceite da finalidade de API externa no primeiro vínculo.
+- [x] **48.3.1.** `/legal/termos` e `/legal/privacidade` seguem públicas. Com versão publicada, mostram o HTML do banco; sem publicação, mostram o texto 1.0 que acompanha o sistema.
+- [x] **48.3.2.** Em `/cadastro`, a caixa `register-terms` nasce desmarcada, com links para os Termos e a Privacidade. "Concluir cadastro" fica desabilitado até a marcação.
+- [x] **48.3.3.** Modal de reaceite que não fecha sozinho quando há versão nova. O mesmo modal aparece no primeiro "Conectar nova loja" e no OAuth de Mercado Livre, Shopee ou TikTok Shop.
+- [x] **48.3.4.** Aviso de cookies essenciais no login, no cadastro, na recuperação de senha, nas páginas legais e no conversor público.
+- [x] **48.4.1.** Tela `/master/termos` com negrito, título, lista, link e pré-visualização do HTML.
+- [x] **48.4.2.** Salvar gera a próxima versão (1.0 é o texto do sistema; a primeira publicação é 1.1), ativa essa versão e desativa a anterior.
+- [x] **Testes:** regras de versão, IP, HTML e reaceite; publicação e aceite com InMemory; o robô marca `register-terms` antes de concluir e abre `/master/termos` sem publicar.
+

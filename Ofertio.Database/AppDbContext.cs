@@ -89,6 +89,8 @@ public class AppDbContext : DbContext
     public DbSet<PlanMenuPermission> PlanMenuPermissions { get; set; } = null!;
     public DbSet<SystemDeveloperAccount> SystemDeveloperAccounts { get; set; } = null!;
     public DbSet<GlobalIntegrationToken> GlobalIntegrationTokens { get; set; } = null!;
+    public DbSet<TermsVersion> TermsVersions { get; set; } = null!;
+    public DbSet<UserTermsAcceptance> UserTermsAcceptances { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema Ofertio (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -117,6 +119,8 @@ public class AppDbContext : DbContext
         {
             entity.Property(u => u.Role).HasDefaultValue("TenantUser");
             entity.Property(u => u.IsActive).HasDefaultValue(true);
+            entity.Property(u => u.TermsAcceptedVersion).HasMaxLength(16);
+            entity.Property(u => u.TermsAcceptedIp).HasMaxLength(64);
             entity.HasIndex(u => u.Role);
         });
 
@@ -798,6 +802,31 @@ public class AppDbContext : DbContext
             entity.Property(item => item.ExternalAccountId).HasMaxLength(128);
             entity.Property(item => item.ExternalAccountName).HasMaxLength(256);
             entity.HasIndex(item => item.Provider).IsUnique();
+        });
+
+        modelBuilder.Entity<TermsVersion>(entity =>
+        {
+            entity.ToTable("TermsVersions");
+            entity.Property(item => item.DocumentKind).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Version).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Content).IsRequired();
+            entity.HasIndex(item => new { item.DocumentKind, item.Version }).IsUnique();
+            entity.HasIndex(item => item.DocumentKind)
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+        });
+
+        modelBuilder.Entity<UserTermsAcceptance>(entity =>
+        {
+            entity.ToTable("UserTermsAcceptances");
+            entity.Property(item => item.DocumentKind).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Version).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.AcceptedIp).HasMaxLength(64);
+            entity.Property(item => item.Purpose).HasMaxLength(16).IsRequired();
+            entity.HasIndex(item => new { item.UserId, item.DocumentKind, item.AcceptedAt });
+            entity.HasOne(item => item.User)
+                .WithMany()
+                .HasForeignKey(item => item.UserId);
         });
 
         modelBuilder.Entity<SystemDeveloperAccount>(entity =>

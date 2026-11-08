@@ -14,6 +14,7 @@ using Ofertio.SharedUi.Services.Navigation;
 using Ofertio.SharedUi.Services.UI;
 using Ofertio.SharedUi.Services.Devices;
 using Ofertio.SharedUi.Services.Integrations;
+using Ofertio.SharedUi.Services.Legal;
 using Ofertio.SharedUi.Services.LinkGenerator;
 using Ofertio.SharedUi.Services.Radar;
 using Ofertio.SharedUi.Services.Time;
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<OrquestradorApiOptions>(configuration.GetSection(OrquestradorApiOptions.SectionName));
 
+        services.AddTransient<ClientIpForwardingHandler>();
         var orquestradorClient = services.AddHttpClient("Orquestrador", (sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OrquestradorApiOptions>>().Value;
@@ -36,6 +38,7 @@ public static class ServiceCollectionExtensions
             client.Timeout = Ofertio.Business.Service.Groups.MonitoredGroupSyncRules.ResolveHttpTimeout(options.TimeoutSeconds);
             client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
         });
+        orquestradorClient.AddHttpMessageHandler<ClientIpForwardingHandler>();
 
         if (environment is not null
             && (environment.IsDevelopment() || environment.IsEnvironment("Homologacao")))
@@ -56,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITikTokAuthService, TikTokAuthService>();
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
+        services.AddScoped<ITermsApiService, TermsApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IUserClock, UserClock>();
         services.AddScoped<IMyAccountApiService, MyAccountApiService>();

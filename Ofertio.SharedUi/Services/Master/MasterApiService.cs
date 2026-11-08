@@ -1,4 +1,5 @@
 ﻿using Ofertio.Business.Dto;
+using Ofertio.Database.Filter;
 using Ofertio.SharedUi.Models;
 using Ofertio.SharedUi.Services.Http;
 using Ofertio.SharedUi.Services.UI;
@@ -50,6 +51,8 @@ public interface IMasterApiService
     Task<ApiResult<MasterOperationResultDto>> SaveGlobalTikTokShopSettingsAsync(GlobalIntegrationSettingsDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> DisconnectGlobalTikTokShopAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MarketplaceAuthorizeUrlResponseDto>> GlobalTikTokShopAuthorizeUrlAsync(string redirectUri, CancellationToken cancellationToken = default);
+    Task<ApiResult<TermsVersionResponseDto>> TermsAsync(TermsVersionFilter filter, CancellationToken cancellationToken = default);
+    Task<ApiResult<TermsVersionResponseDto>> PublishTermsAsync(TermsVersionDto request, CancellationToken cancellationToken = default);
 }
 
 public sealed class MasterApiService : IMasterApiService
@@ -197,6 +200,12 @@ public sealed class MasterApiService : IMasterApiService
         WithLoading("Abrindo autorização do TikTok Shop...", () => _http.GetAsync<MarketplaceAuthorizeUrlResponseDto>(
             $"api/master/integracoes-globais/tiktok-shop/authorize-url?redirectUri={Uri.EscapeDataString(redirectUri)}",
             cancellationToken: cancellationToken));
+
+    public Task<ApiResult<TermsVersionResponseDto>> TermsAsync(TermsVersionFilter filter, CancellationToken cancellationToken = default) =>
+        _http.GetAsync<TermsVersionResponseDto>("api/master/termos", filter, cancellationToken);
+
+    public Task<ApiResult<TermsVersionResponseDto>> PublishTermsAsync(TermsVersionDto request, CancellationToken cancellationToken = default) =>
+        WithLoading("Publicando nova versão...", () => _http.PostAsync<TermsVersionDto, TermsVersionResponseDto>("api/master/termos", request, cancellationToken));
 
     private async Task<T> WithLoading<T>(string message, Func<Task<T>> action)
     {

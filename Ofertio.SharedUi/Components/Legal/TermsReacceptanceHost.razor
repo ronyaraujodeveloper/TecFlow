@@ -1,0 +1,30 @@
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject ITermsApiService TermsApi
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<TermsConsentDialog Visible="_visible"
+                    FieldId="terms-reaccept"
+                    Purpose="@TermsDocumentRules.PurposeAccount"
+                    Accepted="HideAsync" />
+
+@code {
+    private bool _visible;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
+
+        var status = await TermsApi.GetStatusAsync();
+        _visible = status.Success && status.Data?.RequiresReacceptance == true;
+    }
+
+    private Task HideAsync()
+    {
+        _visible = false;
+        return Task.CompletedTask;
+    }
+}

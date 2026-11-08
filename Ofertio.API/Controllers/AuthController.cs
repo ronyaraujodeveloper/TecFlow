@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Dto.Auth;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Legal;
 
 namespace Ofertio.API.Controllers;
 
@@ -125,7 +126,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var result = await _platformAuthService.RegisterAsync(request, cancellationToken);
+            var result = await _platformAuthService.RegisterAsync(request, ClientIp(), cancellationToken);
             return result.Status ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
@@ -218,6 +219,11 @@ public class AuthController : ControllerBase
             throw;
         }
     }
+
+    private string? ClientIp() => TermsDocumentRules.ResolveClientIp(
+        Request.Headers["CF-Connecting-IP"].FirstOrDefault(),
+        Request.Headers["X-Forwarded-For"].FirstOrDefault(),
+        HttpContext.Connection.RemoteIpAddress?.ToString());
 
     private int? GetCurrentUserId()
     {

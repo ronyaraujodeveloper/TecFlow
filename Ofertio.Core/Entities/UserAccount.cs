@@ -39,6 +39,15 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     [MaxLength(2)]
     public string? StateCode { get; set; }
 
+    /// <summary>Versão dos Termos de Uso aceita por este usuário. Nula até o primeiro aceite.</summary>
+    [MaxLength(16)]
+    public string? TermsAcceptedVersion { get; set; }
+
+    public DateTime? TermsAcceptedAt { get; set; }
+
+    [MaxLength(64)]
+    public string? TermsAcceptedIp { get; set; }
+
     public string? TikTokShopAccessToken { get; set; }
     public string? TikTokRefreshToken { get; set; }
     public DateTime? TikTokTokenExpiresAt { get; set; }

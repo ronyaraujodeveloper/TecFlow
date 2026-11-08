@@ -1,9 +1,11 @@
-﻿using System.Security.Claims;
+﻿using System.Net;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Ofertio.API.Controllers;
+using Ofertio.Business.Dto;
 using Ofertio.Business.Dto.Auth;
 using Ofertio.Business.Interfaces.Services;
 
@@ -101,6 +103,29 @@ public class AuthControllerSecurityTests
 
         var bad = Assert.IsType<BadRequestObjectResult>(action.Result);
         Assert.False(Assert.IsType<AuthProviderResponseDto>(bad.Value).Status);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldKeepTheCloudflareIpInsteadOfTheProxy()
+    {
+        var auth = new Mock<IPlatformAuthService>();
+        auth.Setup(service => service.RegisterAsync(It.IsAny<UserDto>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserResponseDto { Status = true, Descricao = "Conta criada com sucesso." });
+
+        var controller = CreateController(auth.Object, userId: null);
+        controller.HttpContext.Request.Headers["CF-Connecting-IP"] = "203.0.113.10";
+        controller.HttpContext.Request.Headers["X-Forwarded-For"] = "198.51.100.4, 10.0.0.2";
+        controller.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse("10.0.0.8");
+
+        var action = await controller.RegisterAsync(
+            new UserDto { Email = "ana@ofertio.local", PasswordHash = "Senha!123", AcceptedTerms = true },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(action.Result);
+        auth.Verify(service => service.RegisterAsync(
+            It.Is<UserDto>(dto => dto.AcceptedTerms),
+            "203.0.113.10",
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static AuthController CreateController(IPlatformAuthService service, string? userId = "7")

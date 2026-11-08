@@ -17,57 +17,52 @@
             </p>
         </div>
 
-        <AuthorizeView>
-            <Authorized>
-                <div class="card shadow-sm border-0 login-card unified-login-card">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-semibold mb-2">Alterar senha</h2>
-                        <p class="text-muted small mb-4">
-                            Você já está autenticado. Em breve, a central de segurança permitirá alterar a senha diretamente aqui.
-                        </p>
-                        <a href="/dashboard" class="btn btn-primary btn-lg w-100 btn-touch">
-                            Ir para o painel
-                        </a>
-                    </div>
+        @if (_isAuthenticated)
+        {
+            <div class="card shadow-sm border-0 login-card unified-login-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-2">Alterar senha</h2>
+                    <p class="text-muted small mb-4">
+                        Você já está autenticado. Em breve, a central de segurança permitirá alterar a senha diretamente aqui.
+                    </p>
+                    <a href="/dashboard" class="btn btn-primary btn-lg w-100 btn-touch">
+                        Ir para o painel
+                    </a>
                 </div>
-            </Authorized>
-            <NotAuthorized Context="authContext">
-                <div class="card shadow-sm border-0 login-card unified-login-card">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-semibold mb-2">Esqueci minha senha</h2>
-                        <p class="text-muted small mb-4">
-                            Informe o e-mail cadastrado. Enviaremos instruções quando a recuperação automática estiver disponível.
-                        </p>
+            </div>
+        }
+        else if (_authReady)
+        {
+            <div class="card shadow-sm border-0 login-card unified-login-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-2">Esqueci minha senha</h2>
+                    <p class="text-muted small mb-4">
+                        Informe o e-mail cadastrado. Enviaremos instruções quando a recuperação automática estiver disponível.
+                    </p>
 
-                        <EditForm Model="_recoveryModel" OnValidSubmit="SubmitRecoveryRequestAsync">
-                            <DataAnnotationsValidator />
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold" for="recovery-email">E-mail</label>
-                                <InputText id="recovery-email"
-                                           class="form-control form-control-lg"
-                                           @bind-Value="_recoveryModel.Email"
-                                           placeholder="seu@email.com"
-                                           autocomplete="email"
-                                           inputmode="email" />
-                                <ValidationMessage For="@(() => _recoveryModel.Email)" />
-                            </div>
-
-                            @if (!string.IsNullOrWhiteSpace(_feedbackMessage))
-                            {
-                                <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-info") small py-2" role="status">
-                                    @_feedbackMessage
-                                </div>
-                            }
-
-                            <button type="submit" class="btn btn-outline-primary btn-lg w-100 btn-touch">
-                                Enviar instruções
-                            </button>
-                        </EditForm>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="recovery-email">E-mail</label>
+                        <input id="recovery-email"
+                               class="form-control form-control-lg"
+                               @bind="_recoveryModel.Email"
+                               placeholder="seu@email.com"
+                               autocomplete="email"
+                               inputmode="email" />
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_feedbackMessage))
+                    {
+                        <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-info") small py-2" role="status">
+                            @_feedbackMessage
+                        </div>
+                    }
+
+                    <button type="button" class="btn btn-outline-primary btn-lg w-100 btn-touch" @onclick="SubmitRecoveryRequest">
+                        Enviar instruções
+                    </button>
                 </div>
-            </NotAuthorized>
-        </AuthorizeView>
+            </div>
+        }
     </div>
 </div>
 
@@ -75,24 +70,35 @@
     private readonly RecoveryModel _recoveryModel = new();
     private string? _feedbackMessage;
     private bool _feedbackIsError;
+    private bool _authReady;
+    private bool _isAuthenticated;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        if (authState.User.Identity?.IsAuthenticated == true)
-        {
-            return;
-        }
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+        _authReady = true;
     }
 
-    private Task SubmitRecoveryRequestAsync()
+    private void SubmitRecoveryRequest()
     {
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        var context = new System.ComponentModel.DataAnnotations.ValidationContext(_recoveryModel);
+        if (!System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+                _recoveryModel,
+                context,
+                results,
+                validateAllProperties: true))
+        {
+            _feedbackIsError = true;
+            _feedbackMessage = results[0].ErrorMessage;
+            return;
+        }
+
         _feedbackIsError = false;
         _feedbackMessage =
             "Recebemos sua solicitação. A recuperação automática de senha será habilitada em breve. " +
             "Se precisar de acesso imediato, entre em contato com o suporte Ofertio.";
-
-        return Task.CompletedTask;
     }
 
     private sealed class RecoveryModel
@@ -102,3 +108,5 @@
         public string Email { get; set; } = string.Empty;
     }
 }
+
+<CookieConsentBanner />

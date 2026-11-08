@@ -30,6 +30,7 @@ public static class IdentityRegistrationExtensions
 
         services.AddHttpClient(nameof(SocialAuthTokenValidator));
         services.AddScoped<ISocialAuthTokenValidator, SocialAuthTokenValidator>();
+        services.AddScoped<ITermsDocumentService, Ofertio.Infrastructure.Services.Legal.TermsDocumentService>();
         services.AddScoped<IPlatformAuthService, PlatformAuthService>();
 
         return services;

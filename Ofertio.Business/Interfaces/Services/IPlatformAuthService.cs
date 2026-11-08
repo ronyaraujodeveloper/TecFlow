@@ -32,6 +32,7 @@ public interface IPlatformAuthService
 
     Task<UserResponseDto> RegisterAsync(
         UserDto request,
+        string? clientIp = null,
         CancellationToken cancellationToken = default);
 
     Task<AuthProviderResponseDto> GetProviderStatusAsync(

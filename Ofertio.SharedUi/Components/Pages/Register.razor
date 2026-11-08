@@ -71,10 +71,29 @@
                                    autocomplete="new-password" />
                     </div>
 
+                    <div class="mb-3 form-check">
+                        <InputCheckbox id="register-terms"
+                                       class="form-check-input"
+                                       @bind-Value="_registerModel.AcceptedTerms" />
+                        <label class="form-check-label" for="register-terms">
+                            Li e aceito os <a href="@LegalRoutes.Terms" target="_blank" rel="noopener">Termos de Uso</a>
+                            e a <a href="@LegalRoutes.Privacy" target="_blank" rel="noopener">Política de Privacidade</a>.
+                        </label>
+                    </div>
+
                     <button type="submit"
                             class="btn btn-primary btn-lg w-100 btn-touch fw-semibold"
-                            disabled="@(_isSubmitting || _passwordsMismatch || _passwordsIncomplete)">
-                        @(_isSubmitting ? "Cadastrando..." : "Concluir cadastro")
+                            disabled="@(_isSubmitting || _passwordsMismatch || _passwordsIncomplete || !_registerModel.AcceptedTerms)">
+                        @if (_isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            <span>Cadastrando...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                            <span>Concluir cadastro</span>
+                        }
                     </button>
                 </EditForm>
 
@@ -110,8 +129,13 @@
         _errorMessage = null;
         OnFormChanged();
 
-        if (_passwordsMismatch || _passwordsIncomplete)
+        if (_passwordsMismatch || _passwordsIncomplete || !_registerModel.AcceptedTerms)
         {
+            if (!_registerModel.AcceptedTerms && !_passwordsMismatch && !_passwordsIncomplete)
+            {
+                _errorMessage = TermsDocumentRules.AcceptanceRequiredMessage;
+            }
+
             return;
         }
 
@@ -122,7 +146,8 @@
             var request = new UserDto
             {
                 Email = _registerModel.Email.Trim(),
-                PasswordHash = _registerModel.Password
+                PasswordHash = _registerModel.Password,
+                AcceptedTerms = true
             };
 
             var response = await RegistrationApi.RegisterAsync(request);
@@ -152,5 +177,9 @@
 
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Confirmação de senha é obrigatória.")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        public bool AcceptedTerms { get; set; }
     }
 }
+
+<CookieConsentBanner />

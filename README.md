@@ -29,13 +29,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 - **Dados:** cada entidade tem só `Filter`, `Dto` e `ResponseDto`; listagens paginadas em no máximo 30. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 - **Segredos:** senhas e tokens são criptografados no banco e nunca vão para o repositório nem para os logs. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 - **UI:** todo botão tem ícone `bi bi-*`; combos seguem o padrão global (busca só com mais de 6 itens); campo preenchível tem `id` estável (`{tela}-{campo}`) e `<label for>` igual. ➔ [frontend-ui](./docs/rules/frontend-ui.md)
-- **Testes e RPA:** comportamento novo ou corrigido ganha teste em `Ofertio.Tests` no mesmo passo. O que a pessoa vê ou clica entra em `Ofertio.E2E` nesse mesmo passo. O robô só encontra o controle pelo `id` estável ou pelo nome acessível. ➔ [frontend-ui](./docs/rules/frontend-ui.md#10-ids-estáveis-para-testes-pela-tela) e [PLANO_RPA](./docs/PLANO_RPA.md)
-  - Campo preenchível (`input`, `textarea`, `select`, checkbox): `id` `{tela}-{campo}` e `<label for>` igual. O teste preenche esse `id`, recusa o valor inválido e só grava o caminho válido com prefixo `E2E-`.
-  - Botão que muda o fluxo, inclusive em aviso e modal: `id` próprio quando o texto se repete ou quando o clique libera a tela (`cookie-accept`, `terms-reaccept-confirm`, `terms-api-consent-confirm`). Texto único na tela pode ficar no nome acessível. O teste clica e confere o que aparece.
-  - Tela nova no menu do cliente: visita em `MenuSmokeTests`, conferindo o `h1`. Tela nova no menu Master: a mesma visita, quando a sessão permanece em `/master`.
-  - Aviso, modal e checkbox que travam o próximo passo entram no robô. Cookies (`#cookie-accept`), reaceite (`#terms-reaccept`) e consentimento de API (`#terms-api-consent`) são clicados. O confirmar fica desabilitado até a caixa ser marcada. O login dispensa o aviso e o reaceite quando eles aparecem, para o restante da suíte seguir.
-  - Publicação que vale para todo mundo (termos) grava um parágrafo `E2E-`, confere a mensagem, aceita o reaceite, aceita o consentimento ao clicar em "Conectar nova loja", fecha o formulário da loja e devolve o texto anterior. Sem a permissão de publicar, o robô só confere o título.
-  - Ficam de fora do robô: OAuth, sessão real de WhatsApp/Telegram, QR, webhook e cobrança ASAAS.
+- **Testes e RPA:** comportamento novo ou corrigido ganha teste em `Ofertio.Tests` e, se a pessoa vê ou clica, em `Ofertio.E2E`, no mesmo passo. O robô só encontra o controle pelo `id` estável `{tela}-{campo}` ou pelo nome acessível. ➔ [frontend-ui §10](./docs/rules/frontend-ui.md#10-ids-estáveis-para-testes-pela-tela)
 - **Marketplaces:** só API oficial com Bearer token; sem raspagem nem contorno de anti-bot ou captcha. ➔ [marketplaces-oauth](./docs/rules/marketplaces-oauth.md)
 - **Preservação:** não remova validações nem regras existentes ao refatorar. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
 
@@ -65,8 +59,6 @@ dotnet test .\Ofertio.E2E\Ofertio.E2E.csproj
 # Carga de homologação (não rode na produção). Preencha o e-mail do dono no script:
 # scripts/carga-homolog-rpa.sql
 
-Execute a FASE 2: Publicação e Deploy Limpo no IIS do arquivo ./docs/EXECUCAO_HOMOLOGACAO.md
-
 # Migrations (SQL Server)
 dotnet ef migrations add <Nome> --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
@@ -74,7 +66,7 @@ dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup
 
 ## 🚀 Homologação (IIS)
 
-O roteiro completo está em [`docs/EXECUCAO_HOMOLOGACAO.md`](./docs/EXECUCAO_HOMOLOGACAO.md), executado em sequência no PowerShell como Administrador. Ele normaliza o encoding, aplica as migrations, publica API e WebUi em `C:\inetpub\ofertio`, reinicia o IIS, roda o smoke test e registra o commit em [`docs/GIT_VERSAO.md`](./docs/GIT_VERSAO.md).
+O roteiro completo está em [`docs/EXECUCAO_HOMOLOGACAO.md`](./docs/EXECUCAO_HOMOLOGACAO.md), executado em sequência no PowerShell como Administrador. Ele normaliza o encoding, aplica as migrations, publica API e WebUi em `C:\inetpub\ofertio`, reinicia o IIS e roda o smoke test.
 
 ## 🐳 Produção (Docker)
 
@@ -90,17 +82,16 @@ A VPS usa Docker, não o IIS. A configuração está em [`docs/CONFIGURACAO_PROD
 - ✅ [Checklist Ativo (pendências)](./docs/CHECKLIST_ATIVO.md)
 - 🤖 [Plano RPA — testes pela tela](./docs/PLANO_RPA.md)
 - 📜 [Histórico de Fases Concluídas](./docs/HISTORICO_FASES_CONCLUIDAS.md): detalhes de cada entrega já feita.
-- 📁 [Lista de Mudanças de Arquivos](./docs/LISTA_ARQUIVOS_MUDANCAS.md)
 - 🧭 [Diagramas de Arquitetura](./docs/DIAGRAMAS_ARQUITETURA.md)
-- 🏷️ [Versões e Commits](./docs/GIT_VERSAO.md)
+- 📦 [Arquivo histórico](./docs/arquivo/): exploração de mai/2026, lista de mudanças e registro de versões (congelados; não são regra).
 - 📱 [Build Mobile](./docs/Ofertio_MOBILE_BUILD.md)
 
 ### 🔁 Fluxo de documentação
 1. Nova tarefa entra como `[ ]` no [Checklist Ativo](./docs/CHECKLIST_ATIVO.md).
 2. Ao concluir, o detalhamento vai para o [Histórico](./docs/HISTORICO_FASES_CONCLUIDAS.md) e o item sai do checklist.
-3. Arquivos criados, movidos ou excluídos atualizam a [Lista de Mudanças](./docs/LISTA_ARQUIVOS_MUDANCAS.md) e, se mudarem o fluxo, os [Diagramas](./docs/DIAGRAMAS_ARQUITETURA.md) (ver `.cursorrules`).
+3. Arquivos criados, movidos ou excluídos ficam registrados no próprio commit (Conventional Commits). Se mudarem o fluxo, atualize os [Diagramas](./docs/DIAGRAMAS_ARQUITETURA.md) (ver `.cursorrules`).
 4. Regra nova ou alterada vai para o arquivo correspondente em `docs/rules/`, não para este README.
 
 ---
 
-*Nota para a IA: leia só o arquivo de `docs/rules/` da camada em que estiver trabalhando e o [Checklist Ativo](./docs/CHECKLIST_ATIVO.md). O histórico é arquivo de consulta; abra apenas quando precisar do contexto de uma entrega antiga.*
+*Nota para a IA: leia só o arquivo de `docs/rules/` da camada em que estiver trabalhando e o [Checklist Ativo](./docs/CHECKLIST_ATIVO.md). O histórico é arquivo de consulta; abra apenas quando precisar do contexto de uma entrega antiga. Não leia `docs/arquivo/`.*

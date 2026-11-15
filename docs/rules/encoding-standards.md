@@ -34,7 +34,7 @@ $WarningPreference='SilentlyContinue'; .\NormalizarEncodingPrecoce.ps1 *> $null
 - **CSS:** classes kebab-case com prefixo da tela ou do componente (`busca-*`, `multiselect-*`).
 - **JavaScript:** objetos globais `window.ofertio*` (ex.: `ofertioMultiSelect`, `ofertioClipboard`).
 - **Migrations:** PascalCase descritivo (ex.: `AddProductTags`).
-- **Commits:** Conventional Commits (`fix(busca): ...`), registrados em `docs/GIT_VERSAO.md`.
+- **Commits:** Conventional Commits (`fix(busca): ...`); o histórico de versões é o `git log`.
 
 ## 5. Identificadores legados (não renomear)
 
@@ -44,4 +44,4 @@ Herdados da marca TecFlow e gravados em dados, URLs ou credenciais:
 - Migration `InitialTecFlow`.
 - Prefixo `tecflow-u` das instâncias do WhatsApp e o usuário `demo@TecFlow.local`.
 - IDs de afiliado/rastreio `tecflow_*` (ex.: `tecflow_kabum`, `tecflow_cb`), `utm_source=tecflow` e `matt_word` "tecflow".
-- Credenciais sandbox `tecflow-homolog-*` e o histórico de `docs/GIT_VERSAO.md`.
+- Credenciais sandbox `tecflow-homolog-*` e o histórico congelado em `docs/arquivo/GIT_VERSAO.md`.

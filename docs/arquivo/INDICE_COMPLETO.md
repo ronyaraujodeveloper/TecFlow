@@ -1,3 +1,5 @@
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
+
 # 📑 ÍNDICE COMPLETO - EXPLORAÇÃO Ofertio
 
 **Data:** 26 de Maio de 2026 · **Atualização de links:** 3 de junho de 2026  
@@ -5,7 +7,7 @@
 **Total de Documentos:** 5 (+ README na raiz)  
 **Total de Páginas:** ~100+  
 
-[Ir para o README Principal](../README.md)
+[Ir para o README Principal](../../README.md)
 
 ---
 
@@ -83,7 +85,7 @@
 
 ---
 
-### 4️⃣ **[DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md)** (VISUAL)
+### 4️⃣ **[DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md)** (VISUAL)
 **Tipo**: Visualizações e diagramas ASCII  
 **Público**: Todos (especialmente visual learners)  
 **Tempo de Leitura**: 30 minutos  
@@ -128,7 +130,7 @@
 → Leia: [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min)
 
 **... VER VISUALMENTE o problema**
-→ Leia: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) (30 min)
+→ Leia: [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) (30 min)
 
 **... começar A IMPLEMENTAR a solução**
 → Leia: [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) (45 min)
@@ -161,25 +163,25 @@
 
 ### 👨‍🏫 ARQUITETO
 1. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min)
-2. Leia [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) (30 min)
+2. Leia [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) (30 min)
 3. Foque em: "Mapeamento Interface × Implementação" + "Estrutura Proposta"
 4. Valide a solução proposta
 
 ### 👨‍💻 DESENVOLVEDOR (Vai Implementar)
 1. Leia [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
 2. Leia [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) (45 min)
-3. Ref: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) durante implementação
+3. Ref: [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) durante implementação
 4. Execute o CHECKLIST fase por fase
 
 ### 👨‍💻 DESENVOLVEDOR (Code Review)
 1. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) (60 min) - IMPORTANTE!
-2. Ref: [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) durante review
+2. Ref: [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) durante review
 3. Validar: Nenhum novo problema foi introduzido
 
 ### 📚 NOVO NO PROJETO
 1. Leia [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md) (10 min)
 2. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) - Seção "🏗️ ESTRUTURA DE PROJETOS" (30 min)
-3. Leia [README principal](../README.md) — regras de código e roadmap
+3. Leia [README principal](../../README.md) — regras de código e roadmap
 3. Explore os 10 projetos no seu IDE
 4. Volte e leia completo quando tiver tempo
 
@@ -311,9 +313,9 @@
 
 - **Um específico problema** → [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md)
 - **Como implementar** → [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)
-- **Visualizar arquitetura** → [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md)
+- **Visualizar arquitetura** → [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md)
 - **Decisões gerenciais** → [RESUMO_EXECUTIVO.md](./RESUMO_EXECUTIVO.md)
-- **Roadmap e padrões de código** → [README principal](../README.md)
+- **Roadmap e padrões de código** → [README principal](../../README.md)
 
 ---
 

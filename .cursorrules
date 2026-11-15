@@ -1,17 +1,10 @@
-# Regras de Automação de Arquitetura e Documentação
+﻿# Regras de Automação de Arquitetura e Documentação
 
-Sempre que o usuário solicitar a criação, movimentação, refatoração ou exclusão de QUALQUER arquivo de código (.cs, .csproj, etc.) nas camadas do projeto, você DEVE, obrigatoriamente, realizar as seguintes ações em segundo plano antes de dar a tarefa como concluída:
+Ao criar, mover, refatorar ou excluir qualquer arquivo de código (.cs, .csproj, .razor etc.), antes de dar a tarefa como concluída:
 
-1. **Atualizar o Mapa de Arquivos:**
-   - Abra o arquivo `docs/LISTA_ARQUIVOS_MUDANCAS.md`.
-   - Remova o item da lista antiga (se foi movido/deletado) ou adicione o novo arquivo criado na seção correspondente, marcando o checklist como concluído `[x]`.
+1. **Commit descritivo:** o registro dos arquivos criados, movidos ou excluídos é o próprio commit (Conventional Commits). Não há mais lista manual de arquivos nem registro de versões: `docs/arquivo/` é histórico congelado, não leia nem atualize.
+2. **Diagramas:** se a mudança alterar o fluxo de dados (novo Controller chamando novo serviço, nova entidade, nova integração), atualize o diagrama correspondente em `docs/DIAGRAMAS_ARQUITETURA.md`.
+3. **Checklist e histórico:** se a tarefa estava em `docs/CHECKLIST_ATIVO.md`, marque `[x]` e mova o detalhamento para `docs/HISTORICO_FASES_CONCLUIDAS.md`.
+4. **Regras:** regra nova ou alterada vai para o arquivo da camada em `docs/rules/`, não para o `README.md`.
 
-2. **Atualizar os Diagramas de Arquitetura:**
-   - Abra o arquivo `docs/DIAGRAMAS_ARQUITETURA.md`.
-   - Se a nova classe/arquivo alterar o fluxo de dados (ex: um novo Controller chamando um novo Serviço no Business, ou uma nova Entidade no Database), atualize o gráfico correspondente (como blocos de texto ou diagramas Mermaid) para refletir a nova dependência da arquitetura.
-
-3. **Atualizar o Painel de Controle Principal:**
-   - Abra o `README.md` (antigo TODO.md) na raiz.
-   - Se a criação da classe fizer parte de uma tarefa pendente listada lá, marque-a como concluída.
-
-Não finalize a resposta sem confirmar ao usuário que os arquivos em 'docs/' e o 'README.md' foram devidamente sincronizados com a nova estrutura física.
+Ao terminar, informe ao usuário quais arquivos de `docs/` foram atualizados.

@@ -99,11 +99,11 @@ Todo campo preenchível (`input`, `select`, `textarea`, `InputText`, `InputNumbe
 - Id já em uso não muda de nome. A lista fechada está no item 1.2 de [`PLANO_RPA.md`](../PLANO_RPA.md) (`portal-email`, `profile-*`, `busca-min`, `wa-*`, `tg-*` e os demais citados lá).
 - Referência aplicada: `ProdutosPropaganda.razor` (`propaganda-*`) e `CampaignCreateForm.razor` (`campaign-*`).
 
-Tela, campo, botão, aviso ou modal novo entra em `Ofertio.E2E` no mesmo passo em que o comportamento ganha teste em `Ofertio.Tests`. O checklist que não pode ficar de fora está no [README](../../README.md#-regras-de-ouro-resumo).
+Tela, campo, botão, aviso ou modal novo entra em `Ofertio.E2E` no mesmo passo em que o comportamento ganha teste em `Ofertio.Tests`. Esta seção é a fonte única dessa regra; o README, o `backend-architecture.md` e o `PLANO_RPA.md` só apontam para cá.
 
 - Campo preenchível, inclusive checkbox: `id` `{tela}-{campo}` e `<label for>` igual. O teste preenche esse `id`, recusa o valor inválido e só grava o caminho válido com prefixo `E2E-`.
 - Botão que libera a tela, inclusive em aviso e modal: `id` estável quando o texto se repete. O teste clica e confere o que a tela mostra. O confirmar de um aceite fica desabilitado até a caixa ser marcada.
 - Tela nova no menu do cliente: visita em `MenuSmokeTests`, conferindo o `h1`. Tela nova no menu Master: a mesma visita, quando a sessão permanece em `/master`.
 - Aviso e modal que travam o próximo passo são dispensados no fluxo (`cookie-accept`, `terms-reaccept`, `terms-api-consent`). O login faz isso quando eles aparecem.
-- Publicação global, como os termos, grava um trecho `E2E-`, confere a mensagem e devolve o texto que estava no editor.
+- Publicação global, como os termos, grava um trecho `E2E-`, confere a mensagem, aceita o reaceite, aceita o consentimento ao clicar em "Conectar nova loja", fecha o formulário da loja e devolve o texto que estava no editor. Sem a permissão de publicar, o robô só confere o título.
 - Ficam de fora do robô, como na fase 9 do [PLANO_RPA.md](../PLANO_RPA.md): OAuth, sessão real de WhatsApp/Telegram, QR, webhook e cobrança ASAAS. O `RobotBoundaryTests` continua falhando se um teste de tela citar esses cliques.

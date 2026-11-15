@@ -1,6 +1,8 @@
-﻿# 🚀 Guia e Script de Implantação em Produção (CD) - Ofertio
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
 
-> Substituído por [`CONFIGURACAO_PRODUCAO_DOCKER.md`](./CONFIGURACAO_PRODUCAO_DOCKER.md) e [`EXECUCAO_PRODUCAO.md`](./EXECUCAO_PRODUCAO.md). Use esses dois arquivos. O domínio publicado é `https://ofertio.com.br`.
+# 🚀 Guia e Script de Implantação em Produção (CD) - Ofertio
+
+> Substituído por [`CONFIGURACAO_PRODUCAO_DOCKER.md`](../CONFIGURACAO_PRODUCAO_DOCKER.md) e [`EXECUCAO_PRODUCAO.md`](../EXECUCAO_PRODUCAO.md). Use esses dois arquivos. O domínio publicado é `https://ofertio.com.br`.
 
 Este documento orienta o Cursor AI ou o desenvolvedor a realizar a implantação automatizada das atualizações no servidor VPS (Hetzner Cloud).
 

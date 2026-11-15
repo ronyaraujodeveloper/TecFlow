@@ -1,4 +1,6 @@
-﻿[2026-09-29 21:43:13]fix(homolog): preenche preco e nome no modal de edicao do link
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
+
+[2026-09-29 21:43:13]fix(homolog): preenche preco e nome no modal de edicao do link
 [2026-09-29 22:37:27]feat(paginas): versiona slugs da pagina publica e deduplica plataformas
 [2026-09-29 22:57:36]feat(paginas): compacta badges e resultados da pagina publica
 [2026-09-30 21:03:02]feat(whatsapp): orquestra sessao Evolution API por usuario

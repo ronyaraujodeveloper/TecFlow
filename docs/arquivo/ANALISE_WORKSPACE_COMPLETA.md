@@ -1,6 +1,8 @@
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
+
 # 📊 ANÁLISE PROFUNDA COMPLETA - WORKSPACE Ofertio
 
-[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
+[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
 
 **Data**: 26 de Maio de 2026 | **Atualização de caminhos**: 3 de junho de 2026 | **Status**: ✅ Exploração Completa (referência histórica + gaps atuais)
 

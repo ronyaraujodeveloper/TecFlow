@@ -2,14 +2,14 @@
 
 > Instruções para o Cursor Agent. Execute as fases em sequência quando o usuário pedir para rodar este arquivo, publicar a produção ou implantar a nova versão na VPS.
 
-A configuração do ambiente está em [`CONFIGURACAO_PRODUCAO_DOCKER.md`](./CONFIGURACAO_PRODUCAO_DOCKER.md). Este arquivo substitui o fluxo antigo de [`BUILD_PRODUCAO.md`](./BUILD_PRODUCAO.md).
+A configuração do ambiente está em [`CONFIGURACAO_PRODUCAO_DOCKER.md`](./CONFIGURACAO_PRODUCAO_DOCKER.md). Este arquivo substitui o fluxo antigo de [`BUILD_PRODUCAO.md`](./arquivo/BUILD_PRODUCAO.md), arquivado.
 
 Não grave senha de root, connection string, JWT, chave de criptografia nem segredo OAuth neste repositório, no commit nem na resposta ao usuário. Use a credencial que o usuário informar na conversa, ou uma chave SSH já autorizada.
 
 ## Fase 1 — Código local
 
 1. Confira `git status`. Se a árvore estiver limpa, siga para a fase 2.
-2. Se houver alterações da entrega, registre em `docs/GIT_VERSAO.md` e faça o commit no padrão Conventional Commits. Não inclua `.env`, `*.pfx`, `App_Data` nem segredo.
+2. Se houver alterações da entrega, faça o commit no padrão Conventional Commits. Não inclua `.env`, `*.pfx`, `App_Data` nem segredo.
 3. Envie a branch que a VPS acompanha (`main`, salvo outra indicação do usuário):
 
 ```powershell

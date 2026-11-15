@@ -1,4 +1,4 @@
-# Ofertio.Mobile — Build, Push e Deep Links
+﻿# Ofertio.Mobile — Build, Push e Deep Links
 
 ## Build
 

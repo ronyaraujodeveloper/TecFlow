@@ -1,6 +1,8 @@
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
+
 # ⚡ RESUMO EXECUTIVO - EXPLORAÇÃO Ofertio
 
-[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md)
+[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../../README.md)
 
 **Gerado em**: 26 de Maio de 2026  
 **Tempo de Exploração**: ~2 horas  
@@ -125,7 +127,7 @@ Toda configuração em Configurator.cs (não é invocada)
    - ✏️ Arquivos a EDITAR (8-10)
    - ✓ Checklist completo
 
-3. **[DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md)**
+3. **[DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md)**
    - 🏗️ Estrutura atual vs proposta (visual)
    - 🔄 Fluxo de DI atual (problemático)
    - ✅ Fluxo de DI proposto (correto)
@@ -193,7 +195,7 @@ Toda configuração em Configurator.cs (não é invocada)
 ### OPÇÃO 1: Implementar Eu Mesmo
 1. Leia [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) completo
 2. Siga [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) passo-a-passo
-3. Use [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) como referência visual
+3. Use [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) como referência visual
 
 ### OPÇÃO 2: Solicitar Implementação
 - Diga qual FASE quer que eu implemente primeiro
@@ -239,7 +241,7 @@ Escolha um:
 **Documentos Gerados:**
 - ✅ [ANALISE_WORKSPACE_COMPLETA.md](./ANALISE_WORKSPACE_COMPLETA.md) - 80+ páginas
 - ✅ [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) - Ações específicas
-- ✅ [DIAGRAMAS_ARQUITETURA.md](./DIAGRAMAS_ARQUITETURA.md) - Visualizações
+- ✅ [DIAGRAMAS_ARQUITETURA.md](../DIAGRAMAS_ARQUITETURA.md) - Visualizações
 - ✅ **RESUMO_EXECUTIVO.md** - Este documento
 
 **Tempo Total de Exploração:** ~2 horas  

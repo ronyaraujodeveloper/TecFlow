@@ -1,4 +1,6 @@
-﻿# 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
+﻿> 📦 **Arquivo histórico, congelado em 14/11/2026.** Não é regra nem pendência e não é mais atualizado. A fonte atual é o [README](../../README.md), as regras em [docs/rules/](../rules/) e o [Checklist Ativo](../CHECKLIST_ATIVO.md). O histórico de commits fica no `git log`.
+
+# 📋 LISTA EXECUTIVA: ARQUIVOS A MOVER/CRIAR/DELETAR
 
 **Última varredura:** 4 de junho de 2026 (Fase 7.1 — Multi-Tenant)  
 **Workspace:** `c:\Programacao\Tecso.AutomacaoCusor` (pasta ainda com prefixo *Tecso*; projetos já renomeados para *Ofertio*)  
@@ -6,7 +8,7 @@
 
 > **Nota de varredura:** Esta lista deve ser usada para eliminar **resíduos das pastas antigas** (*Tecso* / camadas pré-refatoração) que ainda geram conflitos de compilação — por exemplo, cópias de `ExceptionMiddleware` na API, interfaces fantasma em `Infrastructure.Services/Interfaces`, artefatos `bin/`/`obj/` versionados e namespaces legados (`Ofertio.API.Middlewares` em arquivos do Core). Priorize itens da seção **🚨 Conflitos** antes de novas features.
 
-**Navegação:** [« Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md)
+**Navegação:** [« Índice Completo](./INDICE_COMPLETO.md) · [README principal](../../README.md)
 
 Use esta lista como painel de controle para garantir que nenhuma classe antiga ficou duplicada e que todos os namespaces estejam nos projetos corretos.
 
@@ -2171,3 +2173,22 @@ API / Orquestrador / Worker / WebUi
 - [x] **Ofertio.Tests/Unit/Legal/TermsDocumentRulesTests.cs** (novo) e **Ofertio.Tests/Unit/Controllers/AuthControllerSecurityTests.cs**.
 - [x] **Ofertio.E2E/AccountFlowTests.cs**, **MasterFlowTests.cs** e **PortalSession.cs** — cookies, caixa do cadastro, publicação `E2E-` com restauração do texto, reaceite, consentimento ao conectar loja e fumaça de `/master/termos`.
 - [x] **docs/rules/backend-architecture.md** e **docs/rules/frontend-ui.md** — aceite, IP e caixa desmarcada.
+
+### E-mail contato@ e recuperação de senha (nov/2026)
+
+- [x] **Ofertio.Business/Service/Mail/OfertioMailAddresses.cs** (novo) — `contato@ofertio.com.br` e `nao-responda@ofertio.com.br`.
+- [x] **Ofertio.Business/Service/Mail/TransactionalEmail.cs** e **TransactionalEmailRules.cs** (novos) — textos de senha e de assinatura, hash do token e links.
+- [x] **Ofertio.Business/Interfaces/Services/ITransactionalEmailSender.cs** e **IPasswordResetService.cs** (novos).
+- [x] **Ofertio.Business/Dto/Auth/PasswordResetRequestDto.cs** e **PasswordResetConfirmDto.cs** (novos).
+- [x] **Ofertio.Core/Entities/PasswordResetToken.cs** (novo) — hash, validade e uso único.
+- [x] **Ofertio.Database/AppDbContext.cs** e **Ofertio.Data/Migrations/20261111003931_AddPasswordResetTokens.cs** (novo, + Designer e snapshot) — tabela `PasswordResetTokens`.
+- [x] **Ofertio.Infrastructure.Services/Email/EmailOptions.cs** e **TransactionalEmailSender.cs** (novos) — SMTP quando há host; sem host, só log.
+- [x] **Ofertio.Infrastructure.Services/Security/PasswordResetService.cs** (novo) — a resposta é a mesma com ou sem conta; a senha nova não vai no e-mail.
+- [x] **Ofertio.Infrastructure.Services/Security/PlatformAuthService.cs** — conta desativada aponta para `contato@ofertio.com.br`.
+- [x] **Ofertio.Infrastructure.Services/Master/AsaasWebhookService.cs** — confirmação, vencimento e estorno avisam o e-mail da conta. O gateway simulado não envia.
+- [x] **Ofertio.API/Controllers/AuthController.cs** — `POST api/auth/password-reset/request` e `password-reset/confirm`.
+- [x] **Ofertio.API/appsettings.json**, **appsettings.Development.json** e **appsettings.Homologacao.json** — seção `Email`.
+- [x] **Ofertio.SharedUi/Services/Navigation/LegalRoutes.cs** — contato público passa a ser `contato@ofertio.com.br`.
+- [x] **Ofertio.SharedUi/Services/Auth/PasswordResetApiService.cs** (novo).
+- [x] **Ofertio.SharedUi/Components/Pages/RecuperarSenha.razor**, **Home.razor**, **Register.razor** e **Layout/MainLayout.razor** — Fale conosco e o fluxo do link.
+- [x] **Ofertio.Tests/Unit/Security/PasswordResetServiceTests.cs** e **PlanPaymentEmailTests.cs** (novos).

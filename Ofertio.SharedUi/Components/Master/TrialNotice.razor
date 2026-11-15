@@ -1,0 +1,40 @@
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IMyAccountApiService AccountApi
+
+@if (_message is not null && !_dismissed)
+{
+    <div class="alert alert-info alert-dismissible rounded-0 border-0 mb-0 py-2 px-3 small trial-notice" role="status">
+        <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+        @_message
+        <a href="/meu-plano" class="alert-link ms-1">Ver planos</a>
+        <button type="button" class="btn-close btn-sm" aria-label="Fechar" @onclick="() => _dismissed = true"></button>
+    </div>
+}
+
+@code {
+    private string? _message;
+    private bool _dismissed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await AccountApi.GetPlanAsync();
+        var data = result.Data;
+        if (!result.Success || data is null || data.IsMaster
+            || TenantStatuses.Normalize(data.TenantStatus) != TenantStatuses.Trial
+            || data.TrialEndsAt is not { } ends)
+        {
+            return;
+        }
+
+        var days = Math.Max(0, (int)Math.Ceiling((ends - DateTime.UtcNow).TotalDays));
+        var left = days switch
+        {
+            0 => "termina hoje",
+            1 => "termina amanhã",
+            _ => $"termina em {days} dias"
+        };
+        _message = data.TrialHasCard
+            ? $"Seu teste grátis {left}. Depois dele, o plano {data.PostTrialPlanName} será cobrado no cartão cadastrado."
+            : $"Seu teste grátis {left}. Escolha um plano para continuar sem interrupção.";
+    }
+}

@@ -100,6 +100,21 @@ public class SaasPlanDto
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
     public int TenantCount { get; set; }
+    /// <summary>Plano Trial: dias grátis no cadastro.</summary>
+    public int TrialDays { get; set; }
+    /// <summary>Plano Trial: exige cartão no cadastro.</summary>
+    public bool RequireCard { get; set; }
+    /// <summary>Plano Trial: plano cobrado ao fim do teste quando há cartão.</summary>
+    public string? PostTrialPlanCode { get; set; }
+}
+
+/// <summary>Planos e regras do teste grátis exibidos na página pública, sem dados internos.</summary>
+public class PublicPlansDto
+{
+    public int TrialDays { get; set; }
+    public bool RequireCard { get; set; }
+    public string PostTrialPlanCode { get; set; } = string.Empty;
+    public List<SaasPlanDto> Plans { get; set; } = [];
 }
 
 public class TenantQueryDto

@@ -728,6 +728,7 @@ public class AppDbContext : DbContext
             entity.Property(item => item.AnnualPrice).HasPrecision(18, 2);
             entity.Property(item => item.Highlights).HasMaxLength(2000);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.Property(item => item.PostTrialPlanCode).HasMaxLength(32);
             entity.HasIndex(item => item.Code).IsUnique();
         });
 

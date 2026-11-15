@@ -15,6 +15,57 @@
 
     <MasterAlerts Error="@Error" Info="@Info" />
 
+    @if (_trial is not null)
+    {
+        <section class="card shadow-sm mb-4" aria-labelledby="trial-title">
+            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 id="trial-title" class="h6 fw-semibold mb-0"><i class="bi bi-gift me-1" aria-hidden="true"></i>Teste grátis (plano Trial)</h2>
+                <span class="badge @(_trial.IsActive ? "text-bg-success" : "text-bg-secondary")">@(_trial.IsActive ? "Oferecido no cadastro" : "Desativado")</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label small" for="trial-days">Dias de teste grátis</label>
+                        <input id="trial-days" type="number" min="1" max="365" class="form-control" @bind="_trial.TrialDays" />
+                        <div class="form-text">Vale para novos cadastros. Quem já está em teste mantém a data atual (para estender, use Inquilinos).</div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label small" for="trial-next">Plano ao fim do teste (com cartão)</label>
+                        <select id="trial-next" class="form-select" @bind="_trial.PostTrialPlanCode">
+                            @foreach (var option in _plans.Where(item => item.Code != SaasPlanCodes.Trial))
+                            {
+                                <option value="@option.Code">@option.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="form-check form-switch">
+                            <input id="trial-card" type="checkbox" class="form-check-input" role="switch" @bind="_trial.RequireCard" />
+                            <label class="form-check-label" for="trial-card">Exigir cartão no cadastro</label>
+                        </div>
+                        <div class="form-text">Ligado: ao fim do teste a conta vira @(_trial.PostTrialPlanCode ?? "Starter") e o cartão é cobrado. Desligado: a conta é bloqueada até escolher um plano.</div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3 d-flex gap-2 flex-wrap">
+                        @if (Can(MasterPermissions.ManagePlans))
+                        {
+                            <button id="trial-save" type="button" class="btn btn-primary" @onclick="() => SaveAsync(_trial)"><i class="bi bi-check-circle me-1"></i>Salvar teste</button>
+                        }
+                    </div>
+                </div>
+                @if (_trial.RequireCard)
+                {
+                    <div class="alert alert-warning small mt-3 mb-0" role="note">
+                        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                        A cobrança automática depende da integração real com o ASAAS (hoje o pagamento é simulado). Enquanto ela não estiver ativa, o cartão não é coletado de verdade: ligue esta opção só depois da integração.
+                    </div>
+                }
+                <p class="text-muted small mt-3 mb-0">
+                    Campanha (ex.: Black Friday): aumente os dias, salve e volte ao valor normal quando terminar. Limites, vantagens e menus do Trial são editados na linha do plano abaixo e em Menus por plano.
+                </p>
+            </div>
+        </section>
+    }
+
     <div class="table-responsive card shadow-sm">
         <table class="table align-middle mb-0 small">
             <thead class="table-light">
@@ -38,15 +89,15 @@
                         <td>
                             <label class="visually-hidden" for="plan-name-@plan.Code">Nome do plano @plan.Code</label>
                             <input id="plan-name-@plan.Code" class="form-control form-control-sm" style="min-width: 110px;" @bind="plan.Name" />
-                            <div class="text-muted">@plan.Code</div>
+                            <div class="text-muted">@plan.Code@(IsTrial(plan) ? " · grátis" : string.Empty)</div>
                         </td>
                         <td>
                             <label class="visually-hidden" for="plan-monthly-@plan.Code">Mensal do plano @plan.Code</label>
-                            <input id="plan-monthly-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.MonthlyPrice" />
+                            <input id="plan-monthly-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" disabled="@IsTrial(plan)" @bind="plan.MonthlyPrice" />
                         </td>
                         <td>
                             <label class="visually-hidden" for="plan-annual-@plan.Code">Anual do plano @plan.Code</label>
-                            <input id="plan-annual-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" @bind="plan.AnnualPrice" />
+                            <input id="plan-annual-@plan.Code" type="number" step="0.01" min="0" class="form-control form-control-sm" disabled="@IsTrial(plan)" @bind="plan.AnnualPrice" />
                         </td>
                         <td>
                             <label class="visually-hidden" for="plan-stores-@plan.Code">Lojas do plano @plan.Code</label>
@@ -90,6 +141,9 @@
 
 @code {
     private List<SaasPlanDto> _plans = [];
+    private SaasPlanDto? _trial;
+
+    private static bool IsTrial(SaasPlanDto plan) => plan.Code == SaasPlanCodes.Trial;
 
     protected override async Task LoadAsync()
     {
@@ -97,6 +151,11 @@
         if (Accept(result))
         {
             _plans = result.Data ?? [];
+            _trial = _plans.FirstOrDefault(IsTrial);
+            if (_trial is not null && string.IsNullOrWhiteSpace(_trial.PostTrialPlanCode))
+            {
+                _trial.PostTrialPlanCode = TrialRules.DefaultPostTrialPlan;
+            }
         }
     }
 

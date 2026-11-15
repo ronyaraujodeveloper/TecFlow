@@ -25,5 +25,14 @@ public class SaasPlan : BaseEntity
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Só vale para o plano Trial: dias grátis concedidos no cadastro (campanhas como Black Friday aumentam este valor).</summary>
+    public int TrialDays { get; set; }
+
+    /// <summary>Só vale para o plano Trial: exige cartão no cadastro e cobra o plano seguinte ao fim do teste.</summary>
+    public bool RequireCard { get; set; }
+
+    /// <summary>Só vale para o plano Trial: plano em que a conta cai ao fim do teste quando há cartão.</summary>
+    public string? PostTrialPlanCode { get; set; }
+
     public int SortOrder { get; set; }
 }

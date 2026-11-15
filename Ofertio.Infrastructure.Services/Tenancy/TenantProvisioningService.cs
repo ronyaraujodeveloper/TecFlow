@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Database;
 using Ofertio.Database.MultiTenancy;
@@ -42,6 +43,46 @@ public class TenantProvisioningService : ITenantProvisioningService
             }
         }
 
+        return tenant;
+    }
+
+    public async Task<Tenant> CreateTrialTenantForNewUserAsync(UserAccount user, CancellationToken cancellationToken = default)
+    {
+        var trialPlan = await _context.SaasPlans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(plan => plan.Code == SaasPlanCodes.Trial && plan.IsActive, cancellationToken);
+        if (trialPlan is null)
+        {
+            return await EnsureTenantForUserAsync(user, cancellationToken);
+        }
+
+        var now = DateTime.UtcNow;
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Name = string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name,
+            IsActive = true,
+            Status = TenantStatuses.Trial,
+            StatusChangedAt = now,
+            PlanCode = trialPlan.Code,
+            BillingCycle = "Mensal",
+            TrialEndsAt = TrialRules.EndsAt(now, trialPlan.TrialDays),
+            CreatedAt = now
+        };
+
+        var wasBypass = _currentTenant.BypassTenantFilters;
+        _currentTenant.BypassTenantFilters = true;
+        try
+        {
+            await _context.Tenants.AddAsync(tenant, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _currentTenant.BypassTenantFilters = wasBypass;
+        }
+
+        user.TenantId = tenant.Id;
         return tenant;
     }
 

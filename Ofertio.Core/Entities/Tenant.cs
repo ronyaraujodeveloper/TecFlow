@@ -38,6 +38,9 @@ public class Tenant
 
     public DateTime? TrialEndsAt { get; set; }
 
+    /// <summary>Quando o aviso de fim do teste foi enviado (evita repetir o e-mail).</summary>
+    public DateTime? TrialEndingNoticeSentAt { get; set; }
+
     public DateTime? RenewalAt { get; set; }
 
     public DateTime? CanceledAt { get; set; }

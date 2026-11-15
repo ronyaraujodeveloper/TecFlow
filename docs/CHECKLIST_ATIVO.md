@@ -72,6 +72,16 @@ Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plan
 - [ ] **CEP automático:** preencher rua, bairro, cidade e UF pelo ViaCEP em `/meus-dados`.
 - [ ] **Gestão da assinatura:** troca de plano com pró-rata, cancelamento e histórico de pedidos em Meu plano.
 
+## 🎁 Teste grátis e página inicial (`TrialPlan`, `LandingPage`)
+
+- [ ] **Migration:** aplicar `AddTrialPlan` em homologação (runbook `EXECUCAO_HOMOLOGACAO.md`) e, depois, em produção. Cria o plano Trial (14 dias, sem cartão, cai em Starter, limites do Pro) e as colunas `TrialDays`, `RequireCard`, `PostTrialPlanCode` e `TrialEndingNoticeSentAt`. Incluir no script idempotente de produção.
+- [ ] **Master ➔ Planos:** conferir o cartão "Teste grátis" (dias, plano ao fim do teste, exigir cartão), a linha do Trial com preços travados e os menus do Trial em Menus por plano.
+- [ ] **Cadastro:** criar conta nova e conferir tenant próprio em Trial com `TrialEndsAt` correto (antes, todo cadastro caía no "Tenant Principal"). Conferir o aviso no cadastro, o banner no topo e o aviso em Meu plano.
+- [ ] **Aviso de fim do teste:** com `TrialEndsAt` a menos de 3 dias, rodar o ciclo (`TenantBillingWorker`) e conferir o e-mail (um só por conta).
+- [ ] **Cartão no cadastro (depende do ASAAS, fase 2):** a opção "Exigir cartão" só prepara a regra (conta com assinatura vira plano pago ao fim do teste). A coleta real do cartão e a cobrança ainda não existem; não ligar em produção antes disso.
+- [ ] **Termos:** revisar `docs/Legal/RASCUNHO_CLAUSULA_TESTE_GRATIS.md` com o jurídico, publicar nova versão em Master ➔ Termos e atualizar a Política de Privacidade (gateway como operador).
+- [ ] **Página inicial (`/conheca`):** revisar textos, trocar as imagens provisórias em `Ofertio.SharedUi/wwwroot/images/landing/` por capturas reais, validar em celular e depois trocar a rota `/` (login hoje) pela landing, redirecionando logados para `/dashboard`.
+- [ ] **KPIs do Master:** comparação com o mês anterior quando houver histórico (`MasterDashboardDto`).
 ## 📝 Registrado sem implementação
 
 - **Autocomplete do ML como fallback (`MLBScraperPrimary`):** não gera ofertas (só termos) e responde 404/403 ao servidor; fora de escopo enquanto a busca for só pela API oficial.

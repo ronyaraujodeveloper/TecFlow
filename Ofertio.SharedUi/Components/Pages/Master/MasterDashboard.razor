@@ -41,19 +41,24 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h2 class="h6 fw-semibold mb-3">Novos assinantes por mês</h2>
-                @{
-                    var max = Math.Max(1, _data.NewSubscribers.Count == 0 ? 1 : _data.NewSubscribers.Max(point => point.Count));
+                @if (_data.NewSubscribers.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Ainda não há assinantes no período.</p>
                 }
-                <div class="d-flex align-items-end gap-3" style="height: 160px;">
-                    @foreach (var point in _data.NewSubscribers)
-                    {
-                        <div class="d-flex flex-column align-items-center flex-grow-1 h-100 justify-content-end">
-                            <span class="small fw-semibold">@point.Count</span>
-                            <div class="bg-primary rounded-top w-100" style="height: @(Math.Max(4, point.Count * 120 / max))px;"></div>
-                            <span class="small text-muted mt-1">@point.Month</span>
-                        </div>
-                    }
-                </div>
+                else
+                {
+                    var max = Math.Max(1, _data.NewSubscribers.Max(point => point.Count));
+                    <div class="master-bars" role="img" aria-label="Novos assinantes por mês">
+                        @foreach (var point in _data.NewSubscribers)
+                        {
+                            <div class="master-bar-col" title="@point.Month: @point.Count novo(s) assinante(s)">
+                                <span class="master-bar-value">@point.Count</span>
+                                <div class="master-bar @(point.Count == 0 ? "is-empty" : string.Empty)" style="height: @((point.Count * 100 / max).ToString(PtBr))%;"></div>
+                                <span class="master-bar-label">@point.Month</span>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
 
@@ -65,6 +70,19 @@
             @Kpi("Requisições à API", _data.ApiRequests24h.ToString("N0", PtBr), "Desde o último restart")
         </div>
         <p class="text-muted small mt-3 mb-0">Gerado em @DateTimeText(_data.GeneratedAt)</p>
+    }
+    else if (Busy)
+    {
+        <div class="row g-3" aria-busy="true" aria-label="Carregando indicadores">
+            @for (var i = 0; i < 8; i++)
+            {
+                <div class="col-6 col-lg-3"><div class="card master-skeleton"></div></div>
+            }
+        </div>
+    }
+    else if (string.IsNullOrWhiteSpace(Error))
+    {
+        <p class="text-muted">Nenhum dado para exibir. Use "Atualizar" para tentar de novo.</p>
     }
 </div>
 

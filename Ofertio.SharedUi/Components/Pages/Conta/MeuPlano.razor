@@ -66,6 +66,16 @@
             </div>
         }
 
+        @if (!_overview.IsMaster && TenantStatuses.Normalize(_overview.TenantStatus) == TenantStatuses.Trial && _overview.TrialEndsAt is { } trialEnd)
+        {
+            <div class="alert alert-info small py-2 d-flex align-items-start gap-2" role="status">
+                <i class="bi bi-hourglass-split mt-1" aria-hidden="true"></i>
+                <span>
+                    @TrialMessage(trialEnd)
+                </span>
+            </div>
+        }
+
         @if (!_overview.IsMaster)
         {
             <section class="card border-0 shadow-sm mb-4" aria-label="Assinatura atual">
@@ -258,6 +268,19 @@
         }
 
         Navigation.NavigateTo($"/meu-plano/pagamento/{code}");
+    }
+
+    private string TrialMessage(DateTime trialEndUtc)
+    {
+        var days = Math.Max(0, (int)Math.Ceiling((trialEndUtc - DateTime.UtcNow).TotalDays));
+        var date = Clock.ToLocal(trialEndUtc).ToString("dd/MM/yyyy");
+        var left = days == 1 ? "falta 1 dia" : $"faltam {days} dias";
+        if (_overview!.TrialHasCard)
+        {
+            return $"Seu teste grátis termina em {date} ({left}). Nesse dia sua conta passa para o plano {_overview.PostTrialPlanName} e {_overview.PostTrialPlanPrice.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))} serão cobrados no cartão cadastrado. Para trocar de plano ou cancelar antes, escolha abaixo.";
+        }
+
+        return $"Seu teste grátis termina em {date} ({left}). Escolha um plano abaixo para continuar sem interrupção; seus dados ficam guardados.";
     }
 
     private static string StatusBadgeClass(string status) => TenantStatuses.Normalize(status) switch

@@ -1,0 +1,368 @@
+﻿/* Landing pública do Ofertio. Mobile primeiro; o laranja da marca é o destaque. */
+.landing-shell {
+    --lp-accent: #d9480f;
+    --lp-accent-dark: #9a3412;
+    --lp-accent-soft: #fff4ed;
+    --lp-ink: #0f172a;
+    --lp-muted: #475569;
+    --lp-line: #e2e8f0;
+    --lp-bg: #ffffff;
+    --lp-bg-alt: #f8fafc;
+    min-height: 100vh;
+    background: var(--lp-bg);
+    color: var(--lp-ink);
+    scroll-behavior: smooth;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    html, .landing-shell { scroll-behavior: auto; }
+}
+
+.landing-container {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+}
+
+/* Cabeçalho */
+.landing-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--lp-line);
+}
+
+.landing-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 0.6rem;
+}
+
+.landing-brand { display: inline-flex; }
+
+.landing-nav { display: none; gap: 1.25rem; margin-inline: auto; }
+
+.landing-nav a {
+    color: var(--lp-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+.landing-nav a:hover { color: var(--lp-accent); }
+
+.landing-header-actions { display: flex; gap: 0.5rem; margin-left: auto; align-items: center; }
+
+@media (min-width: 900px) {
+    .landing-nav { display: flex; }
+    .landing-header-actions { margin-left: 0; }
+}
+
+@media (max-width: 480px) {
+    .landing-login-link { display: none; }
+}
+
+/* Herói */
+.landing-hero {
+    padding-block: 2.5rem 3rem;
+    background: radial-gradient(60rem 30rem at 85% -10%, var(--lp-accent-soft), transparent 70%), var(--lp-bg);
+}
+
+.landing-hero-grid {
+    display: grid;
+    gap: 2rem;
+    align-items: center;
+}
+
+.landing-eyebrow {
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    background: var(--lp-accent-soft);
+    color: var(--lp-accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.landing-title {
+    font-size: clamp(1.9rem, 5vw, 3.1rem);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+}
+
+.landing-lead { font-size: 1.1rem; color: var(--lp-muted); max-width: 36rem; margin: 0 0 1.5rem; }
+
+.landing-cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.landing-microcopy { margin: 0.9rem 0 0; font-size: 0.88rem; color: var(--lp-muted); }
+
+.landing-microcopy-light { color: rgba(255, 255, 255, 0.85); }
+
+.landing-hero-media img,
+.landing-feature img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.35);
+}
+
+@media (min-width: 900px) {
+    .landing-hero { padding-block: 4rem 4.5rem; }
+    .landing-hero-grid { grid-template-columns: 1.05fr 1fr; gap: 3rem; }
+}
+
+/* Canais */
+.landing-channels { border-block: 1px solid var(--lp-line); background: var(--lp-bg-alt); padding-block: 1.25rem; }
+.landing-channels .landing-container { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem 1.5rem; }
+.landing-channels-label { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lp-muted); }
+.landing-channel-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.25rem; list-style: none; margin: 0; padding: 0; }
+.landing-channel-list li { font-weight: 700; color: #334155; }
+
+/* Seções */
+.landing-section { padding-block: 3rem; }
+.landing-section-alt { background: var(--lp-bg-alt); }
+.landing-h2 { font-size: clamp(1.5rem, 3.5vw, 2.1rem); font-weight: 800; text-align: center; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+.landing-sub { text-align: center; color: var(--lp-muted); margin: 0 0 2rem; }
+
+.landing-steps {
+    display: grid;
+    gap: 1.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.landing-steps li {
+    padding: 1.25rem;
+    border: 1px solid var(--lp-line);
+    border-radius: 1rem;
+    background: var(--lp-bg);
+}
+
+.landing-steps h3 { font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0; }
+.landing-steps p { margin: 0; color: var(--lp-muted); }
+
+.landing-step-num {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--lp-accent);
+    color: #fff;
+    font-weight: 800;
+}
+
+@media (min-width: 800px) { .landing-steps { grid-template-columns: repeat(3, 1fr); } }
+
+/* Recursos */
+.landing-feature {
+    display: grid;
+    gap: 1.5rem;
+    align-items: center;
+    margin-top: 2.5rem;
+}
+
+.landing-feature h3 { font-size: 1.4rem; font-weight: 800; margin: 0 0 0.5rem; }
+.landing-feature p { color: var(--lp-muted); }
+
+.landing-checks { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+
+.landing-checks li {
+    position: relative;
+    padding-left: 1.6rem;
+}
+
+.landing-checks li::before {
+    content: "";
+    position: absolute;
+    left: 0.15rem;
+    top: 0.4em;
+    width: 0.8rem;
+    height: 0.45rem;
+    border-left: 2px solid var(--lp-accent);
+    border-bottom: 2px solid var(--lp-accent);
+    transform: rotate(-45deg);
+}
+
+@media (min-width: 900px) {
+    .landing-feature { grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3.5rem; }
+    .landing-feature-reverse .landing-feature-text { order: 2; }
+}
+
+/* Planos: faixa horizontal com rolagem e encaixe */
+.landing-cycle {
+    display: flex;
+    width: fit-content;
+    margin: 0 auto 1.5rem;
+    padding: 0.25rem;
+    border: 1px solid var(--lp-line);
+    border-radius: 999px;
+    background: var(--lp-bg-alt);
+}
+
+.landing-cycle-btn {
+    border: 0;
+    background: transparent;
+    padding: 0.4rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--lp-muted);
+}
+
+.landing-cycle-btn.active { background: var(--lp-accent); color: #fff; }
+
+.landing-plans-wrap { position: relative; display: flex; align-items: stretch; gap: 0.5rem; }
+
+.landing-plans {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0.75rem 0.25rem 1rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.landing-plans:focus-visible { outline: 2px solid var(--lp-accent); outline-offset: 2px; border-radius: 0.5rem; }
+
+.landing-plan {
+    position: relative;
+    flex: 0 0 min(17rem, 82%);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.5rem 1.25rem;
+    border: 1px solid var(--lp-line);
+    border-radius: 1rem;
+    background: var(--lp-bg);
+}
+
+.landing-plan h3 { font-size: 1.15rem; font-weight: 800; margin: 0; }
+
+.landing-plan-trial {
+    border: 2px solid var(--lp-accent);
+    background: var(--lp-accent-soft);
+    box-shadow: 0 16px 32px -20px rgba(217, 72, 15, 0.6);
+}
+
+.landing-plan-flag {
+    position: absolute;
+    top: -0.75rem;
+    left: 1rem;
+    padding: 0.15rem 0.7rem;
+    border-radius: 999px;
+    background: var(--lp-accent);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.landing-price { margin: 0.5rem 0 0; display: flex; align-items: baseline; gap: 0.25rem; }
+.landing-price-big { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; }
+.landing-price-per { color: var(--lp-muted); }
+.landing-price-note { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--lp-muted); }
+.landing-plan-list { margin: 0 0 1.25rem; font-size: 0.93rem; }
+
+.landing-plans-arrow {
+    display: none;
+    align-self: center;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--lp-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--lp-ink);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.landing-plans-arrow:hover { border-color: var(--lp-accent); color: var(--lp-accent); }
+
+@media (min-width: 768px) {
+    .landing-plans-arrow { display: inline-flex; align-items: center; justify-content: center; }
+    .landing-plan { flex-basis: 16rem; }
+}
+
+/* Perguntas */
+.landing-faq { max-width: 48rem; }
+.landing-faq details { border-bottom: 1px solid var(--lp-line); padding: 0.9rem 0; }
+.landing-faq summary { cursor: pointer; font-weight: 700; list-style-position: outside; }
+.landing-faq details p { margin: 0.6rem 0 0; color: var(--lp-muted); }
+
+/* Chamada final */
+.landing-final {
+    padding-block: 3.5rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--lp-accent), #ea580c);
+    color: #fff;
+}
+
+.landing-final .landing-h2 { margin-bottom: 1.25rem; }
+
+/* Rodapé */
+.landing-footer { padding-block: 1.75rem; background: #0f172a; color: #94a3b8; text-align: center; }
+.landing-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.25rem; margin-bottom: 0.75rem; }
+.landing-footer-links a { color: #e2e8f0; text-decoration: none; font-size: 0.9rem; }
+.landing-footer-links a:hover { text-decoration: underline; }
+
+/* Login sobre a página */
+.landing-login-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(15, 23, 42, 0.6);
+}
+
+.landing-login-modal {
+    position: fixed;
+    z-index: 1100;
+    inset: 0;
+    margin: auto;
+    width: min(30rem, 100%);
+    height: fit-content;
+    max-height: 100dvh;
+    overflow-y: auto;
+    padding: 1.25rem 1rem 1.5rem;
+    background: var(--lp-bg-alt);
+    border-radius: 1.25rem;
+    box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.5);
+}
+
+.landing-login-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--lp-muted);
+}
+
+.landing-login-close:hover { background: var(--lp-line); }
+
+@media (max-width: 575.98px) {
+    .landing-login-modal { width: 100%; height: 100dvh; max-height: none; border-radius: 0; padding-top: 3rem; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .landing-login-modal { animation: landing-pop 0.18s ease-out; }
+    @keyframes landing-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+}

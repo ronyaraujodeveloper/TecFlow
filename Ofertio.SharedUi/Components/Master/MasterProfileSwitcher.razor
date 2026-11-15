@@ -2,13 +2,13 @@
 @if (_user is not null && MasterAccess.IsMaster(_user) && !MasterAccess.IsImpersonating(_user))
 {
     var masterView = MasterAccess.IsMasterView(_user);
-    <div class="btn-group btn-group-sm d-none d-md-inline-flex" role="group" aria-label="Alternar visão">
+    <div class="btn-group btn-group-sm d-none d-md-inline-flex view-switch" role="group" aria-label="Alternar visão">
         <a href="/master/visao/master" data-enhance-nav="false"
-           class="btn @(masterView ? "btn-dark" : "btn-outline-dark")">
+           class="btn view-switch-btn @(masterView ? "active" : string.Empty)">
             <i class="bi bi-shield-lock" aria-hidden="true"></i> Painel Master
         </a>
         <a href="/master/visao/cliente" data-enhance-nav="false"
-           class="btn @(masterView ? "btn-outline-dark" : "btn-dark")">
+           class="btn view-switch-btn @(!masterView ? "active" : string.Empty)">
             <i class="bi bi-person" aria-hidden="true"></i> Visão Cliente
         </a>
     </div>

@@ -1,4 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Ofertio.Business.Service.Mail;
+using Ofertio.Infrastructure.Services.Email;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Groups;
@@ -22,6 +26,9 @@ public sealed class TenantAdminService : ITenantAdminService
     private readonly ITenantAccessReader _accessReader;
     private readonly ISaasPaymentGateway _gateway;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ITransactionalEmailSender _email;
+    private readonly EmailOptions _emailOptions;
+    private readonly ILogger<TenantAdminService> _logger;
 
     public TenantAdminService(
         AppDbContext context,
@@ -29,8 +36,14 @@ public sealed class TenantAdminService : ITenantAdminService
         IMasterAuditService audit,
         ITenantAccessReader accessReader,
         ISaasPaymentGateway gateway,
-        ICurrentTenantService currentTenant)
+        ICurrentTenantService currentTenant,
+        ITransactionalEmailSender email,
+        IOptions<EmailOptions> emailOptions,
+        ILogger<TenantAdminService> logger)
     {
+        _email = email;
+        _emailOptions = emailOptions.Value;
+        _logger = logger;
         _context = context;
         _currentTenant = currentTenant;
         _uploads = uploads;
@@ -354,6 +367,14 @@ public sealed class TenantAdminService : ITenantAdminService
                 reason = $"Bloqueio automático: inadimplente há mais de {TenantLifecycleRules.OverdueGraceDays} dias.";
                 transition = TenantLifecycleRules.Apply(tenant.Status, TenantLifecycleActions.Suspender, now, tenant.TrialEndsAt);
             }
+            else if (TrialRules.ShouldConvertToPaid(tenant.Status, tenant.TrialEndsAt, tenant.GatewaySubscriptionId, now))
+            {
+                var paidPlan = await ResolvePostTrialPlanAsync(cancellationToken);
+                reason = $"Teste encerrado com cartão: conta passou para o plano {paidPlan}.";
+                tenant.PlanCode = paidPlan;
+                tenant.RenewalAt = now.AddMonths(1);
+                transition = new TenantLifecycleTransition(TenantStatuses.Ativo, tenant.TrialEndsAt, null);
+            }
             else if (TenantLifecycleRules.ShouldExpireTrial(tenant.Status, tenant.TrialEndsAt, tenant.GatewaySubscriptionId, now))
             {
                 reason = "Trial expirado sem assinatura ativa.";
@@ -374,7 +395,73 @@ public sealed class TenantAdminService : ITenantAdminService
             changed++;
         }
 
+        await SendTrialEndingNoticesAsync(now, cancellationToken);
         return changed;
+    }
+
+    private async Task<string> ResolvePostTrialPlanAsync(CancellationToken cancellationToken)
+    {
+        var configured = await _context.SaasPlans
+            .AsNoTracking()
+            .Where(item => item.Code == SaasPlanCodes.Trial)
+            .Select(item => item.PostTrialPlanCode)
+            .FirstOrDefaultAsync(cancellationToken);
+        return TrialRules.ResolvePostTrialPlan(configured);
+    }
+
+    /// <summary>Avisa por e-mail, uma única vez, que o teste está acabando (com cartão, informa a cobrança).</summary>
+    private async Task SendTrialEndingNoticesAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var windowEnd = now.AddDays(TrialRules.NoticeDaysBefore);
+        var due = await _context.Tenants
+            .Where(item => item.Status == TenantStatuses.Trial
+                && item.TrialEndingNoticeSentAt == null
+                && item.TrialEndsAt != null
+                && item.TrialEndsAt > now
+                && item.TrialEndsAt <= windowEnd)
+            .ToListAsync(cancellationToken);
+        if (due.Count == 0)
+        {
+            return;
+        }
+
+        var postTrialCode = await ResolvePostTrialPlanAsync(cancellationToken);
+        var nextPlan = await _context.SaasPlans.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Code == postTrialCode, cancellationToken);
+        var planUrl = TransactionalEmailRules.BuildPlanUrl(_emailOptions.PublicBaseUrl);
+
+        foreach (var tenant in due)
+        {
+            try
+            {
+                var recipient = await _context.UserAccounts
+                    .IgnoreQueryFilters()
+                    .Where(user => user.TenantId == tenant.Id && user.Email != "")
+                    .OrderBy(user => user.Id)
+                    .Select(user => user.Email)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (string.IsNullOrWhiteSpace(recipient))
+                {
+                    continue;
+                }
+
+                await _email.SendAsync(
+                    TransactionalEmailRules.TrialEnding(
+                        recipient,
+                        hasCard: !string.IsNullOrWhiteSpace(tenant.GatewaySubscriptionId),
+                        nextPlan?.Name ?? postTrialCode,
+                        nextPlan?.MonthlyPrice ?? 0m,
+                        tenant.TrialEndsAt!.Value,
+                        planUrl),
+                    cancellationToken);
+                tenant.TrialEndingNoticeSentAt = now;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao enviar o aviso de fim de teste do inquilino {TenantId}.", tenant.Id);
+            }
+        }
     }
 
     internal static void ApplyTransition(Tenant tenant, TenantLifecycleTransition transition, string? reason, DateTime now)

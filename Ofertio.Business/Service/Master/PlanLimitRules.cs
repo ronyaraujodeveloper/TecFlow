@@ -15,12 +15,13 @@ public sealed record PlanLimits(
 
 public static class SaasPlanCodes
 {
+    public const string Trial = "Trial";
     public const string Starter = "Starter";
     public const string Pro = "Pro";
     public const string Agency = "Agency";
     public const string Enterprise = "Enterprise";
 
-    public static readonly IReadOnlyList<string> All = [Starter, Pro, Agency, Enterprise];
+    public static readonly IReadOnlyList<string> All = [Trial, Starter, Pro, Agency, Enterprise];
 }
 
 public static class PlanLimitRules

@@ -294,7 +294,7 @@ public class PlatformAuthService : IPlatformAuthService
 
         user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, request.PasswordHash);
 
-        var tenant = await _tenantProvisioningService.EnsureTenantForUserAsync(user);
+        var tenant = await _tenantProvisioningService.CreateTrialTenantForNewUserAsync(user);
         user.TenantId = tenant.Id;
 
         await _userAccountRepository.AddAsync(user);
@@ -442,7 +442,7 @@ public class PlatformAuthService : IPlatformAuthService
             CreatedAt = DateTime.UtcNow
         };
 
-        var tenant = await _tenantProvisioningService.EnsureTenantForUserAsync(newUser);
+        var tenant = await _tenantProvisioningService.CreateTrialTenantForNewUserAsync(newUser);
         newUser.TenantId = tenant.Id;
         await _userAccountRepository.AddAsync(newUser);
         await _userManager.AddLoginAsync(newUser, new UserLoginInfo(provider, payload.ProviderKey, provider));

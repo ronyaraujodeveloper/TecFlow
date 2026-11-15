@@ -1,5 +1,5 @@
 ﻿:root {
-    --tecso-primary: #0d6efd;
+    --tecso-primary: #d9480f;
     --tecso-bg: #f4f6fb;
     --tecso-card: #ffffff;
     --brand-shopee: #EE4D2D;
@@ -30,41 +30,41 @@ html, body {
     --tf-client-border: #e2e8f0;
     --tf-client-text: #0f172a;
     --tf-client-muted: #64748b;
-    --tf-client-accent: #2563eb;
-    --tf-client-accent-soft: #eff6ff;
+    --tf-client-accent: #d9480f;
+    --tf-client-accent-soft: #fff4ed;
     --bs-body-color: var(--tf-client-text);
     --bs-secondary-color: var(--tf-client-muted);
     --bs-border-color: var(--tf-client-border);
     --bs-border-radius: 0.625rem;
     --bs-border-radius-lg: 0.875rem;
-    --bs-primary: #2563eb;
-    --bs-primary-rgb: 37, 99, 235;
-    --bs-link-color: #2563eb;
-    --bs-link-color-rgb: 37, 99, 235;
-    --bs-link-hover-color: #1d4ed8;
-    --bs-link-hover-color-rgb: 29, 78, 216;
+    --bs-primary: #d9480f;
+    --bs-primary-rgb: 217, 72, 15;
+    --bs-link-color: #d9480f;
+    --bs-link-color-rgb: 217, 72, 15;
+    --bs-link-hover-color: #c2410c;
+    --bs-link-hover-color-rgb: 194, 65, 12;
     background: var(--tf-client-bg);
     color: var(--tf-client-text);
 }
 
 .portal-shell .btn-primary {
-    --bs-btn-bg: #2563eb;
-    --bs-btn-border-color: #2563eb;
-    --bs-btn-hover-bg: #1d4ed8;
-    --bs-btn-hover-border-color: #1d4ed8;
-    --bs-btn-active-bg: #1e40af;
-    --bs-btn-active-border-color: #1e40af;
-    --bs-btn-disabled-bg: #2563eb;
-    --bs-btn-disabled-border-color: #2563eb;
+    --bs-btn-bg: #d9480f;
+    --bs-btn-border-color: #d9480f;
+    --bs-btn-hover-bg: #c2410c;
+    --bs-btn-hover-border-color: #c2410c;
+    --bs-btn-active-bg: #9a3412;
+    --bs-btn-active-border-color: #9a3412;
+    --bs-btn-disabled-bg: #d9480f;
+    --bs-btn-disabled-border-color: #d9480f;
 }
 
 .portal-shell .btn-outline-primary {
-    --bs-btn-color: #2563eb;
-    --bs-btn-border-color: #2563eb;
-    --bs-btn-hover-bg: #2563eb;
-    --bs-btn-hover-border-color: #2563eb;
-    --bs-btn-active-bg: #1d4ed8;
-    --bs-btn-active-border-color: #1d4ed8;
+    --bs-btn-color: #d9480f;
+    --bs-btn-border-color: #d9480f;
+    --bs-btn-hover-bg: #d9480f;
+    --bs-btn-hover-border-color: #d9480f;
+    --bs-btn-active-bg: #c2410c;
+    --bs-btn-active-border-color: #c2410c;
 }
 
 .portal-main .card {
@@ -149,7 +149,7 @@ html, body {
 }
 
 .login-recovery-link:hover {
-    color: #0d6efd;
+    color: #d9480f;
     text-decoration: underline !important;
 }
 
@@ -218,7 +218,7 @@ html, body {
     display: inline-block;
     padding: 0.35rem 0.85rem;
     border-radius: 999px;
-    background: #0d6efd;
+    background: #d9480f;
     color: #fff;
     font-size: 0.85rem;
     font-weight: 600;
@@ -326,8 +326,8 @@ html, body {
 }
 
 .confirm-dialog-icon--info {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: #ffedd5;
+    color: #c2410c;
 }
 
 .loading-overlay {
@@ -460,10 +460,10 @@ html, body {
 }
 
 .portal-nav-link.active {
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: #fff4ed;
+    color: #c2410c;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 #2563eb;
+    box-shadow: inset 3px 0 0 #d9480f;
 }
 
 /* Menu pai: ícone em destaque (badge) + texto em negrito. */
@@ -480,13 +480,13 @@ html, body {
     justify-content: center;
     border-radius: 0.5rem;
     background: #eef2ff;
-    color: #2563eb;
+    color: #d9480f;
     opacity: 1;
     font-size: 1rem;
 }
 
 .portal-nav-parent.active > .portal-nav-icon {
-    background: #2563eb;
+    background: #d9480f;
     color: #ffffff;
 }
 
@@ -500,7 +500,7 @@ html, body {
 
 .portal-nav-group-toggle.active {
     background: transparent;
-    color: #1d4ed8;
+    color: #c2410c;
     box-shadow: none;
 }
 
@@ -529,7 +529,7 @@ html, body {
 }
 
 .portal-nav-sublink.active {
-    box-shadow: inset 2px 0 0 #2563eb;
+    box-shadow: inset 2px 0 0 #d9480f;
 }
 
 .portal-nav-icon {
@@ -822,7 +822,7 @@ html, body {
 }
 
 .ofertio-toast--info {
-    background: #0d6efd;
+    background: #d9480f;
 }
 
 .ofertio-toast-icon {
@@ -1298,7 +1298,7 @@ html, body {
 }
 
 .account-security-tabs .nav-link.active {
-    background: #0d6efd;
+    background: #d9480f;
     color: #fff;
 }
 
@@ -1800,7 +1800,7 @@ html, body {
     align-items: center;
     justify-content: center;
     background: var(--bs-primary-bg-subtle, #e7f1ff);
-    color: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary, #d9480f);
     margin-bottom: 0.4rem;
 }
 
@@ -2650,7 +2650,7 @@ html, body {
 .link-history-clicks-value {
     font-size: 1.25rem;
     font-weight: 800;
-    color: #0d6efd;
+    color: #d9480f;
     line-height: 1;
 }
 
@@ -2683,7 +2683,7 @@ html, body {
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     background: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
+    color: #d9480f;
     font-weight: 800;
     font-size: 0.85rem;
 }
@@ -3464,4 +3464,166 @@ html, body {
 
 .legal-published {
     overflow-wrap: anywhere;
+}
+
+/* Alternador Painel Master / Visão Cliente: legível no cabeçalho claro e no escuro. */
+.view-switch .view-switch-btn {
+    color: #334155;
+    background: #fff;
+    border-color: #cbd5e1;
+}
+
+.view-switch .view-switch-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.view-switch .view-switch-btn.active {
+    color: #fff;
+    background: #0f172a;
+    border-color: #0f172a;
+}
+
+.master-header .view-switch .view-switch-btn {
+    color: #e2e8f0;
+    background: transparent;
+    border-color: #475569;
+}
+
+.master-header .view-switch .view-switch-btn:hover {
+    color: #fff;
+    background: #1e293b;
+}
+
+.master-header .view-switch .view-switch-btn.active {
+    color: #0f172a;
+    background: var(--tf-master-accent, #ff9900);
+    border-color: var(--tf-master-accent, #ff9900);
+    font-weight: 600;
+}
+
+/* Botões de login social: neutros, para o "Entrar" ser a ação principal. */
+.auth-provider-btn.btn-social {
+    color: var(--tf-client-text);
+    background: #fff;
+    border: 1px solid var(--tf-client-border);
+}
+
+.auth-provider-btn.btn-social:hover,
+.auth-provider-btn.btn-social:focus-visible {
+    background: var(--tf-client-accent-soft);
+    border-color: var(--tf-client-accent);
+}
+
+.login-recovery-link {
+    font-size: 0.9rem;
+}
+
+/* Master: barra de ações fixa, rotas discretas e linha em foco na matriz de menus. */
+.master-sticky-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 0.5rem 0;
+    background: var(--tf-master-bg, #0f172a);
+}
+
+.master-main .menu-route {
+    color: var(--tf-master-muted, #94a3b8);
+    background: transparent;
+    font-size: 0.75em;
+}
+
+.master-main .menu-matrix tbody tr:hover > * {
+    background-color: rgba(255, 153, 0, 0.08);
+}
+
+.master-main .menu-matrix input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+/* Master: títulos das seções do menu lateral (só no desktop, onde o menu é vertical). */
+.master-nav-group {
+    display: none;
+}
+
+@media (min-width: 992px) {
+    .master-nav-group {
+        display: block;
+        margin: 0.9rem 0.75rem 0.25rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tf-master-muted, #94a3b8);
+    }
+
+    .master-nav-group:first-child {
+        margin-top: 0.25rem;
+    }
+}
+
+/* Master: gráfico de barras do dashboard e carregamento. */
+.master-bars {
+    display: flex;
+    align-items: stretch;
+    gap: 0.75rem;
+    height: 11rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--tf-master-border, #334155);
+}
+
+.master-bar-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    justify-items: center;
+    align-items: end;
+    gap: 0.25rem;
+}
+
+.master-bar {
+    width: 100%;
+    max-width: 3.5rem;
+    min-height: 3px;
+    background: var(--tf-master-accent, #ff9900);
+    border-radius: 0.35rem 0.35rem 0 0;
+    transition: filter 0.15s ease;
+}
+
+.master-bar.is-empty {
+    background: var(--tf-master-border, #334155);
+}
+
+.master-bar-col:hover .master-bar {
+    filter: brightness(1.15);
+}
+
+.master-bar-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.master-bar-label {
+    grid-row: 3;
+    font-size: 0.75rem;
+    color: var(--tf-master-muted, #94a3b8);
+}
+
+.master-skeleton {
+    height: 5.5rem;
+    background: linear-gradient(90deg, var(--tf-master-surface, #1e293b) 25%, var(--tf-master-surface-2, #172033) 50%, var(--tf-master-surface, #1e293b) 75%);
+    background-size: 200% 100%;
+    animation: master-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes master-skeleton {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .master-skeleton { animation: none; }
 }

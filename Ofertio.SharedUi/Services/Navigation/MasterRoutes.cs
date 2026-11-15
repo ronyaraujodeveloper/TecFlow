@@ -7,7 +7,11 @@ public sealed record MasterRouteLink(
     string Label,
     string Icon,
     string? Permission,
-    IReadOnlyList<MasterRouteLink>? Children = null);
+    IReadOnlyList<MasterRouteLink>? Children = null)
+{
+    /// <summary>Seção do menu lateral em que o link aparece.</summary>
+    public string? Group { get; init; }
+}
 
 /// <summary>Convenção de rotas do backoffice: toda administração global vive sob /master/*.</summary>
 public static class MasterRoutes
@@ -37,21 +41,21 @@ public static class MasterRoutes
 
     public static readonly IReadOnlyList<MasterRouteLink> Links =
     [
-        new(Dashboard, "Dashboard executivo", "bi-graph-up-arrow", MasterPermissions.ViewMetrics),
-        new(Tenants, "Inquilinos (Tenants)", "bi-buildings", MasterPermissions.ViewTenants),
-        new(Plans, "Planos & assinaturas", "bi-credit-card", MasterPermissions.ManagePlans),
-        new(MenuPermissions, "Menus por plano", "bi-diagram-3", MasterPermissions.ManagePlans),
-        new(Vault, "Cofre de chaves (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys),
+        new(Dashboard, "Dashboard executivo", "bi-graph-up-arrow", MasterPermissions.ViewMetrics) { Group = "Negócio" },
+        new(Tenants, "Inquilinos (Tenants)", "bi-buildings", MasterPermissions.ViewTenants) { Group = "Negócio" },
+        new(Plans, "Planos & assinaturas", "bi-credit-card", MasterPermissions.ManagePlans) { Group = "Negócio" },
+        new(MenuPermissions, "Menus por plano", "bi-diagram-3", MasterPermissions.ManagePlans) { Group = "Negócio" },
+        new(Vault, "Cofre de chaves (Vault)", "bi-safe", MasterPermissions.ManageGlobalKeys) { Group = "Integrações" },
         new(GlobalIntegrations, "Integrações Globais", "bi-globe-americas", MasterPermissions.ManageGlobalKeys,
         [
             new(GlobalMercadoLivre, "API Mercado Livre", "bi-bag-check", MasterPermissions.ManageGlobalKeys),
             new(GlobalTikTokShop, "API TikTok Shop", "bi-tiktok", MasterPermissions.ManageGlobalKeys)
-        ]),
-        new(DeveloperAccounts, "Contas de teste / dev", "bi-person-badge", MasterPermissions.ManageGlobalKeys),
-        new(Operators, "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators),
-        new(Audit, "Trilha de auditoria", "bi-journal-lock", MasterPermissions.ViewAudit),
-        new(Communication, "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication),
-        new(Terms, "Termos e privacidade", "bi-file-earmark-text", MasterPermissions.ManageLegal)
+        ]) { Group = "Integrações" },
+        new(DeveloperAccounts, "Contas de teste / dev", "bi-person-badge", MasterPermissions.ManageGlobalKeys) { Group = "Integrações" },
+        new(Operators, "Operadores & RBAC", "bi-people", MasterPermissions.ManageOperators) { Group = "Governança" },
+        new(Audit, "Trilha de auditoria", "bi-journal-lock", MasterPermissions.ViewAudit) { Group = "Governança" },
+        new(Communication, "Comunicação global", "bi-megaphone", MasterPermissions.ManageCommunication) { Group = "Governança" },
+        new(Terms, "Termos e privacidade", "bi-file-earmark-text", MasterPermissions.ManageLegal) { Group = "Governança" }
     ];
 
     public static bool IsMasterRoute(string? path)

@@ -68,6 +68,14 @@ public class MyPlanResponseDto : ResponseDto
 
     public DateTime? RenewalAt { get; set; }
 
+    /// <summary>Durante o teste: há cartão/assinatura cadastrada, então a conta vira paga ao fim do teste.</summary>
+    public bool TrialHasCard { get; set; }
+
+    /// <summary>Durante o teste: plano para o qual a conta passa ao fim do teste.</summary>
+    public string? PostTrialPlanName { get; set; }
+
+    public decimal PostTrialPlanPrice { get; set; }
+
     /// <summary>Verdadeiro enquanto o pagamento é simulado (nenhuma cobrança real).</summary>
     public bool IsPaymentSimulated { get; set; }
 

@@ -59,6 +59,25 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
             return (null, "Preços e limites não podem ser negativos (use 0 para ilimitado).");
         }
 
+        var isTrial = TrialRules.IsTrialPlan(code);
+        if (isTrial)
+        {
+            if (request.TrialDays is < 1 or > TrialRules.MaxDays)
+            {
+                return (null, $"Informe de 1 a {TrialRules.MaxDays} dias de teste grátis.");
+            }
+
+            var postTrial = TrialRules.ResolvePostTrialPlan(request.PostTrialPlanCode);
+            if (!await _context.SaasPlans.AnyAsync(item => item.Code == postTrial && item.IsActive, cancellationToken))
+            {
+                return (null, $"O plano cobrado ao fim do teste ({postTrial}) não existe ou está inativo.");
+            }
+
+            request.PostTrialPlanCode = postTrial;
+            request.MonthlyPrice = 0;
+            request.AnnualPrice = 0;
+        }
+
         var plan = request.Id > 0
             ? await _context.SaasPlans.FirstOrDefaultAsync(item => item.Id == request.Id, cancellationToken)
             : await _context.SaasPlans.FirstOrDefaultAsync(item => item.Code == code, cancellationToken);
@@ -85,6 +104,9 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         plan.Highlights = PlanPricingRules.NormalizeHighlights(request.Highlights);
         plan.IsActive = request.IsActive;
         plan.SortOrder = request.SortOrder;
+        plan.TrialDays = isTrial ? request.TrialDays : 0;
+        plan.RequireCard = isTrial && request.RequireCard;
+        plan.PostTrialPlanCode = isTrial ? request.PostTrialPlanCode : null;
         plan.Touch();
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -92,11 +114,30 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         {
             await _audit.LogAsync(actor, MasterAuditActions.PlanSaved, "SaasPlan", plan.Id.ToString(),
                 $"{(isNew ? "Criado" : "Alterado")} plano {plan.Code}: R$ {plan.MonthlyPrice:N2}/mês, R$ {plan.AnnualPrice:N2}/ano, " +
-                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, disparos {plan.MaxDailySchedules}/dia.",
+                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, disparos {plan.MaxDailySchedules}/dia." +
+                (isTrial ? $" Teste: {plan.TrialDays} dia(s), cartão {(plan.RequireCard ? "exigido" : "não exigido")}, depois {plan.PostTrialPlanCode}." : string.Empty),
                 cancellationToken);
         }
 
         return (Map(plan), null);
+    }
+
+    public async Task<PublicPlansDto> GetPublicAsync(CancellationToken cancellationToken = default)
+    {
+        var plans = await ListAsync(includeInactive: false, cancellationToken);
+        foreach (var plan in plans)
+        {
+            plan.TenantCount = 0;
+        }
+
+        var trial = plans.FirstOrDefault(plan => TrialRules.IsTrialPlan(plan.Code));
+        return new PublicPlansDto
+        {
+            TrialDays = trial?.TrialDays ?? 0,
+            RequireCard = trial?.RequireCard ?? false,
+            PostTrialPlanCode = TrialRules.ResolvePostTrialPlan(trial?.PostTrialPlanCode),
+            Plans = plans.ToList()
+        };
     }
 
     public async Task<PlanLimits> GetForUserAsync(int userId, CancellationToken cancellationToken = default)
@@ -157,6 +198,9 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
             MaxDailySchedules = plan.MaxDailySchedules,
             Highlights = plan.Highlights,
             IsActive = plan.IsActive,
-            SortOrder = plan.SortOrder
+            SortOrder = plan.SortOrder,
+            TrialDays = plan.TrialDays,
+            RequireCard = plan.RequireCard,
+            PostTrialPlanCode = plan.PostTrialPlanCode
         };
 }

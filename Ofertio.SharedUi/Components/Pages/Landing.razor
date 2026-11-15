@@ -1,0 +1,307 @@
+﻿@page "/conheca"
+@layout Ofertio.SharedUi.Components.Layout.LandingLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
+@using System.Globalization
+@using Ofertio.Business.Service.Master
+@using Ofertio.SharedUi.Services.Public
+@inject IPublicPlansApiService PlansApi
+
+<PageTitle>Ofertio — Ofertas, links de afiliado e disparos no automático</PageTitle>
+
+<section class="landing-hero">
+    <div class="landing-container landing-hero-grid">
+        <div class="landing-hero-copy">
+            <p class="landing-eyebrow">Automação para afiliados</p>
+            <h1 class="landing-title">Encontre ofertas, gere seus links e divulgue no automático</h1>
+            <p class="landing-lead">
+                O Ofertio busca as melhores ofertas nas lojas, converte seus links de afiliado e dispara as campanhas no WhatsApp e no Telegram. Você acompanha cliques e vendas em um só painel.
+            </p>
+            <div class="landing-cta-row">
+                <a href="/cadastro" class="btn btn-primary btn-lg fw-semibold">@TrialButtonText</a>
+                <a href="/conheca?entrar=1" class="btn btn-outline-secondary btn-lg">Já tenho conta</a>
+            </div>
+            <p class="landing-microcopy">@TrialMicrocopy</p>
+        </div>
+        <div class="landing-hero-media">
+            <img src="_content/Ofertio.SharedUi/images/landing/hero-painel.svg" alt="Painel do Ofertio com indicadores e gráfico de desempenho" width="960" height="600" />
+        </div>
+    </div>
+</section>
+
+<section class="landing-channels" aria-label="Integrações">
+    <div class="landing-container">
+        <p class="landing-channels-label">Integrado com</p>
+        <ul class="landing-channel-list">
+            <li>Mercado Livre</li>
+            <li>TikTok Shop</li>
+            <li>Amazon</li>
+            <li>Shopee</li>
+            <li>WhatsApp</li>
+            <li>Telegram</li>
+        </ul>
+    </div>
+</section>
+
+<section id="como-funciona" class="landing-section">
+    <div class="landing-container">
+        <h2 class="landing-h2">Como funciona</h2>
+        <p class="landing-sub">Três passos entre achar a oferta e ver o resultado.</p>
+        <ol class="landing-steps">
+            <li>
+                <span class="landing-step-num" aria-hidden="true">1</span>
+                <h3>Busque ou converta</h3>
+                <p>Pesquise ofertas com selos de Oportunidade, Vantagem e Segurança, ou cole um link de produto e receba o seu link de afiliado.</p>
+            </li>
+            <li>
+                <span class="landing-step-num" aria-hidden="true">2</span>
+                <h3>Monte a campanha</h3>
+                <p>Escolha produtos, textos e grupos. O Radar de Ofertas avisa quando um produto do seu perfil baixa de preço.</p>
+            </li>
+            <li>
+                <span class="landing-step-num" aria-hidden="true">3</span>
+                <h3>Dispare e acompanhe</h3>
+                <p>Agende o envio no WhatsApp e no Telegram e veja cliques, vendas e receita de cada campanha.</p>
+            </li>
+        </ol>
+    </div>
+</section>
+
+<section id="recursos" class="landing-section landing-section-alt">
+    <div class="landing-container">
+        <h2 class="landing-h2">Tudo para vender mais como afiliado</h2>
+
+        <article class="landing-feature">
+            <div class="landing-feature-text">
+                <h3>Buscar Ofertas</h3>
+                <p>Compare preços entre lojas oficiais, filtre por categoria e veja o que realmente vale a pena divulgar, com a comissão de cada canal.</p>
+                <ul class="landing-checks">
+                    <li>Selos de Oportunidade, Vantagem e Segurança</li>
+                    <li>Comparador de preços em outras lojas</li>
+                    <li>Comissão estimada por canal</li>
+                </ul>
+            </div>
+            <img src="_content/Ofertio.SharedUi/images/landing/buscar-ofertas.svg" alt="Tela de busca de ofertas com resultados em cartões" loading="lazy" width="960" height="600" />
+        </article>
+
+        <article class="landing-feature landing-feature-reverse">
+            <div class="landing-feature-text">
+                <h3>Disparos no WhatsApp e no Telegram</h3>
+                <p>Agende mensagens para seus grupos com link rastreável. Conecte suas contas e deixe o robô trabalhar por você.</p>
+                <ul class="landing-checks">
+                    <li>Agendador de grupos e bot de conversão</li>
+                    <li>Links curtos com rastreio de cliques</li>
+                    <li>Mensagens prontas a partir da oferta</li>
+                </ul>
+            </div>
+            <img src="_content/Ofertio.SharedUi/images/landing/disparos.svg" alt="Conversa de grupo com ofertas e agendamento de disparo" loading="lazy" width="960" height="600" />
+        </article>
+
+        <article class="landing-feature">
+            <div class="landing-feature-text">
+                <h3>Métricas por campanha</h3>
+                <p>Visualizações, cliques, vendas, receita, investimento e lucro. Saiba onde vale a pena investir mais.</p>
+                <ul class="landing-checks">
+                    <li>CTR, conversão, ROI e CAC médio</li>
+                    <li>Filtros por campanha e período</li>
+                    <li>Gerador de links com histórico</li>
+                </ul>
+            </div>
+            <img src="_content/Ofertio.SharedUi/images/landing/metricas.svg" alt="Painel de métricas com gráfico de barras e indicadores" loading="lazy" width="960" height="600" />
+        </article>
+    </div>
+</section>
+
+<section id="planos" class="landing-section">
+    <div class="landing-container">
+        <h2 class="landing-h2">Planos</h2>
+        <p class="landing-sub">Comece pelo teste grátis. Troque de plano quando quiser.</p>
+
+        @if (_plans is null || _plans.Plans.Count == 0)
+        {
+            <p class="text-center text-muted">Os planos serão exibidos aqui em breve. <a href="/cadastro">Crie sua conta</a> para começar.</p>
+        }
+        else
+        {
+            <div class="landing-cycle" role="group" aria-label="Periodicidade dos preços">
+                <button type="button" class="landing-cycle-btn @(!_annual ? "active" : null)" aria-pressed="@(!_annual)" @onclick="() => _annual = false">Mensal</button>
+                <button type="button" class="landing-cycle-btn @(_annual ? "active" : null)" aria-pressed="@_annual" @onclick="() => _annual = true">Anual</button>
+            </div>
+
+            <div class="landing-plans-wrap">
+                <button type="button" class="landing-plans-arrow" aria-label="Planos anteriores"
+                        onclick="document.getElementById('plans-track').scrollBy({left: -300, behavior: 'smooth'})">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+                <div id="plans-track" class="landing-plans" tabindex="0" role="list" aria-label="Lista de planos">
+                    @foreach (var plan in _plans.Plans)
+                    {
+                        var isTrial = TrialRules.IsTrialPlan(plan.Code);
+                        <article class="landing-plan @(isTrial ? "landing-plan-trial" : null)" role="listitem">
+                            @if (isTrial)
+                            {
+                                <span class="landing-plan-flag">Comece aqui</span>
+                            }
+                            <h3>@plan.Name</h3>
+                            @if (isTrial)
+                            {
+                                <p class="landing-price"><span class="landing-price-big">Grátis</span></p>
+                                <p class="landing-price-note">@(_plans.TrialDays > 0 ? $"por {_plans.TrialDays} dias" : "para começar")</p>
+                            }
+                            else if (_annual && plan.AnnualPrice > 0)
+                            {
+                                <p class="landing-price"><span class="landing-price-big">@Money(plan.AnnualPrice)</span><span class="landing-price-per">/ano</span></p>
+                                <p class="landing-price-note">equivale a @Money(plan.AnnualPrice / 12m)/mês</p>
+                            }
+                            else
+                            {
+                                <p class="landing-price"><span class="landing-price-big">@Money(plan.MonthlyPrice)</span><span class="landing-price-per">/mês</span></p>
+                                <p class="landing-price-note">&nbsp;</p>
+                            }
+
+                            <ul class="landing-checks landing-plan-list">
+                                @foreach (var line in Features(plan))
+                                {
+                                    <li>@line</li>
+                                }
+                            </ul>
+
+                            @if (plan.Code == SaasPlanCodes.Enterprise)
+                            {
+                                <a href="mailto:@Ofertio.Business.Service.Mail.OfertioMailAddresses.Contact?subject=Plano%20Enterprise" class="btn btn-outline-secondary w-100 mt-auto">Falar com a equipe</a>
+                            }
+                            else
+                            {
+                                <a href="/cadastro" class="btn @(isTrial ? "btn-primary" : "btn-outline-primary") w-100 mt-auto fw-semibold">@(isTrial ? TrialButtonText : "Começar teste grátis")</a>
+                            }
+                        </article>
+                    }
+                </div>
+                <button type="button" class="landing-plans-arrow" aria-label="Próximos planos"
+                        onclick="document.getElementById('plans-track').scrollBy({left: 300, behavior: 'smooth'})">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <p class="landing-microcopy text-center mt-3">@AfterTrialText</p>
+        }
+    </div>
+</section>
+
+<section id="perguntas" class="landing-section landing-section-alt">
+    <div class="landing-container landing-faq">
+        <h2 class="landing-h2">Perguntas frequentes</h2>
+        <details>
+            <summary>Preciso de cartão de crédito para testar?</summary>
+            <p>@CardAnswer</p>
+        </details>
+        <details>
+            <summary>O que acontece quando o teste termina?</summary>
+            <p>@AfterTrialText</p>
+        </details>
+        <details>
+            <summary>Preciso ter conta em cada loja?</summary>
+            <p>Você conecta as suas contas de afiliado e de loja em Minhas Lojas. Para buscar ofertas e converter links, o Ofertio usa as integrações oficiais de cada canal.</p>
+        </details>
+        <details>
+            <summary>Meus dados ficam seguros?</summary>
+            <p>Sim. Tratamos os dados conforme a LGPD e as chaves são guardadas criptografadas. Leia a <a href="@Ofertio.SharedUi.Services.Navigation.LegalRoutes.Privacy">Política de Privacidade</a> e a <a href="@Ofertio.SharedUi.Services.Navigation.LegalRoutes.Security">Segurança da Informação</a>.</p>
+        </details>
+        <details>
+            <summary>Posso cancelar quando quiser?</summary>
+            <p>Pode. O cancelamento e as regras de cobrança estão descritos nos <a href="@Ofertio.SharedUi.Services.Navigation.LegalRoutes.Terms">Termos de Uso</a>.</p>
+        </details>
+    </div>
+</section>
+
+<section class="landing-final">
+    <div class="landing-container">
+        <h2 class="landing-h2 text-white">Pronto para divulgar no automático?</h2>
+        <a href="/cadastro" class="btn btn-light btn-lg fw-semibold">@TrialButtonText</a>
+        <p class="landing-microcopy landing-microcopy-light">@TrialMicrocopy</p>
+    </div>
+</section>
+
+@if (_loginOpen)
+{
+    <div class="landing-login-backdrop" @onclick="CloseLogin"></div>
+    <div class="landing-login-modal" role="dialog" aria-modal="true" aria-label="Entrar no Ofertio">
+        <button type="button" class="landing-login-close" aria-label="Fechar" @onclick="CloseLogin"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        <h2 class="h4 fw-bold text-center mb-3">Entrar no Ofertio</h2>
+        <UnifiedLoginCard />
+        <p class="text-center small mt-3 mb-0">Ainda não tem conta? <a href="/cadastro">Comece o teste grátis</a></p>
+    </div>
+}
+
+@code {
+    private PublicPlansDto? _plans;
+    private bool _annual;
+    private bool _loginOpen;
+
+    [SupplyParameterFromQuery(Name = "entrar")]
+    public string? Entrar { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _plans = await PlansApi.GetAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Entrar))
+        {
+            _loginOpen = true;
+        }
+    }
+
+    private void CloseLogin() => _loginOpen = false;
+
+    private bool HasTrial => _plans is { TrialDays: > 0 };
+
+    private string TrialButtonText => HasTrial ? $"Começar teste grátis de {_plans!.TrialDays} dias" : "Começar agora";
+
+    private string TrialMicrocopy => _plans is null || !HasTrial
+        ? "Crie sua conta em poucos minutos."
+        : _plans.RequireCard
+            ? "Cartão necessário no cadastro. Você só é cobrado depois do teste e pode cancelar antes."
+            : "Sem cartão de crédito. Cancele quando quiser.";
+
+    private string CardAnswer => _plans is { RequireCard: true }
+        ? "Sim, pedimos o cartão no cadastro, mas nada é cobrado durante o teste. Avisamos por e-mail e na tela antes do fim, e você pode trocar de plano ou cancelar antes da cobrança."
+        : "Não. Você testa sem informar cartão e escolhe um plano só se quiser continuar.";
+
+    private string AfterTrialText
+    {
+        get
+        {
+            if (_plans is null || !HasTrial)
+            {
+                return "Escolha o plano que combina com você.";
+            }
+
+            return _plans.RequireCard
+                ? $"Ao fim dos {_plans.TrialDays} dias, sua conta passa para o plano {PlanName(_plans.PostTrialPlanCode)} e o cartão cadastrado é cobrado. Avisamos antes, e você pode trocar de plano ou cancelar."
+                : $"Ao fim dos {_plans.TrialDays} dias, escolha um plano para continuar. Seus dados ficam guardados.";
+        }
+    }
+
+    private string PlanName(string code) =>
+        _plans?.Plans.FirstOrDefault(plan => string.Equals(plan.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
+
+    private static string Money(decimal value) => value.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+    private static IEnumerable<string> Features(SaasPlanDto plan)
+    {
+        yield return plan.MaxStores == 0 ? "Lojas conectadas ilimitadas" : $"Até {plan.MaxStores} loja(s) conectada(s)";
+        yield return plan.DailyVipQuota == 0 ? "Achadinhos ilimitados" : $"{plan.DailyVipQuota} achadinhos por dia";
+        yield return plan.MaxDailySchedules == 0 ? "Disparos ilimitados" : $"{plan.MaxDailySchedules} disparos por dia";
+        if (plan.RadarEnabled)
+        {
+            yield return "Radar de Ofertas";
+        }
+
+        foreach (var line in (plan.Highlights ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            yield return line;
+        }
+    }
+}

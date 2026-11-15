@@ -1,0 +1,41 @@
+﻿@inherits LayoutComponentBase
+@using Ofertio.SharedUi.Services.Navigation
+
+<div class="landing-shell">
+    <header class="landing-header">
+        <div class="landing-container landing-header-inner">
+            <a href="/conheca" class="landing-brand" aria-label="Ofertio — Início">
+                <img src="images/logo-ofertio.png" alt="Ofertio — Inteligência em Ofertas" class="brand-logo" />
+            </a>
+            <nav class="landing-nav" aria-label="Seções da página">
+                <a href="/conheca#como-funciona">Como funciona</a>
+                <a href="/conheca#recursos">Recursos</a>
+                <a href="/conheca#planos">Planos</a>
+                <a href="/conheca#perguntas">Perguntas</a>
+            </nav>
+            <div class="landing-header-actions">
+                <a href="/conheca?entrar=1" class="btn btn-outline-secondary btn-sm landing-login-link">Entrar</a>
+                <a href="/cadastro" class="btn btn-primary btn-sm fw-semibold">Começar teste grátis</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        @Body
+    </main>
+
+    <footer class="landing-footer">
+        <div class="landing-container">
+            <nav class="landing-footer-links" aria-label="Documentos legais">
+                <a href="@LegalRoutes.Terms">Termos de Uso</a>
+                <a href="@LegalRoutes.Privacy">Política de Privacidade</a>
+                <a href="@LegalRoutes.Security">Segurança da Informação</a>
+                <a href="mailto:@LegalRoutes.ContactEmail">Fale conosco</a>
+            </nav>
+            <p class="small mb-0">&copy; @DateTime.UtcNow.Year Ofertio · Sistemas e Integração</p>
+        </div>
+    </footer>
+</div>
+
+<CookieConsentBanner @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
+<ConfirmDialogHost />

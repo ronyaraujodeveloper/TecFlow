@@ -41,6 +41,9 @@ public interface ISaasPlanService
     Task<IReadOnlyList<SaasPlanDto>> ListAsync(bool includeInactive = true, CancellationToken cancellationToken = default);
 
     Task<(SaasPlanDto? Item, string? Error)> SaveAsync(MasterActor actor, SaasPlanDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>Planos ativos e regras do teste grátis para a página pública.</summary>
+    Task<PublicPlansDto> GetPublicAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IPlanLimitsService

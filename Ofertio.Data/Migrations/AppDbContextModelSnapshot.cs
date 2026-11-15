@@ -2209,10 +2209,20 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("PostTrialPlanCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<bool>("RadarEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("RequireCard")
+                        .HasColumnType("bit");
+
                     b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TrialDays")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -2855,6 +2865,9 @@ namespace Ofertio.Data.Migrations
                     b.Property<string>("StatusReason")
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("TrialEndingNoticeSentAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("TrialEndsAt")
                         .HasColumnType("datetime2");

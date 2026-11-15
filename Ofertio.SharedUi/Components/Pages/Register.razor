@@ -3,6 +3,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject IUserRegistrationApiService RegistrationApi
 @inject NavigationManager Navigation
+@inject Ofertio.SharedUi.Services.Public.IPublicPlansApiService PlansApi
 
 <PageTitle>Ofertio — Cadastre-se</PageTitle>
 
@@ -16,6 +17,12 @@
             <p class="text-muted small mb-0 mx-auto unified-login-lead">
                 Preencha os dados abaixo para acessar o Ofertio e gerenciar suas campanhas de afiliados.
             </p>
+            @if (_trialNotice is not null)
+            {
+                <p class="alert alert-success small py-2 mt-3 mb-0" role="note">
+                    <i class="bi bi-gift me-1" aria-hidden="true"></i>@_trialNotice
+                </p>
+            }
         </header>
 
         <div class="card shadow-lg border-0 login-card unified-login-card">
@@ -112,6 +119,19 @@
 </div>
 
 @code {
+    private string? _trialNotice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var plans = await PlansApi.GetAsync();
+        if (plans is { TrialDays: > 0 })
+        {
+            _trialNotice = plans.RequireCard
+                ? $"Teste grátis por {plans.TrialDays} dias. O cartão é pedido agora, mas só é cobrado depois do teste; você pode cancelar antes."
+                : $"Teste grátis por {plans.TrialDays} dias, sem cartão de crédito.";
+        }
+    }
+
     private readonly RegisterFormModel _registerModel = new();
     private string? _errorMessage;
     private bool _isSubmitting;

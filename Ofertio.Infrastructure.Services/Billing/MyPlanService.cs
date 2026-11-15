@@ -47,6 +47,9 @@ public sealed class MyPlanService : IMyPlanService
 
         var plans = await ActivePlansAsync(cancellationToken);
         var current = plans.FirstOrDefault(plan => string.Equals(plan.Code, account.PlanCode, StringComparison.OrdinalIgnoreCase));
+        var trialConfig = plans.FirstOrDefault(plan => TrialRules.IsTrialPlan(plan.Code));
+        var postTrialCode = TrialRules.ResolvePostTrialPlan(trialConfig?.PostTrialPlanCode);
+        var postTrial = plans.FirstOrDefault(plan => string.Equals(plan.Code, postTrialCode, StringComparison.OrdinalIgnoreCase));
         var profile = await _profiles.LoadAsync(userId, cancellationToken);
         var lastCheckout = await _context.PlanCheckouts.AsNoTracking()
             .Where(item => item.UserId == userId)
@@ -66,9 +69,12 @@ public sealed class MyPlanService : IMyPlanService
             TenantStatus = account.TenantStatus,
             TrialEndsAt = account.TrialEndsAt,
             RenewalAt = account.RenewalAt,
+            TrialHasCard = account.HasSubscription,
+            PostTrialPlanName = postTrial?.Name,
+            PostTrialPlanPrice = postTrial?.MonthlyPrice ?? 0m,
             IsPaymentSimulated = _gateway.IsSimulated,
             MissingFields = UserProfileRules.MissingFields(profile),
-            Plans = plans,
+            Plans = plans.Where(plan => !TrialRules.IsTrialPlan(plan.Code)).ToList(),
             LastCheckout = lastCheckout is null ? null : ToDto(lastCheckout)
         };
     }
@@ -199,7 +205,7 @@ public sealed class MyPlanService : IMyPlanService
 
         var tenant = await _context.Tenants.IgnoreQueryFilters().AsNoTracking()
             .Where(item => item.Id == user.TenantId)
-            .Select(item => new { item.PlanCode, item.BillingCycle, item.Status, item.TrialEndsAt, item.RenewalAt })
+            .Select(item => new { item.PlanCode, item.BillingCycle, item.Status, item.TrialEndsAt, item.RenewalAt, item.GatewaySubscriptionId })
             .FirstOrDefaultAsync(cancellationToken);
         return new AccountSnapshot(
             user.TenantId,
@@ -209,7 +215,8 @@ public sealed class MyPlanService : IMyPlanService
             tenant?.BillingCycle,
             tenant?.Status,
             tenant?.TrialEndsAt,
-            tenant?.RenewalAt);
+            tenant?.RenewalAt,
+            !string.IsNullOrWhiteSpace(tenant?.GatewaySubscriptionId));
     }
 
     private static PlanCheckoutDto ToDto(PlanCheckout checkout) =>
@@ -237,5 +244,6 @@ public sealed class MyPlanService : IMyPlanService
         string? BillingCycle,
         string? TenantStatus,
         DateTime? TrialEndsAt,
-        DateTime? RenewalAt);
+        DateTime? RenewalAt,
+        bool HasSubscription);
 }

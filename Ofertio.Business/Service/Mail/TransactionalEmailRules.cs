@@ -145,6 +145,57 @@ public static class TransactionalEmailRules
         };
     }
 
+    /// <summary>Aviso de fim do teste. Com cartão, informa a cobrança automática; sem cartão, pede a escolha de um plano.</summary>
+    public static TransactionalEmail TrialEnding(
+        string to,
+        bool hasCard,
+        string? nextPlan,
+        decimal nextPlanPrice,
+        DateTime trialEndsAtUtc,
+        string planUrl)
+    {
+        var planLabel = string.IsNullOrWhiteSpace(nextPlan) ? "Starter" : nextPlan.Trim();
+        var when = FormatDate(trialEndsAtUtc);
+        var money = FormatMoney(nextPlanPrice);
+        string text;
+        string html;
+        if (hasCard)
+        {
+            text = string.Join(
+                Environment.NewLine + Environment.NewLine,
+                "Seu teste grátis do Ofertio termina em " + when + ".",
+                "Nesse dia sua conta passa para o plano " + planLabel + " e o valor de " + money + " será cobrado no cartão cadastrado.",
+                "Para trocar de plano ou cancelar antes da cobrança, acesse " + planUrl,
+                "Dúvidas: " + OfertioMailAddresses.Contact);
+            html = "<p>Seu teste grátis do Ofertio termina em <strong>" + WebUtility.HtmlEncode(when) + "</strong>.</p>"
+                + "<p>Nesse dia sua conta passa para o plano " + WebUtility.HtmlEncode(planLabel)
+                + " e o valor de " + WebUtility.HtmlEncode(money) + " será cobrado no cartão cadastrado.</p>"
+                + "<p><a href=\"" + WebUtility.HtmlEncode(planUrl) + "\">Trocar de plano ou cancelar</a></p>"
+                + "<p>Dúvidas: " + WebUtility.HtmlEncode(OfertioMailAddresses.Contact) + "</p>";
+        }
+        else
+        {
+            text = string.Join(
+                Environment.NewLine + Environment.NewLine,
+                "Seu teste grátis do Ofertio termina em " + when + ".",
+                "Escolha um plano para continuar usando sem interrupção. Seus dados ficam guardados.",
+                planUrl,
+                "Dúvidas: " + OfertioMailAddresses.Contact);
+            html = "<p>Seu teste grátis do Ofertio termina em <strong>" + WebUtility.HtmlEncode(when) + "</strong>.</p>"
+                + "<p>Escolha um plano para continuar usando sem interrupção. Seus dados ficam guardados.</p>"
+                + "<p><a href=\"" + WebUtility.HtmlEncode(planUrl) + "\">Escolher meu plano</a></p>"
+                + "<p>Dúvidas: " + WebUtility.HtmlEncode(OfertioMailAddresses.Contact) + "</p>";
+        }
+
+        return new TransactionalEmail
+        {
+            To = to,
+            Subject = "Seu teste grátis termina em breve — Ofertio",
+            TextBody = text,
+            HtmlBody = html
+        };
+    }
+
     private static string NormalizeRoot(string? publicBaseUrl)
     {
         var root = string.IsNullOrWhiteSpace(publicBaseUrl)

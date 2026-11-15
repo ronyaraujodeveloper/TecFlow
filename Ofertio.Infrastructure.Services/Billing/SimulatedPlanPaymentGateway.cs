@@ -3,7 +3,7 @@ using Ofertio.Core.Entities;
 
 namespace Ofertio.Infrastructure.Services.Billing;
 
-/// <summary>Gateway da fase de telas: aprova sem cobrar e sem enviar o cartão a lugar nenhum.</summary>
+/// <summary>Gateway da fase de telas: aprova sem cobrar, sem enviar o cartão e sem e-mail de plano ativo.</summary>
 public sealed class SimulatedPlanPaymentGateway : IPlanPaymentGateway
 {
     public const string SimulatedMessage =

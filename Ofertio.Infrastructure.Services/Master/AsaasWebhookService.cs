@@ -3,11 +3,15 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Mail;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
 using Ofertio.Database;
+using Ofertio.Infrastructure.Services.Email;
 
 namespace Ofertio.Infrastructure.Services.Master;
 
@@ -18,17 +22,26 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
     private readonly IConfiguration _configuration;
     private readonly IMasterAuditService _audit;
     private readonly ITenantAccessReader _accessReader;
+    private readonly ITransactionalEmailSender _email;
+    private readonly EmailOptions _emailOptions;
+    private readonly ILogger<AsaasWebhookService> _logger;
 
     public AsaasWebhookService(
         AppDbContext context,
         IConfiguration configuration,
         IMasterAuditService audit,
-        ITenantAccessReader accessReader)
+        ITenantAccessReader accessReader,
+        ITransactionalEmailSender email,
+        IOptions<EmailOptions> emailOptions,
+        ILogger<AsaasWebhookService> logger)
     {
         _context = context;
         _configuration = configuration;
         _audit = audit;
         _accessReader = accessReader;
+        _email = email;
+        _emailOptions = emailOptions.Value;
+        _logger = logger;
     }
 
     public Task<bool> ValidateTokenAsync(string? token, CancellationToken cancellationToken = default)
@@ -68,6 +81,8 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
 
         row.Amount = payment.Value;
         row.NetAmount = payment.NetValue > 0 ? payment.NetValue : payment.Value;
+        var previousPaymentStatus = row.Status;
+        var alreadyPaid = row.PaidAt is not null;
         row.Status = Truncate(payment.Status ?? eventName, 32);
         row.BillingType = Truncate(payment.BillingType ?? string.Empty, 24);
         row.DueDate = ParseDate(payment.DueDate);
@@ -76,10 +91,16 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
         var now = DateTime.UtcNow;
         var previous = tenant.Status;
         string? message = null;
+        string? noticeKind = null;
         switch (eventName)
         {
             case "PAYMENT_CONFIRMED":
             case "PAYMENT_RECEIVED":
+                if (!alreadyPaid)
+                {
+                    noticeKind = "confirmed";
+                }
+
                 row.PaidAt ??= ParseDate(payment.PaymentDate) ?? now;
                 if (TenantStatuses.Normalize(tenant.Status) != TenantStatuses.Cancelado)
                 {
@@ -107,15 +128,30 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
                 }
 
                 message = $"Pagamento {payment.Id} vencido.";
+                if (!string.Equals(previousPaymentStatus, "OVERDUE", StringComparison.OrdinalIgnoreCase))
+                {
+                    noticeKind = "overdue";
+                }
+
                 break;
             case "PAYMENT_REFUNDED":
             case "PAYMENT_DELETED":
                 row.PaidAt = null;
                 message = $"Pagamento {payment.Id} estornado/removido.";
+                if (!string.Equals(previousPaymentStatus, "REFUNDED", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(previousPaymentStatus, "DELETED", StringComparison.OrdinalIgnoreCase))
+                {
+                    noticeKind = "canceled";
+                }
+
                 break;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        if (noticeKind is not null)
+        {
+            await TrySendPlanNoticeAsync(tenant, row, noticeKind, cancellationToken);
+        }
         _accessReader.Invalidate(tenant.Id);
         if (message is not null)
         {
@@ -124,6 +160,50 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
         }
 
         return Ok(message ?? "Evento registrado.");
+    }
+
+    private async Task TrySendPlanNoticeAsync(
+        Tenant tenant,
+        SaasPayment payment,
+        string kind,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var recipient = await _context.UserAccounts
+                .IgnoreQueryFilters()
+                .Where(user => user.TenantId == tenant.Id && user.Email != "")
+                .OrderBy(user => user.Id)
+                .Select(user => user.Email)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                _logger.LogInformation(
+                    "Aviso de assinatura sem destinatário. Tenant {TenantId} Tipo {Kind}.",
+                    tenant.Id,
+                    kind);
+                return;
+            }
+
+            var planUrl = TransactionalEmailRules.BuildPlanUrl(_emailOptions.PublicBaseUrl);
+            var message = kind switch
+            {
+                "confirmed" => TransactionalEmailRules.PlanPaymentConfirmed(
+                    recipient,
+                    tenant.PlanCode,
+                    tenant.BillingCycle,
+                    payment.Amount,
+                    payment.PaidAt ?? DateTime.UtcNow,
+                    planUrl),
+                "overdue" => TransactionalEmailRules.PlanPaymentOverdue(recipient, tenant.PlanCode, payment.Amount, planUrl),
+                _ => TransactionalEmailRules.PlanPaymentCanceled(recipient, payment.Amount, planUrl)
+            };
+            await _email.SendAsync(message, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao enviar o aviso de assinatura do inquilino {TenantId}.", tenant.Id);
+        }
     }
 
     private async Task<Tenant?> FindTenantAsync(AsaasWebhookPaymentDto payment, CancellationToken cancellationToken)

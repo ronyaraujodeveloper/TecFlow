@@ -6,6 +6,7 @@ using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Security;
 using Ofertio.Business.Service.Common;
+using Ofertio.Business.Service.Mail;
 using Ofertio.Business.Service.Legal;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
@@ -55,7 +56,7 @@ public class PlatformAuthService : IPlatformAuthService
     {
         if (!user.IsActive)
         {
-            return (false, null, "Conta desativada. Fale com o suporte Ofertio.", "USER_INACTIVE");
+            return (false, null, "Conta desativada. Escreva para " + OfertioMailAddresses.Contact + ".", "USER_INACTIVE");
         }
 
         if (_tenantAccessReader is not null && !MasterRoles.IsMaster(user.Role) && user.TenantId != Guid.Empty)

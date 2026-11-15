@@ -13,8 +13,7 @@ public static class LegalRoutes
     public const string CompanyCity = "São Paulo - SP";
     public const string DataProtectionOfficer = "Rony Faria de Araujo";
 
-    /// <summary>Provisório até existir um e-mail do domínio ofertio.com.br.</summary>
-    public const string ContactEmail = "rony.araujo@gmail.com";
+    public const string ContactEmail = Ofertio.Business.Service.Mail.OfertioMailAddresses.Contact;
 
     public const string ProductionUrl = "https://ofertio.com.br";
     public const string LastUpdated = "2 de novembro de 2026";

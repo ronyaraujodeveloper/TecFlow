@@ -2,9 +2,9 @@
 
 Este arquivo é o **Registro Histórico de Fases Concluídas** do Ofertio.
 
-Ele preserva o checklist das **Fases 1 a 31** (e entregas equivalentes já marcadas como `[x]`), para reduzir o tamanho do `README.md` sem perder o rastro das implementações. O painel operacional atual — objetivo, stack, regras de código e **Fases 32 a 34** (pendentes) — permanece em [README.md](../README.md).
+Ele guarda o detalhamento de tudo o que já foi entregue (Fases 1 a 31 e as entregas posteriores, identificadas pelo código entre parênteses citado no checklist). As pendências ficam em [CHECKLIST_ATIVO.md](./CHECKLIST_ATIVO.md); o painel do projeto, no [README.md](../README.md).
 
-Quando uma fase ativa do README for concluída, mova o bloco correspondente para este arquivo e marque os itens como `[x]`.
+Quando um item do checklist for concluído, mova o detalhamento para este arquivo, marcado como `[x]`.
 
 ---
 
@@ -1756,4 +1756,12 @@ O serviço de escuta do UserBot (`WTelegramClient`) requer acesso de leitura/esc
 - [x] **48.4.1.** Tela `/master/termos` com editor visual (negrito, itálico, título, lista e link). Colar do Word mantém essa formatação. O campo de HTML e a pré-visualização ao lado saíram: o editor já mostra o texto que o site publica.
 - [x] **48.4.2.** Salvar gera a próxima versão (1.0 é o texto do sistema; a primeira publicação é 1.1), ativa essa versão e desativa a anterior.
 - [x] **Testes:** regras de versão, IP, HTML e reaceite; publicação e aceite com InMemory. O robô marca `register-terms`, dispensa o aviso de cookies, publica um parágrafo `E2E-` em `/master/termos`, aceita o reaceite e o consentimento ao conectar loja, devolve o texto anterior e visita o `h1` na fumaça do Master.
+
+## ✉️ E-mail contato@ e recuperação de senha
+
+- [x] **Endereço público:** `LegalRoutes.ContactEmail` passou a `contato@ofertio.com.br`. Termos, privacidade, segurança e o rodapé legal acompanham. Login, cadastro e o rodapé do portal ganharam "Fale conosco". Conta desativada pede esse endereço.
+- [x] **Dois papéis:** `contato@` é a caixa humana. `nao-responda@` é o remetente dos avisos, com Responder para o contato. Sem SMTP configurado, a API só registra a mensagem.
+- [x] **Esqueci a senha:** `/recuperar-senha` chama `POST api/auth/password-reset/request`. A frase é a mesma exista a conta ou não. O banco guarda só o hash em `PasswordResetTokens` (30 minutos, um uso). O link não leva a senha. Quem não lembra o e-mail escreve para `contato@`.
+- [x] **Assinatura:** o checkout simulado não envia e-mail. O webhook do ASAAS envia confirmação, vencimento ou estorno para o e-mail da conta, com plano, ciclo, valor e link de Meu plano.
+- [x] **Migration:** `20261111003931_AddPasswordResetTokens` aplicada em `localhost\SQLEXPRESS` / `Ofertio`.
 

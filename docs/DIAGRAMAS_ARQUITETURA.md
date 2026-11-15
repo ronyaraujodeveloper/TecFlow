@@ -1,10 +1,10 @@
 ﻿# 🏗️ DIAGRAMAS VISUAIS: ARQUITETURA ATUAL vs PROPOSTA
 
-[« Voltar para o Índice Completo](./INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./LISTA_ARQUIVOS_MUDANCAS.md)
+[« Voltar para o Índice Completo](./arquivo/INDICE_COMPLETO.md) · [README principal](../README.md) · [Lista de mudanças](./arquivo/LISTA_ARQUIVOS_MUDANCAS.md)
 
 > **Raiz da solution:** `c:\Programacao\Tecso.AutomacaoCusor\` (`Ofertio.sln`).  
 > **Painel de controle:** [README.md](../README.md) · **Varredura física:** 3 de junho de 2026  
-> **Divergências / limpeza:** [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md)
+> **Divergências / limpeza:** [LISTA_ARQUIVOS_MUDANCAS.md](./arquivo/LISTA_ARQUIVOS_MUDANCAS.md)
 
 ---
 
@@ -2203,9 +2203,27 @@ flowchart LR
   DOC -->|nova versão ativa| PUBLICO["/legal/termos e /legal/privacidade"]
 ```
 
+### E-mail do domínio (`contato@` e avisos)
+
+`contato@ofertio.com.br` é a caixa humana (Cloudflare encaminha para o Gmail). `nao-responda@ofertio.com.br` é o remetente automático, com Responder para o contato. Sem `Email:Smtp:Host`, o envio só vai para o log.
+
+```mermaid
+flowchart LR
+  LOGIN["Login, cadastro e rodapé"] -->|mailto contato@| GMAIL[Caixa do Gmail]
+  REC["/recuperar-senha"] -->|POST api/auth/password-reset/request| API[AuthController]
+  API --> RESET[PasswordResetService]
+  RESET --> TOKENS[("PasswordResetTokens: só o hash")]
+  RESET --> MAIL[ITransactionalEmailSender]
+  LINK["/recuperar-senha?token"] -->|POST password-reset/confirm| RESET
+  ASAAS[Webhook ASAAS] -->|pagamento confirmado, vencido ou estornado| MAIL
+  MAIL -->|Smtp:Host vazio| LOG[Log da API]
+  MAIL -->|Smtp preenchido| DEST[E-mail da conta]
+  SIM[SimulatedPlanPaymentGateway] -.->|não envia| MAIL
+```
+
 ---
 
 **FIM DOS DIAGRAMAS**
 
 *Sincronizado com pastas físicas em 04/06/2026 (Fase 7 completa — multi-tenant, vendas e estoque físico).*  
-*Próximo:* [README.md](../README.md) · [LISTA_ARQUIVOS_MUDANCAS.md](./LISTA_ARQUIVOS_MUDANCAS.md) · [INDICE_COMPLETO.md](./INDICE_COMPLETO.md)
+*Próximo:* [README.md](../README.md) · [LISTA_ARQUIVOS_MUDANCAS.md](./arquivo/LISTA_ARQUIVOS_MUDANCAS.md) · [INDICE_COMPLETO.md](./arquivo/INDICE_COMPLETO.md)

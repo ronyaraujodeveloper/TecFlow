@@ -87,7 +87,7 @@ public class AccountFlowTests
         await PortalSession.FillAndCommitAsync(page.Locator("#recovery-email"), AccountPilot.UntouchedEmail);
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Enviar instruções" }).ClickAsync();
         await Assertions.Expect(page.GetByText("Recebemos sua solicitação")).ToBeVisibleAsync(Visible);
-        await Assertions.Expect(page.GetByText("A recuperação automática de senha será habilitada em breve.")).ToBeVisibleAsync(Visible);
+        await Assertions.Expect(page.GetByText("Se o e-mail estiver cadastrado")).ToBeVisibleAsync(Visible);
     }
 
     [RequiresE2EFact]

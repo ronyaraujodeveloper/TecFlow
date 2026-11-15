@@ -1515,6 +1515,44 @@ namespace Ofertio.Data.Migrations
                     b.ToTable("OfferRadarItems", (string)null);
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens", (string)null);
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.PlanCheckout", b =>
                 {
                     b.Property<int>("Id")
@@ -3806,6 +3844,17 @@ namespace Ofertio.Data.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.UserAccount", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Ofertio.Core.Entities.PlanMenuPermission", b =>

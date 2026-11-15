@@ -91,6 +91,7 @@ public class AppDbContext : DbContext
     public DbSet<GlobalIntegrationToken> GlobalIntegrationTokens { get; set; } = null!;
     public DbSet<TermsVersion> TermsVersions { get; set; } = null!;
     public DbSet<UserTermsAcceptance> UserTermsAcceptances { get; set; } = null!;
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
 
     /// <summary>Usuários oficiais do ecossistema Ofertio (tabela users).</summary>
     public DbSet<UserEntity> Users { get; set; } = null!;
@@ -122,6 +123,18 @@ public class AppDbContext : DbContext
             entity.Property(u => u.TermsAcceptedVersion).HasMaxLength(16);
             entity.Property(u => u.TermsAcceptedIp).HasMaxLength(64);
             entity.HasIndex(u => u.Role);
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("PasswordResetTokens");
+            entity.Property(item => item.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(item => item.TokenHash).IsUnique();
+            entity.HasIndex(item => item.UserId);
+            entity.HasOne(item => item.User)
+                .WithMany()
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         ConfigureMasterBackoffice(modelBuilder);

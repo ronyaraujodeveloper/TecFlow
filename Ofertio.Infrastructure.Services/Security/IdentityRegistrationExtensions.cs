@@ -32,6 +32,7 @@ public static class IdentityRegistrationExtensions
         services.AddScoped<ISocialAuthTokenValidator, SocialAuthTokenValidator>();
         services.AddScoped<ITermsDocumentService, Ofertio.Infrastructure.Services.Legal.TermsDocumentService>();
         services.AddScoped<IPlatformAuthService, PlatformAuthService>();
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
 
         return services;
     }

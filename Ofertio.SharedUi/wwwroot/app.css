@@ -3403,8 +3403,34 @@ html, body {
     border: 1px solid #ced4da;
     border-radius: 0.5rem;
     background: #fff;
+    color: #111;
+    caret-color: #111;
     line-height: 1.65;
     font-size: 1rem;
+}
+
+.master-main .legal-editor,
+.master-main .legal-editor h1,
+.master-main .legal-editor h2,
+.master-main .legal-editor h3,
+.legal-editor p,
+.legal-editor li,
+.legal-editor span,
+.legal-editor strong,
+.legal-editor em,
+.legal-editor blockquote {
+    color: #111;
+}
+
+.legal-editor a,
+.master-main .legal-editor a {
+    color: #ff9900;
+    text-decoration: underline;
+}
+
+.legal-editor a:hover,
+.master-main .legal-editor a:hover {
+    color: #cc7a00;
 }
 
 .legal-editor:focus {

@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITikTokAuthService, TikTokAuthService>();
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
+        services.AddScoped<IPasswordResetApiService, PasswordResetApiService>();
         services.AddScoped<ITermsApiService, TermsApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IUserClock, UserClock>();

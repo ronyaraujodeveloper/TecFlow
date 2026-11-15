@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Ofertio.Business.Interfaces.Services;
 using Ofertio.Infrastructure.Interfaces;
 using Ofertio.Infrastructure.Security;
+using Ofertio.Infrastructure.Services.Email;
 using Ofertio.Infrastructure.Services.Integrations;
 using Ofertio.Infrastructure.Services.Integrations.Auth;
 using Ofertio.Infrastructure.Services.Integrations.Catalog;
@@ -25,6 +27,9 @@ namespace Ofertio.Infrastructure.Services
             });
 
             services.AddScoped<JwtTokenService>();
+
+            services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+            services.AddScoped<ITransactionalEmailSender, TransactionalEmailSender>();
 
             services.AddOfertioIntegrationHttpClients(configuration);
             services.AddOfertioMarketplaceAuth();

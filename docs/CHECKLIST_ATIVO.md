@@ -26,12 +26,11 @@ Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plan
 - [ ] **Sem conta de criador:** converter um link TikTok numa loja só com o ID e conferir o aviso "Conecte sua conta de criador TikTok em Minhas Lojas para garantir a comissão".
 - [ ] **Legado:** avaliar a remoção de `TikTokShopApiService` e `TikTokAuthController` (fluxo de vendedor antigo, sem uso no App de Criador).
 - [ ] **Questionário de segurança (`LegalPages`):** usar as URLs de produção `https://ofertio.com.br/legal/seguranca`, `/legal/privacidade` e `/legal/termos` (o dev depende do PC ligado); país dos dados = Alemanha (Hetzner) e Brasil.
-- [ ] **Deploy em produção (`EXECUCAO_PRODUCAO.md`):** antes de subir os containers, fazer backup do banco da VPS e aplicar as migrations `AddUserStateCode`, `AddBillingProfileAndCheckout` e `AddGlobalIntegrationExternalAccount` (script idempotente gerado com `dotnet ef migrations script 20261022014444_AddIndexedCatalogOffers --idempotent`); depois conferir `/legal/*` e o Mercado Livre em produção.
+- [ ] **Deploy em produção (`EXECUCAO_PRODUCAO.md`):** antes de subir os containers, fazer backup do banco da VPS e aplicar as migrations `AddUserStateCode`, `AddBillingProfileAndCheckout`, `AddGlobalIntegrationExternalAccount` e `AddPasswordResetTokens` (script idempotente gerado com `dotnet ef migrations script 20261022014444_AddIndexedCatalogOffers --idempotent`); depois conferir `/legal/*` e o Mercado Livre em produção.
 
 ## ⚖️ Documentos legais (`LegalPages`)
 
 - [ ] **Revisão jurídica:** pedir a um advogado a revisão dos Termos de Uso, da Política de Privacidade e da Política de Segurança.
-- [ ] **E-mail de contato:** trocar `LegalRoutes.ContactEmail` (hoje o e-mail pessoal) por um e-mail do domínio `ofertio.com.br` (ex.: `privacidade@` / `contato@`).
 - [ ] **Backup de produção:** criar a rotina de cópia do banco e das chaves de criptografia prometida na Política de Segurança (item 9) e testar uma restauração.
 
 ## 🔎 Buscar Ofertas: validação no navegador
@@ -67,7 +66,9 @@ Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plan
 - [ ] **Fluxo no navegador:** menu Minha conta ➔ Meu plano; olho de um plano; Escolher com cadastro incompleto deve abrir o modal "Completar meus dados" e levar a `/meus-dados?plano=…`; salvar completo deve seguir para o pagamento; Anual com `4111 1111 1111 1111` deve terminar em "Pedido registrado em modo de teste". Conferir no celular.
 - [ ] **Teste com a conta Master (`BillingOptions`):** `rony.araujo@gmail.com` está liberado só em homologação (`Billing:MasterCheckoutTestEmails` no `appsettings.Homologacao.json` da API). Remover a liberação ao terminar os testes; nunca preencher em produção.
 - [ ] **Vantagens:** preencher "Vantagens (uma por linha)" em `/master/planos` para Starter, Pro, Agency e Enterprise.
-- [ ] **Fase 2: cobrança real (ASAAS):** decidir entre formulário próprio com tokenização do cartão ou página de pagamento do ASAAS; trocar o `SimulatedPlanPaymentGateway` e deixar o webhook trocar plano e ciclo do inquilino.
+- [ ] **Fase 2: cobrança real (ASAAS):** decidir entre formulário próprio com tokenização do cartão ou página de pagamento do ASAAS; trocar o `SimulatedPlanPaymentGateway` e deixar o webhook trocar plano e ciclo do inquilino. O checkout simulado não envia e-mail. O webhook que já confirma pagamento (`PAYMENT_RECEIVED` / `PAYMENT_CONFIRMED`) manda o aviso de assinatura; vencimento e estorno também.
+- [ ] **Migration da senha (`AddPasswordResetTokens`):** aplicar `20261111003931_AddPasswordResetTokens` em homologação e em produção. No `localhost\SQLEXPRESS` / `Ofertio` ela já foi aplicada.
+- [ ] **Envio de verdade (`Email`):** preencher `Email:Smtp` (host, usuário e senha fora do Git), incluir o provedor no SPF e publicar o DKIM. Enquanto `Smtp:Host` estiver vazio, a API só registra o e-mail. `Email:LogBody` está ligado em Development e Homologação para o link de senha aparecer no log; desligar quando o SMTP entrar.
 - [ ] **CEP automático:** preencher rua, bairro, cidade e UF pelo ViaCEP em `/meus-dados`.
 - [ ] **Gestão da assinatura:** troca de plano com pró-rata, cancelamento e histórico de pedidos em Meu plano.
 

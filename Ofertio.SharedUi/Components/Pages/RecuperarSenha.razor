@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
+@inject IPasswordResetApiService PasswordResetApi
 
 <PageTitle>Ofertio — Recuperar ou alterar senha</PageTitle>
 
@@ -17,7 +18,59 @@
             </p>
         </div>
 
-        @if (_isAuthenticated)
+        @if (!string.IsNullOrWhiteSpace(_resetToken))
+        {
+            <div class="card shadow-sm border-0 login-card unified-login-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-2">Nova senha</h2>
+                    <p class="text-muted small mb-4">
+                        Escolha uma senha nova. Este link só pode ser usado uma vez.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="recovery-password">Nova senha</label>
+                        <input id="recovery-password"
+                               type="password"
+                               class="form-control form-control-lg"
+                               @bind="_newPassword"
+                               autocomplete="new-password" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="recovery-confirm-password">Confirmar nova senha</label>
+                        <input id="recovery-confirm-password"
+                               type="password"
+                               class="form-control form-control-lg"
+                               @bind="_confirmPassword"
+                               autocomplete="new-password" />
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_feedbackMessage))
+                    {
+                        <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-info") small py-2" role="status">
+                            @_feedbackMessage
+                        </div>
+                    }
+
+                    <button type="button"
+                            class="btn btn-primary btn-lg w-100 btn-touch"
+                            disabled="@_isSubmitting"
+                            @onclick="SubmitNewPasswordAsync">
+                        @(_isSubmitting ? "Salvando..." : "Salvar nova senha")
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_passwordSaved)
+        {
+            <div class="card shadow-sm border-0 login-card unified-login-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-2">Senha atualizada</h2>
+                    <p class="text-muted small mb-4">@_feedbackMessage</p>
+                    <a href="/" class="btn btn-primary btn-lg w-100 btn-touch">Entrar</a>
+                </div>
+            </div>
+        }
+        else if (_isAuthenticated)
         {
             <div class="card shadow-sm border-0 login-card unified-login-card">
                 <div class="card-body p-4">
@@ -37,7 +90,9 @@
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-2">Esqueci minha senha</h2>
                     <p class="text-muted small mb-4">
-                        Informe o e-mail cadastrado. Enviaremos instruções quando a recuperação automática estiver disponível.
+                        Informe o e-mail cadastrado. Se ele existir, enviaremos um link para escolher uma nova senha.
+                        Não lembra qual e-mail usou? Escreva para
+                        <a href="mailto:@LegalRoutes.ContactEmail">@LegalRoutes.ContactEmail</a>.
                     </p>
 
                     <div class="mb-3">
@@ -57,8 +112,11 @@
                         </div>
                     }
 
-                    <button type="button" class="btn btn-outline-primary btn-lg w-100 btn-touch" @onclick="SubmitRecoveryRequest">
-                        Enviar instruções
+                    <button type="button"
+                            class="btn btn-outline-primary btn-lg w-100 btn-touch"
+                            disabled="@_isSubmitting"
+                            @onclick="SubmitRecoveryRequestAsync">
+                        @(_isSubmitting ? "Enviando..." : "Enviar instruções")
                     </button>
                 </div>
             </div>
@@ -72,15 +130,27 @@
     private bool _feedbackIsError;
     private bool _authReady;
     private bool _isAuthenticated;
+    private bool _isSubmitting;
+    private bool _passwordSaved;
+    private string? _resetToken;
+    private string _newPassword = string.Empty;
+    private string _confirmPassword = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("token", out var token) && !string.IsNullOrWhiteSpace(token))
+        {
+            _resetToken = token.ToString();
+        }
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
         _authReady = true;
     }
 
-    private void SubmitRecoveryRequest()
+    private async Task SubmitRecoveryRequestAsync()
     {
         var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
         var context = new System.ComponentModel.DataAnnotations.ValidationContext(_recoveryModel);
@@ -95,10 +165,48 @@
             return;
         }
 
-        _feedbackIsError = false;
-        _feedbackMessage =
-            "Recebemos sua solicitação. A recuperação automática de senha será habilitada em breve. " +
-            "Se precisar de acesso imediato, entre em contato com o suporte Ofertio.";
+        _isSubmitting = true;
+        _feedbackMessage = null;
+        try
+        {
+            var response = await PasswordResetApi.RequestAsync(_recoveryModel.Email.Trim());
+            _feedbackIsError = !response.Status;
+            _feedbackMessage = response.Descricao;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task SubmitNewPasswordAsync()
+    {
+        if (!string.Equals(_newPassword, _confirmPassword, StringComparison.Ordinal))
+        {
+            _feedbackIsError = true;
+            _feedbackMessage = "A confirmação da nova senha não coincide.";
+            return;
+        }
+
+        _isSubmitting = true;
+        _feedbackMessage = null;
+        try
+        {
+            var response = await PasswordResetApi.ConfirmAsync(_resetToken ?? string.Empty, _newPassword);
+            _feedbackIsError = !response.Status;
+            _feedbackMessage = response.Descricao;
+            if (response.Status)
+            {
+                _passwordSaved = true;
+                _resetToken = null;
+                _newPassword = string.Empty;
+                _confirmPassword = string.Empty;
+            }
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
     }
 
     private sealed class RecoveryModel

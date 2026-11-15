@@ -14,13 +14,16 @@ namespace Ofertio.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IPlatformAuthService _platformAuthService;
+    private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IPlatformAuthService platformAuthService,
+        IPasswordResetService passwordResetService,
         ILogger<AuthController> logger)
     {
         _platformAuthService = platformAuthService;
+        _passwordResetService = passwordResetService;
         _logger = logger;
     }
 
@@ -116,6 +119,26 @@ public class AuthController : ControllerBase
         return await ExecuteProviderAsync(
             () => _platformAuthService.ChangeStateAsync(userId.Value, request, cancellationToken),
             "salvar estado");
+    }
+
+    [HttpPost("password-reset/request")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthProviderResponseDto>> RequestPasswordResetAsync(
+        [FromBody] PasswordResetRequestDto? request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _passwordResetService.RequestAsync(request?.Email, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("password-reset/confirm")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthProviderResponseDto>> ConfirmPasswordResetAsync(
+        [FromBody] PasswordResetConfirmDto? request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _passwordResetService.ConfirmAsync(request?.Token, request?.NewPassword, cancellationToken);
+        return result.Status ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("register")]

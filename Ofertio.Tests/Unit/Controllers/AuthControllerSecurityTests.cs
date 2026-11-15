@@ -128,9 +128,37 @@ public class AuthControllerSecurityTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RequestPasswordResetAsync_ShouldReturnTheSameOk_WhenTheServiceAccepts()
+    {
+        var reset = new Mock<IPasswordResetService>();
+        reset.Setup(service => service.RequestAsync("ana@ofertio.com.br", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AuthProviderResponseDto
+            {
+                Status = true,
+                Descricao = "Recebemos sua solicitação. Se o e-mail estiver cadastrado, enviaremos um link para escolher uma nova senha. O link vale por 30 minutos."
+            });
+
+        var controller = new AuthController(
+            new Mock<IPlatformAuthService>().Object,
+            reset.Object,
+            NullLogger<AuthController>.Instance);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var action = await controller.RequestPasswordResetAsync(
+            new PasswordResetRequestDto { Email = "ana@ofertio.com.br" },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action.Result);
+        Assert.Contains("Se o e-mail estiver cadastrado", Assert.IsType<AuthProviderResponseDto>(ok.Value).Descricao, StringComparison.Ordinal);
+    }
+
     private static AuthController CreateController(IPlatformAuthService service, string? userId = "7")
     {
-        var controller = new AuthController(service, NullLogger<AuthController>.Instance);
+        var controller = new AuthController(
+            service,
+            new Mock<IPasswordResetService>().Object,
+            NullLogger<AuthController>.Instance);
         var claims = userId is null
             ? Array.Empty<Claim>()
             : [new Claim(ClaimTypes.NameIdentifier, userId)];

@@ -15,6 +15,7 @@ public static class MasterBackofficeRegistrationExtensions
         services.AddScoped<IMasterAuditService, MasterAuditService>();
         services.AddScoped<IMasterOperatorService, MasterOperatorService>();
         services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        services.AddScoped<ILinkAvailabilityService, LinkAvailabilityService>();
         services.AddScoped<SaasPlanService>();
         services.AddScoped<ISaasPlanService>(sp => sp.GetRequiredService<SaasPlanService>());
         services.AddScoped<IPlanLimitsService>(sp => sp.GetRequiredService<SaasPlanService>());

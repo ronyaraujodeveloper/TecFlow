@@ -23,6 +23,8 @@ public static class SystemSettingCatalog
     public const string AsaasWebhookToken = "Payments:Asaas:WebhookToken";
     public const string AsaasDefaultBaseUrl = "https://sandbox.asaas.com/api/v3";
 
+    public const string LinkGraceDays = "Billing:LinkGraceDaysAfterCancel";
+
     public const string ShortLinkDomain = "Ofertio:ShortLinks:PublicBaseUrl";
     public const string DefaultShortLinkDomain = "https://tflow.link";
 
@@ -57,6 +59,7 @@ public static class SystemSettingCatalog
         new(AsaasApiKey, CategoryBilling, "ASAAS — API Key", true, "$aact_..."),
         new(AsaasBaseUrl, CategoryBilling, "ASAAS — URL base", false, AsaasDefaultBaseUrl),
         new(AsaasWebhookToken, CategoryBilling, "ASAAS — Token do webhook", true),
+        new(LinkGraceDays, CategoryBilling, "Dias de carência dos links e páginas públicas após cancelar ou suspender", false, "30"),
     ];
 
     public static SystemSettingDefinition? Find(string? key) =>

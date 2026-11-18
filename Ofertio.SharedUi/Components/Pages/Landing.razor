@@ -1,10 +1,13 @@
-﻿@page "/conheca"
+﻿@page "/"
+@page "/conheca"
 @layout Ofertio.SharedUi.Components.Layout.LandingLayout
 @rendermode @(new InteractiveServerRenderMode(prerender: true))
 @using System.Globalization
 @using Ofertio.Business.Service.Master
 @using Ofertio.SharedUi.Services.Public
 @inject IPublicPlansApiService PlansApi
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Ofertio — Ofertas, links de afiliado e disparos no automático</PageTitle>
 
@@ -18,7 +21,7 @@
             </p>
             <div class="landing-cta-row">
                 <a href="/cadastro" class="btn btn-primary btn-lg fw-semibold">@TrialButtonText</a>
-                <a href="/conheca?entrar=1" class="btn btn-outline-secondary btn-lg">Já tenho conta</a>
+                <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="OpenLogin">Já tenho conta</button>
             </div>
             <p class="landing-microcopy">@TrialMicrocopy</p>
         </div>
@@ -237,21 +240,32 @@
     private bool _annual;
     private bool _loginOpen;
 
-    [SupplyParameterFromQuery(Name = "entrar")]
-    public string? Entrar { get; set; }
+    private static readonly string[] LoginQueryKeys = ["entrar", "oauth", "login", "registered"];
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var isRoot = relative.Length == 0 || relative[0] == (char)63 || relative[0] == (char)35;
+        if (isRoot && authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/dashboard", replace: true);
+            return;
+        }
+
         _plans = await PlansApi.GetAsync();
     }
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrEmpty(Entrar))
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        if (LoginQueryKeys.Any(query.ContainsKey))
         {
             _loginOpen = true;
         }
     }
+
+    private void OpenLogin() => _loginOpen = true;
 
     private void CloseLogin() => _loginOpen = false;
 

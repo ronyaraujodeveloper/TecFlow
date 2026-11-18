@@ -76,8 +76,23 @@ public interface ITenantAccessReader
     /// <summary>Status atual do inquilino (com cache curto) ou null se não existir.</summary>
     Task<string?> GetStatusAsync(Guid tenantId, CancellationToken cancellationToken = default);
 
+    /// <summary>Status e datas do inquilino (com cache curto) ou null se não existir.</summary>
+    Task<TenantAccessInfo?> GetAccessAsync(Guid tenantId, CancellationToken cancellationToken = default);
+
     void Invalidate(Guid tenantId);
 }
+
+public sealed record TenantAccessInfo(string? Status, DateTime? StatusChangedAt, DateTime? CanceledAt);
+
+/// <summary>Decide se links curtos e páginas públicas de um inquilino ainda podem servir visitantes.</summary>
+public interface ILinkAvailabilityService
+{
+    Task<LinkAvailability> CheckAsync(Guid tenantId, CancellationToken cancellationToken = default);
+
+    Task<int> GetGraceDaysAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed record LinkAvailability(bool IsServing, DateTime? ServingUntil);
 
 public interface IImpersonationService
 {

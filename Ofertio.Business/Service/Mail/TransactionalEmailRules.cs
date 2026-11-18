@@ -196,6 +196,34 @@ public static class TransactionalEmailRules
         };
     }
 
+    /// <summary>Aviso de cancelamento: informa até quando links e páginas públicas continuam ativos.</summary>
+    public static TransactionalEmail AccountCanceled(string to, int graceDays, DateTime linksActiveUntilUtc, string planUrl)
+    {
+        var until = FormatDate(linksActiveUntilUtc);
+        var text = string.Join(
+            Environment.NewLine + Environment.NewLine,
+            "Sua conta Ofertio foi cancelada.",
+            graceDays > 0
+                ? "Seus links curtos e sua página pública continuam funcionando, com os seus próprios dados de afiliado, até " + until + ". Depois dessa data ficam indisponíveis."
+                : "Seus links curtos e sua página pública deixaram de funcionar.",
+            "Seus dados ficam guardados. Para voltar a usar, reative sua assinatura em " + planUrl,
+            "Dúvidas: " + OfertioMailAddresses.Contact);
+
+        return new TransactionalEmail
+        {
+            To = to,
+            Subject = "Sua conta Ofertio foi cancelada",
+            TextBody = text,
+            HtmlBody = "<p>Sua conta Ofertio foi cancelada.</p>"
+                + (graceDays > 0
+                    ? "<p>Seus links curtos e sua página pública continuam funcionando, com os seus próprios dados de afiliado, até <strong>"
+                        + WebUtility.HtmlEncode(until) + "</strong>. Depois dessa data ficam indisponíveis.</p>"
+                    : "<p>Seus links curtos e sua página pública deixaram de funcionar.</p>")
+                + "<p>Seus dados ficam guardados. <a href=\"" + WebUtility.HtmlEncode(planUrl) + "\">Reativar minha assinatura</a></p>"
+                + "<p>Dúvidas: " + WebUtility.HtmlEncode(OfertioMailAddresses.Contact) + "</p>"
+        };
+    }
+
     private static string NormalizeRoot(string? publicBaseUrl)
     {
         var root = string.IsNullOrWhiteSpace(publicBaseUrl)

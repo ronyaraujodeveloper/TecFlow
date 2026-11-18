@@ -75,14 +75,14 @@
     }
     else
     {
-        <section class="marketplace-stores-grid" aria-label="Lojas conectadas">
+        <section class="store-list" role="list" aria-label="Lojas conectadas">
             @foreach (var store in _stores)
             {
-                <MarketplaceStoreCard Store="store"
+                <MarketplaceStoreCard @key="store.Id"
+                                      Store="store"
                                       IsBusy="@_isBusy"
                                       OnUnlink="ConfirmarDesconexaoAsync"
-                                      OnEdit="OpenEditModal"
-                                      OnConnectCreator="ConnectTikTokCreatorAsync" />
+                                      OnEdit="OpenEditModal" />
             }
         </section>
     }
@@ -100,6 +100,7 @@
                    EditingStore="_editingStore"
                    OnClose="CloseConnectModal"
                    OnStartOAuth="StartOAuthAsync"
+                   OnConnectCreator="ConnectTikTokCreatorAsync"
                    OnLojaVinculada="OnLojaVinculadaAsync" />
 
 @code {

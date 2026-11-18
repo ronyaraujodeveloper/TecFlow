@@ -38,7 +38,7 @@ public static class AuthenticationExtensions
             })
             .AddCookie(options =>
             {
-                options.LoginPath = "/";
+                options.LoginPath = "/entrar";
                 options.LogoutPath = "/auth/logout";
                 options.AccessDeniedPath = "/";
                 options.ExpireTimeSpan = TimeSpan.FromHours(authOptions.CookieExpireHours);

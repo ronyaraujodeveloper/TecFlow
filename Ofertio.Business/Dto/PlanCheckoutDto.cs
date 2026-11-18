@@ -68,6 +68,9 @@ public class MyPlanResponseDto : ResponseDto
 
     public DateTime? RenewalAt { get; set; }
 
+    /// <summary>Conta pausada, suspensa ou cancelada: até quando links e páginas públicas continuam ativos (nulo se não se aplica).</summary>
+    public DateTime? LinksActiveUntil { get; set; }
+
     /// <summary>Durante o teste: há cartão/assinatura cadastrada, então a conta vira paga ao fim do teste.</summary>
     public bool TrialHasCard { get; set; }
 

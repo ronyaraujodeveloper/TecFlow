@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using static Ofertio.WebUi.Extensions.AuthenticationExtensions;
+using Ofertio.Business.Service.Common;
 using Ofertio.SharedUi.Models.Enums;
 using Ofertio.SharedUi.Models.Requests;
 using Ofertio.SharedUi.Services.Auth;
@@ -31,7 +32,8 @@ public static class AuthEndpointExtensions
         IOAuthProviderRegistry registry,
         IAuthenticationSchemeProvider schemes,
         string? platform = null,
-        bool link = false)
+        bool link = false,
+        string? returnUrl = null)
     {
         var authProvider = MapProviderKey(provider);
         var scheme = GetAuthenticationScheme(provider);
@@ -55,7 +57,7 @@ public static class AuthEndpointExtensions
         var loginPlatform = ResolvePortalPlatform(platform);
         var redirectUri = link
             ? $"/auth/finish-link-oauth?provider={provider.ToLowerInvariant()}"
-            : $"/auth/finish-oauth?provider={authProvider}";
+            : LoginReturnUrlRules.AppendTo($"/auth/finish-oauth?provider={authProvider}", returnUrl);
 
         var properties = new AuthenticationProperties
         {
@@ -77,7 +79,8 @@ public static class AuthEndpointExtensions
         IOrquestradorAuthBridge authBridge,
         IAuthCookieService authCookie,
         ILoggerFactory loggerFactory,
-        string? platform = null)
+        string? platform = null,
+        string? returnUrl = null)
     {
         var logger = loggerFactory.CreateLogger("Ofertio.WebUi.Auth");
 
@@ -130,7 +133,7 @@ public static class AuthEndpointExtensions
             }
 
             await authCookie.SignInFromAuthResponseAsync(result.Data, loginPlatform, authProvider, httpContext.RequestAborted);
-            return Results.Redirect("/dashboard");
+            return Results.Redirect(LoginReturnUrlRules.ResolveAfterLogin(returnUrl));
         }
         catch (Exception ex)
         {
@@ -210,7 +213,8 @@ public static class AuthEndpointExtensions
         string ticket,
         IAuthSignInTicketStore ticketStore,
         IAuthCookieService authCookie,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        string? returnUrl = null)
     {
         var logger = loggerFactory.CreateLogger("Ofertio.WebUi.Auth");
 
@@ -228,7 +232,7 @@ public static class AuthEndpointExtensions
                 payload.Platform,
                 payload.Provider);
 
-            return Results.Redirect("/dashboard");
+            return Results.Redirect(LoginReturnUrlRules.ResolveAfterLogin(returnUrl));
         }
         catch (Exception ex)
         {

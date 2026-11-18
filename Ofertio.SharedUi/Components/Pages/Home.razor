@@ -1,5 +1,4 @@
-﻿@page "/"
-@page "/entrar"
+﻿@page "/entrar"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
@@ -38,7 +37,9 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            Navigation.NavigateTo("/dashboard", replace: true);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+            var returnUrl = query.TryGetValue(Ofertio.Business.Service.Common.LoginReturnUrlRules.QueryKey, out var value) ? value.ToString() : null;
+            Navigation.NavigateTo(Ofertio.Business.Service.Common.LoginReturnUrlRules.ResolveAfterLogin(returnUrl), replace: true);
         }
     }
 }

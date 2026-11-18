@@ -3,6 +3,8 @@
 @inject IJSRuntime Js
 @inject ISystemCommunicationApiService MenuApi
 @implements IDisposable
+@using System.Security.Claims
+@using System.Text.Json
 
 <nav class="portal-sidebar-nav" aria-label="Menu principal">
     <AuthorizeView>
@@ -15,16 +17,14 @@
                 </a>
             }
 
+            @FavoritesBlock
+
             @{ var afterCategory = false; }
             @foreach (var node in _menu)
             {
                 if (IsCategory(node))
                 {
-                    <div class="portal-nav-category" role="heading" aria-level="2">@node.Title</div>
-                    @foreach (var parent in node.Children)
-                    {
-                        @ParentItem(parent)
-                    }
+                    @CategoryBlock(node)
                     afterCategory = true;
                     continue;
                 }
@@ -56,7 +56,8 @@
 </nav>
 
 @code {
-    private const string DefaultOpenGroup = "integracoes.links";
+    private const int MaxFavorites = 8;
+    private const string FavoritesStoragePrefix = "ofertio.menu.favorites.";
 
     private static readonly Dictionary<string, string[]> RouteAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -75,7 +76,10 @@
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private List<ClientMenuNodeDto> _menu = [];
-    private readonly HashSet<string> _openGroups = new(StringComparer.OrdinalIgnoreCase) { DefaultOpenGroup };
+    private readonly HashSet<string> _openGroups = new(StringComparer.OrdinalIgnoreCase);
+    private List<string> _favorites = [];
+    private string? _storageKey;
+    private string? _favoritesNotice;
     private bool _authenticated;
     private bool _clientView;
 
@@ -85,8 +89,70 @@
         var user = AuthenticationStateTask is null ? null : (await AuthenticationStateTask).User;
         _authenticated = user?.Identity?.IsAuthenticated == true;
         _clientView = MasterAccess.IsMaster(user) && !MasterAccess.IsMasterView(user);
+        var userId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user?.Identity?.Name;
+        _storageKey = string.IsNullOrWhiteSpace(userId) ? null : FavoritesStoragePrefix + userId;
         await LoadMenuAsync();
         OpenGroupsForCurrentPath();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_authenticated || _storageKey is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var json = await Js.InvokeAsync<string?>("localStorage.getItem", _storageKey);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                _favorites = JsonSerializer.Deserialize<List<string>>(json) ?? [];
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JsonException or InvalidOperationException or JSException)
+        {
+            // Sem armazenamento local (aba privada ou circuito caído): o menu segue sem favoritos.
+        }
+    }
+
+    private async Task TogglePinAsync(string key)
+    {
+        _favoritesNotice = null;
+        if (!_favorites.Remove(key))
+        {
+            if (_favorites.Count >= MaxFavorites)
+            {
+                _favoritesNotice = $"Limite de {MaxFavorites} favoritos. Desafixe um para fixar outro.";
+                return;
+            }
+
+            _favorites.Add(key);
+        }
+
+        if (_storageKey is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("localStorage.setItem", _storageKey, JsonSerializer.Serialize(_favorites));
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException)
+        {
+            // Favoritos continuam valendo nesta sessão mesmo sem gravar no navegador.
+        }
+    }
+
+    private List<ClientMenuNodeDto> FavoriteNodes()
+    {
+        var leaves = AllNodes(_menu)
+            .Where(node => !IsFolder(node) && !string.IsNullOrWhiteSpace(node.Route))
+            .GroupBy(node => node.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        return _favorites.Where(leaves.ContainsKey).Select(key => leaves[key]).ToList();
     }
 
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
@@ -118,9 +184,20 @@
             StateHasChanged();
         });
 
+    private string? _lastActiveCategory;
+
     private void OpenGroupsForCurrentPath()
     {
-        foreach (var group in AllNodes(_menu).Where(node => !IsCategory(node) && IsGroupActive(node)))
+        // Ao entrar em outra categoria (por link, favorito ou botão voltar), ela abre e as demais fecham.
+        var activeCategory = _menu.Where(IsCategory).FirstOrDefault(IsGroupActive)?.Key;
+        if (activeCategory is not null && !activeCategory.Equals(_lastActiveCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            CloseOtherCategories(activeCategory);
+        }
+
+        _lastActiveCategory = activeCategory;
+
+        foreach (var group in AllNodes(_menu).Where(node => IsFolder(node) && IsGroupActive(node)))
         {
             _openGroups.Add(group.Key);
         }
@@ -144,15 +221,82 @@
         }
     };
 
-    private RenderFragment ParentItem(ClientMenuNodeDto node) => __builder =>
+    /// <summary>Categoria recolhível: começa fechada e abre sozinha quando a página atual está dentro dela.</summary>
+    private RenderFragment CategoryBlock(ClientMenuNodeDto node) => __builder =>
     {
-        if (!IsFolder(node))
+        var open = _openGroups.Contains(node.Key);
+        <div class="portal-nav-section">
+            <button type="button"
+                    class="portal-nav-category portal-nav-category-toggle @(IsGroupActive(node) ? "has-active" : string.Empty)"
+                    aria-expanded="@open"
+                    @onclick="() => ToggleGroup(node.Key)">
+                <span>@node.Title</span>
+                <i class="bi bi-chevron-down portal-nav-caret transform transition-transform @(open ? "rotate-180" : string.Empty)" aria-hidden="true"></i>
+            </button>
+            @if (open)
+            {
+                <div class="portal-nav-section-body">
+                    @foreach (var child in node.Children)
+                    {
+                        @ParentItem(child)
+                    }
+                </div>
+            }
+        </div>
+    };
+
+    private RenderFragment FavoritesBlock => __builder =>
+    {
+        var favorites = FavoriteNodes();
+        if (favorites.Count == 0 && _favoritesNotice is null)
         {
-            <a href="@node.Route" class="portal-nav-link portal-nav-parent @GetActiveClass(node.Route)" @onclick="NotifyNavigate">
+            return;
+        }
+
+        <div class="portal-nav-section portal-nav-favorites">
+            <div class="portal-nav-category portal-nav-category-static">
+                <span><i class="bi bi-pin-angle-fill me-1" aria-hidden="true"></i>Favoritos</span>
+            </div>
+            <div class="portal-nav-section-body">
+                @foreach (var favorite in favorites)
+                {
+                    @LeafLink(favorite, "portal-nav-sublink")
+                }
+                @if (_favoritesNotice is not null)
+                {
+                    <p class="portal-nav-notice" role="status">@_favoritesNotice</p>
+                }
+            </div>
+        </div>
+        <hr class="portal-nav-divider" />
+    };
+
+    /// <summary>Item de menu com o alfinete de favorito ao lado (fora do link, para não aninhar controles).</summary>
+    private RenderFragment LeafLink(ClientMenuNodeDto node, string levelClass) => __builder =>
+    {
+        var pinned = _favorites.Contains(node.Key, StringComparer.OrdinalIgnoreCase);
+        <div class="portal-nav-item">
+            <a href="@node.Route" class="portal-nav-link @levelClass @GetActiveClass(node.Route)" @onclick="NotifyNavigate">
                 <i class="bi @node.Icon portal-nav-icon" aria-hidden="true"></i>
                 <span class="portal-nav-link-label">@node.Title</span>
                 @Badge(node)
             </a>
+            <button type="button"
+                    class="portal-nav-pin @(pinned ? "is-pinned" : string.Empty)"
+                    aria-pressed="@pinned"
+                    aria-label="@(pinned ? "Desafixar" : "Fixar nos favoritos"): @node.Title"
+                    title="@(pinned ? "Desafixar dos favoritos" : "Fixar nos favoritos")"
+                    @onclick="() => TogglePinAsync(node.Key)">
+                <i class="bi @(pinned ? "bi-pin-angle-fill" : "bi-pin-angle")" aria-hidden="true"></i>
+            </button>
+        </div>
+    };
+
+    private RenderFragment ParentItem(ClientMenuNodeDto node) => __builder =>
+    {
+        if (!IsFolder(node))
+        {
+            @LeafLink(node, "portal-nav-parent")
             return;
         }
 
@@ -183,22 +327,34 @@
                             continue;
                         }
 
-                        <a href="@child.Route" class="portal-nav-link portal-nav-sublink @GetActiveClass(child.Route)" @onclick="NotifyNavigate">
-                            <i class="bi @child.Icon portal-nav-icon" aria-hidden="true"></i>
-                            <span class="portal-nav-link-label">@child.Title</span>
-                            @Badge(child)
-                        </a>
+                        @LeafLink(child, "portal-nav-sublink")
                     }
                 </div>
             }
         </div>
     };
 
+    /// <summary>Abrir uma categoria fecha as outras (o menu cabe na tela); submenus dentro dela são independentes.</summary>
     private void ToggleGroup(string key)
     {
-        if (!_openGroups.Remove(key))
+        if (_openGroups.Remove(key))
         {
-            _openGroups.Add(key);
+            return;
+        }
+
+        if (_menu.Any(node => IsCategory(node) && node.Key.Equals(key, StringComparison.OrdinalIgnoreCase)))
+        {
+            CloseOtherCategories(key);
+        }
+
+        _openGroups.Add(key);
+    }
+
+    private void CloseOtherCategories(string keepKey)
+    {
+        foreach (var category in _menu.Where(IsCategory).Where(node => !node.Key.Equals(keepKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            _openGroups.Remove(category.Key);
         }
     }
 

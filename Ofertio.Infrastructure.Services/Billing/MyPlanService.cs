@@ -22,14 +22,17 @@ public sealed class MyPlanService : IMyPlanService
     private readonly IPlanPaymentGateway _gateway;
     private readonly BillingOptions _options;
     private readonly ILogger<MyPlanService> _logger;
+    private readonly ILinkAvailabilityService? _linkAvailability;
 
     public MyPlanService(
         AppDbContext context,
         UserProfileService profiles,
         IPlanPaymentGateway gateway,
         IOptions<BillingOptions> options,
-        ILogger<MyPlanService> logger)
+        ILogger<MyPlanService> logger,
+        ILinkAvailabilityService? linkAvailability = null)
     {
+        _linkAvailability = linkAvailability;
         _context = context;
         _profiles = profiles;
         _gateway = gateway;
@@ -47,6 +50,12 @@ public sealed class MyPlanService : IMyPlanService
 
         var plans = await ActivePlansAsync(cancellationToken);
         var current = plans.FirstOrDefault(plan => string.Equals(plan.Code, account.PlanCode, StringComparison.OrdinalIgnoreCase));
+        DateTime? linksActiveUntil = null;
+        if (_linkAvailability is not null && !account.IsMaster && TenantLifecycleRules.IsAccessBlocked(account.TenantStatus))
+        {
+            linksActiveUntil = (await _linkAvailability.CheckAsync(account.TenantId, cancellationToken)).ServingUntil;
+        }
+
         var trialConfig = plans.FirstOrDefault(plan => TrialRules.IsTrialPlan(plan.Code));
         var postTrialCode = TrialRules.ResolvePostTrialPlan(trialConfig?.PostTrialPlanCode);
         var postTrial = plans.FirstOrDefault(plan => string.Equals(plan.Code, postTrialCode, StringComparison.OrdinalIgnoreCase));
@@ -69,6 +78,7 @@ public sealed class MyPlanService : IMyPlanService
             TenantStatus = account.TenantStatus,
             TrialEndsAt = account.TrialEndsAt,
             RenewalAt = account.RenewalAt,
+            LinksActiveUntil = linksActiveUntil,
             TrialHasCard = account.HasSubscription,
             PostTrialPlanName = postTrial?.Name,
             PostTrialPlanPrice = postTrial?.MonthlyPrice ?? 0m,

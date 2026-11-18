@@ -18,6 +18,8 @@
     [Parameter, EditorRequired] public string BtnClass { get; set; } = string.Empty;
     [Parameter, EditorRequired] public LoginPlatform Platform { get; set; }
     [Parameter] public bool UseEntrarPrefix { get; set; } = true;
+    /// <summary>Tela para onde voltar depois do login (já validada pelo chamador).</summary>
+    [Parameter] public string? ReturnUrl { get; set; }
     [Parameter] public EventCallback<string> OnError { get; set; }
 
     private bool _isEnabled;
@@ -40,7 +42,7 @@
         }
 
         var path = OAuthRegistry.GetChallengePath(Provider, Platform);
-        Navigation.NavigateTo(path, forceLoad: true);
+        Navigation.NavigateTo(Ofertio.Business.Service.Common.LoginReturnUrlRules.AppendTo(path, ReturnUrl), forceLoad: true);
         return Task.CompletedTask;
     }
 

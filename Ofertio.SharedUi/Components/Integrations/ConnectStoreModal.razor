@@ -5,6 +5,7 @@
 @using Ofertio.SharedUi.Services.Integrations
 @inject IIntegracaoLojaApiService IntegracaoApi
 @inject IJSRuntime JS
+@inject IUserClock Clock
 @inject ILogger<ConnectStoreModal> Logger
 
 @if (Visible)
@@ -32,6 +33,40 @@
                     @if (!string.IsNullOrWhiteSpace(DisplayError))
                     {
                         <div class="alert alert-danger py-1 px-2 small mb-2" role="alert">@DisplayError</div>
+                    }
+
+                    @if (EditingStore is { } info)
+                    {
+                        <section class="store-info" aria-label="Informações da loja">
+                            <dl class="store-info-grid mb-0">
+                                <div><dt>Shop ID</dt><dd class="font-monospace">@info.ShopId</dd></div>
+                                <div><dt>Affiliate ID</dt><dd class="font-monospace">@(info.RequiresTrackingIdCorrection ? "inválido: informe o ID" : string.IsNullOrWhiteSpace(info.AffiliateTrackingId) ? "—" : info.AffiliateTrackingId)</dd></div>
+                                <div><dt>Vinculada em</dt><dd>@Clock.ToLocal(info.CreatedAt).ToString("dd/MM/yyyy HH:mm")</dd></div>
+                                @if (!info.PlatformType.IsUniversalAffiliatePlatform())
+                                {
+                                    <div><dt>Token expira em</dt><dd>@Clock.ToLocal(info.ExpiresAt).ToString("dd/MM/yyyy HH:mm")</dd></div>
+                                }
+                            </dl>
+                            @if (info.PlatformType == MarketplaceType.TikTokShop)
+                            {
+                                <div class="store-info-creator @(info.HasOAuthToken ? "is-ok" : "is-warning")">
+                                    <span>
+                                        <i class="bi @(info.HasOAuthToken ? "bi-patch-check-fill" : "bi-exclamation-triangle-fill") me-1" aria-hidden="true"></i>
+                                        @(info.HasOAuthToken
+                                            ? "Conta de criador TikTok conectada: links gerados pela API oficial."
+                                            : "Conecte sua conta de criador TikTok para garantir a comissão nos links.")
+                                    </span>
+                                    @if (OnConnectCreator.HasDelegate)
+                                    {
+                                        <button type="button" class="btn @(info.HasOAuthToken ? "btn-outline-secondary" : "btn-primary") btn-sm"
+                                                disabled="@(IsBusy || _linking)"
+                                                @onclick="() => OnConnectCreator.InvokeAsync(info)">
+                                            <i class="bi @(info.HasOAuthToken ? "bi-arrow-repeat" : "bi-tiktok") me-1" aria-hidden="true"></i>@(info.HasOAuthToken ? "Reconectar" : "Conectar conta de criador")
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </section>
                     }
 
                     <div class="marketplace-connect-section">
@@ -223,6 +258,9 @@
     [Parameter] public EventCallback<(MarketplaceType Platform, string FriendlyName)> OnStartOAuth { get; set; }
     [Parameter] public EventCallback OnLojaVinculada { get; set; }
 
+    /// <summary>Modo edição de loja TikTok: conectar ou reconectar a conta de criador.</summary>
+    [Parameter] public EventCallback<MarketplaceAccountDto> OnConnectCreator { get; set; }
+
     [Parameter] public MarketplaceType? PreferredPlatform { get; set; }
 
     /// <summary>Quando informado, o modal abre em modo edição e salva via UPDATE da loja existente.</summary>
@@ -286,6 +324,8 @@
         : IsEditMode
             ? "Salvar alterações"
             : _platform.IsUniversalAffiliatePlatform() ? $"Salvar conta {_platformLabel}" : "Vincular manualmente";
+
+    protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 
     protected override void OnParametersSet()
     {

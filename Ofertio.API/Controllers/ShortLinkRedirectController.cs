@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.Radar;
 
 namespace Ofertio.API.Controllers;
@@ -13,15 +14,18 @@ public class ShortLinkRedirectController : ControllerBase
 {
     private readonly IShortAffiliateLinkRepository _shortLinkRepository;
     private readonly ILinkClickTelemetryService _telemetryService;
+    private readonly ILinkAvailabilityService _availability;
     private readonly ILogger<ShortLinkRedirectController> _logger;
 
     public ShortLinkRedirectController(
         IShortAffiliateLinkRepository shortLinkRepository,
         ILinkClickTelemetryService telemetryService,
+        ILinkAvailabilityService availability,
         ILogger<ShortLinkRedirectController> logger)
     {
         _shortLinkRepository = shortLinkRepository;
         _telemetryService = telemetryService;
+        _availability = availability;
         _logger = logger;
     }
 
@@ -62,6 +66,14 @@ public class ShortLinkRedirectController : ControllerBase
             return NotFound();
         }
 
+        // Conta cancelada/suspensa fora da carência: não redireciona, não grava clique e nunca troca o ID de afiliado.
+        var availability = await _availability.CheckAsync(link.TenantId, cancellationToken);
+        if (!availability.IsServing)
+        {
+            _logger.LogInformation("Short link {ShortCode} indisponível: conta do dono fora da carência.", normalizedCode);
+            return UnavailableLinkPage();
+        }
+
         _logger.LogInformation(
             "Short link {ShortCode} resolvido: redirect 302 para {DestinationHost}",
             normalizedCode,
@@ -85,4 +97,15 @@ public class ShortLinkRedirectController : ControllerBase
 
         return Redirect(link.DestinationUrl);
     }
+
+    private static ContentResult UnavailableLinkPage() => new()
+    {
+        ContentType = "text/html; charset=utf-8",
+        StatusCode = StatusCodes.Status410Gone,
+        Content = "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            + "<meta name=\"robots\" content=\"noindex\"><title>" + LinkAvailabilityRules.UnavailableLinkTitle + "</title>"
+            + "<style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f8fafc;color:#0f172a;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:1rem}"
+            + "main{max-width:28rem;text-align:center}h1{font-size:1.4rem;margin:0 0 .75rem}p{color:#475569;line-height:1.5}</style></head>"
+            + "<body><main><h1>" + LinkAvailabilityRules.UnavailableLinkTitle + "</h1><p>" + LinkAvailabilityRules.UnavailableLinkMessage + "</p></main></body></html>"
+    };
 }

@@ -136,5 +136,13 @@ public class ShortLinkRedirectControllerTests
     private static ShortLinkRedirectController CreateController(
         IShortAffiliateLinkRepository links,
         ILinkClickTelemetryService telemetry) =>
-        new(links, telemetry, NullLogger<ShortLinkRedirectController>.Instance);
+        new(links, telemetry, AlwaysServing(), NullLogger<ShortLinkRedirectController>.Instance);
+
+    private static ILinkAvailabilityService AlwaysServing()
+    {
+        var availability = new Mock<ILinkAvailabilityService>();
+        availability.Setup(item => item.CheckAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LinkAvailability(true, null));
+        return availability.Object;
+    }
 }

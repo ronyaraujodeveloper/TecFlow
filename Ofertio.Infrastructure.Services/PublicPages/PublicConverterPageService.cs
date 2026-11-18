@@ -21,14 +21,17 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
     private readonly PlatformLinkResolver _platformLinkResolver;
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly ILogger<PublicConverterPageService> _logger;
+    private readonly ILinkAvailabilityService? _availability;
 
     public PublicConverterPageService(
         AppDbContext context,
         IMarketplaceAccountRepository marketplaceAccounts,
         PlatformLinkResolver platformLinkResolver,
         IAffiliateLinkGenerationService generationService,
-        ILogger<PublicConverterPageService> logger)
+        ILogger<PublicConverterPageService> logger,
+        ILinkAvailabilityService? availability = null)
     {
+        _availability = availability;
         _context = context;
         _marketplaceAccounts = marketplaceAccounts;
         _platformLinkResolver = platformLinkResolver;
@@ -41,7 +44,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         CancellationToken cancellationToken = default)
     {
         var page = await FindBySlugAsync(slug, cancellationToken);
-        if (page is null)
+        if (page is null || !await IsOwnerServingAsync(page.UserId, cancellationToken))
         {
             return null;
         }
@@ -164,6 +167,17 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             };
         }
 
+        if (!await IsOwnerServingAsync(page.UserId, cancellationToken))
+        {
+            return new GerarLinkAfiliadoResponseDto
+            {
+                Success = false,
+                Status = false,
+                Message = LinkAvailabilityRules.UnavailablePageMessage,
+                Descricao = LinkAvailabilityRules.UnavailablePageMessage
+            };
+        }
+
         var workingUrl = originalUrl.Trim();
         string resolvedUrl;
         try
@@ -221,6 +235,23 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         var result = await _generationService.GenerateAsync(request, page.UserId, cancellationToken);
         result.IsFromPublicPage = true;
         return result;
+    }
+
+    /// <summary>Conta do dono cancelada/suspensa fora da carência: a página para de converter (nunca usa outro ID de afiliado).</summary>
+    private async Task<bool> IsOwnerServingAsync(int userId, CancellationToken cancellationToken)
+    {
+        if (_availability is null)
+        {
+            return true;
+        }
+
+        var tenantId = await _context.UserAccounts
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => user.TenantId)
+            .FirstOrDefaultAsync(cancellationToken);
+        return (await _availability.CheckAsync(tenantId, cancellationToken)).IsServing;
     }
 
     private async Task<PublicConverterPage?> FindBySlugAsync(string slug, CancellationToken cancellationToken)

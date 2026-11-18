@@ -25,7 +25,7 @@ public sealed class E2ESettings
 
     public bool Headed { get; }
 
-    public Uri LoginUri => new(BaseUrl, "/");
+    public Uri LoginUri => new(BaseUrl, "/entrar");
 
     public static string RecordName(string label) => RecordPrefix + label.Trim();
 

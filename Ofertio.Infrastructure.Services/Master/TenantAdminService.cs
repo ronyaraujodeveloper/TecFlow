@@ -26,6 +26,7 @@ public sealed class TenantAdminService : ITenantAdminService
     private readonly ITenantAccessReader _accessReader;
     private readonly ISaasPaymentGateway _gateway;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ILinkAvailabilityService? _linkAvailability;
     private readonly ITransactionalEmailSender _email;
     private readonly EmailOptions _emailOptions;
     private readonly ILogger<TenantAdminService> _logger;
@@ -39,8 +40,10 @@ public sealed class TenantAdminService : ITenantAdminService
         ICurrentTenantService currentTenant,
         ITransactionalEmailSender email,
         IOptions<EmailOptions> emailOptions,
-        ILogger<TenantAdminService> logger)
+        ILogger<TenantAdminService> logger,
+        ILinkAvailabilityService? linkAvailability = null)
     {
+        _linkAvailability = linkAvailability;
         _email = email;
         _emailOptions = emailOptions.Value;
         _logger = logger;
@@ -166,7 +169,41 @@ public sealed class TenantAdminService : ITenantAdminService
             $"{tenant.Name}: {action} ({previous} → {tenant.Status}). Motivo: {reason ?? "-"}." +
             (action == TenantLifecycleActions.EstenderTrial ? $" Trial até {tenant.TrialEndsAt:dd/MM/yyyy}." : string.Empty),
             cancellationToken);
+        if (action == TenantLifecycleActions.Cancelar)
+        {
+            await TrySendCancellationNoticeAsync(tenant, now, cancellationToken);
+        }
+
         return new MasterOperationResultDto { Success = true, Message = $"Inquilino {tenant.Name} agora está {tenant.Status}." };
+    }
+
+    private async Task TrySendCancellationNoticeAsync(Tenant tenant, DateTime now, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var recipient = await _context.UserAccounts
+                .IgnoreQueryFilters()
+                .Where(user => user.TenantId == tenant.Id && user.Email != "")
+                .OrderBy(user => user.Id)
+                .Select(user => user.Email)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                return;
+            }
+
+            var graceDays = _linkAvailability is null
+                ? LinkAvailabilityRules.DefaultGraceDays
+                : await _linkAvailability.GetGraceDaysAsync(cancellationToken);
+            var planUrl = TransactionalEmailRules.BuildPlanUrl(_emailOptions.PublicBaseUrl);
+            await _email.SendAsync(
+                TransactionalEmailRules.AccountCanceled(recipient, graceDays, now.AddDays(graceDays), planUrl),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao enviar o aviso de cancelamento do inquilino {TenantId}.", tenant.Id);
+        }
     }
 
     public async Task<MasterOperationResultDto> ChangePlanAsync(

@@ -81,6 +81,7 @@ Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plan
 - [ ] **Cartão no cadastro (depende do ASAAS, fase 2):** a opção "Exigir cartão" só prepara a regra (conta com assinatura vira plano pago ao fim do teste). A coleta real do cartão e a cobrança ainda não existem; não ligar em produção antes disso.
 - [ ] **Termos:** revisar `docs/Legal/RASCUNHO_CLAUSULA_TESTE_GRATIS.md` com o jurídico, publicar nova versão em Master ➔ Termos e atualizar a Política de Privacidade (gateway como operador).
 - [ ] **Página inicial (`/conheca`):** revisar textos, trocar as imagens provisórias em `Ofertio.SharedUi/wwwroot/images/landing/` por capturas reais, validar em celular e depois trocar a rota `/` (login hoje) pela landing, redirecionando logados para `/dashboard`.
+- [ ] **Links após cancelar (LinkAvailability):** conta cancelada, suspensa ou pausada mantém links curtos e página pública por Billing:LinkGraceDaysAfterCancel dias (padrão 30, em Master ➔ Cofre) e depois responde 410 (link) e "página indisponível" (conversão), sem gravar clique e sem trocar o ID de afiliado. Validar em homologação cancelando um tenant de teste; revisar a cláusula nova em docs/Legal/RASCUNHO_CLAUSULA_TESTE_GRATIS.md com o jurídico.
 - [ ] **KPIs do Master:** comparação com o mês anterior quando houver histórico (`MasterDashboardDto`).
 ## 📝 Registrado sem implementação
 

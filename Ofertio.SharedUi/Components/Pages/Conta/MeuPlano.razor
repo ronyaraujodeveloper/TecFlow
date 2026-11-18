@@ -66,6 +66,18 @@
             </div>
         }
 
+        @if (!_overview.IsMaster && _overview.LinksActiveUntil is { } linksUntil)
+        {
+            <div class="alert alert-warning small py-2 d-flex align-items-start gap-2" role="status">
+                <i class="bi bi-link-45deg mt-1" aria-hidden="true"></i>
+                <span>
+                    @(linksUntil > DateTime.UtcNow
+                        ? $"Seus links curtos e sua página pública continuam ativos até {Clock.ToLocal(linksUntil):dd/MM/yyyy}. Depois dessa data ficam indisponíveis. Reative sua assinatura para mantê-los."
+                        : "Seus links curtos e sua página pública estão indisponíveis. Reative sua assinatura para voltar a usá-los.")
+                </span>
+            </div>
+        }
+
         @if (!_overview.IsMaster && TenantStatuses.Normalize(_overview.TenantStatus) == TenantStatuses.Trial && _overview.TrialEndsAt is { } trialEnd)
         {
             <div class="alert alert-info small py-2 d-flex align-items-start gap-2" role="status">

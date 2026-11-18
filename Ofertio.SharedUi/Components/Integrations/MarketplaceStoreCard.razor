@@ -2,108 +2,88 @@
 @using Ofertio.Core.Enums
 @inject IUserClock Clock
 
-<div class="marketplace-store-card card border-0 shadow-sm h-100">
-    <div class="card-body d-flex flex-column gap-3">
-        <div class="d-flex align-items-start justify-content-between gap-2">
-            <div class="min-w-0">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                    <span class="marketplace-platform-badge @GetPlatformBadgeClass()">@GetPlatformLabel()</span>
-                    <span class="badge @GetStatusBadgeClass()">@GetStatusLabel()</span>
-                </div>
-                <h3 class="h6 fw-semibold mb-1 text-truncate" title="@Store.FriendlyName">@Store.FriendlyName</h3>
-                <p class="text-muted small mb-0">Shop ID: <span class="font-monospace">@Store.ShopId</span></p>
-                <p class="text-muted small mb-0">Affiliate ID: <span class="font-monospace">@AffiliateIdDisplay</span></p>
-                @if (IsTikTokShop)
-                {
-                    <p class="small mb-0 mt-1 @(Store.HasOAuthToken ? "text-success" : "text-warning")">
-                        <i class="bi @(Store.HasOAuthToken ? "bi-patch-check" : "bi-exclamation-triangle") me-1" aria-hidden="true"></i>
-                        @(Store.HasOAuthToken
-                            ? "Conta de criador TikTok conectada: links gerados pela API oficial."
-                            : "Conecte sua conta de criador TikTok para garantir a comissão nos links.")
-                    </p>
-                }
-                @if (Store.RequiresTrackingIdCorrection)
-                {
-                    <p class="text-danger small mb-0 mt-2">
-                        ID inválido (URL detectada). Edite o cadastro e informe o ID numérico/tag.
-                    </p>
-                }
-            </div>
-        </div>
-
-        <dl class="marketplace-store-meta mb-0">
-            <div>
-                <dt>Vinculada em</dt>
-                <dd>@Clock.ToLocal(Store.CreatedAt).ToString("dd/MM/yyyy HH:mm")</dd>
-            </div>
-            @if (!Store.PlatformType.IsUniversalAffiliatePlatform())
+<div class="store-row-wrap" role="listitem">
+    <div class="store-row">
+        <span class="marketplace-platform-badge store-row-platform @GetPlatformBadgeClass()" title="@GetPlatformLabel()">@GetPlatformLabel()</span>
+        <span class="store-row-status @StatusIconColor" role="img" tabindex="0" title="@GetStatusLabel()" aria-label="@GetStatusLabel()">
+            <i class="bi @StatusIcon" aria-hidden="true"></i>
+        </span>
+        <span class="store-row-name" title="@Store.FriendlyName">
+            <span class="store-row-name-text">@Store.FriendlyName</span>
+            @if (NeedsCreatorAccount)
             {
-                <div>
-                    <dt>Token expira em</dt>
-                    <dd>@Clock.ToLocal(Store.ExpiresAt).ToString("dd/MM/yyyy HH:mm")</dd>
-                </div>
+                <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" role="img" tabindex="0"
+                   title="Conecte sua conta de criador TikTok para garantir a comissão nos links. Abra Editar para conectar."
+                   aria-label="Falta conectar a conta de criador TikTok"></i>
             }
-        </dl>
-
-        <div class="marketplace-store-actions mt-auto d-grid">
-            @if (_confirmDelete)
+            @if (Store.RequiresTrackingIdCorrection)
             {
-                <p class="text-danger small mb-2">Confirmar desconexão desta loja?</p>
-                <div class="d-grid gap-2">
-                    <button type="button"
-                            class="btn btn-danger btn-touch"
-                            disabled="@IsBusy"
-                            @onclick="() => ConfirmarDesconexaoAsync(Store)">
-                        <i class="bi bi-plug me-1" aria-hidden="true"></i>Sim, desconectar
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-touch" disabled="@IsBusy" @onclick="CancelDelete">
-                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancelar
-                    </button>
-                </div>
+                <i class="bi bi-exclamation-octagon-fill text-danger flex-shrink-0" role="img" tabindex="0"
+                   title="ID de afiliado inválido (URL detectada). Abra Editar e informe o ID numérico/tag."
+                   aria-label="ID de afiliado inválido"></i>
             }
-            else
-            {
-                @if (IsTikTokShop && OnConnectCreator.HasDelegate)
-                {
-                    <button type="button"
-                            class="btn @(Store.HasOAuthToken ? "btn-outline-secondary" : "btn-primary") btn-touch w-100 mb-2"
-                            disabled="@IsBusy"
-                            @onclick="() => OnConnectCreator.InvokeAsync(Store)">
-                        <i class="bi @(Store.HasOAuthToken ? "bi-arrow-repeat" : "bi-tiktok") me-1" aria-hidden="true"></i>
-                        @(Store.HasOAuthToken ? "Reconectar conta de criador TikTok" : "Conectar conta de criador TikTok")
-                    </button>
-                }
-                @if (OnEdit.HasDelegate)
-                {
-                    <button type="button"
-                            class="btn btn-outline-primary btn-touch w-100 mb-2"
-                            disabled="@IsBusy"
-                            @onclick="() => OnEdit.InvokeAsync(Store)">
-                        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
-                        Editar loja
-                    </button>
-                }
-                <button type="button"
-                        class="btn btn-outline-danger btn-touch"
-                        disabled="@IsBusy"
-                        @onclick="RequestDelete">
-                    <i class="bi bi-plug me-1" aria-hidden="true"></i>Desconectar loja
-                </button>
-            }
-        </div>
+        </span>
+        @if (OnEdit.HasDelegate)
+        {
+            <button id="store-edit-@Store.Id"
+                    type="button"
+                    class="store-row-btn"
+                    title="Editar loja"
+                    aria-label="Editar loja @Store.FriendlyName"
+                    disabled="@IsBusy"
+                    @onclick="() => OnEdit.InvokeAsync(Store)">
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+            </button>
+        }
+        <button id="store-unlink-@Store.Id"
+                type="button"
+                class="store-row-btn store-row-btn-danger"
+                title="Desconectar loja"
+                aria-label="Desconectar loja @Store.FriendlyName"
+                aria-expanded="@_confirmDelete"
+                disabled="@IsBusy"
+                @onclick="RequestDelete">
+            <i class="bi bi-trash3" aria-hidden="true"></i>
+        </button>
     </div>
+    @if (_confirmDelete)
+    {
+        <div class="store-row-confirm" role="alert">
+            <span>Desconectar <strong>@Store.FriendlyName</strong>? Os links dessa loja deixam de usar este cadastro.</span>
+            <span class="store-row-confirm-actions">
+                <button id="store-unlink-confirm-@Store.Id" type="button" class="btn btn-danger btn-sm" disabled="@IsBusy" @onclick="() => ConfirmarDesconexaoAsync(Store)">
+                    <i class="bi bi-trash3 me-1" aria-hidden="true"></i>Sim, desconectar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@IsBusy" @onclick="CancelDelete">Cancelar</button>
+            </span>
+        </div>
+    }
 </div>
-
 @code {
     [Parameter, EditorRequired] public MarketplaceAccountDto Store { get; set; } = default!;
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnUnlink { get; set; }
     [Parameter] public EventCallback<MarketplaceAccountDto> OnEdit { get; set; }
-    [Parameter] public EventCallback<MarketplaceAccountDto> OnConnectCreator { get; set; }
 
     private bool _confirmDelete;
 
     private bool IsTikTokShop => Store.PlatformType == MarketplaceType.TikTokShop;
+
+    private bool NeedsCreatorAccount => IsTikTokShop && !Store.HasOAuthToken;
+
+    private string StatusIcon => EffectiveStatus switch
+    {
+        MarketplaceIntegrationStatus.Active => "bi-check-circle-fill",
+        MarketplaceIntegrationStatus.Expired => "bi-exclamation-circle-fill",
+        _ => "bi-dash-circle-fill"
+    };
+
+    private string StatusIconColor => EffectiveStatus switch
+    {
+        MarketplaceIntegrationStatus.Active => "text-success",
+        MarketplaceIntegrationStatus.Expired => "text-warning",
+        _ => "text-secondary"
+    };
 
     protected override Task OnInitializedAsync() => Clock.EnsureLoadedAsync();
 

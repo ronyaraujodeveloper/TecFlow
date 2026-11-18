@@ -22,6 +22,10 @@
                     {
                         <div class="small text-truncate">@email</div>
                     }
+                    @if (isAdmin)
+                    {
+                        <span class="badge text-bg-warning mt-1">@MasterRoles.Label(MasterAccess.Role(user))</span>
+                    }
                 </div>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item" href="/minha-conta" role="menuitem">
@@ -35,11 +39,23 @@
                 </a>
                 @if (isAdmin)
                 {
-                    <a class="dropdown-item"
-                       href="@(masterView ? MasterRoutes.Dashboard : $"/master/visao/{MasterAccess.ViewMaster}")"
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header small text-uppercase profile-section-title">Visão</div>
+                    <a class="dropdown-item @(masterView ? "is-current" : string.Empty)"
+                       href="/master/visao/master"
                        data-enhance-nav="false"
-                       role="menuitem">
-                        <i class="bi bi-shield-lock" aria-hidden="true"></i> Super Admin
+                       aria-current="@(masterView ? "true" : null)"
+                       role="menuitemradio" aria-checked="@masterView">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i> Painel Master
+                        @if (masterView) { <i class="bi bi-check2 profile-view-check" aria-hidden="true"></i> }
+                    </a>
+                    <a class="dropdown-item @(!masterView ? "is-current" : string.Empty)"
+                       href="/master/visao/cliente"
+                       data-enhance-nav="false"
+                       aria-current="@(!masterView ? "true" : null)"
+                       role="menuitemradio" aria-checked="@(!masterView)">
+                        <i class="bi bi-person" aria-hidden="true"></i> Visão Cliente
+                        @if (!masterView) { <i class="bi bi-check2 profile-view-check" aria-hidden="true"></i> }
                     </a>
                 }
                 <div class="dropdown-divider"></div>
@@ -50,7 +66,7 @@
         </details>
     </Authorized>
     <NotAuthorized>
-        <a href="/" class="btn btn-sm btn-primary rounded-pill">Entrar</a>
+        <a href="/entrar" class="btn btn-sm btn-primary rounded-pill">Entrar</a>
     </NotAuthorized>
 </AuthorizeView>
 

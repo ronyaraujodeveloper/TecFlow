@@ -1,8 +1,11 @@
-﻿@inject NavigationManager Navigation
+﻿@using Ofertio.Business.Service.Common
+@inject NavigationManager Navigation
 
 @code {
+    /// <summary>Manda para o login levando a tela atual, para voltar a ela depois de entrar.</summary>
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/", replace: true);
+        var current = Navigation.ToBaseRelativePath(Navigation.Uri);
+        Navigation.NavigateTo(LoginReturnUrlRules.BuildLoginPath(current), replace: true);
     }
 }

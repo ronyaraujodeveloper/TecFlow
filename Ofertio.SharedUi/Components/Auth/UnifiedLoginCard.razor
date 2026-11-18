@@ -1,4 +1,5 @@
 ﻿@using Ofertio.SharedUi.Models.Enums
+@using Ofertio.Business.Service.Common
 @inject ITikTokAuthService PortalAuthService
 @inject IAuthSignInTicketStore SignInTicketStore
 @inject NavigationManager Navigation
@@ -29,6 +30,7 @@
                                      IconContent="G"
                                      BtnClass="btn-social"
                                      Platform="@_portalPlatform"
+                                     ReturnUrl="@_returnUrl"
                                      OnError="SetError" />
 
                 <OAuthProviderButton Provider="AuthProvider.ICloud"
@@ -37,6 +39,7 @@
                                      IconContent="@AppleIconGlyph"
                                      BtnClass="btn-social"
                                      Platform="@_portalPlatform"
+                                     ReturnUrl="@_returnUrl"
                                      OnError="SetError" />
 
                 <OAuthProviderButton Provider="AuthProvider.Facebook"
@@ -45,6 +48,7 @@
                                      IconContent="f"
                                      BtnClass="btn-social"
                                      Platform="@_portalPlatform"
+                                     ReturnUrl="@_returnUrl"
                                      OnError="SetError" />
             </div>
         </section>
@@ -107,6 +111,7 @@
     /// </summary>
     private static readonly LoginPlatform _portalPlatform = LoginPlatform.TikTok;
 
+    private string? _returnUrl;
     private string? _errorMessage;
     private string? _successMessage;
     private bool _isOffline;
@@ -117,6 +122,9 @@
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        _returnUrl = LoginReturnUrlRules.Sanitize(
+            query.TryGetValue(LoginReturnUrlRules.QueryKey, out var returnValue) ? returnValue.ToString() : null);
 
         if (query.TryGetValue("oauth", out var oauthStatus))
         {
@@ -210,7 +218,9 @@
         {
             // Sign-in via endpoint HTTP: HttpContext.SignInAsync quebra no circuito Blazor interativo.
             var ticket = SignInTicketStore.CreateTicket(result.Data, _portalPlatform, provider);
-            Navigation.NavigateTo($"/auth/complete-signin?ticket={Uri.EscapeDataString(ticket)}", forceLoad: true);
+            Navigation.NavigateTo(
+                LoginReturnUrlRules.AppendTo($"/auth/complete-signin?ticket={Uri.EscapeDataString(ticket)}", _returnUrl),
+                forceLoad: true);
         }
         catch (Exception ex)
         {

@@ -1,0 +1,44 @@
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject NavigationManager Navigation
+@inject IAccessControlService Access
+@implements IDisposable
+
+@* Guarda de rota: tela negada ao plano (ou inativa) não abre nem pela URL direta.
+   A barreira dos dados continua na API ([RequiresAccess]); aqui é a experiência do usuário. *@
+
+@code {
+    public const string DeniedPath = "/sem-acesso";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await CheckAsync(forceReload: false);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args) =>
+        _ = InvokeAsync(() => CheckAsync(forceReload: false));
+
+    private async Task CheckAsync(bool forceReload)
+    {
+        var path = CurrentPath();
+        if (path.StartsWith(DeniedPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (await Access.EnsureLoadedAsync(forceReload) is null || !Access.IsRouteDenied(path))
+        {
+            return;
+        }
+
+        Navigation.NavigateTo($"{DeniedPath}?rota={Uri.EscapeDataString(path)}", replace: true);
+    }
+
+    private string CurrentPath()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrEmpty(relative) ? "/" : "/" + relative.Split('?', '#')[0];
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

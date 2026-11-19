@@ -1,4 +1,5 @@
 ﻿using Ofertio.Business.Dto;
+using Ofertio.Core.Enums;
 
 namespace Ofertio.Business.Service.Master;
 
@@ -12,10 +13,76 @@ public sealed record MenuItemDefinition(
     IReadOnlyList<string>? HiddenForPlans = null,
     string? Badge = null,
     bool HiddenForAllPlans = false,
-    bool IsFeatureToggle = false)
+    bool IsFeatureToggle = false,
+    string? ComponentType = null)
 {
-    /// <summary>Chave de permissão (sem rota) que libera um conjunto de telas; nunca aparece na sidebar.</summary>
-    public bool IsFolder => Route is null && !IsFeatureToggle;
+    /// <summary>Parte de uma tela (gráfico, input, botão...); o pai é sempre uma Tela e nunca aparece na sidebar.</summary>
+    public bool IsComponent => ComponentType is not null;
+
+    /// <summary>Grupo: sem rota e não é chave de permissão nem componente.</summary>
+    public bool IsFolder => Route is null && !IsFeatureToggle && !IsComponent;
+
+    public MenuItemKind Kind => MenuHierarchyRules.KindOf(Route, IsFeatureToggle, ComponentType);
+}
+
+/// <summary>Tipos de componente exibidos como selo em /master/menu-permissions.</summary>
+public static class ComponentTypes
+{
+    public const string Chart = "chart";
+    public const string Card = "card";
+    public const string Section = "section";
+    public const string Input = "input";
+    public const string Button = "button";
+
+    /// <summary>Funcionalidade da tela sem um elemento visual único (ex.: slug personalizado).</summary>
+    public const string Feature = "feature";
+
+    public static string Label(string? type) => type switch
+    {
+        Chart => "gráfico",
+        Card => "card",
+        Section => "seção",
+        Input => "campo",
+        Button => "botão",
+        Feature => "recurso",
+        _ => "componente"
+    };
+
+    public static string Icon(string? type) => type switch
+    {
+        Chart => "bi-bar-chart-line",
+        Card => "bi-card-text",
+        Section => "bi-layout-text-window",
+        Input => "bi-input-cursor-text",
+        Button => "bi-hand-index",
+        Feature => "bi-toggle-on",
+        _ => "bi-puzzle"
+    };
+}
+
+/// <summary>
+/// Chaves dos componentes controláveis por plano, no formato {chaveDaTela}.{slug}.
+/// Na tela use &lt;AccessGate Key="..."&gt;; se o componente expõe dados ou ações, cheque também no servidor.
+/// </summary>
+public static class ScreenComponents
+{
+    public static class Painel
+    {
+        public const string Kpis = "painel.indicadores";
+        public const string ClicksChart = "painel.grafico-cliques";
+        public const string Channels = "painel.origens";
+        public const string Devices = "painel.dispositivos";
+        public const string TopProducts = "painel.top-produtos";
+        public const string PublicPageFunnel = "painel.funil-pagina-publica";
+        public const string Regions = "painel.regioes";
+        public const string Groups = "painel.grupos";
+        public const string BestHours = "painel.melhores-horarios";
+    }
+
+    public static class PaginasPublicas
+    {
+        public const string CustomSlug = "integracoes.paginas.slug";
+    }
 }
 
 /// <summary>
@@ -33,7 +100,7 @@ public static class DefaultMenuCatalog
     public const string GlobalIntegrations = "integracoes-globais";
 
     /// <summary>Permissão sob Minhas Páginas Públicas: libera trocar o slug aleatório por um endereço próprio.</summary>
-    public const string CustomPublicSlug = "integracoes.paginas.slug";
+    public const string CustomPublicSlug = ScreenComponents.PaginasPublicas.CustomSlug;
 
     /// <summary>Pasta "Minha conta": Segurança (chave legada "conta"), Meus dados e Meu plano.</summary>
     public const string MyAccount = "minha-conta";
@@ -52,6 +119,15 @@ public static class DefaultMenuCatalog
     public static readonly IReadOnlyList<MenuItemDefinition> All =
     [
         new("painel", "Painel", "/dashboard", "bi-speedometer2", null, 10),
+        Component("painel", ScreenComponents.Painel.Kpis, "Indicadores (cliques, visitantes, links, melhor dia)", ComponentTypes.Card, 10),
+        Component("painel", ScreenComponents.Painel.ClicksChart, "Gráfico: cliques ao longo do tempo", ComponentTypes.Chart, 20),
+        Component("painel", ScreenComponents.Painel.Channels, "Gráfico: de onde vêm os cliques", ComponentTypes.Chart, 30),
+        Component("painel", ScreenComponents.Painel.Devices, "Gráfico: dispositivos", ComponentTypes.Chart, 40),
+        Component("painel", ScreenComponents.Painel.TopProducts, "Top 10 produtos mais clicados", ComponentTypes.Section, 50),
+        Component("painel", ScreenComponents.Painel.PublicPageFunnel, "Funil da página pública", ComponentTypes.Chart, 60),
+        Component("painel", ScreenComponents.Painel.Regions, "Gráfico: cliques por região", ComponentTypes.Chart, 70),
+        Component("painel", ScreenComponents.Painel.Groups, "Grupos que mais trazem cliques", ComponentTypes.Section, 80),
+        Component("painel", ScreenComponents.Painel.BestHours, "Gráfico: melhores dias e horários", ComponentTypes.Chart, 90),
 
         new("mensageria", "Mensageria & Bots", null, "bi-chat-dots", null, 20),
         new("mensageria.conexoes", "Conexões (WA & Telegram)", "/integracoes/conexoes", "bi-qr-code", "mensageria", 10),
@@ -80,7 +156,7 @@ public static class DefaultMenuCatalog
         new("integracoes.estudio", "Estúdio de mídia", "/estudio-midia", "bi-image", "integracoes.conteudo", 20),
         new("integracoes.achadinhos", "Achadinhos VIP", "/achadinhos", "bi-stars", "integracoes.conteudo", 30),
         new("integracoes.paginas", "Minhas Páginas Públicas", "/minhas-paginas-publicas", "bi-globe2", "integracoes.conteudo", 40),
-        new(CustomPublicSlug, "Slug personalizado", null, "bi-pencil", "integracoes.paginas", 10, HiddenForAllPlans: true, IsFeatureToggle: true),
+        new(CustomPublicSlug, "Slug personalizado", null, "bi-pencil", "integracoes.paginas", 10, HiddenForAllPlans: true, ComponentType: ComponentTypes.Feature),
         new("integracoes.resultados", "Saúde & Resultados", null, "bi-activity", "integracoes", 40),
         new("integracoes.saude-ofertas", "Saúde de ofertas", "/saude/ofertas", "bi-heart-pulse", "integracoes.resultados", 10),
         new("integracoes.saude-agendamentos", "Saúde de agendamentos", "/saude/agendamentos", "bi-shield-check", "integracoes.resultados", 20),
@@ -106,6 +182,29 @@ public static class DefaultMenuCatalog
     /// <summary>Prefixo das chaves de pastas criadas no Master (fora do catálogo padrão).</summary>
     public const string CustomFolderPrefix = "pasta.";
 
+    /// <summary>Endereços alternativos de uma tela: destacam o item na sidebar e herdam o bloqueio de rota da tela.</summary>
+    public static readonly IReadOnlyDictionary<string, string[]> RouteAliases =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["/marketplace-accounts"] = ["/minhas-lojas", "/account/integrations", "/integracoes/lojas"],
+            ["/gerador-links"] = ["/comissao/gerar"],
+            ["/minha-conta"] = ["/seguranca", "/account/security"],
+            ["/integracoes/conexoes"] = ["/integracoes/whatsapp", "/integracoes/telegram"],
+            ["/integracoes/whatsapp/grupos/monitorados"] = ["/integracoes/grupos/monitorados"],
+            ["/fila-engajamento"] = ["/engajamento/fila"],
+            ["/conciliacao-financeira"] = ["/conciliacao/financeira"],
+            ["/produtos-propaganda"] = ["/propaganda/produtos"],
+            ["/saude-sistema"] = ["/saude/painel"]
+        };
+
+    /// <summary>A rota e seus endereços alternativos.</summary>
+    public static IEnumerable<string> WithAliases(string route) =>
+        RouteAliases.TryGetValue(route, out var aliases) ? aliases.Prepend(route) : [route];
+
+    /// <summary>Componente de uma tela: chave {tela}.{slug}, sem rota, visível por padrão em todos os planos.</summary>
+    private static MenuItemDefinition Component(string pageKey, string key, string title, string type, int order) =>
+        new(key, title, null, ComponentTypes.Icon(type), pageKey, order, ComponentType: type);
+
     public static MenuItemDefinition? Find(string key) =>
         All.FirstOrDefault(item => string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase));
 
@@ -126,7 +225,8 @@ public static class DefaultMenuCatalog
                 item.Order,
                 true,
                 item.IsFolder,
-                item.Badge))
+                item.Badge,
+                item.Kind))
             .ToList();
         var hidden = All.Where(item => item.HiddenForAllPlans).Select(item => ids[item.Key]).ToHashSet();
         return MenuVisibilityRules.BuildTree(flat, hidden);
@@ -143,7 +243,114 @@ public sealed record MenuNodeSource(
     int Order,
     bool IsActive,
     bool IsFolder = false,
-    string? Badge = null);
+    string? Badge = null,
+    MenuItemKind? Kind = null,
+    string? ComponentType = null)
+{
+    /// <summary>Nível na hierarquia; sem valor explícito, deduzido de pasta/rota (dados legados e testes).</summary>
+    public MenuItemKind EffectiveKind => Kind ?? (IsFolder ? MenuItemKind.Group : Route is null ? MenuItemKind.Feature : MenuItemKind.Page);
+}
+
+/// <summary>Regras da hierarquia Grupo → Tela → Componente e da resolução de acesso por chave e rota.</summary>
+public static class MenuHierarchyRules
+{
+    public static MenuItemKind KindOf(string? route, bool isFeatureToggle, string? componentType) =>
+        componentType is not null ? MenuItemKind.Component
+        : isFeatureToggle ? MenuItemKind.Feature
+        : route is null ? MenuItemKind.Group
+        : MenuItemKind.Page;
+
+    /// <summary>Mensagem de erro quando o item não pode ficar sob o pai informado (null = raiz); null quando é válido.</summary>
+    public static string? ValidateParent(MenuItemKind kind, MenuItemKind? parentKind) => (kind, parentKind) switch
+    {
+        (MenuItemKind.Component, MenuItemKind.Page) => null,
+        (MenuItemKind.Component, _) => "Componentes ficam sempre dentro da tela a que pertencem.",
+        (_, MenuItemKind.Component) => "Nenhum item pode ficar dentro de um componente.",
+        (_, MenuItemKind.Page) => "Dentro de uma tela só entram componentes dela.",
+        (_, MenuItemKind.Feature) => "Chaves de permissão não recebem itens.",
+        (MenuItemKind.Feature, MenuItemKind.Group) => "Chaves de permissão não podem ser movidas para dentro de pastas.",
+        _ => null
+    };
+
+    /// <summary>
+    /// Chaves negadas para o público: inativas, ocultas no plano, telas de chaves de permissão desligadas
+    /// e, em cascata, tudo que está abaixo de um item negado (grupo → tela → componente).
+    /// </summary>
+    public static HashSet<string> ResolveDeniedKeys(IReadOnlyCollection<MenuNodeSource> items, IReadOnlySet<int> hiddenIds)
+    {
+        var hidden = MenuVisibilityRules.ApplyFeatureDependencies(items, hiddenIds);
+        var byId = items.ToDictionary(item => item.Id);
+        var denied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var memo = new Dictionary<int, bool>();
+
+        foreach (var item in items)
+        {
+            if (IsDenied(item.Id, []))
+            {
+                denied.Add(item.Key);
+            }
+        }
+
+        return denied;
+
+        bool IsDenied(int id, HashSet<int> path)
+        {
+            if (memo.TryGetValue(id, out var cached))
+            {
+                return cached;
+            }
+
+            var item = byId[id];
+            var result = !item.IsActive
+                || hidden.Contains(id)
+                || (item.ParentId is int parentId && byId.ContainsKey(parentId) && path.Add(id) && IsDenied(parentId, path));
+            memo[id] = result;
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// True quando a rota mais específica que casa com o caminho está negada.
+    /// Rotas casam por igualdade ou prefixo seguido de "/" (ex.: /radar-ofertas/123).
+    /// </summary>
+    public static bool IsRouteDenied(string? path, IEnumerable<string> allowedRoutes, IEnumerable<string> deniedRoutes)
+    {
+        var normalized = Normalize(path);
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        var bestDenied = Longest(deniedRoutes);
+        return bestDenied > 0 && bestDenied > Longest(allowedRoutes);
+
+        int Longest(IEnumerable<string> routes) =>
+            routes.Select(Normalize)
+                .Where(route => route.Length > 1
+                    && (normalized == route || normalized.StartsWith(route + "/", StringComparison.Ordinal)))
+                .Select(route => route.Length)
+                .DefaultIfEmpty(0)
+                .Max();
+    }
+
+    private static string Normalize(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return string.Empty;
+        }
+
+        var value = route.Trim();
+        var cut = value.IndexOfAny(['?', '#']);
+        if (cut >= 0)
+        {
+            value = value[..cut];
+        }
+
+        value = "/" + value.Trim('/');
+        return value.ToLowerInvariant();
+    }
+}
 
 /// <summary>Regras puras de edição da árvore pelo drag &amp; drop do Master.</summary>
 public static class MenuTreeEditRules
@@ -204,7 +411,7 @@ public static class MenuVisibilityRules
     public static List<ClientMenuNodeDto> BuildTree(IReadOnlyCollection<MenuNodeSource> items, IReadOnlySet<int> hiddenIds)
     {
         var byParent = items
-            .Where(item => item.IsActive && !hiddenIds.Contains(item.Id))
+            .Where(item => item.IsActive && !hiddenIds.Contains(item.Id) && item.EffectiveKind != MenuItemKind.Component)
             .GroupBy(item => item.ParentId ?? 0)
             .ToDictionary(group => group.Key, group => group.OrderBy(item => item.Order).ThenBy(item => item.Title).ToList());
 

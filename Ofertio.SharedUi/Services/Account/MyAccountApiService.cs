@@ -1,4 +1,5 @@
 ﻿using Ofertio.Business.Dto;
+using Ofertio.Database.Filter;
 using Ofertio.SharedUi.Models;
 using Ofertio.SharedUi.Services.Http;
 using Ofertio.SharedUi.Services.UI;
@@ -17,6 +18,9 @@ public interface IMyAccountApiService
     Task<ApiResult<PlanCheckoutResponseDto>> CheckoutAsync(PlanCheckoutDto request, CancellationToken cancellationToken = default);
 
     Task<ApiResult<PlanCheckoutResponseDto>> GetCheckoutAsync(int checkoutId, CancellationToken cancellationToken = default);
+
+    /// <summary>Cidades da UF para o combo de cidade do endereço.</summary>
+    Task<ApiResult<CityResponseDto>> GetCitiesAsync(string stateCode, CancellationToken cancellationToken = default);
 }
 
 public sealed class MyAccountApiService : IMyAccountApiService
@@ -24,6 +28,7 @@ public sealed class MyAccountApiService : IMyAccountApiService
     public const string ProfilePath = "api/conta/dados";
     public const string PlanPath = "api/conta/plano";
     public const string CheckoutPath = "api/conta/plano/pagamento";
+    public const string CitiesPath = "api/localidades/cidades";
 
     private readonly IHttpService _httpService;
     private readonly ILoadingService _loadingService;
@@ -45,6 +50,9 @@ public sealed class MyAccountApiService : IMyAccountApiService
         using var _ = _loadingService.BeginScope("Salvando seus dados...");
         return await _httpService.PutAsync<UserProfileDto, UserProfileResponseDto>(ProfilePath, profile, cancellationToken);
     }
+
+    public Task<ApiResult<CityResponseDto>> GetCitiesAsync(string stateCode, CancellationToken cancellationToken = default) =>
+        _httpService.GetAsync<CityResponseDto>(CitiesPath, new CityFilter { StateCode = stateCode }, cancellationToken);
 
     public async Task<ApiResult<MyPlanResponseDto>> GetPlanAsync(CancellationToken cancellationToken = default)
     {

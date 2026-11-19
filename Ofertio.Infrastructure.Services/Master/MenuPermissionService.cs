@@ -4,6 +4,7 @@ using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Master;
 using Ofertio.Core.Entities;
+using Ofertio.Core.Enums;
 using Ofertio.Database;
 
 namespace Ofertio.Infrastructure.Services.Master;
@@ -43,6 +44,10 @@ public sealed class MenuPermissionService : IMenuPermissionService
         var byKey = items
             .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var childCount = items
+            .Where(item => item.ParentId is not null)
+            .GroupBy(item => item.ParentId!.Value)
+            .ToDictionary(group => group.Key, group => group.Count());
 
         return new MenuPermissionMatrixDto
         {
@@ -68,6 +73,9 @@ public sealed class MenuPermissionService : IMenuPermissionService
                     ParentId = entry.Item.ParentId,
                     Depth = entry.Depth,
                     IsGroup = entry.Item.IsFolder,
+                    Kind = entry.Item.EffectiveKind,
+                    ComponentType = entry.Item.ComponentType,
+                    ChildCount = childCount.GetValueOrDefault(entry.Item.Id),
                     IsCustomFolder = entry.Item.IsFolder && entry.Item.Key.StartsWith(DefaultMenuCatalog.CustomFolderPrefix, StringComparison.Ordinal),
                     IsActive = entry.Item.IsActive,
                     Visibility = plans.ToDictionary(
@@ -158,15 +166,48 @@ public sealed class MenuPermissionService : IMenuPermissionService
         var items = await LoadSourcesAsync(onlyActive: true, cancellationToken);
         var hidden = seesEverything
             ? new HashSet<int>()
-            : MenuVisibilityRules.ApplyFeatureDependencies(
-                items,
-                planId is int id
-                    ? await HiddenForPlanAsync(id, cancellationToken)
-                    : await HiddenForEveryPlanAsync(cancellationToken));
+            : MenuVisibilityRules.ApplyFeatureDependencies(items, await HiddenForAudienceAsync(planId, cancellationToken));
 
         IReadOnlyList<ClientMenuNodeDto> tree = MenuVisibilityRules.BuildTree(items, hidden);
         _cache.Set(cacheKey, tree, CacheDuration);
         return tree;
+    }
+
+    public async Task<ClientAccessDto> GetAccessAsync(int userId, bool clientView = false, CancellationToken cancellationToken = default)
+    {
+        var (isMaster, planId) = await ResolveAudienceAsync(userId, cancellationToken);
+        if (isMaster && !clientView)
+        {
+            return new ClientAccessDto { Unrestricted = true };
+        }
+
+        var audience = planId?.ToString() ?? "sem-plano";
+        var cacheKey = $"ofertio:access:{Volatile.Read(ref _cacheVersion)}:{audience}";
+        if (_cache.TryGetValue(cacheKey, out ClientAccessDto? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        await EnsureCatalogAsync(cancellationToken);
+        var items = await LoadSourcesAsync(onlyActive: false, cancellationToken);
+        var denied = MenuHierarchyRules.ResolveDeniedKeys(items, await HiddenForAudienceAsync(planId, cancellationToken));
+        var pages = items.Where(item => !string.IsNullOrWhiteSpace(item.Route)).ToList();
+        var access = new ClientAccessDto
+        {
+            DeniedKeys = denied.Order(StringComparer.OrdinalIgnoreCase).ToList(),
+            DeniedRoutes = pages.Where(item => denied.Contains(item.Key))
+                .SelectMany(item => DefaultMenuCatalog.WithAliases(item.Route!)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            AllowedRoutes = pages.Where(item => !denied.Contains(item.Key))
+                .SelectMany(item => DefaultMenuCatalog.WithAliases(item.Route!)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        };
+        _cache.Set(cacheKey, access, CacheDuration);
+        return access;
+    }
+
+    public async Task<bool> IsAllowedAsync(int userId, string key, CancellationToken cancellationToken = default)
+    {
+        var access = await GetAccessAsync(userId, clientView: false, cancellationToken);
+        return access.Unrestricted || !access.DeniedKeys.Contains(key, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<MasterOperationResultDto> MoveAsync(MasterActor actor, MenuMoveDto request, CancellationToken cancellationToken = default)
@@ -187,6 +228,24 @@ public sealed class MenuPermissionService : IMenuPermissionService
         if (DefaultMenuCatalog.FeatureDependencies.ContainsKey(item.Key) && request.Position == MenuDropPositions.Into)
         {
             return Fail("Chaves de permissão não podem ser movidas para dentro de pastas.");
+        }
+
+        if (item.Kind == MenuItemKind.Component && (request.Position == MenuDropPositions.Into || target.ParentId != item.ParentId))
+        {
+            return Fail("Componentes só podem ser reordenados dentro da própria tela.");
+        }
+
+        if (request.Position == MenuDropPositions.Into && !target.IsFolder)
+        {
+            return Fail("Para agrupar dois itens, crie uma nova pasta.");
+        }
+
+        var destinationParent = request.Position == MenuDropPositions.Into
+            ? target
+            : items.FirstOrDefault(entry => entry.Id == target.ParentId);
+        if (MenuHierarchyRules.ValidateParent(item.Kind, destinationParent?.Kind) is { } hierarchyError)
+        {
+            return Fail(hierarchyError);
         }
 
         int? newParentId;
@@ -269,12 +328,22 @@ public sealed class MenuPermissionService : IMenuPermissionService
             return Fail("Não é possível agrupar uma pasta com um item que está dentro dela.");
         }
 
+        var folderParent = items.FirstOrDefault(entry => entry.Id == target.ParentId);
+        var hierarchyError = MenuHierarchyRules.ValidateParent(MenuItemKind.Group, folderParent?.Kind)
+            ?? MenuHierarchyRules.ValidateParent(item.Kind, MenuItemKind.Group)
+            ?? MenuHierarchyRules.ValidateParent(target.Kind, MenuItemKind.Group);
+        if (hierarchyError is not null)
+        {
+            return Fail(hierarchyError);
+        }
+
         var folder = new MenuItem
         {
             Key = DefaultMenuCatalog.CustomFolderPrefix + Guid.NewGuid().ToString("N")[..12],
             Title = request.Title.Trim(),
             Icon = "bi-folder2",
             IsFolder = true,
+            Kind = MenuItemKind.Group,
             ParentId = target.ParentId,
             OrderIndex = target.OrderIndex,
             IsCustomized = true
@@ -343,6 +412,8 @@ public sealed class MenuPermissionService : IMenuPermissionService
                     Icon = definition.Icon,
                     Badge = definition.Badge,
                     IsFolder = definition.IsFolder,
+                    Kind = definition.Kind,
+                    ComponentType = definition.ComponentType,
                     OrderIndex = definition.Order,
                     Parent = parent
                 };
@@ -364,7 +435,9 @@ public sealed class MenuPermissionService : IMenuPermissionService
                 || item.Route != definition.Route
                 || item.Icon != definition.Icon
                 || item.Badge != definition.Badge
-                || item.IsFolder != definition.IsFolder;
+                || item.IsFolder != definition.IsFolder
+                || item.Kind != definition.Kind
+                || item.ComponentType != definition.ComponentType;
             var sameParent = parent is null ? item.ParentId is null : parent.Id != 0 && item.ParentId == parent.Id;
             var structureChanged = !item.IsCustomized && (!sameParent || item.OrderIndex != definition.Order);
             if (!contentChanged && !structureChanged)
@@ -377,6 +450,8 @@ public sealed class MenuPermissionService : IMenuPermissionService
             item.Icon = definition.Icon;
             item.Badge = definition.Badge;
             item.IsFolder = definition.IsFolder;
+            item.Kind = definition.Kind;
+            item.ComponentType = definition.ComponentType;
             if (structureChanged)
             {
                 item.OrderIndex = definition.Order;
@@ -444,9 +519,16 @@ public sealed class MenuPermissionService : IMenuPermissionService
 
         return await query
             .Select(item => new MenuNodeSource(
-                item.Id, item.Key, item.Title, item.Route, item.Icon, item.ParentId, item.OrderIndex, item.IsActive, item.IsFolder, item.Badge))
+                item.Id, item.Key, item.Title, item.Route, item.Icon, item.ParentId, item.OrderIndex, item.IsActive, item.IsFolder, item.Badge,
+                item.Kind, item.ComponentType))
             .ToListAsync(cancellationToken);
     }
+
+    /// <summary>Ocultos do plano resolvido; sem plano, só o que nenhum plano ativo enxerga.</summary>
+    private async Task<HashSet<int>> HiddenForAudienceAsync(int? planId, CancellationToken cancellationToken) =>
+        planId is int id
+            ? await HiddenForPlanAsync(id, cancellationToken)
+            : await HiddenForEveryPlanAsync(cancellationToken);
 
     private async Task<HashSet<int>> HiddenForPlanAsync(int planId, CancellationToken cancellationToken) =>
         (await _context.PlanMenuPermissions

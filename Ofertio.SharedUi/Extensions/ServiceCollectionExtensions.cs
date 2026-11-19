@@ -81,6 +81,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOfficialCatalogSearchApiService, OfficialCatalogSearchApiService>();
         services.AddScoped<Ofertio.SharedUi.Services.Master.IMasterApiService, Ofertio.SharedUi.Services.Master.MasterApiService>();
         services.AddScoped<Ofertio.SharedUi.Services.Master.ISystemCommunicationApiService, Ofertio.SharedUi.Services.Master.SystemCommunicationApiService>();
+        services.AddScoped<Ofertio.SharedUi.Services.Navigation.IAccessControlService, Ofertio.SharedUi.Services.Navigation.AccessControlService>();
         services.AddScoped<ISessionStateService, SessionStateService>();
         services.AddScoped<IActiveStoreScopeService, NullActiveStoreScopeService>();
         services.AddScoped<ILoadingService, LoadingService>();

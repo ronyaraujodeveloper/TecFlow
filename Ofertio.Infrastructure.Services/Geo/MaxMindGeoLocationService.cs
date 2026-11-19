@@ -61,7 +61,8 @@ public sealed class MaxMindGeoLocationService : IGeoLocationService, IDisposable
                 city.MostSpecificSubdivision?.Names.TryGetValue("pt-BR", out var regionPt) == true
                     ? regionPt
                     : city.MostSpecificSubdivision?.Name,
-                city.City?.Names.TryGetValue("pt-BR", out var cityPt) == true ? cityPt : city.City?.Name);
+                city.City?.Names.TryGetValue("pt-BR", out var cityPt) == true ? cityPt : city.City?.Name,
+                city.MostSpecificSubdivision?.IsoCode);
             return location.IsEmpty ? null : location;
         }
         catch (Exception)

@@ -52,6 +52,7 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
         services.AddScoped<Ofertio.Infrastructure.Services.PublicPages.JoinLinkHealthService>();
         services.AddScoped<Ofertio.Infrastructure.Services.PublicPages.IpRetentionService>();
         services.AddSingleton<IGeoLocationService, Ofertio.Infrastructure.Services.Geo.MaxMindGeoLocationService>();
+        services.AddSingleton<ILocationCatalog, Ofertio.Infrastructure.Services.Geo.LocationCatalog>();
 
         services.AddHttpClient<IShopeeAffiliateLinkClient, ShopeeAffiliateLinkClient>((sp, client) =>
         {

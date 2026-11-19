@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ofertio.Core.Abstractions;
 using Ofertio.Core.Entities;
+using Ofertio.Core.Enums;
 using Ofertio.Database.Entity;
 using Ofertio.Database.MultiTenancy;
 using Ofertio.Util.Security;
@@ -59,6 +60,9 @@ public class AppDbContext : DbContext
     public DbSet<PublicPageProfile> PublicPageProfiles { get; set; } = null!;
     public DbSet<PublicPageJoinLink> PublicPageJoinLinks { get; set; } = null!;
     public DbSet<PublicPageEvent> PublicPageEvents { get; set; } = null!;
+    public DbSet<Country> Countries { get; set; } = null!;
+    public DbSet<State> States { get; set; } = null!;
+    public DbSet<City> Cities { get; set; } = null!;
     public DbSet<WhatsAppIntegration> WhatsAppIntegrations { get; set; } = null!;
     public DbSet<WhatsAppGroup> WhatsAppGroups { get; set; } = null!;
     public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
@@ -304,6 +308,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Customer>()
             .HasIndex(c => new { c.TenantId, c.DocumentNumber });
 
+        modelBuilder.Entity<Customer>()
+            .HasOne(c => c.City)
+            .WithMany()
+            .HasForeignKey(c => c.CityId)
+            .OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<SalesOrder>()
             .Property(o => o.TotalAmount)
             .HasPrecision(18, 2);
@@ -430,6 +440,35 @@ public class AppDbContext : DbContext
             entity.Property(item => item.City).HasMaxLength(96);
             entity.HasIndex(item => new { item.TenantId, item.UserId, item.CreatedAt });
             entity.HasIndex(item => new { item.TenantId, item.Kind, item.CreatedAt });
+            entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<State>().WithMany().HasForeignKey(item => item.StateId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<City>().WithMany().HasForeignKey(item => item.CityId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // Tabelas de referência de localização: o nome fica uma vez só aqui e os destinos guardam o ID.
+        modelBuilder.Entity<Country>(entity =>
+        {
+            entity.Property(item => item.IsoCode).HasMaxLength(2).IsFixedLength().IsUnicode(false).IsRequired();
+            entity.Property(item => item.Name).HasMaxLength(80).IsRequired();
+            entity.HasIndex(item => item.IsoCode).IsUnique();
+        });
+
+        modelBuilder.Entity<State>(entity =>
+        {
+            entity.Property(item => item.Code).HasMaxLength(2).IsFixedLength().IsUnicode(false).IsRequired();
+            entity.Property(item => item.Name).HasMaxLength(40).IsRequired();
+            entity.HasIndex(item => new { item.CountryId, item.Code }).IsUnique();
+            entity.HasIndex(item => item.IbgeCode).IsUnique();
+            entity.HasOne(item => item.Country).WithMany().HasForeignKey(item => item.CountryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<City>(entity =>
+        {
+            entity.Property(item => item.Name).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.NormalizedName).HasMaxLength(80).IsRequired();
+            entity.HasIndex(item => item.IbgeCode).IsUnique();
+            entity.HasIndex(item => new { item.StateId, item.NormalizedName });
+            entity.HasOne(item => item.State).WithMany().HasForeignKey(item => item.StateId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<WhatsAppIntegration>(entity =>
@@ -700,6 +739,9 @@ public class AppDbContext : DbContext
             entity.Property(log => log.Country).HasMaxLength(64);
             entity.Property(log => log.Region).HasMaxLength(64);
             entity.Property(log => log.City).HasMaxLength(96);
+            entity.HasOne<Country>().WithMany().HasForeignKey(log => log.CountryId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<State>().WithMany().HasForeignKey(log => log.StateId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<City>().WithMany().HasForeignKey(log => log.CityId).OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(log => new { log.TenantId, log.ClickedAt });
             entity.HasIndex(log => new { log.TenantId, log.Channel, log.ClickedAt });
             entity.Property(log => log.Platform).HasMaxLength(32).IsRequired();
@@ -779,6 +821,7 @@ public class AppDbContext : DbContext
         {
             entity.Property(item => item.Document).HasMaxLength(512);
             entity.HasIndex(item => item.UserId).IsUnique();
+            entity.HasOne(item => item.City).WithMany().HasForeignKey(item => item.CityId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<PlanCheckout>(entity =>
@@ -835,6 +878,8 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Route).HasMaxLength(160);
             entity.Property(item => item.Icon).HasMaxLength(64);
             entity.Property(item => item.Badge).HasMaxLength(30);
+            entity.Property(item => item.Kind).HasDefaultValue(MenuItemKind.Page);
+            entity.Property(item => item.ComponentType).HasMaxLength(24);
             entity.Property(item => item.IsActive).HasDefaultValue(true);
             entity.HasIndex(item => item.Key).IsUnique();
             entity.HasIndex(item => new { item.ParentId, item.OrderIndex });

@@ -160,6 +160,15 @@ public interface IMenuPermissionService
     /// </summary>
     Task<IReadOnlyList<ClientMenuNodeDto>> GetClientMenuAsync(int userId, bool clientView = false, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Chaves (grupos, telas, componentes) e rotas negadas para o usuário, com a mesma regra da sidebar.
+    /// Alimenta o AccessGate e a guarda de rota do cliente.
+    /// </summary>
+    Task<ClientAccessDto> GetAccessAsync(int userId, bool clientView = false, CancellationToken cancellationToken = default);
+
+    /// <summary>True quando o usuário pode usar a chave (tela, componente ou permissão). Masters sempre podem.</summary>
+    Task<bool> IsAllowedAsync(int userId, string key, CancellationToken cancellationToken = default);
+
     /// <summary>Reordena (antes/depois de um item) ou move o item para dentro de uma pasta.</summary>
     Task<MasterOperationResultDto> MoveAsync(MasterActor actor, MenuMoveDto request, CancellationToken cancellationToken = default);
 

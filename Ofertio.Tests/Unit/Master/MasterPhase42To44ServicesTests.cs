@@ -131,7 +131,9 @@ public class MenuPermissionServiceTests
         Assert.Equal(DefaultMenuCatalog.CustomPublicSlug, slug.Key);
         Assert.Equal(rows[pages].MenuItemId, slug.ParentId);
         Assert.Equal(rows[pages].Depth + 1, slug.Depth);
-        Assert.True(slug.IsFeatureToggle);
+        Assert.True(slug.IsComponent);
+        Assert.False(slug.IsFeatureToggle);
+        Assert.Equal(1, rows[pages].ChildCount);
         Assert.False(slug.Visibility[starter.Id]);
         Assert.False(slug.Visibility[pro.Id]);
     }
@@ -153,6 +155,138 @@ public class MenuPermissionServiceTests
 
     private static async Task<Dictionary<string, MenuPermissionRowDto>> RowsByKeyAsync(MenuPermissionService service) =>
         (await service.GetMatrixAsync()).Rows.ToDictionary(row => row.Key);
+
+    [Fact]
+    public async Task Access_PageUncheckedForPlan_ShouldDenyPageRouteAndComponents()
+    {
+        var (context, service, starter, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        await service.SaveMatrixAsync(Actor, new MenuPermissionSaveDto
+        {
+            Cells = [new MenuPermissionCellDto { PlanId = starter.Id, MenuItemId = rows["painel"].MenuItemId, IsVisible = false }]
+        });
+
+        var starterAccess = await service.GetAccessAsync(10);
+        Assert.Contains("painel", starterAccess.DeniedKeys);
+        Assert.Contains(ScreenComponents.Painel.ClicksChart, starterAccess.DeniedKeys);
+        Assert.Contains("/dashboard", starterAccess.DeniedRoutes);
+        Assert.False(await service.IsAllowedAsync(10, ScreenComponents.Painel.Regions));
+
+        var proAccess = await service.GetAccessAsync(11);
+        Assert.DoesNotContain("painel", proAccess.DeniedKeys);
+        Assert.True(await service.IsAllowedAsync(11, ScreenComponents.Painel.Regions));
+    }
+
+    [Fact]
+    public async Task Access_ComponentUnchecked_ShouldDenyOnlyThatComponent()
+    {
+        var (context, service, starter, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        await service.SaveMatrixAsync(Actor, new MenuPermissionSaveDto
+        {
+            Cells = [new MenuPermissionCellDto { PlanId = starter.Id, MenuItemId = rows[ScreenComponents.Painel.Regions].MenuItemId, IsVisible = false }]
+        });
+
+        var access = await service.GetAccessAsync(10);
+        Assert.Contains(ScreenComponents.Painel.Regions, access.DeniedKeys);
+        Assert.DoesNotContain(ScreenComponents.Painel.ClicksChart, access.DeniedKeys);
+        Assert.DoesNotContain("/dashboard", access.DeniedRoutes);
+        Assert.Contains("/dashboard", AllRoutes(await service.GetClientMenuAsync(10)));
+    }
+
+    [Fact]
+    public async Task Access_Master_ShouldBeUnrestrictedUnlessClientView()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+
+        Assert.True((await service.GetAccessAsync(12)).Unrestricted);
+        Assert.True(await service.IsAllowedAsync(12, DefaultMenuCatalog.CustomPublicSlug));
+        var clientView = await service.GetAccessAsync(12, clientView: true);
+        Assert.False(clientView.Unrestricted);
+        Assert.Contains(DefaultMenuCatalog.Roadmap, clientView.DeniedKeys);
+    }
+
+    [Fact]
+    public async Task Access_DeniedRoute_ShouldIncludeAliases()
+    {
+        var (context, service, starter, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        await service.SaveMatrixAsync(Actor, new MenuPermissionSaveDto
+        {
+            Cells = [new MenuPermissionCellDto { PlanId = starter.Id, MenuItemId = rows[DefaultMenuCatalog.MarketplaceAccounts].MenuItemId, IsVisible = false }]
+        });
+
+        var access = await service.GetAccessAsync(10);
+        Assert.Contains("/minhas-lojas", access.DeniedRoutes);
+        Assert.True(MenuHierarchyRules.IsRouteDenied("/minhas-lojas", access.AllowedRoutes, access.DeniedRoutes));
+    }
+
+    [Fact]
+    public async Task Move_ComponentOutOfItsPage_ShouldBeRejected()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var intoFolder = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows[ScreenComponents.Painel.Regions].MenuItemId,
+            TargetId = rows["mensageria"].MenuItemId,
+            Position = MenuDropPositions.Into
+        });
+        var nextToOtherPage = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows[ScreenComponents.Painel.Regions].MenuItemId,
+            TargetId = rows["novidades"].MenuItemId,
+            Position = MenuDropPositions.After
+        });
+
+        Assert.False(intoFolder.Success);
+        Assert.False(nextToOtherPage.Success);
+    }
+
+    [Fact]
+    public async Task Move_ComponentWithinItsPage_ShouldReorder()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.MoveAsync(Actor, new MenuMoveDto
+        {
+            ItemId = rows[ScreenComponents.Painel.BestHours].MenuItemId,
+            TargetId = rows[ScreenComponents.Painel.Kpis].MenuItemId,
+            Position = MenuDropPositions.Before
+        });
+
+        Assert.True(result.Success, result.Message);
+        var ordered = (await service.GetMatrixAsync()).Rows.Where(row => row.ParentId == rows["painel"].MenuItemId).ToList();
+        Assert.Equal(ScreenComponents.Painel.BestHours, ordered[0].Key);
+    }
+
+    [Fact]
+    public async Task Move_PageIntoAnotherPage_ShouldBeRejected()
+    {
+        var (context, service, _, _) = await SeedAsync();
+        await using var scope = context;
+        var rows = await RowsByKeyAsync(service);
+
+        var result = await service.CreateFolderAsync(Actor, new MenuFolderCreateDto
+        {
+            Title = "Nova",
+            ItemId = rows[ScreenComponents.Painel.Regions].MenuItemId,
+            TargetId = rows["novidades"].MenuItemId
+        });
+
+        Assert.False(result.Success);
+    }
 
     [Fact]
     public async Task Move_BetweenRows_ShouldReorderSiblingsAndSurviveCatalogSync()

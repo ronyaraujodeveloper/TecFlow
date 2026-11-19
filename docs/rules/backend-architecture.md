@@ -37,6 +37,7 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 
 - **Retorno:** métodos **GET** retornam `[Nome]ResponseDto` com `Data` ou `DataList`; **POST/PUT** recebem `[Nome]Dto` e retornam `[Nome]ResponseDto` quando aplicável.
 - **Filtros:** toda listagem aceita `[FromQuery] [Nome]Filter filter`, aplica o filtro na query (repositório ou extensão `ApplyFilter`) e pagina via `Pagin` (máximo 30 registros).
+- **Localização (país, estado, cidade):** endereços e regiões guardam só o ID das tabelas `Countries`/`States`/`Cities` (carga do IBGE na migration); a UF sai da cidade. As tabelas ficam em memória no `ILocationCatalog`, sem consulta por clique. `api/localidades/cidades?StateCode=SP` devolve a UF inteira, sem paginação, porque alimenta combo.
 - **Listas na query string:** o cliente (`FilterQueryStringExtensions.ToQueryString`) repete a chave para cada item (`Categorias=a&Categorias=b`), formato que o `[FromQuery]` entende.
 - **Validações:** e-mail, celular/WhatsApp, CPF, CNPJ alfanumérico e CEP passam pelo `ValidationHelper` (`Ofertio.Util/Validation`) antes de persistir.
 - **Assíncrono ponta a ponta:** sem `.Result` / `.Wait()`; use `await` (inclusive depois de `Task.WhenAll`).
@@ -67,6 +68,14 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 1. **Toda tela nova tem registro em `MenuItems`** (SQL Server) com `Title`, `Route`, `Icon`, `OrderIndex` e `ParentId`; é proibido fixar links ou submenus no `NavMenu.razor`.
 2. O seeding garimpa as rotas e o item aparece em `/master/menu-permissions` para permissão por plano (`PlanMenuPermissions`).
 3. O `NavMenu.razor` renderiza respeitando `OrderIndex` e os agrupamentos por `ParentId` definidos pelo Master (drag & drop).
+4. **Hierarquia única de controle por plano: Grupo → Tela → Componente** (`MenuItem.Kind`). Todo pedido de "controlar" algo (tela, gráfico, campo, botão, seção, recurso) entra nessa árvore, nunca como flag avulsa:
+   - **Grupo** (`Group`): título de agrupamento sem rota ("Links & Ofertas", "Mensageria & Bots"); pode conter telas e outros grupos.
+   - **Tela** (`Page`): tem `Route`. Desmarcada no plano, some da sidebar **e** a rota é bloqueada (`AccessRouteGuard` → `/sem-acesso`).
+   - **Componente** (`Component` + `ComponentType`): parte da tela; o pai é **obrigatoriamente** uma Tela e a chave segue `{chaveDaTela}.{slug}` (ex.: `painel.grafico-cliques`). Registre no `DefaultMenuCatalog` com o helper `Component(...)` e crie a constante em `ScreenComponents`. Nunca aparece na sidebar.
+   - **Chave de permissão** (`Feature`): só na raiz; libera um conjunto de telas (`FeatureDependencies`).
+5. **Cascata:** item negado (inativo, desmarcado no plano ou dependente de chave desligada) nega tudo abaixo dele (`MenuHierarchyRules.ResolveDeniedKeys`). Sem registro em `PlanMenuPermissions`, o item é visível.
+6. **Checagem no servidor obrigatória** quando o item expõe dados ou ações: `[RequiresAccess(chave)]` no endpoint ou `IMenuPermissionService.IsAllowedAsync(userId, chave)` no serviço. O `AccessGate` da tela é só a experiência do usuário. O filtro responde `{ status: false, errorCode: "ACCESS_DENIED" }` (um 403 seria lido pelo cliente como sessão expirada).
+7. `MenuHierarchyRules.ValidateParent` garante a hierarquia no drag & drop: componente só reordena dentro da própria tela; nada entra em componente nem em tela, exceto componentes.
 
 ## 8. Arquivos, uploads e IIS
 

@@ -16,6 +16,8 @@ public class MyAccountServicesTests
 {
     private const int UserId = 7;
     private const int MasterId = 8;
+    private const int SaoPauloCityId = 100;
+    private const int RioCityId = 200;
     private static readonly Guid TenantId = Guid.NewGuid();
 
     private static AppDbContext CreateContext()
@@ -44,6 +46,13 @@ public class MyAccountServicesTests
             new SaasPlan { Code = SaasPlanCodes.Starter, Name = "Starter", SortOrder = 1 },
             new SaasPlan { Code = SaasPlanCodes.Pro, Name = "Pro", MonthlyPrice = 99m, AnnualPrice = 990m, SortOrder = 2, Highlights = "Suporte prioritário" },
             new SaasPlan { Code = SaasPlanCodes.Agency, Name = "Agency", MonthlyPrice = 199m, AnnualPrice = 1990m, SortOrder = 3, IsActive = false });
+        context.Countries.Add(new Country { Id = 1, IsoCode = "BR", Name = "Brasil" });
+        context.States.AddRange(
+            new State { Id = 35, CountryId = 1, Code = "SP", Name = "São Paulo", IbgeCode = 35 },
+            new State { Id = 33, CountryId = 1, Code = "RJ", Name = "Rio de Janeiro", IbgeCode = 33 });
+        context.Cities.AddRange(
+            new City { Id = SaoPauloCityId, StateId = 35, Name = "São Paulo", NormalizedName = "sao paulo", IbgeCode = 3550308 },
+            new City { Id = RioCityId, StateId = 33, Name = "Rio de Janeiro", NormalizedName = "rio de janeiro", IbgeCode = 3304557 });
         await context.SaveChangesAsync();
         return context;
     }
@@ -59,7 +68,7 @@ public class MyAccountServicesTests
         Street = "Avenida Paulista",
         Number = "1000",
         District = "Bela Vista",
-        City = "São Paulo",
+        CityId = SaoPauloCityId,
         State = "SP"
     };
 
@@ -110,6 +119,56 @@ public class MyAccountServicesTests
         Assert.Equal("52998224725", profile.Document);
         Assert.Equal("2000", profile.Number);
         Assert.Equal("Maria", (await context.UserAccounts.SingleAsync(user => user.Id == UserId)).Name);
+    }
+
+    [Fact]
+    public async Task SaveProfile_ShouldStoreOnlyTheCityIdAndReturnCityNameAndUf()
+    {
+        await using var context = await SeedAsync();
+        var service = new UserProfileService(context);
+
+        await service.SaveAsync(UserId, CompleteProfile());
+        var loaded = await service.GetAsync(UserId);
+
+        Assert.Equal(SaoPauloCityId, (await context.UserProfiles.SingleAsync()).CityId);
+        Assert.Equal(SaoPauloCityId, loaded.Data!.CityId);
+        Assert.Equal("São Paulo", loaded.Data.CityName);
+        Assert.Equal("SP", loaded.Data.State);
+        Assert.Empty(loaded.MissingFields);
+    }
+
+    [Fact]
+    public async Task SaveProfile_WithCityFromAnotherUfOrUnknownCity_ShouldFail()
+    {
+        await using var context = await SeedAsync();
+        var service = new UserProfileService(context);
+        var otherUf = CompleteProfile();
+        otherUf.CityId = RioCityId;
+        var unknown = CompleteProfile();
+        unknown.CityId = 999;
+
+        var wrongUf = await service.SaveAsync(UserId, otherUf);
+        var missingCity = await service.SaveAsync(UserId, unknown);
+
+        Assert.False(wrongUf.Status);
+        Assert.Contains("não é da UF", wrongUf.Descricao);
+        Assert.False(missingCity.Status);
+        Assert.Contains("Cidade inválida", missingCity.Descricao);
+        Assert.False(await context.UserProfiles.AnyAsync());
+    }
+
+    [Fact]
+    public async Task SaveProfile_WithUfButNoCity_ShouldKeepTheUfAndAskForTheCity()
+    {
+        await using var context = await SeedAsync();
+        var profile = CompleteProfile();
+        profile.CityId = null;
+
+        var result = await new UserProfileService(context).SaveAsync(UserId, profile);
+
+        Assert.True(result.Status, result.Descricao);
+        Assert.Equal("SP", result.Data!.State);
+        Assert.Equal(["Cidade"], result.MissingFields);
     }
 
     [Fact]

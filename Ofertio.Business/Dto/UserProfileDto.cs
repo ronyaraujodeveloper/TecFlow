@@ -35,8 +35,13 @@ public class UserProfileDto
 
     public string? District { get; set; }
 
-    public string? City { get; set; }
+    /// <summary>Cidade da tabela de referência. É o que fica gravado; a UF sai dela.</summary>
+    public int? CityId { get; set; }
 
+    /// <summary>Somente leitura: nome da cidade gravada, para exibir.</summary>
+    public string? CityName { get; set; }
+
+    /// <summary>UF escolhida no formulário para filtrar as cidades. Não é gravada: ao carregar, vem da cidade.</summary>
     public string? State { get; set; }
 }
 

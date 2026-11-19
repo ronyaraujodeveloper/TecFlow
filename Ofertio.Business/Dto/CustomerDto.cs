@@ -9,6 +9,6 @@ public class CustomerDto
     public string Street { get; set; } = string.Empty;
     public string StreetNumber { get; set; } = string.Empty;
     public string ZipCode { get; set; } = string.Empty;
-    public string City { get; set; } = string.Empty;
-    public string State { get; set; } = string.Empty;
+    /// <summary>Cidade da tabela de referência (api/localidades/estados/{uf}/cidades); a UF sai dela.</summary>
+    public int? CityId { get; set; }
 }

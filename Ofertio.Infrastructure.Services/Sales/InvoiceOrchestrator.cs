@@ -101,5 +101,5 @@ public class InvoiceOrchestrator : IInvoiceOrchestrator
     }
 
     private static string FormatAddress(Core.Entities.Customer customer) =>
-        $"{customer.Street}, {customer.StreetNumber} — {customer.ZipCode} — {customer.City}/{customer.State}";
+        $"{customer.Street}, {customer.StreetNumber} — {customer.ZipCode} — {customer.City?.Name}/{customer.City?.State?.Code}";
 }

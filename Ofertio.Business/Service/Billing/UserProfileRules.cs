@@ -33,7 +33,8 @@ public static class UserProfileRules
             Number = Clean(source.Number),
             Complement = Clean(source.Complement),
             District = Clean(source.District),
-            City = Clean(source.City),
+            CityId = source.CityId is > 0 ? source.CityId : null,
+            CityName = Clean(source.CityName),
             State = Clean(source.State)?.ToUpperInvariant()
         };
     }
@@ -78,7 +79,7 @@ public static class UserProfileRules
         }
 
         if (profile.Street?.Length > 160 || profile.Number?.Length > 16 || profile.Complement?.Length > 80
-            || profile.District?.Length > 80 || profile.City?.Length > 80)
+            || profile.District?.Length > 80)
         {
             errors.Add("Endereço com campo maior que o permitido.");
         }
@@ -124,10 +125,14 @@ public static class UserProfileRules
         AddIfEmpty(missing, profile.Street, "Rua");
         AddIfEmpty(missing, profile.Number, "Número");
         AddIfEmpty(missing, profile.District, "Bairro");
-        AddIfEmpty(missing, profile.City, "Cidade");
         if (BrazilTimeZoneRules.NormalizeStateCode(profile.State) is null)
         {
             missing.Add("UF");
+        }
+
+        if (profile.CityId is null)
+        {
+            missing.Add("Cidade");
         }
 
         return missing;

@@ -11,6 +11,7 @@ public interface ISystemCommunicationApiService
     Task<ApiResult<MasterOperationResultDto>> MarkReadAsync(int id, CancellationToken cancellationToken = default);
     Task<ApiResult<List<ProductChangelogDto>>> ChangelogAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<List<ClientMenuNodeDto>>> ClientMenuAsync(bool clientView = false, CancellationToken cancellationToken = default);
+    Task<ApiResult<ClientAccessDto>> AccessAsync(bool clientView = false, CancellationToken cancellationToken = default);
 }
 
 public sealed class SystemCommunicationApiService : ISystemCommunicationApiService
@@ -36,4 +37,7 @@ public sealed class SystemCommunicationApiService : ISystemCommunicationApiServi
 
     public Task<ApiResult<List<ClientMenuNodeDto>>> ClientMenuAsync(bool clientView = false, CancellationToken cancellationToken = default) =>
         _http.GetAsync<List<ClientMenuNodeDto>>(clientView ? "api/sistema/menu?visao=cliente" : "api/sistema/menu", cancellationToken: cancellationToken);
+
+    public Task<ApiResult<ClientAccessDto>> AccessAsync(bool clientView = false, CancellationToken cancellationToken = default) =>
+        _http.GetAsync<ClientAccessDto>(clientView ? "api/sistema/acesso?visao=cliente" : "api/sistema/acesso", cancellationToken: cancellationToken);
 }

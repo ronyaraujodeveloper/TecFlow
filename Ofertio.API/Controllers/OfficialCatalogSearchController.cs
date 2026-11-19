@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
+using Ofertio.API.Security;
 using Ofertio.Database.Filter;
 using Ofertio.Infrastructure.Interfaces;
 
@@ -11,6 +13,7 @@ namespace Ofertio.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/busca")]
+[RequiresAccess(DefaultMenuCatalog.OfferSearch)]
 public sealed class OfficialCatalogSearchController : ControllerBase
 {
     private readonly IOfficialCatalogSearchService _search;

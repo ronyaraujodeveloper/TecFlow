@@ -59,18 +59,7 @@
     private const int MaxFavorites = 8;
     private const string FavoritesStoragePrefix = "ofertio.menu.favorites.";
 
-    private static readonly Dictionary<string, string[]> RouteAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["/marketplace-accounts"] = ["/minhas-lojas", "/account/integrations", "/integracoes/lojas"],
-        ["/gerador-links"] = ["/comissao/gerar"],
-        ["/minha-conta"] = ["/seguranca", "/account/security"],
-        ["/integracoes/conexoes"] = ["/integracoes/whatsapp", "/integracoes/telegram"],
-        ["/integracoes/whatsapp/grupos/monitorados"] = ["/integracoes/grupos/monitorados"],
-        ["/fila-engajamento"] = ["/engajamento/fila"],
-        ["/conciliacao-financeira"] = ["/conciliacao/financeira"],
-        ["/produtos-propaganda"] = ["/propaganda/produtos"],
-        ["/saude-sistema"] = ["/saude/painel"]
-    };
+    private static IReadOnlyDictionary<string, string[]> RouteAliases => DefaultMenuCatalog.RouteAliases;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }

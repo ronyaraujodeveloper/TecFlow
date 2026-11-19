@@ -1,16 +1,35 @@
 ﻿@implements IAsyncDisposable
 
-<div @ref="_rootRef" class="multiselect @(_open ? "multiselect--open" : null)">
-    <button @ref="_toggleRef"
-            type="button"
-            class="btn btn-sm multiselect-toggle @(SelectedValues.Count > 0 ? "btn-primary" : "btn-outline-secondary")"
-            aria-haspopup="listbox"
-            aria-expanded="@(_open ? "true" : "false")"
-            disabled="@Disabled"
-            title="@(Disabled ? DisabledHint : Title)"
-            @onclick="ToggleOpenAsync">
-        <i class="bi @Icon me-1" aria-hidden="true"></i><span>@MultiSelectRules.Summary(Title, SelectedValues.Count)</span><i class="bi bi-chevron-down ms-1 multiselect-caret" aria-hidden="true"></i>
-    </button>
+<div @ref="_rootRef" class="multiselect @(Single ? "multiselect--single" : null) @(_open ? "multiselect--open" : null)">
+    @if (Single)
+    {
+        var selectedLabel = MultiSelectRules.SelectedLabel(Options, SelectedValues);
+        <button @ref="_toggleRef"
+                id="@Id"
+                type="button"
+                class="form-select text-start multiselect-toggle @(selectedLabel is null ? "text-muted" : null)"
+                aria-haspopup="listbox"
+                aria-expanded="@(_open ? "true" : "false")"
+                disabled="@Disabled"
+                title="@(Disabled ? DisabledHint : selectedLabel ?? Title)"
+                @onclick="ToggleOpenAsync">
+            <i class="bi @Icon me-1" aria-hidden="true"></i><span>@(selectedLabel ?? Title)</span>
+        </button>
+    }
+    else
+    {
+        <button @ref="_toggleRef"
+                id="@Id"
+                type="button"
+                class="btn btn-sm multiselect-toggle @(SelectedValues.Count > 0 ? "btn-primary" : "btn-outline-secondary")"
+                aria-haspopup="listbox"
+                aria-expanded="@(_open ? "true" : "false")"
+                disabled="@Disabled"
+                title="@(Disabled ? DisabledHint : Title)"
+                @onclick="ToggleOpenAsync">
+            <i class="bi @Icon me-1" aria-hidden="true"></i><span>@MultiSelectRules.Summary(Title, SelectedValues.Count)</span><i class="bi bi-chevron-down ms-1 multiselect-caret" aria-hidden="true"></i>
+        </button>
+    }
     @if (_open)
     {
         var visible = Visible;
@@ -40,7 +59,7 @@
                  class="multiselect-options"
                  role="listbox"
                  tabindex="0"
-                 aria-multiselectable="true"
+                 aria-multiselectable="@(Single ? "false" : "true")"
                  aria-label="@Title"
                  aria-activedescendant="@(_activeIndex >= 0 && _activeIndex < visible.Count ? OptionId(_activeIndex) : null)"
                  @onfocus="OnListFocus"
@@ -65,7 +84,14 @@
                            class="multiselect-option @(selected ? "is-selected" : null) @(optionIndex == _activeIndex ? "is-active" : null)"
                            title="@option.Hint"
                            @onmouseenter="() => _activeIndex = optionIndex">
-                        <input class="form-check-input mt-0" type="checkbox" tabindex="-1" checked="@selected" @onchange="e => ToggleAsync(value, e.Value is true)" />
+                        @if (Single)
+                        {
+                            <input class="form-check-input mt-0" type="radio" name="@ListId" tabindex="-1" checked="@selected" @onchange="() => ToggleAsync(value, true)" />
+                        }
+                        else
+                        {
+                            <input class="form-check-input mt-0" type="checkbox" tabindex="-1" checked="@selected" @onchange="e => ToggleAsync(value, e.Value is true)" />
+                        }
                         <span class="multiselect-option-label">@option.Label</span>
                         @if (option.Count is { } count)
                         {
@@ -74,7 +100,7 @@
                     </label>
                 }
             </div>
-            @if (visible.Count > 0)
+            @if (visible.Count > 0 && !Single)
             {
                 <div class="multiselect-actions" @onkeydown="OnActionsKeyDownAsync">
                     <button type="button" class="btn btn-link btn-sm" @onclick="SelectAllAsync">
@@ -108,6 +134,12 @@
     [Parameter] public string DisabledHint { get; set; } = "Indisponível";
 
     [Parameter] public string EmptyText { get; set; } = "Nenhuma opção disponível.";
+
+    /// <summary>Seleção única (radio): escolher um item troca a seleção e fecha o combo. O botão vira um campo de formulário.</summary>
+    [Parameter] public bool Single { get; set; }
+
+    /// <summary>Id do botão do combo, para o <c>&lt;label for&gt;</c> e os testes pela tela.</summary>
+    [Parameter] public string? Id { get; set; }
 
     private readonly string _id = "ms-" + Guid.NewGuid().ToString("N")[..8];
     private DotNetObjectReference<MultiSelectDropdown>? _selfRef;
@@ -232,7 +264,7 @@
     private Task ToggleActiveAsync(IReadOnlyList<MultiSelectOption> visible)
     {
         var value = visible[_activeIndex].Value;
-        return ToggleAsync(value, !IsSelected(value));
+        return ToggleAsync(value, Single || !IsSelected(value));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -274,8 +306,17 @@
         }
     }
 
-    private Task ToggleAsync(string value, bool isChecked) =>
-        NotifyAsync(MultiSelectRules.Toggle(SelectedValues, value, isChecked));
+    private async Task ToggleAsync(string value, bool isChecked)
+    {
+        if (!Single)
+        {
+            await NotifyAsync(MultiSelectRules.Toggle(SelectedValues, value, isChecked));
+            return;
+        }
+
+        await NotifyAsync(MultiSelectRules.SelectSingle(value));
+        await CloseAsync(returnFocus: true);
+    }
 
     private Task SelectAllAsync() =>
         NotifyAsync(MultiSelectRules.SelectAll(SelectedValues, Visible));

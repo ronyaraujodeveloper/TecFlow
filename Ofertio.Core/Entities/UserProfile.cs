@@ -41,11 +41,10 @@ public class UserProfile : BaseEntity
     [MaxLength(80)]
     public string? District { get; set; }
 
-    [MaxLength(80)]
-    public string? City { get; set; }
+    /// <summary>Cidade da tabela de referência; a UF sai dela (City.State).</summary>
+    public int? CityId { get; set; }
 
-    [MaxLength(2)]
-    public string? State { get; set; }
+    public City? City { get; set; }
 }
 
 public static class PersonTypes

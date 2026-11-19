@@ -34,7 +34,7 @@ Todo botão (`<button>`, `<a>` estilizado como botão ou elemento clicável de a
 6. **Teclado:** setas (ou hover) movem o item ativo, Espaço marca/desmarca, Enter marca/desmarca o item ativo ou fecha, Esc fecha e devolve o foco ao botão.
 7. **Gatilho com ícone** `bi bi-*` e resumo da seleção (ex.: "Categorias (2)").
 
-Referência de implementação: `Ofertio.SharedUi/Components/Shared/MultiSelectDropdown.razor`. Não use o `dropdown-menu` do Bootstrap nesses combos: o atalho de teclado nativo dele exige `data-bs-toggle` e disputa o estado com o Blazor.
+Referência de implementação: `Ofertio.SharedUi/Components/Shared/MultiSelectDropdown.razor`. Seleção única usa o mesmo componente com `Single="true"` e `Id`: radio no lugar do checkbox, sem "Marcar todos/Limpar", escolher fecha o combo e o botão fica com cara de `form-select` (ex.: cidade em Meus dados, filtrada pela UF). Não use o `dropdown-menu` do Bootstrap nesses combos: o atalho de teclado nativo dele exige `data-bs-toggle` e disputa o estado com o Blazor.
 
 ## 3. Responsividade (Mobile First)
 
@@ -71,6 +71,13 @@ Selos com cantos arredondados, `font-semibold` e tamanho compacto (`text-xs px-2
 Agrupamento: **Mensageria & Bots** (Conexões, Agendador de Grupos, Bot de Conversão) ➔ **Canais** (Agendador WhatsApp, Agendador Telegram) ➔ **Integrações & Afiliados** (Minhas Lojas, Gerador de Links, Páginas Públicas) ➔ **Próximos Desenvolvimentos** (accordion com Dashboard, Campanhas, Métricas, Fila de engajamento "Em breve", Conciliação, Produtos propaganda, Saúde do sistema) ➔ **Minha conta** (Segurança, Meus dados, Meu plano; a chave `conta` continua sendo a Segurança).
 
 - Submenus retráteis controlam `isExpanded` em C# (`@onclick` + classes condicionais), sem JavaScript externo; transição suave e chevron que gira ao expandir.
+
+### 7.1 Itens de tela controlados por plano (Grupo → Tela → Componente)
+
+- **Todo item de tela controlável por plano** (gráfico, card, campo, botão, seção, recurso) = entrada `Component(...)` no `DefaultMenuCatalog` + constante em `ScreenComponents` + `<AccessGate Key="@ScreenComponents.Tela.Item">` envolvendo o markup. Nada de `if (plano == ...)` na tela.
+- Componente negado é **sempre ocultado** (sem placeholder nem cadeado). Monte o grid para fechar o buraco: pares de cards com `col-12 col-lg` (largura igual) em vez de `col-lg-6`, com o `AccessGate` envolvendo a coluna inteira.
+- A tela negada é tratada pelo `AccessRouteGuard` do `MainLayout` (redireciona para `/sem-acesso`); não repita essa checagem na página.
+- Em `/master/menu-permissions` a matriz é um acordeão: grupos começam fechados, telas com componentes mostram "N componentes" e abrem para listá-los; busca e "Expandir/Recolher tudo" ficam na barra acima da tabela.
 
 ## 8. Regras de tela específicas
 

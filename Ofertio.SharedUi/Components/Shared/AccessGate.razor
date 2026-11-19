@@ -1,0 +1,25 @@
+﻿@inject IAccessControlService Access
+
+@* Componente controlado por plano em /master/menu-permissions (Grupo → Tela → Componente).
+   Negado: não renderiza nada. Enquanto o acesso carrega, também não renderiza (evita piscar algo bloqueado). *@
+@if (_loaded && Access.IsAllowed(Key))
+{
+    @ChildContent
+}
+
+@code {
+    /// <summary>Chave do componente (constante de ScreenComponents), no formato {chaveDaTela}.{slug}.</summary>
+    [Parameter, EditorRequired]
+    public string Key { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Access.EnsureLoadedAsync();
+        _loaded = true;
+    }
+}

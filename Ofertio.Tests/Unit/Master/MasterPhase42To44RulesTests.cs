@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Service.Master;
+using Ofertio.Core.Enums;
 using Ofertio.SharedUi.Services.Auth;
 using Ofertio.SharedUi.Services.Navigation;
 
@@ -140,7 +141,8 @@ public class MenuCatalogTests
         var permission = DefaultMenuCatalog.Find(DefaultMenuCatalog.CustomPublicSlug)!;
 
         Assert.Equal("integracoes.paginas", permission.ParentKey);
-        Assert.True(permission.IsFeatureToggle);
+        Assert.Equal(MenuItemKind.Component, permission.Kind);
+        Assert.Equal(ComponentTypes.Feature, permission.ComponentType);
         Assert.True(permission.HiddenForAllPlans);
         Assert.Null(permission.Route);
         Assert.DoesNotContain(DefaultMenuCatalog.CustomPublicSlug, Keys(DefaultMenuCatalog.BuildDefaultTree()));
@@ -231,6 +233,171 @@ public class MenuVisibilityRulesTests
         Assert.True(keys.IndexOf("grupo") < keys.IndexOf("grupo.b"));
         Assert.Equal(1, flat.Single(entry => entry.Item.Key == "grupo.a").Depth);
         Assert.Equal(Items.Length, flat.Count);
+    }
+
+    [Fact]
+    public void BuildTree_ShouldNeverPutComponentsInTheSidebar()
+    {
+        MenuNodeSource[] items =
+        [
+            .. Items,
+            new(7, "painel.grafico", "Gráfico", null, "bi", 1, 10, true, Kind: MenuItemKind.Component, ComponentType: ComponentTypes.Chart)
+        ];
+
+        var tree = MenuVisibilityRules.BuildTree(items, new HashSet<int>());
+
+        var painel = tree.Single(node => node.Key == "painel");
+        Assert.Empty(painel.Children);
+        Assert.False(painel.IsFolder);
+    }
+}
+
+public class MenuHierarchyRulesTests
+{
+    private static readonly MenuNodeSource[] Items =
+    [
+        new(1, "grupo", "Grupo", null, "bi", null, 10, true, IsFolder: true, Kind: MenuItemKind.Group),
+        new(2, "grupo.tela", "Tela", "/tela", "bi", 1, 10, true, Kind: MenuItemKind.Page),
+        new(3, "grupo.tela.grafico", "Gráfico", null, "bi", 2, 10, true, Kind: MenuItemKind.Component, ComponentType: ComponentTypes.Chart),
+        new(4, "grupo.tela.campo", "Campo", null, "bi", 2, 20, false, Kind: MenuItemKind.Component, ComponentType: ComponentTypes.Input),
+        new(5, "solta", "Solta", "/solta", "bi", null, 20, true, Kind: MenuItemKind.Page)
+    ];
+
+    [Theory]
+    [InlineData(MenuItemKind.Component, MenuItemKind.Page, true)]
+    [InlineData(MenuItemKind.Component, MenuItemKind.Group, false)]
+    [InlineData(MenuItemKind.Component, null, false)]
+    [InlineData(MenuItemKind.Page, MenuItemKind.Group, true)]
+    [InlineData(MenuItemKind.Page, null, true)]
+    [InlineData(MenuItemKind.Page, MenuItemKind.Page, false)]
+    [InlineData(MenuItemKind.Group, MenuItemKind.Component, false)]
+    [InlineData(MenuItemKind.Group, MenuItemKind.Group, true)]
+    [InlineData(MenuItemKind.Feature, MenuItemKind.Group, false)]
+    [InlineData(MenuItemKind.Feature, null, true)]
+    public void ValidateParent_ShouldEnforceGroupPageComponent(MenuItemKind kind, MenuItemKind? parent, bool valid)
+    {
+        Assert.Equal(valid, MenuHierarchyRules.ValidateParent(kind, parent) is null);
+    }
+
+    [Fact]
+    public void ResolveDeniedKeys_HiddenPage_ShouldDenyItsComponents()
+    {
+        var denied = MenuHierarchyRules.ResolveDeniedKeys(Items, new HashSet<int> { 2 });
+
+        Assert.Contains("grupo.tela", denied);
+        Assert.Contains("grupo.tela.grafico", denied);
+        Assert.DoesNotContain("grupo", denied);
+        Assert.DoesNotContain("solta", denied);
+    }
+
+    [Fact]
+    public void ResolveDeniedKeys_HiddenGroup_ShouldCascadeToPagesAndComponents()
+    {
+        var denied = MenuHierarchyRules.ResolveDeniedKeys(Items, new HashSet<int> { 1 });
+
+        Assert.Equal(["grupo", "grupo.tela", "grupo.tela.campo", "grupo.tela.grafico"], denied.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void ResolveDeniedKeys_InactiveComponent_ShouldBeDeniedAlone()
+    {
+        var denied = MenuHierarchyRules.ResolveDeniedKeys(Items, new HashSet<int>());
+
+        Assert.Equal(["grupo.tela.campo"], denied);
+    }
+
+    [Fact]
+    public void ResolveDeniedKeys_FeatureOff_ShouldDenyDependentPages()
+    {
+        var items = new[]
+        {
+            new MenuNodeSource(1, DefaultMenuCatalog.GlobalIntegrations, "Integrações Globais", null, "bi", null, 10, true, Kind: MenuItemKind.Feature),
+            new MenuNodeSource(2, DefaultMenuCatalog.OfferSearch, "Buscar", "/busca", "bi", null, 20, true, Kind: MenuItemKind.Page)
+        };
+
+        var denied = MenuHierarchyRules.ResolveDeniedKeys(items, new HashSet<int> { 1 });
+
+        Assert.Contains(DefaultMenuCatalog.OfferSearch, denied);
+    }
+
+    [Theory]
+    [InlineData("/radar-ofertas", true)]
+    [InlineData("/radar-ofertas/123", true)]
+    [InlineData("/RADAR-OFERTAS?x=1", true)]
+    [InlineData("/radar-ofertas-extra", false)]
+    [InlineData("/integracoes/conexoes", false)]
+    [InlineData("/integracoes/secreta/sub", true)]
+    [InlineData("/", false)]
+    public void IsRouteDenied_ShouldUseMostSpecificRoute(string path, bool expected)
+    {
+        string[] allowed = ["/integracoes/conexoes", "/dashboard"];
+        string[] denied = ["/radar-ofertas", "/integracoes/secreta"];
+
+        Assert.Equal(expected, MenuHierarchyRules.IsRouteDenied(path, allowed, denied));
+    }
+
+    [Fact]
+    public void IsRouteDenied_AllowedChildOfDeniedRoute_ShouldPass()
+    {
+        Assert.False(MenuHierarchyRules.IsRouteDenied("/saude/ofertas", ["/saude/ofertas"], ["/saude"]));
+        Assert.True(MenuHierarchyRules.IsRouteDenied("/saude/outra", ["/saude/ofertas"], ["/saude"]));
+    }
+}
+
+public class MenuCatalogHierarchyTests
+{
+    [Fact]
+    public void EveryComponent_ShouldSitUnderAPageWithPrefixedKey()
+    {
+        var byKey = DefaultMenuCatalog.All.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var component in DefaultMenuCatalog.All.Where(item => item.IsComponent))
+        {
+            Assert.NotNull(component.ParentKey);
+            var parent = byKey[component.ParentKey!];
+            Assert.Equal(MenuItemKind.Page, parent.Kind);
+            Assert.StartsWith(parent.Key + ".", component.Key);
+            Assert.Null(component.Route);
+        }
+    }
+
+    [Fact]
+    public void CatalogKeys_ShouldBeUnique()
+    {
+        var duplicates = DefaultMenuCatalog.All.GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1);
+
+        Assert.Empty(duplicates);
+    }
+
+    [Fact]
+    public void ScreenComponentConstants_ShouldAllExistInCatalog()
+    {
+        var keys = typeof(ScreenComponents).GetNestedTypes()
+            .SelectMany(type => type.GetFields())
+            .Where(field => field.IsLiteral)
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .ToList();
+
+        Assert.NotEmpty(keys);
+        Assert.All(keys, key => Assert.NotNull(DefaultMenuCatalog.Find(key)));
+    }
+
+    [Fact]
+    public void Painel_ShouldExposeItsChartsAsComponents()
+    {
+        var components = DefaultMenuCatalog.All.Where(item => item.ParentKey == "painel").ToList();
+
+        Assert.Equal(9, components.Count);
+        Assert.All(components, item => Assert.Equal(MenuItemKind.Component, item.Kind));
+        Assert.Contains(components, item => item.Key == ScreenComponents.Painel.Regions && item.ComponentType == ComponentTypes.Chart);
+    }
+
+    [Fact]
+    public void RouteAliases_ShouldPointToCatalogRoutes()
+    {
+        var routes = DefaultMenuCatalog.All.Select(item => item.Route).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.All(DefaultMenuCatalog.RouteAliases.Keys, route => Assert.Contains(route, routes));
     }
 }
 

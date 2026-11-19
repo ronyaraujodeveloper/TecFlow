@@ -45,6 +45,18 @@ public static class MultiSelectRules
     public static string Summary(string title, int selectedCount) =>
         selectedCount > 0 ? $"{title} ({selectedCount})" : title;
 
+    /// <summary>Seleção única: escolher um item substitui o anterior.</summary>
+    public static IReadOnlyList<string> SelectSingle(string value) => [value];
+
+    /// <summary>Rótulo da opção escolhida (seleção única), ou nulo sem seleção ou com valor que não está na lista.</summary>
+    public static string? SelectedLabel(IReadOnlyList<MultiSelectOption> options, IReadOnlyCollection<string> selected)
+    {
+        var value = selected.FirstOrDefault();
+        return value is null
+            ? null
+            : options.FirstOrDefault(option => string.Equals(option.Value, value, StringComparison.OrdinalIgnoreCase))?.Label;
+    }
+
     public static IReadOnlyList<string> Toggle(IReadOnlyCollection<string> selected, string value, bool isChecked)
     {
         var result = selected.Where(item => !string.Equals(item, value, StringComparison.OrdinalIgnoreCase)).ToList();

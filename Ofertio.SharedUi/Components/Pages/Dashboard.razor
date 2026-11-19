@@ -7,6 +7,7 @@
 @using System.Globalization
 @using Ofertio.Business.Dto
 @using Ofertio.Business.Service.Attribution
+@using Ofertio.Business.Service.Master
 @using Ofertio.SharedUi.Components.Dashboard
 @using Ofertio.SharedUi.Services.Dashboard
 @inject ISessionStateService SessionState
@@ -84,6 +85,7 @@
     else
     {
         var summary = _overview.Summary;
+        <AccessGate Key="@ScreenComponents.Painel.Kpis">
         <div class="row g-3 mt-1">
             <div class="col-6 col-lg-3">
                 <KpiCard Title="Cliques" Value="@summary.Clicks.ToString("N0", Pt)" Current="summary.Clicks" Previous="summary.PreviousClicks" />
@@ -100,6 +102,7 @@
                          Hint="@(summary.BestDay is null ? "sem cliques" : $"{summary.BestDayClicks:N0} cliques")" />
             </div>
         </div>
+        </AccessGate>
 
         @if (summary.PreviewsFiltered > 0)
         {
@@ -109,15 +112,19 @@
             </p>
         }
 
+        <AccessGate Key="@ScreenComponents.Painel.ClicksChart">
         <section class="card border-0 shadow-sm mt-3" aria-label="Cliques ao longo do tempo">
             <div class="card-body">
                 <h2 class="h6 fw-semibold mb-3">Cliques ao longo do tempo, por origem</h2>
                 <ClicksChart Series="_overview.Series" ChannelOrder="_overview.ChannelOrder" />
             </div>
         </section>
+        </AccessGate>
 
-        <div class="row g-3 mt-1">
-            <div class="col-12 col-lg-6">
+        @* Colunas col-lg (largura igual): se um card do par for ocultado pelo plano, o outro ocupa a linha inteira. *@
+        <div class="row g-3 mt-1 dashboard-gated-row">
+            <AccessGate Key="@ScreenComponents.Painel.Channels">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="De onde vêm os cliques">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">De onde vêm os cliques</h2>
@@ -125,7 +132,9 @@
                     </div>
                 </section>
             </div>
-            <div class="col-12 col-lg-6">
+            </AccessGate>
+            <AccessGate Key="@ScreenComponents.Painel.Devices">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="Dispositivos">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">Dispositivos</h2>
@@ -133,8 +142,10 @@
                     </div>
                 </section>
             </div>
+            </AccessGate>
         </div>
 
+        <AccessGate Key="@ScreenComponents.Painel.TopProducts">
         <section class="card border-0 shadow-sm mt-3" aria-label="Produtos mais clicados">
             <div class="card-body">
                 <h2 class="h6 fw-semibold mb-3">Top 10 produtos mais clicados</h2>
@@ -173,9 +184,11 @@
                 }
             </div>
         </section>
+        </AccessGate>
 
-        <div class="row g-3 mt-1">
-            <div class="col-12 col-lg-6">
+        <div class="row g-3 mt-1 dashboard-gated-row">
+            <AccessGate Key="@ScreenComponents.Painel.PublicPageFunnel">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="Funil da página pública">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">Sua página pública</h2>
@@ -213,7 +226,9 @@
                     </div>
                 </section>
             </div>
-            <div class="col-12 col-lg-6">
+            </AccessGate>
+            <AccessGate Key="@ScreenComponents.Painel.Regions">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="Cliques por região">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">De onde vêm os cliques (região estimada)</h2>
@@ -232,10 +247,12 @@
                     </div>
                 </section>
             </div>
+            </AccessGate>
         </div>
 
-        <div class="row g-3 mt-1">
-            <div class="col-12 col-lg-6">
+        <div class="row g-3 mt-1 dashboard-gated-row">
+            <AccessGate Key="@ScreenComponents.Painel.Groups">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="Grupos">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">Grupos que mais trazem cliques</h2>
@@ -260,7 +277,9 @@
                     </div>
                 </section>
             </div>
-            <div class="col-12 col-lg-6">
+            </AccessGate>
+            <AccessGate Key="@ScreenComponents.Painel.BestHours">
+            <div class="col-12 col-lg">
                 <section class="card border-0 shadow-sm h-100" aria-label="Melhores horários">
                     <div class="card-body">
                         <h2 class="h6 fw-semibold mb-3">Melhores dias e horários</h2>
@@ -268,6 +287,7 @@
                     </div>
                 </section>
             </div>
+            </AccessGate>
         </div>
     }
 </div>

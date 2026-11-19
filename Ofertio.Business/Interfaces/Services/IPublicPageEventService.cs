@@ -1,7 +1,10 @@
 ﻿namespace Ofertio.Business.Interfaces.Services;
 
-/// <summary>Região estimada pela localização do IP. Nada aqui identifica a pessoa.</summary>
-public sealed record GeoLocation(string? Country, string? Region, string? City)
+/// <summary>
+/// Região estimada pela localização do IP. Nada aqui identifica a pessoa.
+/// <paramref name="Country"/> é o código ISO (BR); <paramref name="RegionCode"/> é a sigla do estado (SP), quando a base informa.
+/// </summary>
+public sealed record GeoLocation(string? Country, string? Region, string? City, string? RegionCode = null)
 {
     public bool IsEmpty => string.IsNullOrWhiteSpace(Country) && string.IsNullOrWhiteSpace(Region) && string.IsNullOrWhiteSpace(City);
 }

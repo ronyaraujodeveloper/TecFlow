@@ -80,7 +80,14 @@ public class LinkClickLog
     /// <summary>Robô de prévia de link (WhatsApp, Telegram etc.). Não entra na contagem de cliques do painel.</summary>
     public bool IsBot { get; set; }
 
-    /// <summary>Região estimada do clique pela localização do IP (o IP completo não é gravado).</summary>
+    /// <summary>Região estimada do clique pela localização do IP (o IP completo não é gravado). Fora do Brasil, só o país.</summary>
+    public int? CountryId { get; set; }
+
+    public int? StateId { get; set; }
+
+    public int? CityId { get; set; }
+
+    /// <summary>Histórico: região em texto dos cliques gravados antes das tabelas de país, estado e cidade. Cliques novos usam só os IDs.</summary>
     [MaxLength(64)]
     public string? Country { get; set; }
 

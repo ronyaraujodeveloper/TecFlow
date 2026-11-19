@@ -86,6 +86,27 @@ public sealed class FunnelAndRegionTests
     }
 
     [Fact]
+    public void Regions_AbroadClicks_ShouldAppearAsExteriorWithTheCountryName()
+    {
+        var abroad = Click("PT", null, null) with { CountryName = "Portugal" };
+        var rows = new[]
+        {
+            abroad,
+            abroad with { Ip = "2.2.2.***" },
+            Click("US", null, null, ip: "3.3.3.***"),
+            Click("BR", "Bahia", "Salvador", ip: "4.4.4.***")
+        };
+
+        var overview = LinkAnalyticsCalculator.BuildOverview(rows, From, To, AnalyticsGrain.Day, 0, true, NoGroups, NoGroups);
+
+        Assert.True(overview.HasRegionData);
+        Assert.Equal("Exterior · Portugal", overview.States[0].Label);
+        Assert.Equal(2, overview.States[0].Clicks);
+        Assert.Contains(overview.States, item => item.Label == "Exterior · US");
+        Assert.Single(overview.Cities);
+    }
+
+    [Fact]
     public void Regions_WithoutLocationData_ShouldBeEmptyAndFlaggedAsUnavailable()
     {
         var overview = LinkAnalyticsCalculator.BuildOverview(

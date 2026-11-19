@@ -3091,6 +3091,71 @@ html, body {
     background: rgba(2, 6, 23, 0.65);
 }
 
+/* ===== Matriz de menus: acordeão Grupo → Tela → Componente ===== */
+.menu-tree-search {
+    position: relative;
+    flex: 1 1 16rem;
+    max-width: 24rem;
+}
+
+.menu-tree-search > .bi-search {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tf-master-muted, #94a3b8);
+    pointer-events: none;
+}
+
+.menu-tree-search > input {
+    padding-left: 2rem;
+}
+
+.menu-tree-toggle {
+    width: 1.5rem;
+    padding: 0;
+    margin-right: 0.15rem;
+    color: inherit;
+    vertical-align: baseline;
+}
+
+.menu-tree-spacer {
+    display: inline-block;
+    width: 1.65rem;
+}
+
+.menu-tree-title {
+    color: inherit;
+    font-weight: inherit;
+    text-decoration: none;
+    vertical-align: baseline;
+}
+
+.menu-tree-title:hover,
+.menu-tree-title:focus-visible {
+    color: #ff9900;
+}
+
+.menu-component-row > td {
+    font-size: 0.8rem;
+}
+
+.menu-component-badge {
+    background: rgba(255, 153, 0, 0.15);
+    color: #ff9900;
+    border: 1px solid rgba(255, 153, 0, 0.35);
+    font-weight: 500;
+}
+
+/* ===== Acesso por plano (AccessGate / guarda de rota) ===== */
+.dashboard-gated-row:not(:has(> *)) {
+    display: none;
+}
+
+.access-denied-card {
+    max-width: 36rem;
+}
+
 .ofertio-tooltip .tooltip-inner {
     max-width: 300px;
     white-space: pre-line;
@@ -3244,6 +3309,22 @@ html, body {
 
 .multiselect-caret {
     font-size: 0.7rem;
+}
+
+/* Seleção única dentro de formulário: ocupa a coluna e tem a cara de um select */
+.multiselect--single {
+    display: block;
+}
+
+.multiselect--single .multiselect-toggle {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.multiselect--single .multiselect-menu {
+    width: 100%;
+    max-width: none;
 }
 
 .multiselect .multiselect-menu {

@@ -19,7 +19,9 @@
             @if (_showHelp)
             {
                 <p class="text-muted small mb-0 mt-1">
-                    Desmarcar uma pasta esconde todos os itens dela; desativar um item o remove para todos.
+                    Hierarquia: <strong>grupo</strong> → <strong>tela</strong> → <strong>componente</strong> (gráfico, campo, botão, seção).
+                    Desmarcar uma pasta esconde todos os itens dela; desmarcar uma tela esconde a tela, bloqueia a rota e oculta os componentes dela;
+                    desativar um item o remove para todos.
                     Linhas <span class="badge text-bg-secondary">permissão</span> liberam um conjunto de telas: desligadas num plano, ocultam essas telas automaticamente.
                 </p>
             }
@@ -51,6 +53,25 @@
 
     @if (_matrix is not null)
     {
+        <div class="menu-tree-toolbar d-flex flex-wrap align-items-center gap-2 mb-2">
+            <div class="menu-tree-search">
+                <label class="visually-hidden" for="menu-search">Buscar item do menu</label>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input id="menu-search" type="search" class="form-control form-control-sm" placeholder="Buscar tela, componente ou rota"
+                       autocomplete="off" @bind="_search" @bind:event="oninput" />
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ExpandAllAsync">
+                <i class="bi bi-arrows-expand me-1" aria-hidden="true"></i>Expandir tudo
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CollapseAllAsync">
+                <i class="bi bi-arrows-collapse me-1" aria-hidden="true"></i>Recolher tudo
+            </button>
+            @if (IsSearching)
+            {
+                <span class="small text-muted" role="status">@VisibleRows().Count() item(ns) encontrado(s)</span>
+            }
+        </div>
+
         <div class="table-responsive card shadow-sm">
             <table class="table table-sm align-middle mb-0 small menu-matrix">
                 <thead class="table-light">
@@ -72,11 +93,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var row in _matrix.Rows)
+                    @foreach (var row in VisibleRows())
                     {
+                        var expandable = row.ChildCount > 0;
+                        var expanded = IsExpanded(row);
                         <tr data-menu-row="@row.MenuItemId"
                             draggable="@(_canManage ? "true" : "false")"
-                            class="@(row.IsGroup ? "table-secondary fw-semibold" : string.Empty) @(row.IsActive ? string.Empty : "text-muted")"
+                            class="@RowClass(row)"
                             @ondragstart="() => _dragId = row.MenuItemId"
                             @ondragend="() => _dragId = null"
                             @ondrop="() => DropAsync(row)"
@@ -88,10 +111,44 @@
                                 }
                             </td>
                             <td style="padding-left: @(0.5 + row.Depth * 1.5)rem;">
-                                <i class="bi @(row.IsGroup ? (row.Icon ?? "bi-folder2") : row.Icon) me-1" aria-hidden="true"></i>@row.Title
+                                @if (expandable)
+                                {
+                                    <button type="button" class="btn btn-link btn-sm menu-tree-toggle" aria-expanded="@(expanded ? "true" : "false")"
+                                            aria-label="@($"{(expanded ? "Recolher" : "Expandir")} {row.Title}")" @onclick="() => ToggleAsync(row)">
+                                        <i class="bi @(expanded ? "bi-chevron-down" : "bi-chevron-right")" aria-hidden="true"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="menu-tree-spacer" aria-hidden="true"></span>
+                                }
+                                @if (row.IsGroup && expandable)
+                                {
+                                    <button type="button" class="btn btn-link menu-tree-title p-0" @onclick="() => ToggleAsync(row)">
+                                        <i class="bi @(row.Icon ?? "bi-folder2") me-1" aria-hidden="true"></i>@row.Title
+                                    </button>
+                                }
+                                else
+                                {
+                                    <i class="bi @(row.IsGroup ? (row.Icon ?? "bi-folder2") : row.Icon) me-1" aria-hidden="true"></i>@row.Title
+                                }
                                 @if (row.IsGroup)
                                 {
                                     <span class="badge text-bg-light ms-1">pasta</span>
+                                }
+                                @if (row.IsComponent)
+                                {
+                                    <span class="badge menu-component-badge ms-1">@ComponentTypes.Label(row.ComponentType)</span>
+                                }
+                                else if (!row.IsGroup && row.ChildCount > 0)
+                                {
+                                    <span class="badge text-bg-light ms-1">@row.ChildCount componente@(row.ChildCount == 1 ? string.Empty : "s")</span>
+                                }
+                                @if (expandable && !expanded && HasPendingBelow(row))
+                                {
+                                    <span class="small text-warning ms-1" title="Há alterações não salvas dentro deste item">
+                                        <i class="bi bi-dot" aria-hidden="true"></i>alterações
+                                    </span>
                                 }
                                 @if (row.IsFeatureToggle)
                                 {
@@ -123,8 +180,9 @@
                             </td>
                             @foreach (var plan in _matrix.Plans)
                             {
-                                var blockedByFeature = !IsFeatureEnabled(row, plan.Id);
-                                <td class="text-center" title="@(blockedByFeature ? $"Oculto: {row.RequiresFeatureTitle} desligada neste plano" : null)">
+                                var blockReason = BlockReason(row, plan.Id);
+                                var blockedByFeature = blockReason is not null;
+                                <td class="text-center" title="@blockReason">
                                     <label class="visually-hidden" for="menu-plan-@row.MenuItemId-@plan.Id">@row.Title no plano @plan.Name</label>
                                     <input id="menu-plan-@row.MenuItemId-@plan.Id" type="checkbox" class="form-check-input" checked="@(IsVisible(row, plan.Id) && !blockedByFeature)" disabled="@(!_canManage || !row.IsActive || blockedByFeature)"
                                            aria-label="@($"{row.Title} no plano {plan.Name}")"
@@ -186,7 +244,15 @@
     private ElementReference _folderInput;
     private bool _focusFolderInput;
 
+    private const string ExpandedStorageKey = "ofertio.master.menu.expanded";
+    /// <summary>Chaves dos grupos/telas abertos; tudo começa fechado (só a raiz aparece).</summary>
+    private readonly HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<int, MenuPermissionRowDto> _byId = [];
+    private string _search = string.Empty;
+
     private int PendingChanges => _cells.Count + _active.Count;
+
+    private bool IsSearching => !string.IsNullOrWhiteSpace(_search);
 
     protected override async Task LoadAsync()
     {
@@ -201,6 +267,7 @@
         if (Accept(result))
         {
             _matrix = result.Data;
+            IndexRows();
             _cells.Clear();
             _active.Clear();
         }
@@ -209,6 +276,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+        if (firstRender)
+        {
+            await RestoreExpandedAsync();
+        }
+
         if (_focusFolderInput && _folderDraft is not null)
         {
             _focusFolderInput = false;
@@ -226,6 +298,7 @@
         }
 
         _matrix = result.Data;
+        IndexRows();
         foreach (var row in _matrix.Rows.Where(row => _active.ContainsKey(row.MenuItemId)))
         {
             row.IsActive = _active[row.MenuItemId];
@@ -307,16 +380,139 @@
             ? pending
             : row.Visibility.GetValueOrDefault(planId, true);
 
-    /// <summary>Falso quando a tela depende de uma chave de permissão inativa ou desmarcada para o plano.</summary>
-    private bool IsFeatureEnabled(MenuPermissionRowDto row, int planId)
+    /// <summary>
+    /// Motivo do bloqueio da célula (null = livre): tela que depende de chave de permissão desligada,
+    /// ou componente cuja tela está inativa/desmarcada no plano (a cascata oculta o componente).
+    /// </summary>
+    private string? BlockReason(MenuPermissionRowDto row, int planId)
     {
-        if (row.RequiresFeatureId is not int featureId)
+        if (row.RequiresFeatureId is int featureId)
         {
-            return true;
+            var feature = _byId.GetValueOrDefault(featureId);
+            if (feature is null || !feature.IsActive || !IsVisible(feature, planId))
+            {
+                return $"Oculto: {row.RequiresFeatureTitle} desligada neste plano";
+            }
         }
 
-        var feature = _matrix?.Rows.FirstOrDefault(item => item.MenuItemId == featureId);
-        return feature is not null && feature.IsActive && IsVisible(feature, planId);
+        if (row.IsComponent && row.ParentId is int parentId && _byId.TryGetValue(parentId, out var page)
+            && (!page.IsActive || !IsVisible(page, planId)))
+        {
+            return $"Oculto: a tela \"{page.Title}\" está desmarcada neste plano";
+        }
+
+        return null;
+    }
+
+    private void IndexRows() => _byId = _matrix?.Rows.ToDictionary(row => row.MenuItemId) ?? [];
+
+    private IEnumerable<MenuPermissionRowDto> Ancestors(MenuPermissionRowDto row)
+    {
+        var guard = 0;
+        var current = row;
+        while (current.ParentId is int parentId && _byId.TryGetValue(parentId, out var parent) && guard++ < 32)
+        {
+            yield return parent;
+            current = parent;
+        }
+    }
+
+    private bool Matches(MenuPermissionRowDto row)
+    {
+        var term = _search.Trim();
+        return row.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || row.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || (row.Route?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    /// <summary>Raiz sempre; demais linhas só com todos os ancestrais abertos. Na busca: resultados e seus ancestrais.</summary>
+    private IEnumerable<MenuPermissionRowDto> VisibleRows()
+    {
+        if (_matrix is null)
+        {
+            return [];
+        }
+
+        if (IsSearching)
+        {
+            var shown = new HashSet<int>();
+            foreach (var match in _matrix.Rows.Where(Matches))
+            {
+                shown.Add(match.MenuItemId);
+                shown.UnionWith(Ancestors(match).Select(item => item.MenuItemId));
+            }
+
+            return _matrix.Rows.Where(row => shown.Contains(row.MenuItemId));
+        }
+
+        return _matrix.Rows.Where(row => Ancestors(row).All(ancestor => _expanded.Contains(ancestor.Key)));
+    }
+
+    private bool IsExpanded(MenuPermissionRowDto row) =>
+        _expanded.Contains(row.Key)
+        || (IsSearching && _matrix is not null && _matrix.Rows.Any(item => Matches(item) && Ancestors(item).Any(a => a.MenuItemId == row.MenuItemId)));
+
+    private string RowClass(MenuPermissionRowDto row) => string.Join(' ',
+        row.IsGroup ? "table-secondary fw-semibold menu-group-row" : string.Empty,
+        row.IsComponent ? "menu-component-row" : string.Empty,
+        row.IsActive ? string.Empty : "text-muted");
+
+    /// <summary>Há marcação pendente em algum item abaixo deste (aviso no grupo recolhido).</summary>
+    private bool HasPendingBelow(MenuPermissionRowDto row) =>
+        _cells.Keys.Select(key => key.ItemId).Concat(_active.Keys)
+            .Distinct()
+            .Any(id => _byId.TryGetValue(id, out var item) && Ancestors(item).Any(a => a.MenuItemId == row.MenuItemId));
+
+    private async Task ToggleAsync(MenuPermissionRowDto row)
+    {
+        if (!_expanded.Remove(row.Key))
+        {
+            _expanded.Add(row.Key);
+        }
+
+        await SaveExpandedAsync();
+    }
+
+    private async Task ExpandAllAsync()
+    {
+        _expanded.UnionWith(_matrix?.Rows.Where(row => row.ChildCount > 0).Select(row => row.Key) ?? []);
+        await SaveExpandedAsync();
+    }
+
+    private async Task CollapseAllAsync()
+    {
+        _expanded.Clear();
+        _search = string.Empty;
+        await SaveExpandedAsync();
+    }
+
+    /// <summary>Lembra os grupos abertos nesta aba; sem armazenamento disponível, tudo segue fechado.</summary>
+    private async Task RestoreExpandedAsync()
+    {
+        try
+        {
+            var json = await Js.InvokeAsync<string?>("sessionStorage.getItem", ExpandedStorageKey);
+            if (!string.IsNullOrWhiteSpace(json)
+                && System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) is { Count: > 0 } keys)
+            {
+                _expanded.UnionWith(keys);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+        }
+    }
+
+    private async Task SaveExpandedAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("sessionStorage.setItem", ExpandedStorageKey, System.Text.Json.JsonSerializer.Serialize(_expanded));
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException)
+        {
+        }
     }
 
     private void ToggleCell(MenuPermissionRowDto row, int planId, bool visible)

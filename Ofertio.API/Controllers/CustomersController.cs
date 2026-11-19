@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Repositories;
+using Ofertio.Business.Interfaces.Services;
 using Ofertio.Core.Entities;
 using Ofertio.Database.Filter;
 using Ofertio.Database.Pagin;
@@ -15,10 +16,12 @@ namespace Ofertio.API.Controllers;
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerRepository _customerRepository;
+    private readonly ILocationCatalog _locations;
 
-    public CustomersController(ICustomerRepository customerRepository)
+    public CustomersController(ICustomerRepository customerRepository, ILocationCatalog locations)
     {
         _customerRepository = customerRepository;
+        _locations = locations;
     }
 
     [HttpGet]
@@ -51,7 +54,7 @@ public class CustomersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CustomerResponseDto>> CreateAsync([FromBody] CustomerDto dto)
     {
-        var validation = ValidateCustomerDto(dto);
+        var validation = await ValidateCustomerDtoAsync(dto);
         if (validation is not null)
         {
             return BadRequest(new CustomerResponseDto { Status = false, Descricao = validation });
@@ -64,7 +67,7 @@ public class CustomersController : ControllerBase
         {
             Status = true,
             Descricao = "Cliente criado com sucesso.",
-            Data = created
+            Data = await _customerRepository.GetByIdAsync(created.Id) ?? created
         });
     }
 
@@ -77,7 +80,7 @@ public class CustomersController : ControllerBase
             return NotFound(new CustomerResponseDto { Status = false, Descricao = "Cliente não encontrado." });
         }
 
-        var validation = ValidateCustomerDto(dto);
+        var validation = await ValidateCustomerDtoAsync(dto);
         if (validation is not null)
         {
             return BadRequest(new CustomerResponseDto { Status = false, Descricao = validation });
@@ -90,12 +93,21 @@ public class CustomersController : ControllerBase
         {
             Status = true,
             Descricao = "Cliente atualizado com sucesso.",
-            Data = updated
+            Data = await _customerRepository.GetByIdAsync(updated.Id) ?? updated
         });
     }
 
-    private static string? ValidateCustomerDto(CustomerDto dto)
+    private async Task<string?> ValidateCustomerDtoAsync(CustomerDto dto)
     {
+        if (dto.CityId is int cityId)
+        {
+            var places = await _locations.GetSnapshotAsync(HttpContext.RequestAborted);
+            if (!places.CitiesById.ContainsKey(cityId))
+            {
+                return "Cidade inválida. Escolha uma cidade da lista.";
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(dto.Name))
         {
             return "Nome é obrigatório.";
@@ -140,7 +152,6 @@ public class CustomersController : ControllerBase
         entity.Street = dto.Street.Trim();
         entity.StreetNumber = dto.StreetNumber.Trim();
         entity.ZipCode = dto.ZipCode.Trim();
-        entity.City = dto.City.Trim();
-        entity.State = dto.State.Trim().ToUpperInvariant();
+        entity.CityId = dto.CityId;
     }
 }

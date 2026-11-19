@@ -128,19 +128,28 @@
                         <label class="form-label small fw-semibold" for="profile-district">Bairro</label>
                         <input id="profile-district" class="form-control" maxlength="80" @bind="_form.District" />
                     </div>
-                    <div class="col-8 col-md-3">
-                        <label class="form-label small fw-semibold" for="profile-city">Cidade</label>
-                        <input id="profile-city" class="form-control" maxlength="80" autocomplete="address-level2" @bind="_form.City" />
-                    </div>
                     <div class="col-4 col-md-1">
                         <label class="form-label small fw-semibold" for="profile-state">UF</label>
-                        <select id="profile-state" class="form-select" @bind="_form.State">
+                        <select id="profile-state" class="form-select" @bind="_form.State" @bind:after="OnStateChangedAsync">
                             <option value="">—</option>
                             @foreach (var state in BrazilTimeZoneRules.States)
                             {
                                 <option value="@state.Code">@state.Code</option>
                             }
                         </select>
+                    </div>
+                    <div class="col-8 col-md-3">
+                        <label class="form-label small fw-semibold" for="profile-city">Cidade</label>
+                        <MultiSelectDropdown Id="profile-city"
+                                             Single="true"
+                                             Title="@(string.IsNullOrWhiteSpace(_form.State) ? "Escolha a UF primeiro" : "Escolha a cidade")"
+                                             Icon="bi-geo-alt"
+                                             Options="_cityOptions"
+                                             SelectedValues="SelectedCity"
+                                             SelectedValuesChanged="OnCityChanged"
+                                             Disabled="@(string.IsNullOrWhiteSpace(_form.State) || _isLoadingCities)"
+                                             DisabledHint="@(_isLoadingCities ? "Carregando cidades..." : "Escolha a UF primeiro")"
+                                             EmptyText="Nenhuma cidade encontrada para a UF." />
                     </div>
                 </div>
             </div>
@@ -179,6 +188,70 @@
 
     private bool IsCompany => UserProfileRules.IsCompany(_form.PersonType);
 
+    private IReadOnlyList<MultiSelectOption> _cityOptions = [];
+    private string? _citiesState;
+    private bool _isLoadingCities;
+
+    private IReadOnlyCollection<string> SelectedCity =>
+        _form.CityId is int cityId ? [cityId.ToString(System.Globalization.CultureInfo.InvariantCulture)] : [];
+
+    /// <summary>Troca de UF: recarrega as cidades e limpa a cidade se ela não for da nova UF.</summary>
+    private async Task OnStateChangedAsync()
+    {
+        await LoadCitiesAsync();
+        if (_form.CityId is int cityId && !_cityOptions.Any(option => option.Value == cityId.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+        {
+            _form.CityId = null;
+            _form.CityName = null;
+        }
+    }
+
+    private void OnCityChanged(IReadOnlyCollection<string> selected)
+    {
+        var value = selected.FirstOrDefault();
+        _form.CityId = int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var id) ? id : null;
+        _form.CityName = _cityOptions.FirstOrDefault(option => option.Value == value)?.Label;
+    }
+
+    private async Task LoadCitiesAsync()
+    {
+        var state = _form.State?.Trim();
+        if (string.IsNullOrWhiteSpace(state))
+        {
+            _cityOptions = [];
+            _citiesState = null;
+            return;
+        }
+
+        if (string.Equals(state, _citiesState, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _isLoadingCities = true;
+        try
+        {
+            var result = await AccountApi.GetCitiesAsync(state);
+            if (result.Success && result.Data is { Status: true, DataList: { } cities })
+            {
+                _cityOptions = cities
+                    .Select(city => new MultiSelectOption(city.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), city.Name))
+                    .ToList();
+                _citiesState = state;
+            }
+            else
+            {
+                _cityOptions = [];
+                _citiesState = null;
+                ToastService.ShowError(result.ErrorMessage ?? result.Data?.Descricao ?? "Não foi possível carregar as cidades.");
+            }
+        }
+        finally
+        {
+            _isLoadingCities = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -189,6 +262,7 @@
                 data.Document = UserProfileRules.FormatDocument(data.Document);
                 _form = data;
                 _missing = response.MissingFields;
+                await LoadCitiesAsync();
             }
             else
             {

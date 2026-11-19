@@ -5,6 +5,7 @@ using Ofertio.Business.Configuration;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Attribution;
+using Ofertio.Business.Service.Geo;
 using Ofertio.Database;
 using Ofertio.Database.Entity;
 
@@ -18,15 +19,18 @@ public sealed class LinkAnalyticsService : ILinkAnalyticsService
     private readonly AppDbContext _context;
     private readonly ShortLinkOptions _shortLinks;
     private readonly ILogger<LinkAnalyticsService> _logger;
+    private readonly ILocationCatalog? _locations;
 
     public LinkAnalyticsService(
         AppDbContext context,
         IOptions<ShortLinkOptions> shortLinks,
-        ILogger<LinkAnalyticsService> logger)
+        ILogger<LinkAnalyticsService> logger,
+        ILocationCatalog? locations = null)
     {
         _context = context;
         _shortLinks = shortLinks.Value;
         _logger = logger;
+        _locations = locations;
     }
 
     public async Task<(AnalyticsOverviewDto? Data, string? Error)> GetOverviewAsync(
@@ -167,11 +171,19 @@ public sealed class LinkAnalyticsService : ILinkAnalyticsService
                 item.log.Platform,
                 item.log.ShopId,
                 item.link.OriginalUrl,
+                item.log.CountryId,
+                item.log.StateId,
+                item.log.CityId,
                 item.log.Country,
                 item.log.Region,
                 item.log.City
             })
             .ToListAsync(cancellationToken);
+
+        // Nomes saem das tabelas de referência em memória; cliques antigos (antes dos IDs) usam o texto gravado.
+        var places = _locations is null || data.TrueForAll(row => row.CountryId is null)
+            ? LocationSnapshot.Empty
+            : await _locations.GetSnapshotAsync(cancellationToken);
 
         if (data.Count >= MaxRows)
         {
@@ -182,24 +194,31 @@ public sealed class LinkAnalyticsService : ILinkAnalyticsService
         }
 
         return data
-            .Select(row => new AnalyticsClickRow(
-                DateTime.SpecifyKind(row.ClickedAt, DateTimeKind.Utc),
-                row.IsBot,
-                row.Channel,
-                row.GroupKey,
-                GroupKeyRules.IsKey(row.SourceGroup) ? null : row.SourceGroup,
-                row.DeviceType,
-                row.IpAddress,
-                row.UserAgent,
-                row.LinkGroupId,
-                row.ProductName,
-                row.ProductImageUrl,
-                row.Platform,
-                row.ShopId,
-                row.OriginalUrl,
-                row.Country,
-                row.Region,
-                row.City))
+            .Select(row =>
+            {
+                var country = row.CountryId is int countryId ? places.CountriesById.GetValueOrDefault(countryId) : null;
+                var state = row.StateId is int stateId ? places.StatesById.GetValueOrDefault(stateId) : null;
+                var city = row.CityId is int cityId ? places.CitiesById.GetValueOrDefault(cityId) : null;
+                return new AnalyticsClickRow(
+                    DateTime.SpecifyKind(row.ClickedAt, DateTimeKind.Utc),
+                    row.IsBot,
+                    row.Channel,
+                    row.GroupKey,
+                    GroupKeyRules.IsKey(row.SourceGroup) ? null : row.SourceGroup,
+                    row.DeviceType,
+                    row.IpAddress,
+                    row.UserAgent,
+                    row.LinkGroupId,
+                    row.ProductName,
+                    row.ProductImageUrl,
+                    row.Platform,
+                    row.ShopId,
+                    row.OriginalUrl,
+                    country?.IsoCode.Trim() ?? row.Country,
+                    state?.Name ?? row.Region,
+                    city?.Name ?? row.City,
+                    country?.Name);
+            })
             .ToList();
     }
 

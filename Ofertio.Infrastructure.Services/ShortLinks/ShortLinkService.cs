@@ -570,13 +570,16 @@ public sealed class LinkClickTelemetryService : BackgroundService, ILinkClickTel
                 work.SourceGroup,
                 work.SubId);
 
-            // Região estimada (país, estado, cidade) a partir do IP; o IP completo nunca é gravado.
+            // Região estimada (país, estado, cidade) a partir do IP, gravada como IDs das tabelas de referência;
+            // o IP completo nunca é gravado. O casamento com as tabelas é feito em memória, sem consulta por clique.
             var geo = scope.ServiceProvider.GetService<IGeoLocationService>()?.Lookup(work.IpAddress);
-            if (geo is not null)
+            var locations = scope.ServiceProvider.GetService<ILocationCatalog>();
+            if (geo is not null && locations is not null)
             {
-                log.Country = geo.Country;
-                log.Region = geo.Region;
-                log.City = geo.City;
+                var place = await locations.ResolveAsync(geo, cancellationToken);
+                log.CountryId = place.CountryId;
+                log.StateId = place.StateId;
+                log.CityId = place.CityId;
             }
 
             await repository.AddAsync(log, cancellationToken);

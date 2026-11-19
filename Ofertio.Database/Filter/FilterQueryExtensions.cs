@@ -149,8 +149,8 @@ public static class FilterQueryExtensions
         if (HasText(filter.DocumentNumber)) source = source.Where(x => x.DocumentNumber != null && x.DocumentNumber.Contains(filter.DocumentNumber!));
         if (HasText(filter.Email)) source = source.Where(x => x.Email != null && x.Email.Contains(filter.Email!, StringComparison.OrdinalIgnoreCase));
         if (HasText(filter.Phone)) source = source.Where(x => x.Phone != null && x.Phone.Contains(filter.Phone!));
-        if (HasText(filter.City)) source = source.Where(x => x.City.Contains(filter.City!, StringComparison.OrdinalIgnoreCase));
-        if (HasText(filter.State)) source = source.Where(x => x.State.Equals(filter.State, StringComparison.OrdinalIgnoreCase));
+        if (filter.CityId.HasValue) source = source.Where(x => x.CityId == filter.CityId.Value);
+        if (filter.StateId.HasValue) source = source.Where(x => x.City?.StateId == filter.StateId.Value);
         return source;
     }
 

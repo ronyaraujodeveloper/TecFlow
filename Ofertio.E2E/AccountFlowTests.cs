@@ -120,6 +120,14 @@ public class AccountFlowTests
 
         await page.Locator("#profile-state").SelectOptionAsync("SP");
         await Assertions.Expect(page.Locator("#profile-state")).ToHaveValueAsync("SP");
+
+        // Cidade: combo de seleção única com as cidades da UF, busca sem acento a partir de 3 letras.
+        await Assertions.Expect(page.Locator("#profile-city")).ToBeEnabledAsync();
+        await page.Locator("#profile-city").ClickAsync();
+        await page.Locator(".multiselect--single .multiselect-menu input[type='search']").FillAsync("campinas");
+        await page.GetByRole(AriaRole.Option, new PageGetByRoleOptions { Name = "Campinas", Exact = true }).ClickAsync();
+        await Assertions.Expect(page.Locator("#profile-city")).ToContainTextAsync("Campinas");
+
         await page.Locator("#profile-state").SelectOptionAsync(state);
 
         await page.Locator("label[for='person-pj']").ClickAsync();

@@ -191,6 +191,40 @@ namespace Ofertio.Data.Migrations
                     b.ToTable("Campanhas");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IbgeCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("StateId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IbgeCode")
+                        .IsUnique();
+
+                    b.HasIndex("StateId", "NormalizedName");
+
+                    b.ToTable("Cities");
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.Content", b =>
                 {
                     b.Property<int>("Id")
@@ -285,6 +319,34 @@ namespace Ofertio.Data.Migrations
                     b.ToTable("Conversaos");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.Country", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("IsoCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("char(2)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsoCode")
+                        .IsUnique();
+
+                    b.ToTable("Countries");
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.CreditTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -331,10 +393,8 @@ namespace Ofertio.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                    b.Property<int?>("CityId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -355,11 +415,6 @@ namespace Ofertio.Data.Migrations
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("nvarchar(2)");
 
                     b.Property<string>("Street")
                         .IsRequired()
@@ -383,6 +438,8 @@ namespace Ofertio.Data.Migrations
                         .HasColumnType("nvarchar(9)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
 
                     b.HasIndex("TenantId", "DocumentNumber");
 
@@ -1264,6 +1321,10 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("ComponentType")
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1286,6 +1347,11 @@ namespace Ofertio.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(2);
 
                     b.Property<int>("OrderIndex")
                         .HasColumnType("int");
@@ -2122,9 +2188,15 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(96)
                         .HasColumnType("nvarchar(96)");
 
+                    b.Property<int?>("CityId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Country")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("CountryId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -2152,6 +2224,9 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<int?>("StateId")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2166,6 +2241,12 @@ namespace Ofertio.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
+
+                    b.HasIndex("CountryId");
+
+                    b.HasIndex("StateId");
 
                     b.HasIndex("TenantId", "Kind", "CreatedAt");
 
@@ -2641,6 +2722,43 @@ namespace Ofertio.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("ShortAffiliateLinkAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.State", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("char(2)")
+                        .IsFixedLength();
+
+                    b.Property<int>("CountryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IbgeCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IbgeCode")
+                        .IsUnique();
+
+                    b.HasIndex("CountryId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("States");
                 });
 
             modelBuilder.Entity("Ofertio.Core.Entities.SystemBanner", b =>
@@ -3371,9 +3489,8 @@ namespace Ofertio.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("City")
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
+                    b.Property<int?>("CityId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Complement")
                         .HasMaxLength(80)
@@ -3415,10 +3532,6 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
 
-                    b.Property<string>("State")
-                        .HasMaxLength(2)
-                        .HasColumnType("nvarchar(2)");
-
                     b.Property<string>("Street")
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
@@ -3430,6 +3543,8 @@ namespace Ofertio.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -3747,6 +3862,9 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(96)
                         .HasColumnType("nvarchar(96)");
 
+                    b.Property<int?>("CityId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("ClickedAt")
                         .HasColumnType("datetime2");
 
@@ -3758,6 +3876,9 @@ namespace Ofertio.Data.Migrations
                     b.Property<string>("Country")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("CountryId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -3815,6 +3936,9 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
 
+                    b.Property<int?>("StateId")
+                        .HasColumnType("int");
+
                     b.Property<string>("SubId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -3831,9 +3955,15 @@ namespace Ofertio.Data.Migrations
 
                     b.HasIndex("AffiliateLinkId");
 
+                    b.HasIndex("CityId");
+
                     b.HasIndex("ClickedAt");
 
+                    b.HasIndex("CountryId");
+
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("StateId");
 
                     b.HasIndex("TenantId");
 
@@ -3938,6 +4068,17 @@ namespace Ofertio.Data.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.City", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.State", "State")
+                        .WithMany()
+                        .HasForeignKey("StateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("State");
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.Content", b =>
                 {
                     b.HasOne("Ofertio.Core.Entities.UserAccount", "Owner")
@@ -3958,6 +4099,16 @@ namespace Ofertio.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.Customer", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("City");
                 });
 
             modelBuilder.Entity("Ofertio.Core.Entities.GlobalAdvertisingProduct", b =>
@@ -4106,6 +4257,24 @@ namespace Ofertio.Data.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.PublicPageEvent", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Ofertio.Core.Entities.Country", null)
+                        .WithMany()
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Ofertio.Core.Entities.State", null)
+                        .WithMany()
+                        .HasForeignKey("StateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.SalesOrder", b =>
                 {
                     b.HasOne("Ofertio.Core.Entities.Customer", "Customer")
@@ -4155,6 +4324,17 @@ namespace Ofertio.Data.Migrations
                     b.Navigation("AffiliateLink");
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.State", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.Country", "Country")
+                        .WithMany()
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Country");
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.UserAccount", b =>
                 {
                     b.HasOne("Ofertio.Core.Entities.Tenant", "Tenant")
@@ -4175,6 +4355,16 @@ namespace Ofertio.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.UserProfile", b =>
+                {
+                    b.HasOne("Ofertio.Core.Entities.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("City");
                 });
 
             modelBuilder.Entity("Ofertio.Core.Entities.UserTermsAcceptance", b =>
@@ -4215,6 +4405,21 @@ namespace Ofertio.Data.Migrations
                         .HasPrincipalKey("AffiliateLinkId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Ofertio.Core.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Ofertio.Core.Entities.Country", null)
+                        .WithMany()
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Ofertio.Core.Entities.State", null)
+                        .WithMany()
+                        .HasForeignKey("StateId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("AffiliateLink");
                 });

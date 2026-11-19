@@ -21,7 +21,7 @@ public class UserProfileRulesTests
         Street = "Avenida Paulista",
         Number = "1000",
         District = "Bela Vista",
-        City = "São Paulo",
+        CityId = 3550308,
         State = "sp"
     };
 
@@ -79,7 +79,7 @@ public class UserProfileRulesTests
         var missing = UserProfileRules.MissingFields(new UserProfileDto { PersonType = PersonTypes.Company });
 
         Assert.Equal(
-            ["Razão social", "CNPJ", "Nome do responsável", "Celular", "CEP", "Rua", "Número", "Bairro", "Cidade", "UF"],
+            ["Razão social", "CNPJ", "Nome do responsável", "Celular", "CEP", "Rua", "Número", "Bairro", "UF", "Cidade"],
             missing);
     }
 

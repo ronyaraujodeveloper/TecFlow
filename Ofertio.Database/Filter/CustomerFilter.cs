@@ -13,6 +13,6 @@ public class CustomerFilter : IPagedFilter
     public string? DocumentNumber { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
-    public string? City { get; set; }
-    public string? State { get; set; }
+    public int? CityId { get; set; }
+    public int? StateId { get; set; }
 }

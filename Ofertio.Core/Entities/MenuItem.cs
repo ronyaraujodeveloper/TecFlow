@@ -1,4 +1,6 @@
-﻿namespace Ofertio.Core.Entities;
+﻿using Ofertio.Core.Enums;
+
+namespace Ofertio.Core.Entities;
 
 /// <summary>Item da árvore de navegação do cliente. Pastas (IsFolder) agrupam itens e não têm rota.</summary>
 public class MenuItem : BaseEntity
@@ -16,6 +18,12 @@ public class MenuItem : BaseEntity
     public string? Badge { get; set; }
 
     public bool IsFolder { get; set; }
+
+    /// <summary>Nível na hierarquia Grupo → Tela → Componente (mantido junto de <see cref="IsFolder"/>).</summary>
+    public MenuItemKind Kind { get; set; } = MenuItemKind.Page;
+
+    /// <summary>Tipo do componente (chart, input, button, section, card, feature); só para <see cref="MenuItemKind.Component"/>.</summary>
+    public string? ComponentType { get; set; }
 
     public int? ParentId { get; set; }
 

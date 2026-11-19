@@ -1,0 +1,17 @@
+﻿@page "/sem-acesso"
+@attribute [Authorize]
+
+<PageTitle>Sem acesso — Ofertio</PageTitle>
+
+<section class="card border-0 shadow-sm text-center p-4 p-md-5 mt-3 mx-auto access-denied-card">
+    <i class="bi bi-lock fs-1 text-muted mb-2" aria-hidden="true"></i>
+    <h1 class="h4 fw-semibold mb-2">Esta tela não faz parte da sua assinatura</h1>
+    <p class="text-muted mb-4">
+        O recurso que você tentou abrir não está liberado no seu plano atual.
+        Veja os planos disponíveis ou volte para o Painel.
+    </p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+        <a href="/meu-plano" class="btn btn-primary">Ver meu plano</a>
+        <a href="/dashboard" class="btn btn-outline-secondary">Voltar ao Painel</a>
+    </div>
+</section>

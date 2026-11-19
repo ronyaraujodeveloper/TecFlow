@@ -281,6 +281,17 @@ public class ClientMenuNodeDto
     public List<ClientMenuNodeDto> Children { get; set; } = [];
 }
 
+/// <summary>Acesso efetivo do usuário: o que está negado por plano, inatividade ou chave de permissão desligada.</summary>
+public class ClientAccessDto
+{
+    /// <summary>Master fora da visão de cliente: nada é negado.</summary>
+    public bool Unrestricted { get; set; }
+    public List<string> DeniedKeys { get; set; } = [];
+    public List<string> DeniedRoutes { get; set; } = [];
+    /// <summary>Rotas liberadas; usadas para escolher a rota mais específica na guarda de rota.</summary>
+    public List<string> AllowedRoutes { get; set; } = [];
+}
+
 public class MenuPermissionMatrixDto
 {
     public List<MenuPlanColumnDto> Plans { get; set; } = [];
@@ -305,6 +316,13 @@ public class MenuPermissionRowDto
     public int? ParentId { get; set; }
     public int Depth { get; set; }
     public bool IsGroup { get; set; }
+    /// <summary>Nível na hierarquia Grupo → Tela → Componente.</summary>
+    public Ofertio.Core.Enums.MenuItemKind Kind { get; set; }
+    public bool IsComponent => Kind == Ofertio.Core.Enums.MenuItemKind.Component;
+    /// <summary>Tipo do componente (chart, input, button...); null fora de componentes.</summary>
+    public string? ComponentType { get; set; }
+    /// <summary>Quantidade de filhos diretos (telas de um grupo ou componentes de uma tela).</summary>
+    public int ChildCount { get; set; }
     /// <summary>Pasta criada no Master (pode ser excluída quando vazia).</summary>
     public bool IsCustomFolder { get; set; }
     public bool IsActive { get; set; }

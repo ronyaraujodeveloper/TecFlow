@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Ofertio.API.Security;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Master;
 using Ofertio.Infrastructure.Interfaces;
 
 namespace Ofertio.API.Controllers;
@@ -40,6 +41,7 @@ public sealed class OfferRadarController : ControllerBase
     }
 
     [HttpGet("perfil")]
+    [RequiresAccess(DefaultMenuCatalog.RadarProfile)]
     public async Task<ActionResult<AffiliateMiningProfileResponseDto>> GetProfileAsync(
         CancellationToken cancellationToken)
     {
@@ -55,6 +57,7 @@ public sealed class OfferRadarController : ControllerBase
     }
 
     [HttpPut("perfil")]
+    [RequiresAccess(DefaultMenuCatalog.RadarProfile)]
     public async Task<ActionResult<AffiliateMiningProfileResponseDto>> SaveProfileAsync(
         [FromBody] AffiliateMiningProfileDto request,
         CancellationToken cancellationToken)
@@ -113,6 +116,7 @@ public sealed class OfferRadarController : ControllerBase
     }
 
     [HttpGet("ofertas")]
+    [RequiresAccess(DefaultMenuCatalog.RadarOffers)]
     public async Task<ActionResult<OfferRadarResponseDto>> ListAsync(
         [FromQuery] int skip = 0,
         [FromQuery] int take = 30,
@@ -130,6 +134,7 @@ public sealed class OfferRadarController : ControllerBase
     }
 
     [HttpPost("ofertas/{id:int}/agendar")]
+    [RequiresAccess(DefaultMenuCatalog.RadarOffers)]
     public async Task<ActionResult<OfferRadarResponseDto>> ScheduleAsync(
         int id,
         [FromQuery] string? channel,
@@ -139,6 +144,7 @@ public sealed class OfferRadarController : ControllerBase
     }
 
     [HttpPost("ofertas/{id:int}/piloto")]
+    [RequiresAccess(DefaultMenuCatalog.RadarOffers)]
     public async Task<ActionResult<OfferRadarResponseDto>> AutoPilotAsync(
         int id,
         CancellationToken cancellationToken)

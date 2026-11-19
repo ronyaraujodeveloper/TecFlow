@@ -27,7 +27,7 @@ public class SalesOrderRepository : ISalesOrderRepository
             query = query
                 .Include(o => o.Items)
                 .ThenInclude(i => i.Product)
-                .Include(o => o.Customer);
+                .Include(o => o.Customer).ThenInclude(c => c!.City).ThenInclude(city => city!.State);
         }
 
         return await query.FirstOrDefaultAsync(o => o.Id == id);

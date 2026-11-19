@@ -41,6 +41,14 @@ public class PublicPageEvent : BaseEntity, ITenantScopedEntity
     [MaxLength(32)]
     public string? DeviceType { get; set; }
 
+    /// <summary>Região estimada pelo IP. Fora do Brasil, só o país.</summary>
+    public int? CountryId { get; set; }
+
+    public int? StateId { get; set; }
+
+    public int? CityId { get; set; }
+
+    /// <summary>Histórico: região em texto dos eventos gravados antes das tabelas de país, estado e cidade. Eventos novos usam só os IDs.</summary>
     [MaxLength(64)]
     public string? Country { get; set; }
 

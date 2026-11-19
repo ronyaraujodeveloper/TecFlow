@@ -24,7 +24,7 @@ public sealed class UserProfileService : IUserProfileService
             return Fail("Usuário não encontrado.");
         }
 
-        var profile = await _context.UserProfiles.AsNoTracking()
+        var profile = await ProfilesWithCity().AsNoTracking()
             .FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
         var dto = ToDto(user, profile);
         return new UserProfileResponseDto
@@ -45,7 +45,7 @@ public sealed class UserProfileService : IUserProfileService
             return null;
         }
 
-        var profile = await _context.UserProfiles.AsNoTracking()
+        var profile = await ProfilesWithCity().AsNoTracking()
             .FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
         return ToDto(user, profile);
     }
@@ -61,12 +61,27 @@ public sealed class UserProfileService : IUserProfileService
 
         var normalized = UserProfileRules.Normalize(request);
         var errors = UserProfileRules.Validate(normalized);
+        City? city = null;
+        if (normalized.CityId is int cityId)
+        {
+            city = await _context.Cities.Include(item => item.State)
+                .FirstOrDefaultAsync(item => item.Id == cityId, cancellationToken);
+            if (city is null)
+            {
+                errors.Add("Cidade inválida. Escolha uma cidade da lista.");
+            }
+            else if (normalized.State is not null && !string.Equals(city.State?.Code.Trim(), normalized.State, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add("A cidade escolhida não é da UF selecionada.");
+            }
+        }
+
         if (errors.Count > 0)
         {
             return Fail(string.Join(" ", errors));
         }
 
-        var profile = await _context.UserProfiles.FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
+        var profile = await ProfilesWithCity().FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
         if (profile is null)
         {
             profile = new UserProfile { UserId = userId };
@@ -83,8 +98,8 @@ public sealed class UserProfileService : IUserProfileService
         profile.Number = normalized.Number;
         profile.Complement = normalized.Complement;
         profile.District = normalized.District;
-        profile.City = normalized.City;
-        profile.State = normalized.State;
+        profile.CityId = city?.Id;
+        profile.City = city;
         profile.Touch();
 
         user.Name = normalized.DisplayName!;
@@ -92,6 +107,7 @@ public sealed class UserProfileService : IUserProfileService
         await _context.SaveChangesAsync(cancellationToken);
 
         var dto = ToDto(user, profile);
+        dto.State ??= normalized.State; // UF escolhida sem cidade continua na tela
         var missing = UserProfileRules.MissingFields(dto);
         return new UserProfileResponseDto
         {
@@ -103,6 +119,9 @@ public sealed class UserProfileService : IUserProfileService
             MissingFields = missing
         };
     }
+
+    private IQueryable<UserProfile> ProfilesWithCity() =>
+        _context.UserProfiles.Include(item => item.City).ThenInclude(city => city!.State);
 
     private Task<UserAccount?> FindUserAsync(int userId, CancellationToken cancellationToken) =>
         _context.UserAccounts.IgnoreQueryFilters().AsNoTracking()
@@ -123,8 +142,9 @@ public sealed class UserProfileService : IUserProfileService
             Number = profile?.Number,
             Complement = profile?.Complement,
             District = profile?.District,
-            City = profile?.City,
-            State = profile?.State
+            CityId = profile?.CityId,
+            CityName = profile?.City?.Name,
+            State = profile?.City?.State?.Code.Trim()
         };
 
     private static UserProfileResponseDto Fail(string message) => new() { Status = false, Descricao = message };

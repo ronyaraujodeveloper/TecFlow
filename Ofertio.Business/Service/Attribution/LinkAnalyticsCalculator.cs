@@ -20,7 +20,8 @@ public sealed record AnalyticsClickRow(
     string? OriginalUrl,
     string? Country = null,
     string? Region = null,
-    string? City = null);
+    string? City = null,
+    string? CountryName = null);
 
 /// <summary>Evento da página pública (visita, conversão ou entrada em grupo), como o serviço o lê do banco.</summary>
 public sealed record PublicEventRow(
@@ -62,7 +63,7 @@ public static class LinkAnalyticsCalculator
             Funnel = BuildFunnel(publicEvents ?? [], from, to),
             States = BuildRegions(humans, state: true),
             Cities = BuildRegions(humans, state: false),
-            HasRegionData = humans.Exists(row => !string.IsNullOrWhiteSpace(row.Region) || !string.IsNullOrWhiteSpace(row.City)),
+            HasRegionData = humans.Exists(row => !string.IsNullOrWhiteSpace(row.Region) || !string.IsNullOrWhiteSpace(row.City) || IsAbroad(row)),
             From = from,
             To = to,
             Grain = AnalyticsPeriodRules.GrainName(grain),
@@ -158,16 +159,23 @@ public static class LinkAnalyticsCalculator
         };
     }
 
-    /// <summary>Cliques por estado ou por cidade, pela região estimada do IP. Só totais; sem a base de localização a lista fica vazia.</summary>
+    /// <summary>
+    /// Cliques por estado ou por cidade, pela região estimada do IP. Só totais; sem a base de localização a lista fica vazia.
+    /// Fora do Brasil só o país é gravado: esses cliques aparecem na lista de estados como "Exterior · país".
+    /// </summary>
     private static List<AnalyticsBreakdownDto> BuildRegions(List<AnalyticsClickRow> humans, bool state)
     {
         var located = humans
-            .Where(row => state ? !string.IsNullOrWhiteSpace(row.Region) : !string.IsNullOrWhiteSpace(row.City))
+            .Where(row => state
+                ? !string.IsNullOrWhiteSpace(row.Region) || IsAbroad(row)
+                : !string.IsNullOrWhiteSpace(row.City))
             .ToList();
         var total = located.Count;
         return located
             .GroupBy(row => state
-                ? Join(row.Region, row.Country)
+                ? string.IsNullOrWhiteSpace(row.Region)
+                    ? $"Exterior · {(string.IsNullOrWhiteSpace(row.CountryName) ? row.Country!.Trim() : row.CountryName.Trim())}"
+                    : Join(row.Region, row.Country)
                 : Join(row.City, row.Region ?? row.Country))
             .Select(group => new AnalyticsBreakdownDto
             {
@@ -184,6 +192,12 @@ public static class LinkAnalyticsCalculator
         static string Join(string? name, string? parent) =>
             string.IsNullOrWhiteSpace(parent) ? name!.Trim() : $"{name!.Trim()} · {parent.Trim()}";
     }
+
+    /// <summary>Clique de fora do Brasil sem estado (só o país é gravado para o exterior).</summary>
+    private static bool IsAbroad(AnalyticsClickRow row) =>
+        string.IsNullOrWhiteSpace(row.Region)
+        && !string.IsNullOrWhiteSpace(row.Country)
+        && !string.Equals(row.Country.Trim(), "BR", StringComparison.OrdinalIgnoreCase);
 
     private static (List<AnalyticsClickRow> Current, List<AnalyticsClickRow> Previous) Split(
         IReadOnlyList<AnalyticsClickRow> rows,

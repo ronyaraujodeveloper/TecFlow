@@ -32,11 +32,10 @@ public class Customer : BaseEntity, ITenantScopedEntity
     [MaxLength(9)]
     public string ZipCode { get; set; } = string.Empty;
 
-    [MaxLength(128)]
-    public string City { get; set; } = string.Empty;
+    /// <summary>Cidade da tabela de referência; a UF sai dela (City.State).</summary>
+    public int? CityId { get; set; }
 
-    [MaxLength(2)]
-    public string State { get; set; } = string.Empty;
+    public City? City { get; set; }
 
     public ICollection<SalesOrder> Orders { get; set; } = new List<SalesOrder>();
 }

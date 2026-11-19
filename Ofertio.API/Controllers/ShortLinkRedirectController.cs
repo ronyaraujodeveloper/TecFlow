@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Business.Service.Attribution;
 using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.Radar;
 
@@ -40,12 +41,24 @@ public class ShortLinkRedirectController : ControllerBase
     public Task<IActionResult> RedirectAsync(string storeSlug, string code, CancellationToken cancellationToken) =>
         RedirectByCodeAsync(storeSlug, code, cancellationToken);
 
+    /// <summary>
+    /// Link com a origem do envio no caminho: /w/ WhatsApp, /t/ Telegram, /e/ E-mail, /p/ Página pública, /i/ Instagram, /o/ Outro.
+    /// As letras precisam coincidir com <c>LinkChannelRules.All</c> (há teste que confere).
+    /// </summary>
+    [HttpGet(ChannelRedirectTemplate)]
+    public Task<IActionResult> RedirectWithChannelAsync(string channel, string storeSlug, string code, CancellationToken cancellationToken) =>
+        RedirectByCodeAsync(storeSlug, code, cancellationToken, channel);
+
     public const string StoreRedirectTemplate = "/{storeSlug:regex(^[[A-Za-z0-9]]{{1,80}}$)}/{code:length(6,8)}";
+
+    public const string ChannelRedirectTemplate =
+        "/{channel:regex(^[[wtepio]]$)}/{storeSlug:regex(^[[A-Za-z0-9]]{{1,80}}$)}/{code:length(6,8)}";
 
     private async Task<IActionResult> RedirectByCodeAsync(
         string? storeSlug,
         string code,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? channelCode = null)
     {
         _logger.LogInformation(
             "Short link recebido: slug={StoreSlug} code={ShortCode}",
@@ -79,20 +92,31 @@ public class ShortLinkRedirectController : ControllerBase
             normalizedCode,
             Uri.TryCreate(link.DestinationUrl, UriKind.Absolute, out var destination) ? destination.Host : "(url inválida)");
 
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-        var userAgent = Request.Headers.UserAgent.ToString();
+        // IP do visitante (encaminhado pela WebUi), não o do servidor: vale para os únicos e para a região estimada.
+        var visitor = ClientRequestInfo.Read(HttpContext);
+        var ipAddress = visitor.IpAddress;
+        var userAgent = visitor.UserAgent;
         var referrer = Request.Headers.Referer.ToString();
         var pairs = Request.Query.Select(item =>
             new KeyValuePair<string, string>(item.Key, item.Value.ToString()));
         var tracking = OfferAttributionRules.ReadTracking(OfferAttributionRules.HttpRequestQuery.FromPairs(pairs));
+
+        // Canal explícito: letra do caminho; senão a marcação antiga (tf_src). Grupo: chave curta (?g=) ou o valor antigo.
+        var explicitChannel = LinkChannelRules.TryFromCode(channelCode, out var fromPath)
+            ? fromPath.Name
+            : LinkChannelRules.FromName(tracking.SourceChannel)?.Name ?? tracking.SourceChannel;
+        var groupKey = Request.Query.TryGetValue(GroupKeyRules.QueryKey, out var groupValue)
+            && GroupKeyRules.IsKey(groupValue.ToString())
+                ? groupValue.ToString()
+                : null;
 
         _telemetryService.EnqueueClickLog(
             link.AffiliateLinkId,
             ipAddress,
             userAgent,
             referrer,
-            tracking.SourceChannel,
-            tracking.SourceGroup,
+            explicitChannel,
+            groupKey ?? tracking.SourceGroup,
             tracking.SubId);
 
         return Redirect(link.DestinationUrl);

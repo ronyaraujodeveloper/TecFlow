@@ -38,4 +38,13 @@ public interface ITelegramApiService
         string botToken,
         IEnumerable<string>? seedChatIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Link de convite do grupo ou canal (público: t.me/usuario; privado: o convite principal ou um novo link adicional,
+    /// sem revogar o que já circula) e a contagem de membros. Também confirma que o bot ainda enxerga o chat.
+    /// </summary>
+    Task<GroupInviteResult> GetChatInviteAsync(
+        string botToken,
+        string chatId,
+        CancellationToken cancellationToken = default);
 }

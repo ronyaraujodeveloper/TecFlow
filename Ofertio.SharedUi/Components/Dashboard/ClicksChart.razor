@@ -1,0 +1,59 @@
+﻿@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Attribution
+
+@if (Series.Count == 0 || Series.All(point => point.Total == 0))
+{
+    <p class="text-muted small mb-0">Nenhum clique no período escolhido.</p>
+}
+else
+{
+    var max = Series.Max(point => point.Total);
+    <div class="clicks-chart" role="img" aria-label="@AriaLabel">
+        <div class="clicks-chart-plot" style="--cols:@Series.Count">
+            @for (var index = 0; index < Series.Count; index++)
+            {
+                var point = Series[index];
+                var height = point.Total * 100.0 / max;
+                <div class="clicks-chart-col" title="@Tooltip(point)">
+                    <div class="clicks-chart-stack" style="height:@height.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%">
+                        @foreach (var channel in ChannelOrder)
+                        {
+                            if (point.ByChannel.TryGetValue(channel, out var count) && count > 0)
+                            {
+                                <span class="clicks-seg @ChannelStyle.Css(channel)" style="flex:@count"></span>
+                            }
+                        }
+                    </div>
+                    <span class="clicks-chart-label">@(ShowLabel(index) ? point.Label : string.Empty)</span>
+                </div>
+            }
+        </div>
+        <ul class="clicks-legend">
+            @foreach (var channel in ChannelOrder)
+            {
+                <li><span class="clicks-dot @ChannelStyle.Css(channel)" aria-hidden="true"></span>@LinkChannelRules.LabelFor(channel)</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<AnalyticsPointDto> Series { get; set; } = [];
+    [Parameter] public List<string> ChannelOrder { get; set; } = [];
+
+    private string AriaLabel => $"Gráfico de cliques por período. Total de {Series.Sum(point => point.Total)} cliques em {Series.Count} períodos.";
+
+    private bool ShowLabel(int index)
+    {
+        var step = Math.Max(1, (int)Math.Ceiling(Series.Count / 10.0));
+        return index % step == 0;
+    }
+
+    private static string Tooltip(AnalyticsPointDto point)
+    {
+        var channels = string.Join(", ", point.ByChannel
+            .OrderByDescending(item => item.Value)
+            .Select(item => $"{LinkChannelRules.LabelFor(item.Key)} {item.Value}"));
+        return $"{point.Label}: {point.Total} clique(s)" + (channels.Length > 0 ? $" ({channels})" : string.Empty);
+    }
+}

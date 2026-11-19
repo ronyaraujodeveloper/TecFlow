@@ -94,6 +94,7 @@ builder.Services.AddHostedService<Ofertio.API.Workers.WhatsAppBroadcastWorker>()
 builder.Services.AddHostedService<Ofertio.API.Workers.TelegramBroadcastWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.TelegramUserMonitorWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.OfferMiningWorker>();
+builder.Services.AddHostedService<Ofertio.API.Workers.JoinLinkHealthWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.OfferIntelligenceWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.PreFlightWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.GlobalTrendingDealsWorker>();

@@ -1,0 +1,38 @@
+﻿@using Ofertio.Business.Dto
+
+@if (Items.Count == 0)
+{
+    <p class="text-muted small mb-0">@EmptyText</p>
+}
+else
+{
+    var max = Math.Max(1, Items.Max(item => item.Clicks));
+    <ul class="breakdown-list">
+        @foreach (var item in Items)
+        {
+            <li>
+                <div class="breakdown-head">
+                    <span class="breakdown-label">
+                        @if (UseChannelColors)
+                        {
+                            <span class="clicks-dot @ChannelStyle.Css(item.Key)" aria-hidden="true"></span>
+                        }
+                        @item.Label
+                    </span>
+                    <span class="breakdown-value">@item.Clicks.ToString("N0", Pt) <span class="text-muted">(@item.Percent.ToString("0.#", Pt)%)</span></span>
+                </div>
+                <div class="breakdown-track" aria-hidden="true">
+                    <div class="breakdown-fill @(UseChannelColors ? ChannelStyle.Css(item.Key) : null)" style="width:@((item.Clicks * 100.0 / max).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private static readonly System.Globalization.CultureInfo Pt = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter, EditorRequired] public List<AnalyticsBreakdownDto> Items { get; set; } = [];
+    [Parameter] public bool UseChannelColors { get; set; }
+    [Parameter] public string EmptyText { get; set; } = "Sem dados no período.";
+}

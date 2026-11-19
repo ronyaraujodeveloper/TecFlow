@@ -21,4 +21,11 @@ public interface IPublicConverterPageService
         string slug,
         string originalUrl,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Conta uma visita ou uma conversão da página (só contagem, sem identificar o visitante).</summary>
+    Task RecordEventAsync(
+        string slug,
+        string kind,
+        PublicVisitorInfo visitor,
+        CancellationToken cancellationToken = default);
 }

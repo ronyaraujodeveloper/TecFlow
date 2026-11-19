@@ -56,6 +56,9 @@ public class AppDbContext : DbContext
     public DbSet<ShortAffiliateLinkAccount> ShortAffiliateLinkAccounts { get; set; } = null!;
     public DbSet<LinkClickLog> LinkClickLogs { get; set; } = null!;
     public DbSet<PublicConverterPage> PublicConverterPages { get; set; } = null!;
+    public DbSet<PublicPageProfile> PublicPageProfiles { get; set; } = null!;
+    public DbSet<PublicPageJoinLink> PublicPageJoinLinks { get; set; } = null!;
+    public DbSet<PublicPageEvent> PublicPageEvents { get; set; } = null!;
     public DbSet<WhatsAppIntegration> WhatsAppIntegrations { get; set; } = null!;
     public DbSet<WhatsAppGroup> WhatsAppGroups { get; set; } = null!;
     public DbSet<WhatsAppBroadcastCampaign> WhatsAppBroadcastCampaigns { get; set; } = null!;
@@ -397,6 +400,38 @@ public class AppDbContext : DbContext
             entity.HasIndex(page => new { page.UserId, page.IsActive });
         });
 
+        modelBuilder.Entity<PublicPageProfile>(entity =>
+        {
+            entity.Property(profile => profile.AvatarUrl).HasMaxLength(300);
+            entity.HasIndex(profile => profile.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<PublicPageJoinLink>(entity =>
+        {
+            entity.Property(link => link.Channel).HasMaxLength(16).IsRequired();
+            entity.Property(link => link.Label).HasMaxLength(80).IsRequired();
+            entity.Property(link => link.InviteUrl).HasMaxLength(512).IsRequired();
+            entity.Property(link => link.SourceGroupId).HasMaxLength(160);
+            entity.Property(link => link.Status).HasMaxLength(16).IsRequired();
+            entity.Property(link => link.StatusReason).HasMaxLength(200);
+            entity.HasIndex(link => new { link.UserId, link.Status });
+            entity.HasIndex(link => new { link.Status, link.LastCheckedAt });
+        });
+
+        modelBuilder.Entity<PublicPageEvent>(entity =>
+        {
+            entity.Property(item => item.Kind).HasMaxLength(12).IsRequired();
+            entity.Property(item => item.Channel).HasMaxLength(16);
+            entity.Property(item => item.IpMasked).HasMaxLength(64);
+            entity.Property(item => item.UserAgent).HasMaxLength(512);
+            entity.Property(item => item.DeviceType).HasMaxLength(32);
+            entity.Property(item => item.Country).HasMaxLength(64);
+            entity.Property(item => item.Region).HasMaxLength(64);
+            entity.Property(item => item.City).HasMaxLength(96);
+            entity.HasIndex(item => new { item.TenantId, item.UserId, item.CreatedAt });
+            entity.HasIndex(item => new { item.TenantId, item.Kind, item.CreatedAt });
+        });
+
         modelBuilder.Entity<WhatsAppIntegration>(entity =>
         {
             entity.ToTable("WhatsAppIntegrations");
@@ -659,6 +694,14 @@ public class AppDbContext : DbContext
             entity.Property(log => log.SourceChannel).HasMaxLength(16);
             entity.Property(log => log.SourceGroup).HasMaxLength(160);
             entity.Property(log => log.SubId).HasMaxLength(64);
+            entity.Property(log => log.Channel).HasMaxLength(16);
+            entity.Property(log => log.ChannelOrigin).HasMaxLength(12);
+            entity.Property(log => log.GroupKey).HasMaxLength(16);
+            entity.Property(log => log.Country).HasMaxLength(64);
+            entity.Property(log => log.Region).HasMaxLength(64);
+            entity.Property(log => log.City).HasMaxLength(96);
+            entity.HasIndex(log => new { log.TenantId, log.ClickedAt });
+            entity.HasIndex(log => new { log.TenantId, log.Channel, log.ClickedAt });
             entity.Property(log => log.Platform).HasMaxLength(32).IsRequired();
             entity.Property(log => log.ShopId).HasMaxLength(128).IsRequired();
             entity.HasOne(log => log.AffiliateLink)

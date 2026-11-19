@@ -23,13 +23,32 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         ITelegramApiService telegramApi,
         IPreFlightService preFlight,
         ILogger<TelegramBroadcastService> logger,
-        IPlanLimitsService? planLimits = null)
+        IPlanLimitsService? planLimits = null,
+        Microsoft.Extensions.Options.IOptions<Ofertio.Business.Configuration.ShortLinkOptions>? shortLinks = null)
     {
+        _shortLinks = shortLinks?.Value;
         _context = context;
         _telegramApi = telegramApi;
         _preFlight = preFlight;
         _logger = logger;
         _planLimits = planLimits;
+    }
+
+    private readonly Ofertio.Business.Configuration.ShortLinkOptions? _shortLinks;
+
+    /// <summary>
+    /// Marca todos os links curtos da mensagem com /t/ e a chave curta do grupo (nunca o ChatId). Sem configuração do
+    /// encurtador, mantém a marcação antiga para não perder a origem.
+    /// </summary>
+    private string StampForGroup(string text, int userId, string chatId)
+    {
+        if (_shortLinks is null)
+        {
+            return Ofertio.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "Telegram", chatId);
+        }
+
+        var key = Ofertio.Business.Service.Attribution.GroupKeyRules.Compute(_shortLinks.GroupKeySecret, userId, "Telegram", chatId);
+        return Ofertio.Business.Service.Attribution.LinkChannelUrl.ApplyToMessage(text, _shortLinks.PublicBaseUrl, 't', key);
     }
 
     public async Task<TelegramBroadcastResponseDto> ListCampaignsAsync(
@@ -274,7 +293,7 @@ public sealed class TelegramBroadcastService : ITelegramBroadcastService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var chatId = chatIds[index];
-            var stamped = Ofertio.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "Telegram", chatId);
+            var stamped = StampForGroup(text, campaign.UserId, chatId);
             try
             {
                 var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)

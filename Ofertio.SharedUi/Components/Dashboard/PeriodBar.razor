@@ -1,0 +1,112 @@
+﻿@using Ofertio.Business.Service.Attribution
+@using Ofertio.SharedUi.Services.Dashboard
+
+<div class="period-bar" role="group" aria-label="Período">
+    <div class="period-presets">
+        @foreach (var (key, label) in PeriodPresets.All)
+        {
+            <button type="button"
+                    class="period-chip @(ActiveKey == key ? "active" : null)"
+                    aria-pressed="@(ActiveKey == key)"
+                    disabled="@Busy"
+                    @onclick="() => PickAsync(key)">
+                @label
+            </button>
+        }
+    </div>
+
+    <div class="period-grain">
+        <label class="small text-muted" for="period-grain-select">Agrupar por</label>
+        <select id="period-grain-select" class="form-select form-select-sm" disabled="@Busy" value="@GrainValue" @onchange="OnGrainChangedAsync">
+            <option value="day">Dia</option>
+            <option value="week">Semana</option>
+            <option value="month">Mês</option>
+            <option value="year">Ano</option>
+        </select>
+    </div>
+
+    @if (_showCustom)
+    {
+        <div class="period-custom">
+            <div>
+                <label class="small text-muted" for="period-from">De</label>
+                <input id="period-from" type="date" class="form-control form-control-sm" @bind="_customFrom" />
+            </div>
+            <div>
+                <label class="small text-muted" for="period-to">Até</label>
+                <input id="period-to" type="date" class="form-control form-control-sm" @bind="_customTo" />
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" disabled="@Busy" @onclick="ApplyCustomAsync">Aplicar</button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <p class="small text-danger mb-0 w-100" role="alert">@_message</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PeriodSelection Selection { get; set; } = default!;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<PeriodSelection> OnChange { get; set; }
+
+    private bool _showCustom;
+    private DateTime _customFrom;
+    private DateTime _customTo;
+    private string? _message;
+
+    private string ActiveKey => _showCustom ? PeriodPresets.Custom : PeriodPresets.KeyFor(Selection, PeriodPresets.TodayLocal());
+
+    private string GrainValue => AnalyticsPeriodRules.GrainName(Selection.Grain);
+
+    protected override void OnParametersSet()
+    {
+        _customFrom = Selection.From.ToDateTime(TimeOnly.MinValue);
+        _customTo = Selection.To.ToDateTime(TimeOnly.MinValue);
+        if (PeriodPresets.KeyFor(Selection, PeriodPresets.TodayLocal()) == PeriodPresets.Custom && !_showCustom)
+        {
+            _showCustom = false;
+        }
+    }
+
+    private async Task PickAsync(string key)
+    {
+        _message = null;
+        if (key == PeriodPresets.Custom)
+        {
+            _showCustom = true;
+            return;
+        }
+
+        _showCustom = false;
+        await OnChange.InvokeAsync(PeriodPresets.Resolve(key, PeriodPresets.TodayLocal()));
+    }
+
+    private async Task ApplyCustomAsync()
+    {
+        var from = DateOnly.FromDateTime(_customFrom);
+        var to = DateOnly.FromDateTime(_customTo);
+        var grain = AnalyticsPeriodRules.SuggestGrain(from, to);
+        _message = AnalyticsPeriodRules.Validate(from, to, grain);
+        if (_message is null)
+        {
+            await OnChange.InvokeAsync(new PeriodSelection(from, to, grain));
+        }
+    }
+
+    private async Task OnGrainChangedAsync(ChangeEventArgs args)
+    {
+        _message = null;
+        if (!AnalyticsPeriodRules.TryParseGrain(args.Value?.ToString(), out var grain))
+        {
+            return;
+        }
+
+        _message = AnalyticsPeriodRules.Validate(Selection.From, Selection.To, grain);
+        if (_message is null)
+        {
+            await OnChange.InvokeAsync(Selection with { Grain = grain });
+        }
+    }
+}

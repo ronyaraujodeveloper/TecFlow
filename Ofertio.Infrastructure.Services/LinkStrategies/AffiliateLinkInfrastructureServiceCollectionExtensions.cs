@@ -47,6 +47,11 @@ public static class AffiliateLinkInfrastructureServiceCollectionExtensions
         services.AddScoped<IShopeeService, ShopeeService>();
         services.AddScoped<IIntegracaoLojaScopeResolver, IntegracaoLojaScopeResolver>();
         services.AddScoped<IPublicConverterPageService, Ofertio.Infrastructure.Services.PublicPages.PublicConverterPageService>();
+        services.AddScoped<IPublicPageProfileService, Ofertio.Infrastructure.Services.PublicPages.PublicPageProfileService>();
+        services.AddScoped<IPublicPageEventService, Ofertio.Infrastructure.Services.PublicPages.PublicPageEventService>();
+        services.AddScoped<Ofertio.Infrastructure.Services.PublicPages.JoinLinkHealthService>();
+        services.AddScoped<Ofertio.Infrastructure.Services.PublicPages.IpRetentionService>();
+        services.AddSingleton<IGeoLocationService, Ofertio.Infrastructure.Services.Geo.MaxMindGeoLocationService>();
 
         services.AddHttpClient<IShopeeAffiliateLinkClient, ShopeeAffiliateLinkClient>((sp, client) =>
         {

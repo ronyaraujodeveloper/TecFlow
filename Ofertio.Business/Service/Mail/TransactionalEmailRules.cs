@@ -224,6 +224,31 @@ public static class TransactionalEmailRules
         };
     }
 
+    /// <summary>Aviso de que o botão de entrada em grupo da página pública foi desativado porque o grupo não foi encontrado.</summary>
+    public static TransactionalEmail JoinLinkDeactivated(string to, string label, string channel, string pagesUrl)
+    {
+        var text = string.Join(
+            Environment.NewLine + Environment.NewLine,
+            "O botão \"" + label + "\" (" + channel + ") da sua página pública foi desativado.",
+            "Não encontramos mais o grupo, ou a sua conta deixou de ser administradora dele. Para o visitante não cair num convite quebrado, o botão saiu do ar.",
+            "Se o grupo voltou, reative o botão em Minhas Páginas Públicas: " + pagesUrl,
+            "Dúvidas: " + OfertioMailAddresses.Contact);
+
+        return new TransactionalEmail
+        {
+            To = to,
+            Subject = "Um botão de grupo da sua página foi desativado — Ofertio",
+            TextBody = text,
+            HtmlBody = "<p>O botão <strong>" + WebUtility.HtmlEncode(label) + "</strong> (" + WebUtility.HtmlEncode(channel) + ") da sua página pública foi desativado.</p>"
+                + "<p>Não encontramos mais o grupo, ou a sua conta deixou de ser administradora dele. Para o visitante não cair num convite quebrado, o botão saiu do ar.</p>"
+                + "<p><a href=\"" + WebUtility.HtmlEncode(pagesUrl) + "\">Reativar em Minhas Páginas Públicas</a></p>"
+                + "<p>Dúvidas: " + WebUtility.HtmlEncode(OfertioMailAddresses.Contact) + "</p>"
+        };
+    }
+
+    public static string BuildPublicPagesUrl(string? publicBaseUrl) =>
+        NormalizeRoot(publicBaseUrl) + "/minhas-paginas-publicas";
+
     private static string NormalizeRoot(string? publicBaseUrl)
     {
         var root = string.IsNullOrWhiteSpace(publicBaseUrl)

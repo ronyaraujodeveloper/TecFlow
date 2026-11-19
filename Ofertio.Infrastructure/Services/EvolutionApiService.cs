@@ -481,6 +481,66 @@ public sealed class EvolutionApiService : IEvolutionApiService
         }
     }
 
+    public async Task<GroupInviteResult> FetchGroupInviteAsync(
+        string instanceName,
+        string groupJid,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureConfigured() || string.IsNullOrWhiteSpace(instanceName) || string.IsNullOrWhiteSpace(groupJid))
+        {
+            return GroupInviteResult.Unavailable;
+        }
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(
+                $"group/inviteCode/{Uri.EscapeDataString(instanceName)}?groupJid={Uri.EscapeDataString(groupJid)}",
+                cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                LogEvolutionHttpError("FetchGroupInviteAsync", instanceName, response.StatusCode, json);
+
+                // 4xx com a instância conectada = o grupo não existe ou a conta não é administradora. O chamador confere a conexão antes.
+                return (int)response.StatusCode is >= 400 and < 500
+                    ? GroupInviteResult.NotFound
+                    : GroupInviteResult.Unavailable;
+            }
+
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            string? url = null;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("inviteUrl", out var urlElement) && urlElement.ValueKind == JsonValueKind.String)
+                {
+                    url = urlElement.GetString();
+                }
+
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    foreach (var name in new[] { "inviteCode", "code" })
+                    {
+                        if (root.TryGetProperty(name, out var codeElement) && codeElement.ValueKind == JsonValueKind.String)
+                        {
+                            url = "https://chat.whatsapp.com/" + codeElement.GetString();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(url)
+                ? GroupInviteResult.NotFound
+                : new GroupInviteResult(GroupInviteOutcome.Ok, url.Trim());
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Falha ao buscar o convite do grupo na Evolution API. Instance={Instance}", instanceName);
+            return GroupInviteResult.Unavailable;
+        }
+    }
+
     private bool EnsureConfigured()
     {
         if (_options.IsConfigured)

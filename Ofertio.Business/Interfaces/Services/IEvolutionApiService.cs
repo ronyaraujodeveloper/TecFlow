@@ -29,4 +29,10 @@ public interface IEvolutionApiService
         string mediaUrl,
         string caption,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Link de convite do grupo (só funciona onde a conta conectada é administradora).</summary>
+    Task<GroupInviteResult> FetchGroupInviteAsync(
+        string instanceName,
+        string groupJid,
+        CancellationToken cancellationToken = default);
 }

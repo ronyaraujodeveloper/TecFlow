@@ -1,0 +1,239 @@
+﻿@page "/painel/produto/{LinkGroupId:guid}"
+
+@attribute [Authorize]
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using System.Globalization
+@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Attribution
+@using Ofertio.SharedUi.Components.Dashboard
+@using Ofertio.SharedUi.Services.Dashboard
+@inject ILinkAnalyticsApiService AnalyticsApi
+@inject NavigationManager Navigation
+
+<PageTitle>@(_detail?.Product.Name ?? "Produto") — Painel — Ofertio</PageTitle>
+
+<div class="dashboard-page analytics-page">
+    <a href="@BackUrl" class="small text-decoration-none d-inline-flex align-items-center gap-1 mb-2">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar ao painel
+    </a>
+
+    @if (_detail is not null)
+    {
+        <div class="d-flex align-items-center gap-3 mb-3">
+            @if (!string.IsNullOrWhiteSpace(_detail.Product.ImageUrl))
+            {
+                <img src="@_detail.Product.ImageUrl" alt="" class="top-product-img top-product-img--lg" />
+            }
+            <div class="min-w-0">
+                <h1 class="h4 fw-bold mb-1 text-break">@_detail.Product.Name</h1>
+                <p class="text-muted small mb-0">@_detail.Product.Platform</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <h1 class="h4 fw-bold mb-3">Produto</h1>
+    }
+
+    <PeriodBar Selection="_selection" Busy="_isLoading" OnChange="ChangePeriodAsync" />
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <ErrorAlert Message="@_error" OnDismiss="@(EventCallback.Factory.Create(this, () => _error = null))" />
+    }
+
+    @if (_detail is not null)
+    {
+        var summary = _detail.Summary;
+        <div class="row g-3 mt-1">
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Cliques" Value="@summary.Clicks.ToString("N0", Pt)" Current="summary.Clicks" Previous="summary.PreviousClicks" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Visitantes únicos" Value="@summary.UniqueClicks.ToString("N0", Pt)" Current="summary.UniqueClicks" Previous="summary.PreviousUniqueClicks" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Melhor dia"
+                         Value="@(summary.BestDay is { } day ? day.ToString("dd/MM", Pt) : "—")"
+                         Hint="@(summary.BestDay is null ? "sem cliques" : $"{summary.BestDayClicks:N0} cliques")" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Melhor semana" Value="@BestWeekText" Hint="@BestWeekHint" />
+            </div>
+        </div>
+
+        <section class="card border-0 shadow-sm mt-3" aria-label="Cliques ao longo do tempo">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Cliques ao longo do tempo, por origem</h2>
+                <ClicksChart Series="_detail.Series" ChannelOrder="_detail.ChannelOrder" />
+            </div>
+        </section>
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">De onde vêm os cliques</h2>
+                        <BreakdownBars Items="_detail.Channels" UseChannelColors="true" EmptyText="Nenhum clique no período." />
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Por loja</h2>
+                        <BreakdownBars Items="_detail.Shops" EmptyText="Nenhum clique no período." />
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Grupos</h2>
+                        @if (_detail.Groups.Count == 0)
+                        {
+                            <p class="text-muted small mb-0">Nenhum grupo trouxe cliques deste produto no período.</p>
+                        }
+                        else
+                        {
+                            <ul class="group-list">
+                                @foreach (var group in _detail.Groups)
+                                {
+                                    <li>
+                                        <span class="clicks-dot @ChannelStyle.Css(group.Channel)" aria-hidden="true"></span>
+                                        <span class="group-name" title="@group.Name">@group.Name</span>
+                                        <strong class="ms-auto">@group.Clicks.ToString("N0", Pt)</strong>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Melhores dias e horários</h2>
+                        <HeatmapGrid Matrix="_detail.Heatmap" />
+                    </div>
+                </section>
+            </div>
+        </div>
+    }
+    else if (_isLoading)
+    {
+        <div class="row g-3 mt-1" aria-busy="true">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="col-6 col-lg-3"><div class="kpi-card kpi-skeleton"></div></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo Pt = CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter] public Guid LinkGroupId { get; set; }
+
+    private PeriodSelection _selection = PeriodPresets.Resolve(PeriodPresets.Last30, PeriodPresets.TodayLocal());
+    private AnalyticsProductDetailDto? _detail;
+    private string? _error;
+    private bool _isLoading;
+    private string? _shopId;
+
+    private string BackUrl => $"/dashboard?{PeriodPresets.ToQuery(_selection)}"
+        + (string.IsNullOrWhiteSpace(_shopId) ? string.Empty : "&shop=" + Uri.EscapeDataString(_shopId));
+
+    protected override void OnInitialized()
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        _selection = PeriodPresets.FromQuery(
+            query.TryGetValue("from", out var from) ? from.ToString() : null,
+            query.TryGetValue("to", out var to) ? to.ToString() : null,
+            query.TryGetValue("grain", out var grain) ? grain.ToString() : null,
+            PeriodPresets.TodayLocal());
+        // Mesma regra do painel: a loja vem do filtro escolhido lá (parâmetro "shop"), nunca da loja ativa global.
+        _shopId = query.TryGetValue("shop", out var shop) && !string.IsNullOrWhiteSpace(shop) ? shop.ToString() : null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task ChangePeriodAsync(PeriodSelection selection)
+    {
+        _selection = selection;
+        await LoadAsync();
+    }
+
+    /// <summary>Busca de novo sem apagar a tela: se falhar, os números anteriores ficam e um aviso explica.</summary>
+    private async Task LoadAsync()
+    {
+        if (_isLoading)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var result = await AnalyticsApi.GetProductAsync(LinkGroupId, _selection.From, _selection.To, _selection.Grain, _shopId);
+            if (result.Success && result.Data is not null)
+            {
+                _detail = result.Data;
+            }
+            else
+            {
+                _error = (result.ErrorMessage ?? "Não foi possível carregar o produto.")
+                    + (_detail is not null ? " Os números exibidos são da última atualização." : string.Empty);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _error = "Não foi possível atualizar agora. Tente novamente em instantes.";
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Melhor semana (segunda a domingo) dentro do período, a partir dos cliques diários da série.</summary>
+    private (DateOnly Start, int Clicks)? BestWeek
+    {
+        get
+        {
+            if (_detail is null)
+            {
+                return null;
+            }
+
+            var weeks = _detail.Series
+                .GroupBy(point => AnalyticsPeriodRules.BucketStart(point.Start, AnalyticsGrain.Week))
+                .Select(group => (Start: group.Key, Clicks: group.Sum(point => point.Total)))
+                .Where(item => item.Clicks > 0)
+                .OrderByDescending(item => item.Clicks)
+                .ThenBy(item => item.Start)
+                .ToList();
+            return weeks.Count == 0 ? null : weeks[0];
+        }
+    }
+
+    private string BestWeekText => BestWeek is { } week ? week.Start.ToString("dd/MM", Pt) : "—";
+
+    private string BestWeekHint => BestWeek is { } week ? $"semana com {week.Clicks:N0} cliques" : "sem cliques";
+}

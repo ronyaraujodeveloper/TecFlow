@@ -1,0 +1,38 @@
+﻿@if (Matrix.Count != 7 || Matrix.All(line => line.All(value => value == 0)))
+{
+    <p class="text-muted small mb-0">Sem cliques suficientes para mostrar os melhores horários.</p>
+}
+else
+{
+    var max = Matrix.Max(line => line.Max());
+    <div class="heatmap" role="img" aria-label="Mapa de calor de cliques por dia da semana e hora">
+        <div class="heatmap-hours" aria-hidden="true">
+            <span></span>
+            @for (var hour = 0; hour < 24; hour++)
+            {
+                <span>@(hour % 3 == 0 ? hour.ToString() : string.Empty)</span>
+            }
+        </div>
+        @for (var day = 0; day < 7; day++)
+        {
+            <div class="heatmap-row">
+                <span class="heatmap-day">@Days[day]</span>
+                @for (var hour = 0; hour < 24; hour++)
+                {
+                    var value = Matrix[day][hour];
+                    var intensity = value == 0 ? 0 : 0.15 + 0.85 * value / max;
+                    <span class="heatmap-cell"
+                          style="--i:@intensity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                          title="@Days[day] às @(hour)h: @value clique(s)"></span>
+                }
+            </div>
+        }
+    </div>
+    <p class="small text-muted mt-2 mb-0">Horário de Brasília. Quanto mais forte a cor, mais cliques.</p>
+}
+
+@code {
+    private static readonly string[] Days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+    [Parameter, EditorRequired] public List<List<int>> Matrix { get; set; } = [];
+}

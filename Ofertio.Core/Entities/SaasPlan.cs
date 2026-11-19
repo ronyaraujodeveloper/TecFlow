@@ -20,6 +20,9 @@ public class SaasPlan : BaseEntity
     /// <summary>Disparos de WhatsApp e Telegram somados por dia. 0 = ilimitado.</summary>
     public int MaxDailySchedules { get; set; }
 
+    /// <summary>Quantos botões de entrada em grupo a página pública pode ter. 0 = ilimitado.</summary>
+    public int MaxJoinLinks { get; set; }
+
     /// <summary>Vantagens exibidas no modal de Meu plano, uma por linha.</summary>
     public string? Highlights { get; set; }
 

@@ -60,7 +60,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShopeeAuthService, ShopeeAuthService>();
         services.AddScoped<IUserRegistrationApiService, UserRegistrationApiService>();
         services.AddScoped<IPasswordResetApiService, PasswordResetApiService>();
+        services.AddScoped<Ofertio.SharedUi.Services.Dashboard.ILinkAnalyticsApiService, Ofertio.SharedUi.Services.Dashboard.LinkAnalyticsApiService>();
         services.AddScoped<Ofertio.SharedUi.Services.Public.IPublicPlansApiService, Ofertio.SharedUi.Services.Public.PublicPlansApiService>();
+        services.AddScoped<Ofertio.SharedUi.Services.Public.IPublicPageProfileApiService, Ofertio.SharedUi.Services.Public.PublicPageProfileApiService>();
         services.AddScoped<ITermsApiService, TermsApiService>();
         services.AddScoped<IAccountSecurityApiService, AccountSecurityApiService>();
         services.AddScoped<IUserClock, UserClock>();

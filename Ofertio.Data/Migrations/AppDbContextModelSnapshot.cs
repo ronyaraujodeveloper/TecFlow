@@ -2106,6 +2106,178 @@ namespace Ofertio.Data.Migrations
                     b.ToTable("PublicConverterPages", (string)null);
                 });
 
+            modelBuilder.Entity("Ofertio.Core.Entities.PublicPageEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(96)
+                        .HasColumnType("nvarchar(96)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceType")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("IpMasked")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsBot")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("JoinLinkId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Kind", "CreatedAt");
+
+                    b.HasIndex("TenantId", "UserId", "CreatedAt");
+
+                    b.ToTable("PublicPageEvents");
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.PublicPageJoinLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedChecks")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InviteUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime?>("LastCheckedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ShowMemberCount")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceGroupId")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("StatusReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "LastCheckedAt");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("PublicPageJoinLinks");
+                });
+
+            modelBuilder.Entity("Ofertio.Core.Entities.PublicPageProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PublicPageProfiles");
+                });
+
             modelBuilder.Entity("Ofertio.Core.Entities.SaasPayment", b =>
                 {
                     b.Property<int>("Id")
@@ -2195,6 +2367,9 @@ namespace Ofertio.Data.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<int>("MaxDailySchedules")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxJoinLinks")
                         .HasColumnType("int");
 
                     b.Property<int>("MaxStores")
@@ -3560,6 +3735,18 @@ namespace Ofertio.Data.Migrations
                     b.Property<Guid>("AffiliateLinkId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Channel")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ChannelOrigin")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(96)
+                        .HasColumnType("nvarchar(96)");
+
                     b.Property<DateTime>("ClickedAt")
                         .HasColumnType("datetime2");
 
@@ -3567,6 +3754,10 @@ namespace Ofertio.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -3581,10 +3772,17 @@ namespace Ofertio.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("GroupKey")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.Property<string>("IpAddress")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsBot")
+                        .HasColumnType("bit");
 
                     b.Property<string>("OriginalUrl")
                         .IsRequired()
@@ -3599,6 +3797,10 @@ namespace Ofertio.Data.Migrations
                     b.Property<string>("ReferrerUrl")
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("ShopId")
                         .IsRequired()
@@ -3634,6 +3836,10 @@ namespace Ofertio.Data.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "ClickedAt");
+
+                    b.HasIndex("TenantId", "Channel", "ClickedAt");
 
                     b.ToTable("LinkClickLog");
                 });

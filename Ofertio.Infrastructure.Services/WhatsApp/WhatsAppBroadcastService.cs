@@ -24,14 +24,33 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
         IWhatsAppBroadcastJobCoordinator jobs,
         IPreFlightService preFlight,
         ILogger<WhatsAppBroadcastService> logger,
-        IPlanLimitsService? planLimits = null)
+        IPlanLimitsService? planLimits = null,
+        Microsoft.Extensions.Options.IOptions<Ofertio.Business.Configuration.ShortLinkOptions>? shortLinks = null)
     {
+        _shortLinks = shortLinks?.Value;
         _context = context;
         _evolution = evolution;
         _jobs = jobs;
         _preFlight = preFlight;
         _logger = logger;
         _planLimits = planLimits;
+    }
+
+    private readonly Ofertio.Business.Configuration.ShortLinkOptions? _shortLinks;
+
+    /// <summary>
+    /// Marca todos os links curtos da mensagem com /w/ e a chave curta do grupo (nunca o JID). Sem configuração do
+    /// encurtador, mantém a marcação antiga para não perder a origem.
+    /// </summary>
+    private string StampForGroup(string text, int userId, string jid)
+    {
+        if (_shortLinks is null)
+        {
+            return Ofertio.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "WhatsApp", jid);
+        }
+
+        var key = Ofertio.Business.Service.Attribution.GroupKeyRules.Compute(_shortLinks.GroupKeySecret, userId, "WhatsApp", jid);
+        return Ofertio.Business.Service.Attribution.LinkChannelUrl.ApplyToMessage(text, _shortLinks.PublicBaseUrl, 'w', key);
     }
 
     public async Task<WhatsAppBroadcastResponseDto> ListGroupsAsync(
@@ -382,7 +401,7 @@ public sealed class WhatsAppBroadcastService : IWhatsAppBroadcastService
                 }
 
                 var jid = jids[index];
-                var stamped = Ofertio.Business.Service.Radar.OfferAttributionRules.StampMessage(text, "WhatsApp", jid);
+                var stamped = StampForGroup(text, campaign.UserId, jid);
                 try
                 {
                     var ok = string.IsNullOrWhiteSpace(campaign.ImageUrl)

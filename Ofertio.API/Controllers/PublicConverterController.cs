@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Services;
+using Ofertio.Core.Entities;
 
 namespace Ofertio.API.Controllers;
 
@@ -33,6 +34,9 @@ public sealed class PublicConverterController : ControllerBase
             });
         }
 
+        // Visita: só contagem (robôs ficam marcados e fora dos números). Não atrasa nem derruba a página.
+        await _pages.RecordEventAsync(slug, PublicPageEvent.KindView, ClientRequestInfo.Read(HttpContext), cancellationToken);
+
         return Ok(new PublicConverterPageResponseDto
         {
             Status = true,
@@ -56,6 +60,7 @@ public sealed class PublicConverterController : ControllerBase
             return notFound ? NotFound(result) : BadRequest(result);
         }
 
+        await _pages.RecordEventAsync(slug, PublicPageEvent.KindConvert, ClientRequestInfo.Read(HttpContext), cancellationToken);
         return Ok(result);
     }
 

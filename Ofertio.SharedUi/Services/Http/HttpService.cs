@@ -49,6 +49,21 @@ public class HttpService : IHttpService
         CancellationToken cancellationToken = default) =>
         SendAsync<TResponse>(HttpMethod.Put, relativeUrl, body, cancellationToken);
 
+    public async Task<ApiResult<TResponse>> PostFileAsync<TResponse>(
+        string relativeUrl,
+        string fieldName,
+        string fileName,
+        string contentType,
+        Stream content,
+        CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new StreamContent(content);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        form.Add(file, fieldName, fileName);
+        return await SendAsync<TResponse>(HttpMethod.Post, relativeUrl, body: null, cancellationToken, form);
+    }
+
     public Task<ApiResult<TResponse>> DeleteAsync<TResponse>(
         string relativeUrl,
         object? queryFilter = null,
@@ -62,7 +77,8 @@ public class HttpService : IHttpService
         HttpMethod method,
         string relativeUrl,
         object? body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpContent? rawContent = null)
     {
         try
         {
@@ -79,6 +95,10 @@ public class HttpService : IHttpService
             if (body is not null)
             {
                 request.Content = JsonContent.Create(body);
+            }
+            else if (rawContent is not null)
+            {
+                request.Content = rawContent;
             }
 
             using var response = await client.SendAsync(request, cancellationToken);

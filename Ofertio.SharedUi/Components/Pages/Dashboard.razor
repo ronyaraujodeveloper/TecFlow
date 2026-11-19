@@ -1,116 +1,293 @@
 ﻿@page "/dashboard"
-@page "/campanhas"
-@page "/metricas"
 
 @attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
+@using System.Globalization
+@using Ofertio.Business.Dto
+@using Ofertio.Business.Service.Attribution
+@using Ofertio.SharedUi.Components.Dashboard
+@using Ofertio.SharedUi.Services.Dashboard
 @inject ISessionStateService SessionState
 @inject IAuthCookieService AuthCookie
-@inject IDashboardApiService DashboardApi
+@inject ILinkAnalyticsApiService AnalyticsApi
 @inject IActiveStoreScopeService StoreScope
-@inject ILoadingService LoadingService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>Painel — Ofertio</PageTitle>
 
-<div class="dashboard-page">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+<div class="dashboard-page analytics-page @(_isLoading && _overview is not null ? "is-refreshing" : null)" aria-busy="@_isLoading">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <div>
             <h1 class="h3 fw-bold mb-1">Painel</h1>
-            <p class="text-muted mb-0">
-                Bem-vindo, <strong>@_displayName</strong>
-                @if (_platform is not null)
-                {
-                    <span class="badge text-bg-primary ms-2">@_platform</span>
-                }
-            </p>
+            <p class="text-muted mb-0">Olá, <strong>@_displayName</strong>. Veja como seus links estão performando.</p>
+            @if (_updatedAt is { } updatedAt)
+            {
+                <p class="small text-muted mb-0" role="status">Atualizado às @AnalyticsPeriodRules.ToLocalTime(updatedAt).ToString("HH:mm:ss")</p>
+            }
         </div>
-        <div class="dashboard-toolbar">
-            <button type="button" class="btn btn-outline-primary" disabled="@_isLoading" @onclick="ReloadAsync">
-                Atualizar
+        <div class="dashboard-toolbar d-flex gap-2 flex-wrap">
+            <a href="/campanhas" class="btn btn-outline-secondary">Campanhas e métricas</a>
+            <button type="button" class="btn btn-outline-primary" disabled="@_isLoading" @onclick="LoadAsync">
+                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>@(_isLoading ? "Atualizando..." : "Atualizar")
             </button>
-
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_globalError))
+    <PeriodBar Selection="_selection" Busy="_isLoading" OnChange="ChangePeriodAsync" />
+
+    @if (StoreScope.Stores.Count > 1)
     {
-        <ErrorAlert Message="@_globalError" IsOffline="@_isOffline" OnDismiss="@(EventCallback.Factory.Create(this, ClearGlobalError))" />
+        <div class="store-filter">
+            <label class="small text-muted" for="panel-store">Loja</label>
+            <select id="panel-store" class="form-select form-select-sm" disabled="@_isLoading" value="@(_shopId ?? string.Empty)" @onchange="ChangeStoreAsync">
+                <option value="">Todas as lojas</option>
+                @foreach (var store in StoreScope.Stores)
+                {
+                    <option value="@store.ShopId">@store.FriendlyName (@store.PlatformType)</option>
+                }
+            </select>
+        </div>
     }
 
-    <div class="row g-3 mb-4">
-        <MetricsSummaryCards Stats="@_stats" />
-    </div>
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <ErrorAlert Message="@_error" IsOffline="@_isOffline" OnDismiss="@(EventCallback.Factory.Create(this, () => _error = null))" />
+    }
 
-    <CampaignCreateForm Model="_campaignDto"
-                        IsBusy="_isSavingCampaign"
-                        StatusMessage="@_campaignSaveMessage"
-                        IsSuccess="_campaignSaveSuccess"
-                        OnSubmit="CreateCampaignAsync" />
-
-    <CampaignFilterForm Filter="_campaignFilter"
-                        IsBusy="_isLoading"
-                        OnSearch="LoadCampaignsAsync"
-                        OnClear="ClearCampaignFiltersAsync" />
-
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-lg-8">
-            <CampaignsWidget Response="@_campaignResponse" ErrorMessage="@_campaignsError" />
+    @if (_overview is null)
+    {
+        @if (_isLoading)
+        {
+            <div class="row g-3 mt-1" aria-busy="true" aria-label="Carregando indicadores">
+                @for (var i = 0; i < 4; i++)
+                {
+                    <div class="col-6 col-lg-3"><div class="kpi-card kpi-skeleton"></div></div>
+                }
+            </div>
+        }
+    }
+    else if (!_overview.HasAnyLink)
+    {
+        <section class="card border-0 shadow-sm text-center p-4 p-md-5 mt-3">
+            <h2 class="h5 fw-semibold mb-2">Você ainda não gerou nenhum link</h2>
+            <p class="text-muted mb-3">Gere o primeiro link no Gerador de Links e divulgue. Os cliques aparecem aqui assim que alguém abrir.</p>
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <a href="/gerador-links" class="btn btn-primary">Gerar meu primeiro link</a>
+                <a href="/minhas-lojas" class="btn btn-outline-secondary">Conectar uma loja</a>
+            </div>
+        </section>
+    }
+    else
+    {
+        var summary = _overview.Summary;
+        <div class="row g-3 mt-1">
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Cliques" Value="@summary.Clicks.ToString("N0", Pt)" Current="summary.Clicks" Previous="summary.PreviousClicks" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Visitantes únicos" Value="@summary.UniqueClicks.ToString("N0", Pt)" Current="summary.UniqueClicks" Previous="summary.PreviousUniqueClicks" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Links gerados" Value="@summary.LinksGenerated.ToString("N0", Pt)" Hint="no período" />
+            </div>
+            <div class="col-6 col-lg-3">
+                <KpiCard Title="Melhor dia"
+                         Value="@(summary.BestDay is { } day ? day.ToString("dd/MM", Pt) : "—")"
+                         Hint="@(summary.BestDay is null ? "sem cliques" : $"{summary.BestDayClicks:N0} cliques")" />
+            </div>
         </div>
-        <div class="col-12 col-lg-4">
-            <PipelineStatusWidget Status="@_pipelineStatus"
-                                  IsLoading="@_pipelineLoading"
-                                  ErrorMessage="@_pipelineError" />
+
+        @if (summary.PreviewsFiltered > 0)
+        {
+            <p class="small text-muted mt-2 mb-0">
+                <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+                @summary.PreviewsFiltered.ToString("N0", Pt) abertura(s) automática(s) (prévias de WhatsApp, Telegram e similares) não entram na contagem.
+            </p>
+        }
+
+        <section class="card border-0 shadow-sm mt-3" aria-label="Cliques ao longo do tempo">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Cliques ao longo do tempo, por origem</h2>
+                <ClicksChart Series="_overview.Series" ChannelOrder="_overview.ChannelOrder" />
+            </div>
+        </section>
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="De onde vêm os cliques">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">De onde vêm os cliques</h2>
+                        <BreakdownBars Items="_overview.Channels" UseChannelColors="true" EmptyText="Nenhum clique no período." />
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="Dispositivos">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Dispositivos</h2>
+                        <BreakdownBars Items="_overview.Devices" EmptyText="Nenhum clique no período." />
+                    </div>
+                </section>
+            </div>
         </div>
-    </div>
 
-    <MetricFilterForm Filter="_metricFilter"
-                      IsBusy="_isLoading"
-                      OnSearch="LoadMetricsAsync"
-                      OnClear="ClearMetricFiltersAsync" />
+        <section class="card border-0 shadow-sm mt-3" aria-label="Produtos mais clicados">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Top 10 produtos mais clicados</h2>
+                @if (_overview.TopProducts.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Nenhum clique em produtos no período.</p>
+                }
+                else
+                {
+                    var top = Math.Max(1, _overview.TopProducts.Max(item => item.Clicks));
+                    <ol class="top-products">
+                        @foreach (var product in _overview.TopProducts)
+                        {
+                            <li>
+                                <a class="top-product-row" href="@ProductUrl(product)" title="Ver o desempenho de @product.Name">
+                                    @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                                    {
+                                        <img src="@product.ImageUrl" alt="" class="top-product-img" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="top-product-img top-product-img--empty" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+                                    }
+                                    <span class="top-product-body">
+                                        <span class="top-product-name">@product.Name</span>
+                                        <span class="top-product-meta">@product.Platform · @product.UniqueClicks.ToString("N0", Pt) visitante(s) único(s)</span>
+                                        <span class="breakdown-track" aria-hidden="true"><span class="breakdown-fill" style="width:@((product.Clicks * 100.0 / top).ToString("0.##", CultureInfo.InvariantCulture))%"></span></span>
+                                    </span>
+                                    <span class="top-product-clicks">@product.Clicks.ToString("N0", Pt)<span class="text-muted small"> cliques</span></span>
+                                    <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                        }
+                    </ol>
+                    <p class="small text-muted mt-2 mb-0">Clique em um produto para ver em que dia ou semana ele mais rendeu.</p>
+                }
+            </div>
+        </section>
 
-    <MetricsWidget Response="@_metricResponse" ErrorMessage="@_metricsError" />
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="Funil da página pública">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Sua página pública</h2>
+                        @{ var funnel = _overview.Funnel; }
+                        @if (!funnel.HasData)
+                        {
+                            <p class="text-muted small mb-0">Quando alguém abrir a sua página pública, as visitas, os links convertidos e as entradas em grupo aparecem aqui.</p>
+                        }
+                        else
+                        {
+                            <ol class="funnel">
+                                <li>
+                                    <span class="funnel-label">Visitas à página</span>
+                                    <strong>@funnel.Views.ToString("N0", Pt)</strong>
+                                    <span class="funnel-note">@funnel.UniqueViews.ToString("N0", Pt) visitante(s) único(s)</span>
+                                </li>
+                                <li>
+                                    <span class="funnel-label">Converteram um link</span>
+                                    <strong>@funnel.Conversions.ToString("N0", Pt)</strong>
+                                    <span class="funnel-note">@Rate(funnel.Conversions, funnel.Views) das visitas</span>
+                                </li>
+                                <li>
+                                    <span class="funnel-label">Foram entrar em um grupo</span>
+                                    <strong>@funnel.JoinClicks.ToString("N0", Pt)</strong>
+                                    <span class="funnel-note">@Rate(funnel.JoinClicks, funnel.Conversions) de quem converteu</span>
+                                </li>
+                            </ol>
+                            @if (funnel.JoinByChannel.Count > 0)
+                            {
+                                <p class="small text-muted mt-3 mb-2">Entradas em grupo por canal</p>
+                                <BreakdownBars Items="funnel.JoinByChannel" UseChannelColors="true" />
+                            }
+                            <p class="small text-muted mt-2 mb-0">Contagens sem identificar a pessoa. Quem só olhou a página fica entre as visitas e as conversões.</p>
+                        }
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="Cliques por região">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">De onde vêm os cliques (região estimada)</h2>
+                        @if (!_overview.HasRegionData)
+                        {
+                            <p class="text-muted small mb-0">A região aparece para os cliques novos, assim que a base de localização estiver ativa no servidor.</p>
+                        }
+                        else
+                        {
+                            <p class="small text-muted mb-1">Estados</p>
+                            <BreakdownBars Items="_overview.States" EmptyText="Sem dados de estado." />
+                            <p class="small text-muted mt-3 mb-1">Cidades</p>
+                            <BreakdownBars Items="_overview.Cities" EmptyText="Sem dados de cidade." />
+                            <p class="small text-muted mt-2 mb-0">Estimada pelo endereço de rede: o estado costuma estar certo, a cidade é aproximada (VPN e redes de operadora podem aparecer em outra cidade).</p>
+                        }
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="Grupos">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Grupos que mais trazem cliques</h2>
+                        @if (_overview.Groups.Count == 0)
+                        {
+                            <p class="text-muted small mb-0">Os grupos aparecem aqui quando você dispara pelo Ofertio (WhatsApp ou Telegram).</p>
+                        }
+                        else
+                        {
+                            <ul class="group-list">
+                                @foreach (var group in _overview.Groups)
+                                {
+                                    <li>
+                                        <span class="clicks-dot @ChannelStyle.Css(group.Channel)" aria-hidden="true"></span>
+                                        <span class="group-name" title="@group.Name">@group.Name</span>
+                                        <span class="text-muted small">@LinkChannelRules.LabelFor(group.Channel)</span>
+                                        <strong class="ms-auto">@group.Clicks.ToString("N0", Pt)</strong>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-6">
+                <section class="card border-0 shadow-sm h-100" aria-label="Melhores horários">
+                    <div class="card-body">
+                        <h2 class="h6 fw-semibold mb-3">Melhores dias e horários</h2>
+                        <HeatmapGrid Matrix="_overview.Heatmap" />
+                    </div>
+                </section>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
+    private static readonly CultureInfo Pt = CultureInfo.GetCultureInfo("pt-BR");
+
     private string? _displayName;
-    private string? _platform;
-
-    private readonly CampaignFilter _campaignFilter = new();
-    private readonly MetricFilter _metricFilter = new();
-    private readonly DashboardAnalyticsFilter _statsFilter = new();
-    private readonly CampaignDto _campaignDto = new()
-    {
-        StartDate = DateTime.UtcNow.Date,
-        EndDate = DateTime.UtcNow.Date.AddMonths(1)
-    };
-
-    private DashboardSummaryDto? _stats;
-    private CampaignResponseDto? _campaignResponse;
-    private MetricResponseDto? _metricResponse;
-    private PipelineStatusDto? _pipelineStatus;
-
-    private string? _globalError;
-    private string? _campaignsError;
-    private string? _metricsError;
-    private string? _pipelineError;
-    private string? _campaignSaveMessage;
-    private bool _campaignSaveSuccess;
+    private PeriodSelection _selection = PeriodPresets.Resolve(PeriodPresets.Last30, PeriodPresets.TodayLocal());
+    private AnalyticsOverviewDto? _overview;
+    private DateTime? _updatedAt;
+    private string? _error;
     private bool _isOffline;
     private bool _isLoading;
-    private bool _isSavingCampaign;
-    private bool _pipelineLoading;
-    private bool _storeScopeSubscribed;
+    private string? _shopId;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
         if (user.Identity?.IsAuthenticated != true)
         {
             Navigation.NavigateTo("/entrar", replace: true);
@@ -118,200 +295,92 @@
         }
 
         AuthCookie.SyncSessionFromPrincipal(user);
-
         _displayName = user.Identity?.Name ?? SessionState.DisplayName ?? "Utilizador";
-        _platform = user.FindFirst(Ofertio.Core.Security.OfertioClaimTypes.Platform)?.Value
-            ?? SessionState.ActivePlatform?.ToString();
 
-        StoreScope.OnStoreChanged += HandleStoreScopeChanged;
-        _storeScopeSubscribed = true;
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        _selection = PeriodPresets.FromQuery(
+            query.TryGetValue("from", out var from) ? from.ToString() : null,
+            query.TryGetValue("to", out var to) ? to.ToString() : null,
+            query.TryGetValue("grain", out var grain) ? grain.ToString() : null,
+            PeriodPresets.TodayLocal());
 
+        // A loja é um filtro do próprio painel (padrão: todas), não a "loja ativa" global, que não aparece nesta tela
+        // e escondia os cliques das outras lojas depois da primeira carga.
+        _shopId = query.TryGetValue("shop", out var shop) && !string.IsNullOrWhiteSpace(shop) ? shop.ToString() : null;
         await StoreScope.EnsureInitializedAsync();
-        ApplyActiveStoreScope();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (firstRender)
         {
-            return;
+            await LoadAsync();
         }
-
-        await StoreScope.RestoreFromBrowserAsync();
-        ApplyActiveStoreScope();
-        await LoadDashboardDataAsync();
-    }
-
-    private void HandleStoreScopeChanged()
-    {
-        ApplyActiveStoreScope();
-        _ = InvokeAsync(LoadDashboardDataAsync);
-    }
-
-    private void ApplyActiveStoreScope()
-    {
-        var lojaId = StoreScope.IsAllStoresScope ? null : StoreScope.ActiveStore?.IntegracaoLojaId;
-        _statsFilter.LojaId = lojaId;
-        _campaignFilter.LojaId = lojaId;
-        _metricFilter.LojaId = lojaId;
     }
 
     public void Dispose()
     {
-        if (_storeScopeSubscribed)
-        {
-            StoreScope.OnStoreChanged -= HandleStoreScopeChanged;
-        }
     }
 
-    private async Task ReloadAsync() => await LoadDashboardDataAsync();
-
-    private async Task LoadDashboardDataAsync()
+    private async Task ChangePeriodAsync(PeriodSelection selection)
     {
-        ClearGlobalError();
-        _campaignsError = null;
-        _metricsError = null;
-        _pipelineError = null;
+        _selection = selection;
+        await LoadAsync();
+    }
+
+    private async Task ChangeStoreAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        _shopId = string.IsNullOrWhiteSpace(value) ? null : value;
+        await LoadAsync();
+    }
+
+    /// <summary>
+    /// Busca os números de novo (mesmo período e mesma loja). Nunca apaga o que já está na tela: se a busca falhar,
+    /// os dados anteriores continuam visíveis e um aviso explica o que houve.
+    /// </summary>
+    private async Task LoadAsync()
+    {
+        if (_isLoading)
+        {
+            return;
+        }
+
         _isLoading = true;
-        _pipelineLoading = true;
+        _error = null;
+        await InvokeAsync(StateHasChanged);
 
-        using var scope = LoadingService.BeginScope("A atualizar painel...");
-
-        var statsTask = DashboardApi.GetStatsAsync(_statsFilter);
-        var campaignsTask = LoadCampaignsInternalAsync();
-        var metricsTask = LoadMetricsInternalAsync();
-        var pipelineTask = DashboardApi.GetPipelineStatusAsync();
-
-        await Task.WhenAll(statsTask, campaignsTask, metricsTask, pipelineTask);
-
-        ApplyStatsResult(await statsTask);
-        ApplyPipelineResult(await pipelineTask);
-
-        _isLoading = false;
-        _pipelineLoading = false;
-    }
-
-    private Task LoadCampaignsAsync() => LoadCampaignsInternalAsync();
-
-    private Task LoadMetricsAsync() => LoadMetricsInternalAsync();
-
-    private async Task LoadCampaignsInternalAsync()
-    {
-        var result = await DashboardApi.GetCampaignsByFilterAsync(_campaignFilter);
-
-        if (result.IsApiSuccess(out var response))
+        try
         {
-            _campaignResponse = response;
-            _campaignsError = null;
-            return;
+            var result = await AnalyticsApi.GetOverviewAsync(_selection.From, _selection.To, _selection.Grain, _shopId);
+            if (result.Success && result.Data is not null)
+            {
+                _overview = result.Data;
+                _updatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                _error = (result.ErrorMessage ?? "Não foi possível carregar o painel.")
+                    + (_overview is not null ? " Os números exibidos são da última atualização." : string.Empty);
+                _isOffline = result.IsOffline;
+            }
         }
-
-        _campaignResponse = null;
-        _campaignsError = result.ResolveErrorMessage("Erro ao carregar campanhas.");
-        if (result.IsOffline)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            SetGlobalError(result.ErrorMessage, result.IsOffline);
+            _error = "Não foi possível atualizar o painel agora. Tente novamente em instantes."
+                + (_overview is not null ? " Os números exibidos são da última atualização." : string.Empty);
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task LoadMetricsInternalAsync()
-    {
-        var result = await DashboardApi.GetMetricsByFilterAsync(_metricFilter);
+    private static string Rate(int part, int whole) =>
+        whole <= 0 ? "—" : (part * 100.0 / whole).ToString("0.#", Pt) + "%";
 
-        if (result.IsApiSuccess(out var response))
-        {
-            _metricResponse = response;
-            _metricsError = null;
-            return;
-        }
-
-        _metricResponse = null;
-        _metricsError = result.ResolveErrorMessage("Erro ao carregar métricas.");
-        if (result.IsOffline)
-        {
-            SetGlobalError(result.ErrorMessage, result.IsOffline);
-        }
-    }
-
-    private async Task CreateCampaignAsync()
-    {
-        _isSavingCampaign = true;
-        _campaignSaveMessage = null;
-        _campaignDto.LojaId = StoreScope.IsAllStoresScope ? null : StoreScope.ActiveStore?.IntegracaoLojaId;
-
-        var result = await DashboardApi.CreateCampaignAsync(_campaignDto);
-
-        if (result.IsApiSuccess(out var response))
-        {
-            _campaignSaveSuccess = true;
-            _campaignSaveMessage = response!.Descricao;
-            _campaignDto.Name = string.Empty;
-            _campaignDto.Description = string.Empty;
-            _campaignDto.Budget = 0;
-            await LoadCampaignsInternalAsync();
-        }
-        else
-        {
-            _campaignSaveSuccess = false;
-            _campaignSaveMessage = result.ResolveErrorMessage("Não foi possível criar a campanha.");
-        }
-
-        _isSavingCampaign = false;
-    }
-
-    private async Task ClearCampaignFiltersAsync()
-    {
-        _campaignFilter.Name = null;
-        _campaignFilter.Description = null;
-        _campaignFilter.StartDate = null;
-        _campaignFilter.EndDate = null;
-        _campaignFilter.Budget = null;
-        await LoadCampaignsInternalAsync();
-    }
-
-    private async Task ClearMetricFiltersAsync()
-    {
-        _metricFilter.CampaignId = null;
-        _metricFilter.Views = null;
-        _metricFilter.Revenue = null;
-        _metricFilter.Clicks = null;
-        _metricFilter.Sales = null;
-        _metricFilter.Investment = null;
-        await LoadMetricsInternalAsync();
-    }
-
-    private void ApplyStatsResult(Models.ApiResult<DashboardSummaryDto> result)
-    {
-        if (result.Success)
-        {
-            _stats = result.Data ?? new DashboardSummaryDto();
-            return;
-        }
-
-        SetGlobalError(result.ErrorMessage, result.IsOffline);
-    }
-
-    private void ApplyPipelineResult(Models.ApiResult<PipelineStatusDto> result)
-    {
-        if (result.Success)
-        {
-            _pipelineStatus = result.Data;
-            return;
-        }
-
-        _pipelineError = result.ErrorMessage ?? "Não foi possível obter o estado do pipeline.";
-    }
-
-    private void SetGlobalError(string? message, bool isOffline)
-    {
-        _globalError = message;
-        _isOffline = isOffline;
-    }
-
-    private void ClearGlobalError()
-    {
-        _globalError = null;
-        _isOffline = false;
-    }
+    private string ProductUrl(AnalyticsProductDto product) =>
+        $"/painel/produto/{product.LinkGroupId}?{PeriodPresets.ToQuery(_selection)}"
+        + (string.IsNullOrWhiteSpace(_shopId) ? string.Empty : "&shop=" + Uri.EscapeDataString(_shopId));
 }
-

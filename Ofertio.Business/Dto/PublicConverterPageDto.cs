@@ -19,6 +19,12 @@ public class PublicConverterPageDto
     public string? PublicUrl { get; set; }
 
     public List<MarketplaceType> ConnectedPlatforms { get; set; } = [];
+
+    /// <summary>Foto do afiliado (caminho em /uploads). Nulo = sem foto.</summary>
+    public string? AvatarUrl { get; set; }
+
+    /// <summary>Botões de entrada em grupo, mostrados só depois de converter um link.</summary>
+    public List<PublicJoinButtonDto> JoinButtons { get; set; } = [];
 }
 
 public class PublicConverterPageFilter

@@ -6,9 +6,10 @@ public sealed record PlanLimits(
     int MaxStores,
     int DailyVipQuota,
     bool RadarEnabled,
-    int MaxDailySchedules)
+    int MaxDailySchedules,
+    int MaxJoinLinks = 0)
 {
-    public static readonly PlanLimits Unlimited = new(string.Empty, 0, 0, true, 0);
+    public static readonly PlanLimits Unlimited = new(string.Empty, 0, 0, true, 0, 0);
 
     public bool IsUnlimited => string.IsNullOrEmpty(PlanCode);
 }
@@ -33,6 +34,9 @@ public static class PlanLimitRules
 
     public static string SchedulesLimitMessage(PlanLimits limits) =>
         $"Seu plano {limits.PlanCode} permite até {limits.MaxDailySchedules} disparo(s) por dia. Faça upgrade para disparar mais.";
+
+    public static string JoinLinksLimitMessage(PlanLimits limits) =>
+        $"Seu plano {limits.PlanCode} permite até {limits.MaxJoinLinks} link(s) de convite na página pública. Faça upgrade para criar mais.";
 
     public static string RadarBlockedMessage(PlanLimits limits) =>
         $"O Radar de Ofertas não está incluído no plano {limits.PlanCode}. Faça upgrade para liberar.";

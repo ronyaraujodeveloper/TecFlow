@@ -3,6 +3,7 @@
 @attribute [AllowAnonymous]
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Ofertio.Business.Dto
+@using Ofertio.Business.Service.PublicPages
 @using Ofertio.Core.Enums
 @using Ofertio.SharedUi.Helpers
 @using Ofertio.SharedUi.Services.LinkGenerator
@@ -12,102 +13,125 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<PublicConverter> Logger
 
-<PageTitle>Converter link — Ofertio</PageTitle>
+<PageTitle>@(_page?.DisplayName is { Length: > 0 } name ? $"{name} — Conversor de links" : "Conversor de links")</PageTitle>
 
 @if (_notFound)
 {
-    <div class="alert alert-warning" role="alert">
+    <div class="alert alert-warning pc-card" role="alert">
         Página pública não encontrada.
     </div>
 }
 else if (_page is null)
 {
-    <p class="text-muted">Carregando página do afiliado...</p>
+    <p class="text-muted text-center">Carregando…</p>
 }
 else
 {
-    <section class="card border-0 shadow-sm mx-auto public-converter-card">
-        <div class="card-body">
-            <h1 class="public-converter-title">@(_page.DisplayName ?? "Converter link de produto")</h1>
-            <p class="public-converter-lead">
-                Cole o link do produto. A comissão vai para o afiliado desta página.
-            </p>
-
-            <div class="d-flex flex-wrap public-converter-platforms" aria-label="Lojas conectadas">
-                @foreach (var platform in DistinctPlatforms)
+    <section class="pc-card" aria-labelledby="pc-title">
+        <header class="pc-header">
+            <span class="affiliate-avatar" aria-hidden="true">
+                @if (!string.IsNullOrWhiteSpace(_page.AvatarUrl))
                 {
-                    var definition = MarketplaceUrlDetector.All.FirstOrDefault(item => item.IntegrationType == platform);
-                    if (definition is not null)
-                    {
-                        <MarketplacePlatformChip Definition="definition" IsConnected="true" />
-                    }
-                    else
-                    {
-                        <span class="marketplace-platform-badge">@platform.GetDisplayName()</span>
-                    }
+                    <img src="@_page.AvatarUrl" alt="" loading="lazy" />
                 }
+                else
+                {
+                    <span class="affiliate-avatar-initial">@Initial</span>
+                }
+            </span>
+            <div class="min-w-0">
+                <h1 id="pc-title" class="pc-title">@AffiliateName</h1>
+                <p class="pc-lead">Cole o link do produto e receba o link direto da loja.</p>
             </div>
+        </header>
 
-            <label class="form-label public-converter-label" for="public-product-url">Link do produto</label>
-            <input id="public-product-url"
-                   class="form-control public-converter-input"
-                   placeholder="Cole aqui o link da Shopee, Amazon, Magalu..."
-                   value="@_productUrl"
-                   disabled="@_isConverting"
-                   @oninput="e => _productUrl = e.Value?.ToString() ?? string.Empty" />
+        <label class="pc-label" for="public-product-url">Link do produto</label>
+        <input id="public-product-url"
+               class="form-control form-control-lg pc-input"
+               placeholder="Cole aqui o link do produto"
+               inputmode="url"
+               autocomplete="off"
+               value="@_productUrl"
+               disabled="@_isConverting"
+               @oninput="e => _productUrl = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="OnKeyDownAsync" />
 
-            <div class="row g-2">
-                <div class="col-6">
-                    <button type="button"
-                            class="btn btn-primary w-100"
-                            disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
-                            @onclick="ConvertAsync">
-                        @(_isConverting ? "Convertendo..." : "Converter link")
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button type="button"
-                            class="btn btn-outline-secondary w-100"
-                            disabled="@_isConverting"
-                            @onclick="ClearForm">
-                        Limpar
-                    </button>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrWhiteSpace(_error))
+        <div class="pc-actions">
+            <button type="button"
+                    class="btn btn-primary btn-lg pc-convert"
+                    disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
+                    @onclick="ConvertAsync">
+                @(_isConverting ? "Convertendo..." : "Converter link")
+            </button>
+            @if (!string.IsNullOrWhiteSpace(_productUrl) || _result is not null)
             {
-                <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">@_error</div>
+                <button type="button" class="btn btn-link pc-clear" disabled="@_isConverting" @onclick="ClearForm">Limpar</button>
             }
+        </div>
 
-            @if (_result is { HasConvertedLink: true })
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">@_error</div>
+        }
+
+        @if (_result is { HasConvertedLink: true })
+        {
+            <div class="pc-result" role="region" aria-label="Link convertido" aria-live="polite">
+                <p class="pc-result-title"><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>Link pronto</p>
+                @if (!string.IsNullOrWhiteSpace(_result.ProductName))
+                {
+                    <p class="pc-result-product">@_result.ProductName</p>
+                }
+                <div class="pc-result-buttons">
+                    <a class="btn btn-primary btn-lg"
+                       href="@OfertioTrackingUrl"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir na loja
+                    </a>
+                    <button type="button"
+                            class="btn btn-lg @(_copiedTrack ? "btn-success" : "btn-outline-secondary")"
+                            disabled="@(_isCopying || string.IsNullOrWhiteSpace(OfertioTrackingUrl))"
+                            @onclick="() => CopyAsync(OfertioTrackingUrl)">
+                        <i class="bi @(_copiedTrack ? "bi-clipboard-check" : "bi-clipboard") me-1" aria-hidden="true"></i>@(_copiedTrack ? "Copiado" : "Copiar link")
+                    </button>
+                </div>
+            </div>
+
+            @if (_page.JoinButtons.Count > 0)
             {
-                <div class="public-converter-results" role="region" aria-label="Link de rastreio">
-                    <label class="form-label public-converter-label" for="public-ofertio-url">
-                        Link de rastreio Ofertio
-                    </label>
-                    <div class="input-group">
-                        <input id="public-ofertio-url"
-                               class="form-control font-monospace small"
-                               readonly
-                               value="@OfertioTrackingUrl" />
-                        <button type="button"
-                                class="btn @(_copiedTrack ? "btn-success" : "btn-outline-primary")"
-                                disabled="@(_isCopying || string.IsNullOrWhiteSpace(OfertioTrackingUrl))"
-                                @onclick="() => CopyAsync(OfertioTrackingUrl)">
-                            Copiar
-                        </button>
-                        <a class="btn btn-outline-secondary @(string.IsNullOrWhiteSpace(OfertioTrackingUrl) ? "disabled" : null)"
-                           href="@OfertioTrackingUrl"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           title="Abrir rastreio Ofertio">
-                            Abrir
-                        </a>
+                <div class="pc-join" role="region" aria-label="Entrar nos grupos">
+                    <p class="pc-join-title">Quer receber ofertas assim todo dia?</p>
+                    <p class="pc-join-lead">Entre no grupo: o convite abre direto no aplicativo.</p>
+                    <div class="pc-join-list">
+                        @foreach (var button in _page.JoinButtons)
+                        {
+                            var channel = JoinLinkRules.FindChannel(button.Channel);
+                            <a class="pc-join-button"
+                               href="/j/@button.Id"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                <span class="pc-join-icon @(channel?.CssClass)" aria-hidden="true"><i class="bi @(channel?.Icon ?? "bi-people-fill")"></i></span>
+                                <span class="pc-join-text">
+                                    <span class="pc-join-name">@button.Label</span>
+                                    <span class="pc-join-meta">@channel?.Label@(string.IsNullOrWhiteSpace(button.MemberText) ? string.Empty : " · " + button.MemberText)</span>
+                                </span>
+                                <span class="pc-join-cta">Entrar</span>
+                            </a>
+                        }
                     </div>
                 </div>
             }
-        </div>
+        }
+
+        <p class="pc-disclosure">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            Este é um link de afiliado: o preço para você é o mesmo e uma pequena comissão vai para @AffiliateName.
+        </p>
+        @if (PlatformNames.Count > 0)
+        {
+            <p class="pc-platforms">Funciona com @string.Join(", ", PlatformNames).</p>
+        }
     </section>
 }
 
@@ -123,9 +147,14 @@ else
     private string? _error;
     private GerarLinkAfiliadoResponseDto? _result;
 
-    private IReadOnlyList<MarketplaceType> DistinctPlatforms =>
+    private string AffiliateName => string.IsNullOrWhiteSpace(_page?.DisplayName) ? "o afiliado desta página" : _page!.DisplayName!.Trim();
+
+    private string Initial => string.IsNullOrWhiteSpace(_page?.DisplayName) ? "?" : char.ToUpperInvariant(_page!.DisplayName!.Trim()[0]).ToString();
+
+    private IReadOnlyList<string> PlatformNames =>
         (_page?.ConnectedPlatforms ?? [])
             .Distinct()
+            .Select(platform => platform.GetDisplayName())
             .ToList();
 
     private string OfertioTrackingUrl => ShortLinkPublicUrl.RebaseToCurrentHost(_result?.ResolvedShortUrl, GetBaseUrl());
@@ -148,6 +177,14 @@ else
         }
 
         _page = response.Data.Data;
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !_isConverting && !string.IsNullOrWhiteSpace(_productUrl))
+        {
+            await ConvertAsync();
+        }
     }
 
     private void ClearForm()

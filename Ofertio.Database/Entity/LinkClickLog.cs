@@ -69,6 +69,31 @@ public class LinkClickLog
     [MaxLength(64)]
     public string? SubId { get; set; }
 
+    /// <summary>Canal resolvido do clique (WhatsApp, Telegram, Email, PaginaPublica, Instagram, Outro, Facebook, TikTok, Google, X, Direto ou Desconhecido).</summary>
+    [MaxLength(16)]
+    public string? Channel { get; set; }
+
+    /// <summary>Como o canal foi descoberto: Explicit (letra no caminho), InApp (navegador do aplicativo), Referer ou Unknown.</summary>
+    [MaxLength(12)]
+    public string? ChannelOrigin { get; set; }
+
+    /// <summary>Robô de prévia de link (WhatsApp, Telegram etc.). Não entra na contagem de cliques do painel.</summary>
+    public bool IsBot { get; set; }
+
+    /// <summary>Região estimada do clique pela localização do IP (o IP completo não é gravado).</summary>
+    [MaxLength(64)]
+    public string? Country { get; set; }
+
+    [MaxLength(64)]
+    public string? Region { get; set; }
+
+    [MaxLength(96)]
+    public string? City { get; set; }
+
+    /// <summary>Chave curta e opaca do grupo de envio (?g=), nunca o JID/ChatId.</summary>
+    [MaxLength(16)]
+    public string? GroupKey { get; set; }
+
     public ShortAffiliateLink? AffiliateLink { get; set; }
 
     public static string PlatformName(MarketplaceType platformType) => platformType switch

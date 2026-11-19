@@ -570,6 +570,15 @@ public sealed class LinkClickTelemetryService : BackgroundService, ILinkClickTel
                 work.SourceGroup,
                 work.SubId);
 
+            // Região estimada (país, estado, cidade) a partir do IP; o IP completo nunca é gravado.
+            var geo = scope.ServiceProvider.GetService<IGeoLocationService>()?.Lookup(work.IpAddress);
+            if (geo is not null)
+            {
+                log.Country = geo.Country;
+                log.Region = geo.Region;
+                log.City = geo.City;
+            }
+
             await repository.AddAsync(log, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -603,6 +612,7 @@ public static class ShortLinkServiceCollectionExtensions
         services.Configure<ShortLinkOptions>(configuration.GetSection(ShortLinkOptions.SectionName));
         services.AddScoped<IShortAffiliateLinkRepository, ShortAffiliateLinkRepository>();
         services.AddScoped<ILinkClickLogRepository, LinkClickLogRepository>();
+        services.AddScoped<ILinkAnalyticsService, Ofertio.Infrastructure.Services.Analytics.LinkAnalyticsService>();
         services.AddScoped<IShortLinkService, ShortLinkService>();
         services.AddScoped<IAffiliateLinkHistoryService, AffiliateLinkHistoryService>();
         services.AddSingleton<LinkClickTelemetryService>();

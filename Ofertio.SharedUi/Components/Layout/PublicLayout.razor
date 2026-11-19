@@ -1,15 +1,12 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="public-converter-shell">
-    <header class="public-converter-header border-bottom bg-white">
-        <div class="container d-flex align-items-center justify-content-between gap-2">
-            <a href="/" class="fw-bold text-decoration-none text-dark">Ofertio</a>
-            <span class="text-muted small text-truncate">Conversor de links do afiliado</span>
-        </div>
-    </header>
     <main class="container public-converter-main">
         @Body
     </main>
+    <footer class="pc-footer">
+        <span>Feito com <a href="/" class="text-decoration-none">Ofertio</a></span>
+    </footer>
 </div>
 <CookieConsentBanner @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
 <ConfirmDialogHost />

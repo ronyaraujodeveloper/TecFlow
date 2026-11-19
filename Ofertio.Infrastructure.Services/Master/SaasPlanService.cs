@@ -54,7 +54,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         }
 
         if (request.MonthlyPrice < 0 || request.AnnualPrice < 0
-            || request.MaxStores < 0 || request.DailyVipQuota < 0 || request.MaxDailySchedules < 0)
+            || request.MaxStores < 0 || request.DailyVipQuota < 0 || request.MaxDailySchedules < 0 || request.MaxJoinLinks < 0)
         {
             return (null, "Preços e limites não podem ser negativos (use 0 para ilimitado).");
         }
@@ -101,6 +101,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         plan.DailyVipQuota = request.DailyVipQuota;
         plan.RadarEnabled = request.RadarEnabled;
         plan.MaxDailySchedules = request.MaxDailySchedules;
+        plan.MaxJoinLinks = request.MaxJoinLinks;
         plan.Highlights = PlanPricingRules.NormalizeHighlights(request.Highlights);
         plan.IsActive = request.IsActive;
         plan.SortOrder = request.SortOrder;
@@ -114,7 +115,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
         {
             await _audit.LogAsync(actor, MasterAuditActions.PlanSaved, "SaasPlan", plan.Id.ToString(),
                 $"{(isNew ? "Criado" : "Alterado")} plano {plan.Code}: R$ {plan.MonthlyPrice:N2}/mês, R$ {plan.AnnualPrice:N2}/ano, " +
-                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, disparos {plan.MaxDailySchedules}/dia." +
+                $"lojas {plan.MaxStores}, VIP {plan.DailyVipQuota}/dia, radar {(plan.RadarEnabled ? "sim" : "não")}, disparos {plan.MaxDailySchedules}/dia, links de convite {plan.MaxJoinLinks}." +
                 (isTrial ? $" Teste: {plan.TrialDays} dia(s), cartão {(plan.RequireCard ? "exigido" : "não exigido")}, depois {plan.PostTrialPlanCode}." : string.Empty),
                 cancellationToken);
         }
@@ -182,7 +183,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
     }
 
     public static PlanLimits ToLimits(SaasPlan plan) =>
-        new(plan.Code, plan.MaxStores, plan.DailyVipQuota, plan.RadarEnabled, plan.MaxDailySchedules);
+        new(plan.Code, plan.MaxStores, plan.DailyVipQuota, plan.RadarEnabled, plan.MaxDailySchedules, plan.MaxJoinLinks);
 
     public static SaasPlanDto Map(SaasPlan plan) =>
         new()
@@ -196,6 +197,7 @@ public sealed class SaasPlanService : ISaasPlanService, IPlanLimitsService
             DailyVipQuota = plan.DailyVipQuota,
             RadarEnabled = plan.RadarEnabled,
             MaxDailySchedules = plan.MaxDailySchedules,
+            MaxJoinLinks = plan.MaxJoinLinks,
             Highlights = plan.Highlights,
             IsActive = plan.IsActive,
             SortOrder = plan.SortOrder,

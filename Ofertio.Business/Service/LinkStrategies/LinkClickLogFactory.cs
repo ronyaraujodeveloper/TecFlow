@@ -1,4 +1,5 @@
-﻿using Ofertio.Core.Enums;
+﻿using Ofertio.Business.Service.Attribution;
+using Ofertio.Core.Enums;
 using Ofertio.Database.Entity;
 
 namespace Ofertio.Business.Service.LinkStrategies;
@@ -40,7 +41,9 @@ public static class LinkClickLogFactory
         string? referrerUrl,
         string? sourceChannel = null,
         string? sourceGroup = null,
-        string? subId = null)
+        string? subId = null,
+        ClickClassification? classification = null,
+        string? groupKey = null)
     {
         var log = Create(
             affiliateLinkId,
@@ -56,6 +59,13 @@ public static class LinkClickLogFactory
         log.SourceChannel = sourceChannel;
         log.SourceGroup = sourceGroup;
         log.SubId = subId;
+
+        // Sem classificação (chamadas antigas), classifica aqui pelo mesmo critério do redirect.
+        var result = classification ?? ClickClassifierRules.Classify(userAgent, referrerUrl, sourceChannel);
+        log.Channel = result.Channel;
+        log.ChannelOrigin = result.OriginName;
+        log.IsBot = result.IsBot;
+        log.GroupKey = GroupKeyRules.IsKey(groupKey) ? groupKey : GroupKeyRules.IsKey(sourceGroup) ? sourceGroup : null;
         return log;
     }
 

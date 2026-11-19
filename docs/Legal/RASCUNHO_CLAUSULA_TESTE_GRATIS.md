@@ -49,3 +49,29 @@ Na contratação de plano pago à distância, o usuário pode desistir em até *
 - Prazo de carência e de guarda dos dados.
 - Alinhar a redação com a Política de Privacidade (LGPD: finalidade e prazo de guarda dos dados de cliques).
 - Revisar se os termos dos programas de afiliados (Mercado Livre, Amazon, Shopee, TikTok) impõem regras adicionais para links desativados.
+---
+
+# Rascunho: página pública, foto, grupos e dados de acesso (Termos e Política de Privacidade)
+
+> RASCUNHO para revisão jurídica. Não publicado. Publicar nova versão em Master → Termos e atualizar a Política de Privacidade.
+
+## Termos de Uso: página pública do afiliado
+
+1. **Foto e conteúdo.** O afiliado é o único responsável pela foto que envia e pelos nomes, grupos e links de convite que divulga na sua página pública. Ele declara ter os direitos sobre a imagem (autoria, autorização de uso de imagem e de terceiros) e que o conteúdo não viola lei, direitos de terceiros, regras de marketplaces ou das plataformas de mensagens (WhatsApp, Telegram e outras).
+2. **Remoção.** O Ofertio pode remover foto, botão ou página, sem aviso prévio, quando houver indício de violação, denúncia ou ordem de autoridade, sem que isso gere indenização.
+3. **Grupos divulgados.** O Ofertio apenas exibe o botão de convite escolhido pelo afiliado. Não administra, modera nem garante o conteúdo dos grupos. O convite pode deixar de funcionar se o grupo for encerrado ou o convite redefinido, e o sistema pode desativar o botão automaticamente (conferência periódica).
+4. **Responsabilidade pelas mensagens.** Quem administra o grupo responde pelo que é publicado nele e pelo cumprimento das regras do WhatsApp, do Telegram e da LGPD em relação aos membros.
+
+## Política de Privacidade: dados de acesso dos visitantes
+
+1. **O que contamos.** Nas páginas públicas e nos links curtos registramos apenas contagens: visitas, links convertidos, cliques e entradas em grupo, com data e hora, tipo de dispositivo e navegador (para separar acessos automáticos de pessoas).
+2. **Região estimada.** A partir do endereço de rede (IP) estimamos país, estado e cidade no momento do acesso, com base de localização instalada em nosso servidor. O IP não é enviado a terceiros para isso.
+3. **IP.** Guardamos o IP apenas de forma mascarada (parte final oculta), exclusivamente para estimar visitantes únicos, por até **[90] dias**, quando é apagado. A região estimada e as contagens permanecem sem identificar a pessoa.
+4. **Sem identificação.** Não pedimos telefone, nome ou e-mail do visitante e não usamos cookies para acompanhá-lo. Os dados não são associados a uma pessoa e não são vendidos.
+5. **Finalidade e base legal.** Medir o desempenho dos links do afiliado, detectar acessos automáticos e proteger o serviço (legítimo interesse, LGPD art. 7º, IX), com minimização e retenção curta.
+6. **Controlador e operador.** Definir com o jurídico quem é controlador (o Ofertio ou o afiliado) em cada caso.
+
+## Pendências para o jurídico
+- Confirmar se o Marco Civil da Internet (art. 15, guarda de registros de acesso por 6 meses) alcança o acesso de visitantes a links e páginas públicas, o que afetaria o prazo de 90 dias do IP mascarado.
+- Revisar a base legal (legítimo interesse) e se é preciso aviso ao visitante na página.
+- Revisar a cláusula de remoção e de responsabilidade pelas imagens.

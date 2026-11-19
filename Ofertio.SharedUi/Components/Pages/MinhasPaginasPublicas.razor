@@ -3,6 +3,9 @@
 @rendermode InteractiveServer
 @using Ofertio.Business.Dto
 @using Ofertio.SharedUi.Services.LinkGenerator
+@using Ofertio.Business.Service.PublicPages
+@using Microsoft.AspNetCore.Components.Forms
+@inject Ofertio.SharedUi.Services.Public.IPublicPageProfileApiService ProfileApi
 @inject IPublicConverterApiService PublicPages
 @inject NavigationManager Navigation
 @inject ILogger<MinhasPaginasPublicas> Logger
@@ -64,6 +67,158 @@
             </div>
         </section>
 
+        <section class="card border-0 shadow-sm mb-4" aria-labelledby="photo-title">
+            <div class="card-body">
+                <h2 id="photo-title" class="h6 fw-semibold mb-1">Sua foto</h2>
+                <p class="small text-muted mb-3">Aparece na sua página pública, ao lado do seu nome. A foto é de sua responsabilidade: use só imagens que você tem o direito de divulgar.</p>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="affiliate-avatar affiliate-avatar--lg" aria-hidden="true">
+                        @if (!string.IsNullOrWhiteSpace(_profile?.AvatarUrl))
+                        {
+                            <img src="@_profile!.AvatarUrl" alt="" />
+                        }
+                        else
+                        {
+                            <i class="bi bi-person-fill"></i>
+                        }
+                    </span>
+                    <div class="d-flex flex-column gap-2">
+                        <label class="btn btn-outline-primary btn-sm mb-0 @(_profileBusy ? "disabled" : null)">
+                            <i class="bi bi-upload me-1" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(_profile?.AvatarUrl) ? "Enviar foto" : "Trocar foto")
+                            <InputFile OnChange="OnPhotoSelectedAsync" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="visually-hidden" disabled="@_profileBusy" />
+                        </label>
+                        @if (!string.IsNullOrWhiteSpace(_profile?.AvatarUrl))
+                        {
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-start" disabled="@_profileBusy" @onclick="RemovePhotoAsync">Remover foto</button>
+                        }
+                    </div>
+                </div>
+                <p class="small text-muted mt-2 mb-0">JPG, PNG ou WebP até 2 MB. Imagem quadrada fica melhor.</p>
+            </div>
+        </section>
+
+        <section class="card border-0 shadow-sm mb-4" aria-labelledby="join-title">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-1">
+                    <h2 id="join-title" class="h6 fw-semibold mb-0">Links de convite para grupos</h2>
+                    @if (_profile is not null)
+                    {
+                        <span class="small text-muted">@(_profile.MaxJoinLinks > 0 ? $"{_profile.JoinLinks.Count} de {_profile.MaxJoinLinks} usados" : $"{_profile.JoinLinks.Count} criado(s), sem limite no seu plano")</span>
+                    }
+                </div>
+                <p class="small text-muted">Depois que o visitante converte um link, a página convida para entrar nos seus grupos. O botão abre o convite e a própria pessoa toca em "Entrar".</p>
+
+                @if (!string.IsNullOrWhiteSpace(_profileMessage))
+                {
+                    <div class="alert @(_profileMessageIsError ? "alert-danger" : "alert-success") py-2 small" role="status">@_profileMessage</div>
+                }
+
+                @if (_profile is { JoinLinks.Count: > 0 })
+                {
+                    <ul class="join-link-list">
+                        @foreach (var item in _profile.JoinLinks)
+                        {
+                            var channel = JoinLinkRules.FindChannel(item.Channel);
+                            <li class="join-link-item @(item.Status == JoinLinkRules.StatusInactive ? "is-inactive" : null)">
+                                <span class="join-link-icon @(channel?.CssClass)" aria-hidden="true"><i class="bi @(channel?.Icon ?? "bi-link-45deg")"></i></span>
+                                <div class="join-link-body">
+                                    <strong class="join-link-name">@item.Label</strong>
+                                    <span class="small text-muted">
+                                        @(item.SourceGroupName is not null ? $"Grupo: {item.SourceGroupName}" : "Link colado (o sistema não consegue conferir)")
+                                        · @item.Clicks.ToString("N0") clique(s)
+                                    </span>
+                                    @if (item.Status == JoinLinkRules.StatusInactive)
+                                    {
+                                        <span class="small text-danger">Desativado@(string.IsNullOrWhiteSpace(item.StatusReason) ? string.Empty : ": " + item.StatusReason)</span>
+                                    }
+                                    else if (item.Status == JoinLinkRules.StatusUnverified)
+                                    {
+                                        <span class="small text-warning-emphasis">Não foi possível conferir agora (conexão fora do ar).</span>
+                                    }
+                                </div>
+                                <div class="join-link-actions">
+                                    <a class="btn btn-outline-secondary btn-sm" href="@item.InviteUrl" target="_blank" rel="noopener noreferrer" title="Abrir o convite como o visitante">Testar</a>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@_profileBusy" @onclick="() => ToggleLinkAsync(item)">
+                                        @(item.Status == JoinLinkRules.StatusInactive ? "Ativar" : "Desativar")
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" aria-label="Remover @item.Label" disabled="@_profileBusy" @onclick="() => DeleteLinkAsync(item)">
+                                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (_profile is { CanAddJoinLink: false })
+                {
+                    <p class="small text-muted mb-0">Você chegou ao limite do seu plano. Remova um link ou faça upgrade para criar mais.</p>
+                }
+                else if (_profile is not null)
+                {
+                    <div class="join-link-form">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small" for="join-channel">Canal</label>
+                                <select id="join-channel" class="form-select form-select-sm" @bind="_newChannel" @bind:after="OnChannelChanged">
+                                    @foreach (var option in JoinLinkRules.Channels)
+                                    {
+                                        <option value="@option.Name">@option.Label</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (!_manualInvite)
+                            {
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small" for="join-group">Grupo</label>
+                                    <select id="join-group" class="form-select form-select-sm" @bind="_newGroupId">
+                                        <option value="">Escolha um grupo…</option>
+                                        @foreach (var group in GroupsOfChannel)
+                                        {
+                                            <option value="@group.GroupId" disabled="@(!group.CanInvite || group.AlreadyUsed)">
+                                                @group.Name@(group.AlreadyUsed ? " (já adicionado)" : !group.CanInvite ? " (você não é administrador)" : string.Empty)
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small" for="join-url">Link de convite</label>
+                                    <input id="join-url" class="form-control form-control-sm" placeholder="https://chat.whatsapp.com/…" @bind="_newInviteUrl" />
+                                </div>
+                            }
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small" for="join-label">Texto do botão (opcional)</label>
+                                <input id="join-label" class="form-control form-control-sm" maxlength="@JoinLinkRules.MaxLabelLength" placeholder="Nome do grupo" @bind="_newLabel" />
+                            </div>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input id="join-members" type="checkbox" class="form-check-input" @bind="_newShowMembers" />
+                            <label class="form-check-label small" for="join-members">Mostrar o número de membros no botão</label>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" disabled="@_profileBusy" @onclick="AddLinkAsync">
+                                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@(_profileBusy ? "Adicionando..." : "Adicionar")
+                            </button>
+                            <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => _manualInvite = !_manualInvite">
+                                @(_manualInvite ? "Escolher entre os meus grupos" : "Colar um link de convite")
+                            </button>
+                        </div>
+                        @if (!_manualInvite && GroupsOfChannel.Count == 0)
+                        {
+                            <p class="small text-muted mt-2 mb-0">Nenhum grupo sincronizado neste canal. Conecte e sincronize em <a href="/integracoes/conexoes">Gerenciamento de conexões</a>, ou cole um link de convite.</p>
+                        }
+                        @if (_manualInvite)
+                        {
+                            <p class="small text-muted mt-2 mb-0">Links colados não são conferidos pelo sistema: se o convite for redefinido no grupo, o botão passa a falhar.</p>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
         <section class="card border-0 shadow-sm">
             @if (_pages.Count == 0)
             {
@@ -118,10 +273,177 @@
     private bool _isSaving;
     private bool _isLoading = true;
 
+    private PublicPageProfileDto? _profile;
+    private bool _profileBusy;
+    private string? _profileMessage;
+    private bool _profileMessageIsError;
+    private string _newChannel = JoinLinkRules.WhatsApp;
+    private string _newGroupId = string.Empty;
+    private string _newInviteUrl = string.Empty;
+    private string _newLabel = string.Empty;
+    private bool _newShowMembers;
+    private bool _manualInvite;
+
+    private List<AvailableJoinGroupDto> GroupsOfChannel =>
+        _profile?.AvailableGroups.Where(group => string.Equals(group.Channel, _newChannel, StringComparison.OrdinalIgnoreCase)).ToList() ?? [];
+
+    private void OnChannelChanged() => _newGroupId = string.Empty;
+
+    private async Task LoadProfileAsync()
+    {
+        var result = await ProfileApi.GetAsync();
+        if (result.Success && result.Data?.Data is not null)
+        {
+            _profile = result.Data.Data;
+        }
+        else
+        {
+            SetProfileMessage(result.Data?.Descricao ?? result.ErrorMessage ?? "Não foi possível carregar sua foto e seus links de convite.", true);
+        }
+    }
+
+    private void ApplyProfileResult(Models.ApiResult<PublicPageProfileResponseDto> result, string fallbackError)
+    {
+        if (result.Success && result.Data is { Status: true })
+        {
+            if (result.Data.Data is not null)
+            {
+                _profile = result.Data.Data;
+            }
+
+            SetProfileMessage(result.Data.Descricao, false);
+            return;
+        }
+
+        SetProfileMessage(result.Data?.Descricao ?? result.ErrorMessage ?? fallbackError, true);
+    }
+
+    private void SetProfileMessage(string message, bool isError)
+    {
+        _profileMessage = message;
+        _profileMessageIsError = isError;
+    }
+
+    private async Task OnPhotoSelectedAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file is null)
+        {
+            return;
+        }
+
+        _profileBusy = true;
+        _profileMessage = null;
+        try
+        {
+            if (file.Size > AvatarImageRules.MaxBytes)
+            {
+                SetProfileMessage(AvatarImageRules.TooLargeMessage, true);
+                return;
+            }
+
+            await using var stream = file.OpenReadStream(AvatarImageRules.MaxBytes);
+            var result = await ProfileApi.UploadAvatarAsync(file.Name, string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType, stream);
+            ApplyProfileResult(result, "Não foi possível enviar a foto.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao enviar a foto do afiliado.");
+            SetProfileMessage("Não foi possível enviar a foto. Tente de novo.", true);
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
+    private async Task RemovePhotoAsync()
+    {
+        _profileBusy = true;
+        try
+        {
+            ApplyProfileResult(await ProfileApi.RemoveAvatarAsync(), "Não foi possível remover a foto.");
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
+    private async Task AddLinkAsync()
+    {
+        _profileBusy = true;
+        _profileMessage = null;
+        try
+        {
+            var request = new JoinLinkCreateDto
+            {
+                Channel = _newChannel,
+                GroupId = _manualInvite ? null : _newGroupId,
+                InviteUrl = _manualInvite ? _newInviteUrl : null,
+                Label = _newLabel,
+                ShowMemberCount = _newShowMembers
+            };
+            if (!_manualInvite && string.IsNullOrWhiteSpace(_newGroupId))
+            {
+                SetProfileMessage("Escolha um grupo ou cole um link de convite.", true);
+                return;
+            }
+
+            var result = await ProfileApi.CreateLinkAsync(request);
+            ApplyProfileResult(result, "Não foi possível adicionar o link.");
+            if (result.Success && result.Data is { Status: true })
+            {
+                _newGroupId = string.Empty;
+                _newInviteUrl = string.Empty;
+                _newLabel = string.Empty;
+                _newShowMembers = false;
+            }
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
+    private async Task ToggleLinkAsync(PublicPageJoinLinkDto item)
+    {
+        _profileBusy = true;
+        try
+        {
+            var activate = item.Status == JoinLinkRules.StatusInactive;
+            var result = await ProfileApi.UpdateLinkAsync(item.Id, new JoinLinkUpdateDto
+            {
+                Label = item.Label,
+                ShowMemberCount = item.ShowMemberCount,
+                IsActive = activate
+            });
+            ApplyProfileResult(result, "Não foi possível atualizar o link.");
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
+    private async Task DeleteLinkAsync(PublicPageJoinLinkDto item)
+    {
+        _profileBusy = true;
+        try
+        {
+            ApplyProfileResult(await ProfileApi.DeleteLinkAsync(item.Id), "Não foi possível remover o link.");
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Clock.EnsureLoadedAsync();
         await LoadAsync();
+        await LoadProfileAsync();
     }
 
     private async Task LoadAsync()

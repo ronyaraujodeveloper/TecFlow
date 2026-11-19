@@ -34,6 +34,13 @@ public sealed class ClientIpForwardingHandler : DelegatingHandler
             {
                 request.Headers.TryAddWithoutValidation("CF-Connecting-IP", cloudflare);
             }
+
+            // Navegador do visitante: a API usa para separar robôs de prévia e contar dispositivos nas páginas públicas.
+            var userAgent = http.Request.Headers["User-Agent"].ToString();
+            if (!string.IsNullOrWhiteSpace(userAgent))
+            {
+                request.Headers.TryAddWithoutValidation("X-Client-User-Agent", userAgent);
+            }
         }
 
         return base.SendAsync(request, cancellationToken);

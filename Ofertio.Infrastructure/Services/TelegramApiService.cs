@@ -251,6 +251,71 @@ public sealed class TelegramApiService : ITelegramApiService
         return result;
     }
 
+    public async Task<GroupInviteResult> GetChatInviteAsync(
+        string botToken,
+        string chatId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(botToken) || string.IsNullOrWhiteSpace(chatId))
+        {
+            return GroupInviteResult.Unavailable;
+        }
+
+        var client = CreateClient(botToken);
+        try
+        {
+            var chat = await client.GetChatAsync(chatId.Trim(), cancellationToken);
+            if (chat.Type is not (ChatType.Group or ChatType.Supergroup or ChatType.Channel))
+            {
+                return GroupInviteResult.NotFound;
+            }
+
+            var me = await client.GetMeAsync(cancellationToken);
+            var member = await client.GetChatMemberAsync(chat.Id, me.Id, cancellationToken);
+            if (member.Status is not (ChatMemberStatus.Administrator or ChatMemberStatus.Creator))
+            {
+                return GroupInviteResult.NotFound;
+            }
+
+            int? members = null;
+            try
+            {
+                members = await client.GetChatMemberCountAsync(chat.Id, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogDebug(ex, "Não foi possível contar os membros do chat {ChatId}.", chatId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(chat.Username))
+            {
+                return new GroupInviteResult(GroupInviteOutcome.Ok, $"https://t.me/{chat.Username}", members);
+            }
+
+            var link = chat.InviteLink;
+            if (string.IsNullOrWhiteSpace(link))
+            {
+                // Link adicional: não revoga o convite principal que já circula nos grupos.
+                var created = await client.CreateChatInviteLinkAsync(chat.Id, name: "Ofertio", cancellationToken: cancellationToken);
+                link = created.InviteLink;
+            }
+
+            return string.IsNullOrWhiteSpace(link)
+                ? GroupInviteResult.NotFound
+                : new GroupInviteResult(GroupInviteOutcome.Ok, link.Trim(), members);
+        }
+        catch (ApiRequestException ex) when (ex.ErrorCode is 400 or 403 or 404)
+        {
+            _logger.LogInformation(ex, "Telegram não enxerga mais o chat {ChatId}.", chatId);
+            return GroupInviteResult.NotFound;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Falha ao buscar o convite do chat {ChatId} no Telegram.", chatId);
+            return GroupInviteResult.Unavailable;
+        }
+    }
+
     private static TelegramBotClient CreateClient(string botToken) =>
         new(botToken.Trim());
 }

@@ -76,6 +76,7 @@
                     <th>Lojas</th>
                     <th>Achadinhos/dia</th>
                     <th>Disparos/dia</th>
+                    <th title="Botões de entrada em grupo na página pública. 0 = ilimitado.">Links de convite</th>
                     <th>Radar</th>
                     <th>Ativo</th>
                     <th class="text-end">Inquilinos</th>
@@ -112,6 +113,10 @@
                             <input id="plan-schedules-@plan.Code" type="number" min="0" class="form-control form-control-sm" title="Disparos de WhatsApp e Telegram somados neste plano. 0 = ilimitado." @bind="plan.MaxDailySchedules" />
                         </td>
                         <td>
+                            <label class="visually-hidden" for="plan-joinlinks-@plan.Code">Links de convite do plano @plan.Code</label>
+                            <input id="plan-joinlinks-@plan.Code" type="number" min="0" class="form-control form-control-sm" title="Botões de entrada em grupo na página pública. 0 = ilimitado." @bind="plan.MaxJoinLinks" />
+                        </td>
+                        <td>
                             <label class="visually-hidden" for="plan-radar-@plan.Code">Radar do plano @plan.Code</label>
                             <input id="plan-radar-@plan.Code" type="checkbox" class="form-check-input" @bind="plan.RadarEnabled" />
                         </td>
@@ -128,7 +133,7 @@
                         </td>
                     </tr>
                     <tr class="master-plan-highlights-row">
-                        <td colspan="10" class="border-top-0 pt-0">
+                        <td colspan="11" class="border-top-0 pt-0">
                             <label class="form-label small text-muted mb-1" for="plan-highlights-@plan.Code">Vantagens (uma por linha) — aparecem no olho de Meu plano</label>
                             <textarea id="plan-highlights-@plan.Code" class="form-control form-control-sm" rows="2" maxlength="2000" @bind="plan.Highlights"></textarea>
                         </td>

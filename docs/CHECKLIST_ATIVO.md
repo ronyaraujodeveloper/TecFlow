@@ -83,6 +83,32 @@ Fases 1 a 9 concluídas no [histórico](./HISTORICO_FASES_CONCLUIDAS.md). O plan
 - [ ] **Página inicial (`/conheca`):** revisar textos, trocar as imagens provisórias em `Ofertio.SharedUi/wwwroot/images/landing/` por capturas reais, validar em celular e depois trocar a rota `/` (login hoje) pela landing, redirecionando logados para `/dashboard`.
 - [ ] **Links após cancelar (LinkAvailability):** conta cancelada, suspensa ou pausada mantém links curtos e página pública por Billing:LinkGraceDaysAfterCancel dias (padrão 30, em Master ➔ Cofre) e depois responde 410 (link) e "página indisponível" (conversão), sem gravar clique e sem trocar o ID de afiliado. Validar em homologação cancelando um tenant de teste; revisar a cláusula nova em docs/Legal/RASCUNHO_CLAUSULA_TESTE_GRATIS.md com o jurídico.
 - [ ] **KPIs do Master:** comparação com o mês anterior quando houver histórico (`MasterDashboardDto`).
+
+## 📊 Painel de cliques e origem do envio (`ClickChannel`, `PainelAnalytics`)
+
+- [ ] **Migration `AddClickChannelAndBot`:** já aplicada em homologação (reclassificou o histórico). Aplicar em produção e incluir no script idempotente.
+- [ ] **Segredo da chave de grupo:** definir `Ofertio:ShortLinks:GroupKeySecret` por ambiente, fora do Git, **antes de divulgar** e nunca trocar depois (as chaves `?g=` antigas deixariam de ser resolvidas). Sem valor, usa um segredo interno fixo.
+- [ ] **Disparo real:** mandar uma mensagem para um grupo de WhatsApp e outro de Telegram e conferir que todos os links curtos saem como `/w/…?g=` e `/t/…?g=` (sem JID/ChatId) e que o nome do grupo aparece no painel.
+- [ ] **Painel (`/dashboard`):** validar no navegador, desktop e celular: barra de período, indicadores com variação, gráfico por origem, Top 10, detalhe do produto (`/painel/produto/{id}`), grupos e mapa de calor. A antiga tela de campanhas e métricas passou para `/campanhas` e `/metricas`.
+- [ ] **Gerador de Links:** conferir o menu "Copiar para" (WhatsApp, Telegram, E-mail, Instagram, Outro) e que os botões de WhatsApp/Telegram já usam `/w/` e `/t/`.
+- [ ] **Página pública:** converter um link em `/p/{slug}` e conferir que o link devolvido sai como `/p/{loja}/{código}` e que o clique entra como "Página pública".
+- [ ] **Limite conhecido:** a tag `{COMMISSION}` dos disparos usa a URL direta de afiliado (`AffiliateUrl`), não o link curto, então esse link nunca é rastreado.
+- [ ] **Robôs de prévia:** abrir `/w/…` com User-Agent `WhatsApp/2.23` e conferir que redireciona, mas não entra nos cliques (aparece em "aberturas automáticas").
+- [ ] **Pendentes do plano:** saúde dos grupos (tabela `GroupDispatchLog`: cliques por envio, tendência e alerta de grupo esfriando), visita à página pública no funil, limite de histórico por plano, "mais vendidos" quando houver importação de vendas.
+
+## 🌐 Página pública: foto, links de convite, funil e região (`PublicPageProfile`)
+
+- [ ] **Migration `AddPublicPageProfileJoinLinksAndRegion`:** aplicada em homologação (tabelas `PublicPageProfiles`, `PublicPageJoinLinks`, `PublicPageEvents`, `SaasPlans.MaxJoinLinks`, região em `LinkClickLog`). Aplicar em produção e incluir no script idempotente.
+- [ ] **Master ➔ Planos:** conferir a coluna "Links de convite" (padrão: Trial 2, Starter 3, Pro 10, Agency 30, Enterprise ilimitado).
+- [ ] **Minhas Páginas Públicas:** enviar e trocar a foto; criar um link de convite escolhendo um grupo do WhatsApp (conta administradora) e outro do Telegram (bot administrador); testar o botão "Testar"; colar um link manual e ver o aviso de "não verificável". **Confirmar em homologação que a versão da Evolution API responde `group/inviteCode`.**
+- [ ] **Página pública (`/p/{slug}`):** conferir foto, aviso de afiliado, "Abrir na loja", "Copiar link" e, só depois de converter, os botões de grupo. Validar no celular.
+- [ ] **Botão `/j/{id}`:** abre o convite, conta a entrada e não aceita endereço livre; convite desativado mostra aviso; conta cancelada fora da carência responde 410.
+- [ ] **Conferência dos grupos (`JoinLinkHealthWorker`):** roda a cada 6 h (processa só os vencidos há mais de 20 h). Simular um grupo removido e conferir: 1ª falha mantém ativo, 2ª desativa, avisa no sistema e por e-mail; WhatsApp desconectado deixa "não verificado".
+- [ ] **Região por IP:** baixar a base GeoLite2-City (`.mmdb`, MaxMind, cadastro gratuito, atualização mensal) e configurar `GeoIp:DatabasePath` por ambiente. Sem o arquivo, a região fica em branco e nada quebra. Conferir também que o IP do visitante chega à API (cabeçalhos `CF-Connecting-IP`/`X-Forwarded-For`): antes os cliques gravavam `***`.
+- [ ] **Retenção do IP mascarado:** `Privacy:IpRetentionDays` (padrão 90). Confirmar o prazo com o jurídico (Marco Civil, art. 15).
+- [ ] **Termos e Política de Privacidade:** revisar o novo rascunho em `docs/Legal/RASCUNHO_CLAUSULA_TESTE_GRATIS.md` (seção "página pública, foto, grupos e dados de acesso") e publicar.
+- [ ] **Painel:** conferir o funil "Sua página pública" (visitas, conversões, entradas em grupo) e "De onde vêm os cliques (região estimada)".
+
 ## 📝 Registrado sem implementação
 
 - **Autocomplete do ML como fallback (`MLBScraperPrimary`):** não gera ofertas (só termos) e responde 404/403 ao servidor; fora de escopo enquanto a busca for só pela API oficial.

@@ -4,6 +4,7 @@ using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Repositories;
 using Ofertio.Business.Interfaces.Services;
 using Ofertio.Business.Service.Application;
+using Ofertio.Business.Service.Attribution;
 using Ofertio.Business.Service.LinkStrategies;
 using Ofertio.Business.Service.Master;
 using Ofertio.Business.Service.PublicPages;
@@ -22,6 +23,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
     private readonly IAffiliateLinkGenerationService _generationService;
     private readonly ILogger<PublicConverterPageService> _logger;
     private readonly ILinkAvailabilityService? _availability;
+    private readonly IPublicPageEventService? _events;
 
     public PublicConverterPageService(
         AppDbContext context,
@@ -29,9 +31,11 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         PlatformLinkResolver platformLinkResolver,
         IAffiliateLinkGenerationService generationService,
         ILogger<PublicConverterPageService> logger,
-        ILinkAvailabilityService? availability = null)
+        ILinkAvailabilityService? availability = null,
+        IPublicPageEventService? events = null)
     {
         _availability = availability;
+        _events = events;
         _context = context;
         _marketplaceAccounts = marketplaceAccounts;
         _platformLinkResolver = platformLinkResolver;
@@ -50,7 +54,52 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         }
 
         var platforms = await LoadDistinctPlatformsAsync(page.UserId, cancellationToken);
-        return Map(page, platforms);
+        var dto = Map(page, platforms);
+
+        dto.AvatarUrl = await _context.PublicPageProfiles
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(profile => profile.UserId == page.UserId)
+            .Select(profile => profile.AvatarUrl)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var links = await _context.PublicPageJoinLinks
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(link => link.UserId == page.UserId
+                && (link.Status == JoinLinkRules.StatusActive || link.Status == JoinLinkRules.StatusUnverified))
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.Id)
+            .ToListAsync(cancellationToken);
+        // O link de convite nunca vai para o visitante: o botão passa por /j/{id}.
+        dto.JoinButtons = links.Select(link => new PublicJoinButtonDto
+        {
+            Id = link.Id,
+            Channel = link.Channel,
+            Label = link.Label,
+            MemberText = JoinLinkRules.MemberText(link.ShowMemberCount, link.MemberCount)
+        }).ToList();
+        return dto;
+    }
+
+    public async Task RecordEventAsync(
+        string slug,
+        string kind,
+        PublicVisitorInfo visitor,
+        CancellationToken cancellationToken = default)
+    {
+        if (_events is null)
+        {
+            return;
+        }
+
+        var page = await FindBySlugAsync(slug, cancellationToken);
+        if (page is null)
+        {
+            return;
+        }
+
+        await _events.RecordAsync(page.TenantId, page.UserId, kind, visitor, cancellationToken: cancellationToken);
     }
 
     public async Task<PublicConverterPageResponseDto> ListMineAsync(
@@ -234,6 +283,15 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
 
         var result = await _generationService.GenerateAsync(request, page.UserId, cancellationToken);
         result.IsFromPublicPage = true;
+
+        // Origem "p": o link que o visitante copia carrega a letra no caminho (/p/{loja}/{código}).
+        // Vai no endereço devolvido, não no Source do link, que é compartilhado entre quem reaproveita o mesmo destino.
+        result.ShortenedUrl = LinkChannelUrl.Apply(result.ShortenedUrl, 'p');
+        foreach (var variant in result.Accounts)
+        {
+            variant.ShortenedUrl = LinkChannelUrl.Apply(variant.ShortenedUrl, 'p');
+        }
+
         return result;
     }
 

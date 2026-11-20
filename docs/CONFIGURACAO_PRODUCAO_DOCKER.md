@@ -53,6 +53,7 @@ ASPNETCORE_URLS: http://+:8080
 ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
 OrquestradorApi__BaseUrl: http://api:8080/
 OrquestradorApi__TimeoutSeconds: "180"
+UploadStorage__RootPath: /app/uploads          # volume uploads:/app/uploads:ro, o mesmo da API
 Authentication__Google__Enabled: "true"
 Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
 Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
@@ -128,15 +129,15 @@ O `docker-compose.yml`, o `Caddyfile`, o `nuget.config` e os Dockerfiles da VPS 
 | # | Na VPS hoje | No git (alvo) | Risco |
 |---|---|---|---|
 | 1 | **Disco estava em 38 GB de 38 GB (100%).** Em 19/11/2026 o cache de build e as imagens sem uso foram limpos (13,2 GB): ficou em 72%. Causa: **log da API com 19 GB**, porque o exportador de console do OpenTelemetry (`Telemetry:EnableConsoleExporter=true` no appsettings) imprime cada trace e métrica (~1,3 GB/dia) e o Docker da VPS não limita logs (sem `/etc/docker/daemon.json`) | `Telemetry__EnableConsoleExporter=false` na API e `logging` com `max-size: 50m` / `max-file: 3` em todos os serviços | Alto: sem o deploy, o disco enche de novo em cerca de 8 dias. Paliativo: `truncate -s 0 $(docker inspect -f '{{.LogPath}}' ofertio-api)` |
-| 2 | API **sem volume** de `uploads` e de `App_Data` | volumes `uploads:/app/uploads` e `api_appdata:/app/App_Data` | Alto: a cada recriação do container, perde as imagens enviadas, as chaves do Data Protection (tokens `DP1:` ficam ilegíveis) e as sessões do Telegram |
+| 2 | API e WebUi **sem volume**. A chave do Data Protection está dentro do container em `/usr/share/Ofertio/DataProtectionKeys/` (caminho padrão, sem `DataProtection:KeysPath`). Em 20/11/2026 não havia imagens em `/app/wwwroot/uploads` nem sessões do Telegram | API: `uploads:/app/uploads` e `api_appdata:/app/App_Data` com `DataProtection__KeysPath`; WebUi: `uploads:/app/uploads:ro` com `UploadStorage__RootPath=/app/uploads` (o Caddy manda `/uploads` para a WebUi) | Alto: recriar a API sem copiar a chave deixa os tokens `DP1:` ilegíveis. Sem o volume na WebUi, as imagens quebram (404) |
 | 3 | Senhas, JWT, chave de criptografia e segredo do Google escritos no próprio compose; não existe `.env` | `${VAR}` lidos do `.env` | Médio: o compose não pode ir para o git como está |
 | 4 | Sem `UploadStorage__RootPath` | `/app/uploads` | Médio: cai no caminho Windows do appsettings |
 | 5 | `MassTransit__Host=rabbitmq`; API sem `RabbitMq__Username/Password` (usa `guest` do appsettings) | `RabbitMq__Host/Port/Username/Password` | Baixo |
 | 6 | Caddyfile com `ofertio.com.br, www.ofertio.com.br` | só `ofertio.com.br` | Baixo: o Caddy repete a emissão do certificado do `www` sem DNS |
-| 7 | Banco com 62 tabelas e **39 migrations** (última `20261028005516_AddGlobalIntegrationExternalAccount`) | 49 migrations no código | É o deploy pendente; aplicar as 10 migrations incrementais |
+| 7 | Banco com 62 tabelas e **39 migrations** (última `20261028005516_AddGlobalIntegrationExternalAccount`) | **8 migrations pendentes**, no script idempotente `scripts/producao/migrations-pendentes-20261028-ate-20261119.sql` (testado no banco local) | É o deploy pendente. O banco local tem 49 porque guarda 2 registros antigos (`20260524_InitialMigration`, `20260525_AddTikTokTokensToUsuario`) que não existem no código |
 | 8 | Volume do banco montado em `/var/opt/mssql/data` | igual | — (o git foi alinhado à VPS) |
 
-Ordem sugerida no próximo deploy: (1) liberar disco com `docker builder prune -af` e `docker image prune -af`, que não tocam em containers em execução nem em volumes; (2) criar o `.env` com os valores atuais do compose; (3) `git pull` com o compose do git; (4) **antes de recriar a API**, copiar as chaves e uploads de dentro do container atual para os volumes novos (`docker cp ofertio-api:/app/App_Data ...`), senão os tokens `DP1:` se perdem; (5) subir e aplicar as migrations.
+O passo a passo do primeiro deploy, com os comandos prontos, está em [`EXECUCAO_PRODUCAO.md`](./EXECUCAO_PRODUCAO.md#primeiro-deploy-com-o-compose-do-git-uma-vez).
 
 ## O que desta implantação entra no código local
 

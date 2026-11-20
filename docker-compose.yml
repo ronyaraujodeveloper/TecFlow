@@ -105,6 +105,10 @@ services:
       Authentication__Google__Enabled: "true"
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      # O Caddy manda /uploads/... para a WebUi, que entrega as imagens que a API grava.
+      UploadStorage__RootPath: /app/uploads
+    volumes:
+      - uploads:/app/uploads:ro   # mesmo volume da API; somente leitura (a WebUi só entrega os arquivos)
     networks: [ofertio-net]
 
   caddy:

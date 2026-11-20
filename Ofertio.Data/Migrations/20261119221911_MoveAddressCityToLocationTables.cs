@@ -139,7 +139,15 @@ namespace Ofertio.Data.Migrations
                 table: "Customers");
         }
 
+        /// <summary>
+        /// Executado via EXEC(N'...'): no script idempotente (dotnet ef migrations script --idempotent) o SQL Server
+        /// compila o bloco antes de avaliar o IF NOT EXISTS; sem o EXEC, rodar o script de novo depois que City/State
+        /// já foram removidas falharia com "Invalid column name".
+        /// </summary>
         private static string ConvertTextToCityId(string table) =>
+            $"EXEC(N'{ConvertTextToCityIdSql(table).Replace("'", "''")}');";
+
+        private static string ConvertTextToCityIdSql(string table) =>
             $"""
             UPDATE t SET t.[CityId] = COALESCE(
                 (SELECT TOP (1) c.[Id]

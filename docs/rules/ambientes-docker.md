@@ -49,7 +49,7 @@ O compose do git pode estar **à frente** da VPS em itens que [`CONFIGURACAO_PRO
 |---|---|---|
 | `sqlserver_data` | banco `Ofertio` | perde tudo; restaurar do `.bak` |
 | `api_appdata` | chaves do Data Protection e sessões do Telegram | tokens `DP1:` de marketplace ficam ilegíveis; o UserBot pede login de novo |
-| `uploads` | imagens enviadas | imagens quebradas |
+| `uploads` | imagens enviadas (a API grava; a WebUi lê, somente leitura, e entrega em `/uploads`) | imagens quebradas |
 | `evolution_pg` | sessão do WhatsApp (Evolution) | precisa ler o QR de novo |
 
 Nunca rode `docker compose down -v` nem `docker volume rm` nesses volumes sem backup. Nunca rode `dotnet ef database update` em base vazia (a migration inicial falha); restaure o `.bak`.

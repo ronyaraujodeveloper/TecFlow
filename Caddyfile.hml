@@ -1,0 +1,38 @@
+# Homologação: mesmo roteamento da produção (/api/* -> api, resto -> webui).
+#
+# Diferença em relação à produção: o TLS público é do Cloudflare. O serviço "cloudflared"
+# (túnel 9d81a4d1..., config em %USERPROFILE%\.cloudflared\config.yml) leva
+# dev.ofertio.com.br -> https://127.0.0.1:7002 com noTLSVerify. Por isso:
+#   - o Caddy usa certificado interno (tls internal), sem Let's Encrypt;
+#   - default_sni cobre a conexão do túnel, que chega por IP e sem SNI;
+#   - trusted_proxies preserva o X-Forwarded-Proto=https enviado pelo Cloudflare
+#     (sem isso a aplicação acharia que a requisição é http e quebraria OAuth e cookies).
+{
+    default_sni dev.ofertio.com.br
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+dev.ofertio.com.br {
+    tls internal
+
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    handle {
+        reverse_proxy webui:8080
+    }
+}
+
+# Acesso local sem domínio: http://localhost
+:80 {
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    handle {
+        reverse_proxy webui:8080
+    }
+}

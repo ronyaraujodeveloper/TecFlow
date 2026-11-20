@@ -1,0 +1,13 @@
+# Conceito Docker: tudo que NÃO deve ir para o "contexto de build" (o que o docker build enxerga).
+**/bin/
+**/obj/
+**/.vs/
+**/node_modules/
+**/App_Data/
+**/logs/
+.git/
+.env
+.env.*
+*.bak
+*.user
+test_full_output.txt

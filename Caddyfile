@@ -1,0 +1,10 @@
+# Produção. Publicar só domínio com DNS (www.ofertio.com.br não resolve).
+ofertio.com.br {
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    handle {
+        reverse_proxy webui:8080
+    }
+}

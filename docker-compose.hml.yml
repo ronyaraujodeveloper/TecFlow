@@ -1,0 +1,30 @@
+# =============================================================================
+# OVERRIDE DE HOMOLOGAÇÃO (dev.ofertio.com.br nesta máquina)
+# Usar SEMPRE junto com a base e o local:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml -f docker-compose.hml.yml --profile app up -d
+# (ou .\Publicar-Homologacao-Docker.ps1). Só diferenças inevitáveis em relação à produção.
+# =============================================================================
+
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Homologacao
+      EvolutionApi__BaseUrl: http://evolution:8080
+      EvolutionApi__ApiKey: ${EVOLUTION_API_KEY}
+      EvolutionApi__WebhookUrl: http://api:8080/api/v1/integrations/whatsapp/webhook
+      Telegram__WebhookBaseUrl: https://dev.ofertio.com.br
+      Ofertio__ShortLinks__PublicBaseUrl: https://dev.ofertio.com.br
+      Email__PublicBaseUrl: https://dev.ofertio.com.br
+
+  webui:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Homologacao
+
+  caddy:
+    ports: !override
+      - "${HML_HTTP_PORT:-80}:80"
+      - "${HML_HTTPS_PORT:-443}:443"
+    volumes: !override
+      - ./Caddyfile.hml:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config

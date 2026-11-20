@@ -45,7 +45,7 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 
 ## 5. Banco de dados oficial (inviolável)
 
-- O único banco oficial é o **SQL Server**, banco **`Ofertio`** (`localhost\SQLEXPRESS` no Development e na Homologação IIS).
+- O único banco oficial é o **SQL Server**, banco **`Ofertio`**, no container `ofertio-db` nos três ambientes (local: `127.0.0.1,1433`; ver [ambientes-docker.md](./ambientes-docker.md)).
 - Provider obrigatório: **`SqlServer`** (`Microsoft.EntityFrameworkCore.SqlServer`, `Database:Provider=SqlServer`).
 - É **proibido** trocar o `appsettings.json` para `PostgreSQL` / `Npgsql` ou criar bancos com outros nomes (ex.: `OfertioDb`). O PostgreSQL existe só como assembly de migrations legado em `Ofertio.Infrastructure`.
 - Migrations geradas e aplicadas apenas em T-SQL, em `Ofertio.Data` com `--context AppDbContext` (comandos no [README](../../README.md#-comandos-principais)).
@@ -53,7 +53,7 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 ## 6. Segurança, criptografia e LGPD
 
 - **Credenciais sempre criptografadas em repouso:** senhas, `AccessToken`, `RefreshToken`, `ClientSecret`/`AppSecret` e chaves de API passam pelo `ISecurityEncryptionService` / `ValueConverter` do EF Core (`EncryptedStringConverter.CreateProtected`); nunca em texto puro no banco.
-- **Data Protection:** `AddOfertioDataProtection` com chaves em `App_Data/OfertioDataProtectionKeys` da API (`DataProtection:KeysPath`), protegidas por DPAPI; API, Worker e Orquestrador compartilham o mesmo anel.
+- **Data Protection:** `AddOfertioDataProtection` com chaves em `App_Data/OfertioDataProtectionKeys` da API (`DataProtection:KeysPath`); API, Worker e Orquestrador compartilham o mesmo anel. No Windows as chaves são protegidas por DPAPI da máquina; nos containers Linux (produção e homologação) ficam no volume `api_appdata`, sem DPAPI. Uma chave DPAPI não abre no Linux: na migração do IIS ela foi decifrada no Windows e copiada para o volume.
 - **Cadeia de leitura (`Unprotect`):** `DP1:` (Data Protection) ➔ `ENC1:` (AES legado) ➔ texto puro. Ao mexer em entidades com segredos, confira se a conversão no `OnModelCreating` continua ativa.
 - **Deploy:** a limpeza da pasta da API **preserva `App_Data`**; sem as chaves, os tokens gravados ficam ilegíveis e todas as contas precisam ser reautorizadas.
 - **Identificadores legados:** `SetApplicationName("TecFlow")` e o purpose `TecFlow.MarketplaceTokens.v1` **não podem ser renomeados** (ver [encoding-standards.md](./encoding-standards.md#5-identificadores-legados-não-renomear)).
@@ -79,7 +79,7 @@ Para evitar redundância (como Create/Update DTOs), cada entidade possui estrita
 
 ## 8. Arquivos, uploads e IIS
 
-- **Uploads fora do deploy:** `UploadStorage:RootPath` (`C:\inetpub\ofertio\uploads` em produção, `C:\inetpub\ofertio_dev\uploads` no Development), servido em `/uploads`; a pasta precisa se chamar `uploads` porque as URLs no banco começam com `/uploads/`.
+- **Uploads fora do deploy:** `UploadStorage:RootPath` (`/app/uploads` no volume `uploads` em produção e homologação, `C:\inetpub\ofertio_dev\uploads` no Development pelo Visual Studio), servido em `/uploads`; a pasta precisa se chamar `uploads` porque as URLs no banco começam com `/uploads/`.
 - **Mídia:** o banco só recebe a URL depois que o arquivo físico existe (`.tmp` ➔ flush ➔ move); sem arquivo confirmado, a URL fica nula.
 - **IIS:** sites `Ofertio.API` / `Ofertio.WebUi`, pools `OfertioApiPool` / `OfertioWebUiPool`. **Não** criar subaplicação `/api` dentro de `Ofertio.WebUi` (HTTP 500.35 no mesmo pool); a WebUi repassa as rotas públicas para a API via YARP.
 - **HTTPS no Kestrel (só `dotnet run`):** `Ofertio.WebUi/appsettings.Development.json` aponta o `.pfx` em `Kestrel:Endpoints:Https` (`Http1AndHttp2`); no IIS o HTTPS da porta 7002 é o binding do site.

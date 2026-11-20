@@ -16,7 +16,7 @@ Não grave senha de root, connection string, JWT, chave de criptografia nem segr
 git push origin main
 ```
 
-Não rode o roteiro de IIS de [`EXECUCAO_HOMOLOGACAO.md`](./EXECUCAO_HOMOLOGACAO.md) nesta publicação. Homologação e produção são ambientes separados.
+Não rode [`EXECUCAO_HOMOLOGACAO.md`](./EXECUCAO_HOMOLOGACAO.md) nesta publicação. Homologação e produção são ambientes separados: a homologação roda em Docker na máquina local, a produção na VPS. Os dois usam o mesmo `docker-compose.yml` (regra [`rules/ambientes-docker.md`](./rules/ambientes-docker.md)).
 
 ## Fase 2 — Atualizar o código na VPS
 
@@ -24,7 +24,7 @@ Diretório: `/var/www/ofertio`. Host: `root@138.199.212.202`.
 
 1. Conecte por SSH.
 2. Entre em `/var/www/ofertio`.
-3. Antes do `git pull`, preserve o que ainda não está no git: `docker-compose.yml`, `Caddyfile`, `nuget.config`, `Ofertio.API/Dockerfile`, `Ofertio.WebUi/Dockerfile` e qualquer `.env`. Se o pull for recusar porque um desses arquivos passaria a ser rastreado, faça cópia para `/root/ofertio-config-backup` e só então atualize.
+3. Antes do `git pull`, preserve as cópias locais da VPS: `docker-compose.yml`, `Caddyfile`, `nuget.config`, `Ofertio.API/Dockerfile`, `Ofertio.WebUi/Dockerfile` e qualquer `.env`. Desde 19/11/2026 esses arquivos (menos o `.env`) também estão no git, então o pull vai recusar enquanto as cópias não rastreadas existirem. Faça cópia para `/root/ofertio-config-backup`, compare com as versões do git (`diff`) e leve qualquer diferença para o repositório antes de remover as cópias e atualizar. Na primeira vez, essa comparação fecha a pendência de [`CONFIGURACAO_PRODUCAO_DOCKER.md`](./CONFIGURACAO_PRODUCAO_DOCKER.md#o-que-fica-no-git-e-o-que-fica-só-na-vps).
 4. Puxe o código com a chave de deploy do repositório:
 
 ```bash

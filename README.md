@@ -8,9 +8,9 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 ## 🛠️ Stack Tecnológica
 - **Backend:** .NET 8.0 Web API (C#), Worker e Orquestrador.
 - **Frontend:** Blazor WebApp `Ofertio.WebUi` com componentes compartilhados em `Ofertio.SharedUi` (Bootstrap 5 + Bootstrap Icons).
-- **Banco de Dados:** SQL Server (`localhost\SQLEXPRESS` / `Ofertio`) via `Database:Provider=SqlServer` no Development e na Homologação IIS.
+- **Banco de Dados:** SQL Server 2022 em container (`ofertio-db`, banco `Ofertio`) via `Database:Provider=SqlServer` nos três ambientes. Local: `127.0.0.1,1433` (SSMS com login SQL).
 - **ORM:** Entity Framework Core 8 (`UseSqlServer`, migrations em `Ofertio.Data`); `Ofertio.Infrastructure` guarda só as migrations legadas de PostgreSQL.
-- **Hospedagem:** IIS (`OfertioApiPool` e `OfertioWebUiPool`, em `C:\inetpub\ofertio`).
+- **Hospedagem:** Docker (Caddy + Kestrel + SQL Server + RabbitMQ) na produção (VPS) e na homologação local, com o mesmo `docker-compose.yml`. ➔ [ambientes-docker](./docs/rules/ambientes-docker.md)
 
 ---
 
@@ -22,6 +22,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 | 🎨 [Interface & UI/UX](./docs/rules/frontend-ui.md) | Telas Blazor, ícones `bi bi-*`, combos, modais, Mobile First e badges. |
 | 🔑 [Marketplaces & OAuth](./docs/rules/marketplaces-oauth.md) | OAuth do Mercado Livre e do TikTok Shop (App de Criador), token Master, busca oficial, sanitização de links e novas plataformas. |
 | 🔤 [Encoding & Nomenclatura](./docs/rules/encoding-standards.md) | UTF-8 com BOM, cultura pt-BR, idioma, nomes e identificadores legados. |
+| 🐳 [Ambientes Docker](./docs/rules/ambientes-docker.md) | Compose, Dockerfile, `.env`, roteiros `EXECUCAO_*`: dev e homologação espelham a produção. |
 
 ### ⚡ Regras de ouro (resumo)
 - **Encoding:** todo arquivo criado ou alterado vai em UTF-8 com BOM. ➔ [encoding-standards](./docs/rules/encoding-standards.md)
@@ -32,6 +33,7 @@ Plataforma de **automação e inteligência para afiliados de alta escala**: orq
 - **Testes e RPA:** comportamento novo ou corrigido ganha teste em `Ofertio.Tests` e, se a pessoa vê ou clica, em `Ofertio.E2E`, no mesmo passo. O robô só encontra o controle pelo `id` estável `{tela}-{campo}` ou pelo nome acessível. ➔ [frontend-ui §10](./docs/rules/frontend-ui.md#10-ids-estáveis-para-testes-pela-tela)
 - **Marketplaces:** só API oficial com Bearer token; sem raspagem nem contorno de anti-bot ou captcha. ➔ [marketplaces-oauth](./docs/rules/marketplaces-oauth.md)
 - **Preservação:** não remova validações nem regras existentes ao refatorar. ➔ [backend-architecture](./docs/rules/backend-architecture.md)
+- **Ambientes:** dev e homologação seguem a produção; diferença só em override e documentada. ➔ [ambientes-docker](./docs/rules/ambientes-docker.md)
 
 ---
 
@@ -64,17 +66,22 @@ dotnet ef migrations add <Nome> --project .\Ofertio.Data\Ofertio.Data.csproj --s
 dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 ```
 
-## 🚀 Homologação (IIS)
+## 🐳 Ambientes (Docker)
 
-O roteiro completo está em [`docs/EXECUCAO_HOMOLOGACAO.md`](./docs/EXECUCAO_HOMOLOGACAO.md), executado em sequência no PowerShell como Administrador. Ele normaliza o encoding, aplica as migrations, publica API e WebUi em `C:\inetpub\ofertio`, reinicia o IIS e roda o smoke test.
+Os três ambientes usam o mesmo [`docker-compose.yml`](./docker-compose.yml) (o da produção). Dev e homologação acrescentam overrides com as diferenças documentadas ([regra](./docs/rules/ambientes-docker.md)).
 
-## 🐳 Produção (Docker)
+| Ambiente | Roteiro | Onde roda | Compose |
+|---|---|---|---|
+| Desenvolvimento | [`EXECUCAO_DESENVOLVIMENTO.md`](./docs/EXECUCAO_DESENVOLVIMENTO.md) | infra em Docker + API/WebUi no Visual Studio | `-f docker-compose.yml -f docker-compose.local.yml` |
+| Homologação | [`EXECUCAO_HOMOLOGACAO.md`](./docs/EXECUCAO_HOMOLOGACAO.md) | tudo em Docker nesta máquina (`dev.ofertio.com.br`) | `+ -f docker-compose.hml.yml --profile app` |
+| Produção | [`EXECUCAO_PRODUCAO.md`](./docs/EXECUCAO_PRODUCAO.md) ([configuração](./docs/CONFIGURACAO_PRODUCAO_DOCKER.md)) | VPS | `-f docker-compose.yml` |
 
-A VPS usa Docker, não o IIS. A configuração está em [`docs/CONFIGURACAO_PRODUCAO_DOCKER.md`](./docs/CONFIGURACAO_PRODUCAO_DOCKER.md). O roteiro de publicação está em [`docs/EXECUCAO_PRODUCAO.md`](./docs/EXECUCAO_PRODUCAO.md).
+Portas locais: SQL Server `127.0.0.1,1433` · RabbitMQ `5672` / painel `15672` · Evolution (WhatsApp) `8080` · API (VS) `7001` · WebUi (VS) `7002` · homologação via Caddy `80` e `7002` (túnel Cloudflare).
 
-- Preserve `C:\inetpub\ofertio\api\App_Data` no publish (chaves do Data Protection e sessão do Telegram).
-- Não recrie a sub-aplicação `/api` dentro do site `Ofertio.WebUi` (causa HTTP 500.35).
-- Logs da API: `C:\inetpub\ofertio\api\logs\stdout_*.log`.
+- Segredos no `.env` (modelo `.env.example`) e, no Visual Studio, em user-secrets.
+- Nunca rode `docker compose down -v`: apaga banco, chaves, uploads e sessão do WhatsApp.
+- Logs: `docker logs ofertio-api --tail 80` (idem `ofertio-webui`, `ofertio-evolution`).
+- O roteiro antigo de IIS está em [`docs/arquivo/EXECUCAO_HOMOLOGACAO_IIS.md`](./docs/arquivo/EXECUCAO_HOMOLOGACAO_IIS.md).
 
 ---
 

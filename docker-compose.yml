@@ -1,0 +1,134 @@
+# =============================================================================
+# BASE COMUM = PRODUÇÃO (VPS /var/www/ofertio)
+# Regra: docs/rules/ambientes-docker.md. Dev e homologação NÃO editam este arquivo;
+# as diferenças ficam em docker-compose.local.yml / docker-compose.hml.yml (overrides).
+#
+# Conferido com o compose da VPS em 19/11/2026. Este arquivo já traz o que
+# docs/CONFIGURACAO_PRODUCAO_DOCKER.md exige e a VPS ainda NÃO tem (ver "Pendências na VPS"):
+#   segredos via .env, volumes uploads/api_appdata, RabbitMq__Username/Password,
+#   UploadStorage__RootPath, sem MassTransit__Host (o código não lê).
+#
+# Conceitos Docker:
+#   service   = um componente da aplicação (api, banco...). Vira um ou mais containers.
+#   container = processo isolado criado a partir de uma imagem.
+#   image     = pacote pronto (SO mínimo + runtime + app). Ex.: mcr.microsoft.com/mssql/server.
+#   volume    = pasta gerenciada pelo Docker que sobrevive quando o container é recriado.
+#   network   = rede virtual: os serviços se enxergam pelo NOME (ex.: "sqlserver", "api").
+#   ${VAR}    = valor lido do arquivo .env (segredos ficam fora do git).
+# =============================================================================
+name: ofertio
+
+# Conceito Docker: "x-..." é um bloco reutilizável (âncora YAML). Limita o log de cada container
+# a 3 arquivos de 50 MB. Sem isso, a API da VPS chegou a 19 GB de log e encheu o disco (19/11/2026).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ofertio-db
+    logging: *default-logging
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_PID: Express
+    volumes:
+      - sqlserver_data:/var/opt/mssql/data
+    networks: [ofertio-net]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ofertio-rabbitmq
+    logging: *default-logging
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks: [ofertio-net]
+
+  api:
+    build:
+      context: .
+      dockerfile: Ofertio.API/Dockerfile
+    container_name: ofertio-api
+    logging: *default-logging
+    restart: always
+    depends_on: [sqlserver, rabbitmq]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # O exportador de console do OpenTelemetry imprimia cada trace/métrica (~1,3 GB/dia).
+      # Os logs do Serilog continuam no console; /metrics (Prometheus) continua ativo.
+      Telemetry__EnableConsoleExporter: "false"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ASPNETCORE_URLS: http://+:8080
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: ${SQL_CONNECTION}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Encryption__Key: ${ENCRYPTION_KEY}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Secret: ${JWT_KEY}
+      Jwt__Issuer: ofertio.com.br
+      Jwt__Audience: ofertio.com.br
+      Authentication__Google__Enabled: "true"
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      UploadStorage__RootPath: /app/uploads
+      # Chaves do Data Protection e sessões do Telegram ficam em /app/App_Data (volume abaixo).
+      DataProtection__KeysPath: App_Data/OfertioDataProtectionKeys
+      Telegram__UserBotSessionFolder: App_Data/telegram-sessions
+    volumes:
+      - uploads:/app/uploads
+      - api_appdata:/app/App_Data
+    networks: [ofertio-net]
+
+  webui:
+    build:
+      context: .
+      dockerfile: Ofertio.WebUi/Dockerfile
+    container_name: ofertio-webui
+    logging: *default-logging
+    restart: always
+    depends_on: [api]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ASPNETCORE_URLS: http://+:8080
+      OrquestradorApi__BaseUrl: http://api:8080/
+      OrquestradorApi__TimeoutSeconds: "180"
+      Authentication__Google__Enabled: "true"
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+    networks: [ofertio-net]
+
+  caddy:
+    image: caddy:latest
+    container_name: ofertio-caddy
+    logging: *default-logging
+    restart: always
+    depends_on: [webui]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [ofertio-net]
+
+networks:
+  ofertio-net:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+  uploads:
+  api_appdata:
+  caddy_data:
+  caddy_config:

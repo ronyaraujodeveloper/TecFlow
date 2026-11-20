@@ -2,6 +2,8 @@
 
 Referência do que a VPS precisa para a API e a WebUi conversarem sem alterar o ambiente local. O roteiro de publicação está em [`EXECUCAO_PRODUCAO.md`](./EXECUCAO_PRODUCAO.md).
 
+Este documento é a **referência dos ambientes locais**. Desenvolvimento e homologação usam o mesmo `docker-compose.yml` com overrides e seguem a regra [`rules/ambientes-docker.md`](./rules/ambientes-docker.md). Ao mudar algo aqui, revise [`EXECUCAO_DESENVOLVIMENTO.md`](./EXECUCAO_DESENVOLVIMENTO.md) e [`EXECUCAO_HOMOLOGACAO.md`](./EXECUCAO_HOMOLOGACAO.md) no mesmo commit.
+
 ## Onde roda
 
 | Item | Valor |
@@ -32,7 +34,8 @@ A máquina de desenvolvimento continua com `ASPNETCORE_ENVIRONMENT=Development` 
 
 | Artefato | Onde deve viver |
 |---|---|
-| `Ofertio.API/Dockerfile`, `Ofertio.WebUi/Dockerfile`, `Caddyfile`, `nuget.config`, `docker-compose.yml` | No git. Hoje existem só na VPS e estão fora do controle de versão. |
+| `Ofertio.API/Dockerfile`, `Ofertio.WebUi/Dockerfile`, `Caddyfile`, `nuget.config`, `docker-compose.yml` | No git, na raiz do repositório (desde 19/11/2026). Conferidos com a VPS em 19/11/2026: ver [Pendências na VPS](#pendências-na-vps-comparação-de-19112026). |
+| `.env.example` | No git. Modelo das variáveis do `.env`. |
 | Senhas, JWT, chave de criptografia, segredo do Google | Arquivo `.env` na VPS, fora do git. Não copiar para `appsettings*.json` nem para o Compose versionado. |
 | Volume `sqlserver_data` | Só na VPS. O esquema já aplicado não é um arquivo de código. |
 
@@ -117,6 +120,23 @@ e de `nuget.config` com `signatureValidationMode=accept`. Sem isso o pacote Refi
 O volume `sqlserver_data` guarda o banco `Ofertio`. Em 23/10/2026 o esquema atual (60 tabelas, inclusive `Usuarios` e `AspNetUserLogins`) foi criado direto no volume e as 36 migrations de `Ofertio.Data` foram registradas em `__EFMigrationsHistory`.
 
 `dotnet ef database update` em um banco vazio falha: `20260920224523_InitialSqlServerMigration` altera `Usuarios` em vez de criar o banco do zero. Não rode esse comando numa base nova. Com o histórico já gravado, uma migration nova e incremental pode ser aplicada em cima dessa base.
+
+## Pendências na VPS (comparação de 19/11/2026)
+
+O `docker-compose.yml`, o `Caddyfile`, o `nuget.config` e os Dockerfiles da VPS foram comparados com os do git. **Dockerfiles e `nuget.config` são idênticos.** O compose do git já traz o que este documento exige; a VPS ainda roda a versão antiga, com estas diferenças:
+
+| # | Na VPS hoje | No git (alvo) | Risco |
+|---|---|---|---|
+| 1 | **Disco estava em 38 GB de 38 GB (100%).** Em 19/11/2026 o cache de build e as imagens sem uso foram limpos (13,2 GB): ficou em 72%. Causa: **log da API com 19 GB**, porque o exportador de console do OpenTelemetry (`Telemetry:EnableConsoleExporter=true` no appsettings) imprime cada trace e métrica (~1,3 GB/dia) e o Docker da VPS não limita logs (sem `/etc/docker/daemon.json`) | `Telemetry__EnableConsoleExporter=false` na API e `logging` com `max-size: 50m` / `max-file: 3` em todos os serviços | Alto: sem o deploy, o disco enche de novo em cerca de 8 dias. Paliativo: `truncate -s 0 $(docker inspect -f '{{.LogPath}}' ofertio-api)` |
+| 2 | API **sem volume** de `uploads` e de `App_Data` | volumes `uploads:/app/uploads` e `api_appdata:/app/App_Data` | Alto: a cada recriação do container, perde as imagens enviadas, as chaves do Data Protection (tokens `DP1:` ficam ilegíveis) e as sessões do Telegram |
+| 3 | Senhas, JWT, chave de criptografia e segredo do Google escritos no próprio compose; não existe `.env` | `${VAR}` lidos do `.env` | Médio: o compose não pode ir para o git como está |
+| 4 | Sem `UploadStorage__RootPath` | `/app/uploads` | Médio: cai no caminho Windows do appsettings |
+| 5 | `MassTransit__Host=rabbitmq`; API sem `RabbitMq__Username/Password` (usa `guest` do appsettings) | `RabbitMq__Host/Port/Username/Password` | Baixo |
+| 6 | Caddyfile com `ofertio.com.br, www.ofertio.com.br` | só `ofertio.com.br` | Baixo: o Caddy repete a emissão do certificado do `www` sem DNS |
+| 7 | Banco com 62 tabelas e **39 migrations** (última `20261028005516_AddGlobalIntegrationExternalAccount`) | 49 migrations no código | É o deploy pendente; aplicar as 10 migrations incrementais |
+| 8 | Volume do banco montado em `/var/opt/mssql/data` | igual | — (o git foi alinhado à VPS) |
+
+Ordem sugerida no próximo deploy: (1) liberar disco com `docker builder prune -af` e `docker image prune -af`, que não tocam em containers em execução nem em volumes; (2) criar o `.env` com os valores atuais do compose; (3) `git pull` com o compose do git; (4) **antes de recriar a API**, copiar as chaves e uploads de dentro do container atual para os volumes novos (`docker cp ofertio-api:/app/App_Data ...`), senão os tokens `DP1:` se perdem; (5) subir e aplicar as migrations.
 
 ## O que desta implantação entra no código local
 

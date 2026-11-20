@@ -1,0 +1,87 @@
+# =============================================================================
+# OVERRIDE LOCAL (desenvolvimento e homologação nesta máquina)
+# Conceito Docker: "override" = arquivo extra passado com outro -f. O Compose junta
+# com a base (docker-compose.yml): o que aparece aqui soma ou substitui o da base.
+#
+# Só diferenças INEVITÁVEIS em relação à produção (tabela completa em
+# docs/EXECUCAO_DESENVOLVIMENTO.md e docs/EXECUCAO_HOMOLOGACAO.md):
+#   - portas em 127.0.0.1 para SSMS, RabbitMQ e debug no Visual Studio;
+#   - limites de memória (máquina de 16 GB, Docker limitado a 5 GB no .wslconfig);
+#   - SQL Server com teto de memória (a edição Express já vem da base, igual à VPS);
+#   - Evolution API (WhatsApp), que a produção ainda não documenta;
+#   - api/webui/caddy só sobem com o perfil "app" (no dev rodam no Visual Studio).
+# =============================================================================
+
+services:
+  sqlserver:
+    environment:
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    ports:
+      - "127.0.0.1:1433:1433"   # SSMS: 127.0.0.1,1433 / login sa
+    mem_limit: 1800m
+
+  rabbitmq:
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672" # painel: http://localhost:15672
+    mem_limit: 256m
+
+  evolution-db:
+    image: postgres:15-alpine   # mesma versão da Evolution antiga (restore do dump)
+    container_name: ofertio-evolution-db
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+    networks: [ofertio-net]
+    mem_limit: 128m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "50m", max-file: "3" }
+
+  evolution:
+    image: ${EVOLUTION_IMAGE:-evoapicloud/evolution-api:v2.3.7}
+    container_name: ofertio-evolution
+    depends_on: [evolution-db]
+    environment:
+      SERVER_URL: http://localhost:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD}@evolution-db:5432/evolution
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      TZ: America/Sao_Paulo
+    ports:
+      - "127.0.0.1:8080:8080"   # a API do Visual Studio chama http://localhost:8080
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks: [ofertio-net]
+    mem_limit: 512m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "50m", max-file: "3" }
+
+  api:
+    profiles: [app]
+    mem_limit: 768m
+    environment:
+      DOTNET_gcServer: "0"
+
+  webui:
+    profiles: [app]
+    mem_limit: 512m
+    environment:
+      DOTNET_gcServer: "0"
+
+  caddy:
+    profiles: [app]
+    mem_limit: 64m
+
+volumes:
+  evolution_pg:
+  evolution_instances:

@@ -133,7 +133,7 @@ public class MenuPermissionServiceTests
         Assert.Equal(rows[pages].Depth + 1, slug.Depth);
         Assert.True(slug.IsComponent);
         Assert.False(slug.IsFeatureToggle);
-        Assert.Equal(1, rows[pages].ChildCount);
+        Assert.Equal(2, rows[pages].ChildCount);
         Assert.False(slug.Visibility[starter.Id]);
         Assert.False(slug.Visibility[pro.Id]);
     }

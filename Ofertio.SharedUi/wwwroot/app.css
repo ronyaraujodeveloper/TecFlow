@@ -3119,6 +3119,68 @@ html, body {
     vertical-align: baseline;
 }
 
+.menu-tree-toggle > .bi {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.menu-tree-toggle.is-open > .bi {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-tree-toggle > .bi {
+        transition: none;
+    }
+}
+
+/* Recuo por nível inteiro: 1,5rem por nível a partir do chevron do pai. */
+.menu-matrix .menu-title-cell {
+    padding-left: calc(0.5rem + var(--menu-depth, 0) * 1.5rem);
+}
+
+/* Tons de destaque por nível aberto: laranja da marca 40%, 55% e 70% mais claro (repete a cada 3 níveis). */
+.menu-matrix {
+    --menu-accent-0: color-mix(in srgb, #ff9900, white 40%);
+    --menu-accent-1: color-mix(in srgb, #ff9900, white 55%);
+    --menu-accent-2: color-mix(in srgb, #ff9900, white 70%);
+}
+
+.menu-matrix tr.menu-parent-accent-0 { --menu-parent-accent: var(--menu-accent-0); }
+.menu-matrix tr.menu-parent-accent-1 { --menu-parent-accent: var(--menu-accent-1); }
+.menu-matrix tr.menu-parent-accent-2 { --menu-parent-accent: var(--menu-accent-2); }
+.menu-matrix tr.menu-accent-0 { --menu-accent: var(--menu-accent-0); }
+.menu-matrix tr.menu-accent-1 { --menu-accent: var(--menu-accent-1); }
+.menu-matrix tr.menu-accent-2 { --menu-accent: var(--menu-accent-2); }
+
+/* Reserva o espaço da barra em todas as linhas, para as alças não pularem 3px. */
+.menu-matrix tbody tr > td:first-child {
+    border-left: 3px solid transparent;
+}
+
+/* Filho de uma linha aberta: barra e fundo suave no tom do pai. */
+.menu-matrix tr.menu-in-open > td {
+    --bs-table-bg-state: color-mix(in srgb, var(--menu-parent-accent) 6%, transparent);
+}
+
+.menu-matrix tr.menu-in-open > td:first-child {
+    border-left: 3px solid var(--menu-parent-accent);
+}
+
+/* Linha aberta (cabeçalho do bloco): fundo, barra e título no tom do próprio nível. */
+.menu-matrix tr.menu-open > td {
+    --bs-table-bg-state: color-mix(in srgb, var(--menu-accent) 16%, transparent);
+}
+
+.menu-matrix tr.menu-open > td:first-child {
+    border-left: 3px solid var(--menu-accent);
+}
+
+.menu-matrix tr.menu-open > td.menu-title-cell,
+.menu-matrix tr.menu-open .menu-tree-title {
+    color: var(--menu-accent);
+}
+
 .menu-tree-spacer {
     display: inline-block;
     width: 1.65rem;

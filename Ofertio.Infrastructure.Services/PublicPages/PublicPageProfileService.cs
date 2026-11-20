@@ -18,6 +18,10 @@ public sealed class PublicPageProfileService : IPublicPageProfileService
     private readonly IEvolutionApiService _evolution;
     private readonly ITelegramApiService _telegram;
     private readonly ILogger<PublicPageProfileService> _logger;
+    private readonly IMenuPermissionService? _menus;
+
+    /// <summary>Mensagem quando o componente de convite está desligado para o plano.</summary>
+    public const string JoinGroupsBlockedMessage = "Os convites para grupos não fazem parte do seu plano.";
 
     public PublicPageProfileService(
         AppDbContext context,
@@ -25,8 +29,10 @@ public sealed class PublicPageProfileService : IPublicPageProfileService
         IPlanLimitsService planLimits,
         IEvolutionApiService evolution,
         ITelegramApiService telegram,
-        ILogger<PublicPageProfileService> logger)
+        ILogger<PublicPageProfileService> logger,
+        IMenuPermissionService? menus = null)
     {
+        _menus = menus;
         _context = context;
         _uploads = uploads;
         _planLimits = planLimits;
@@ -100,6 +106,11 @@ public sealed class PublicPageProfileService : IPublicPageProfileService
         JoinLinkCreateDto request,
         CancellationToken cancellationToken = default)
     {
+        if (!await JoinGroupsAllowedAsync(userId, cancellationToken))
+        {
+            return Fail(JoinGroupsBlockedMessage);
+        }
+
         var channel = JoinLinkRules.FindChannel(request.Channel);
         if (channel is null)
         {
@@ -233,7 +244,8 @@ public sealed class PublicPageProfileService : IPublicPageProfileService
             .FirstOrDefaultAsync(item => item.Id == joinLinkId, cancellationToken);
         if (link is null
             || !JoinLinkRules.IsPublic(link.Status)
-            || !JoinLinkRules.TryNormalizeInviteUrl(link.Channel, link.InviteUrl, out var invite, out _))
+            || !JoinLinkRules.TryNormalizeInviteUrl(link.Channel, link.InviteUrl, out var invite, out _)
+            || !await JoinGroupsAllowedAsync(link.UserId, cancellationToken))
         {
             return null;
         }
@@ -335,6 +347,10 @@ public sealed class PublicPageProfileService : IPublicPageProfileService
         new() { Status = true, Descricao = message, Data = await BuildAsync(userId, cancellationToken) };
 
     private static PublicPageProfileResponseDto Fail(string message) => new() { Status = false, Descricao = message };
+
+    /// <summary>Componente "Convite para entrar no grupo" liberado para o plano do dono (Grupo → Tela → Componente).</summary>
+    private async Task<bool> JoinGroupsAllowedAsync(int userId, CancellationToken cancellationToken) =>
+        _menus is null || await _menus.IsAllowedAsync(userId, ScreenComponents.PaginasPublicas.JoinGroups, cancellationToken);
 
     private async Task<PublicPageProfileDto> BuildAsync(int userId, CancellationToken cancellationToken)
     {

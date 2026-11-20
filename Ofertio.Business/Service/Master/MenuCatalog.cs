@@ -82,6 +82,9 @@ public static class ScreenComponents
     public static class PaginasPublicas
     {
         public const string CustomSlug = "integracoes.paginas.slug";
+
+        /// <summary>Convite "Quer receber ofertas assim todo dia?" exibido depois que o visitante gera o link.</summary>
+        public const string JoinGroups = "integracoes.paginas.convite-grupo";
     }
 }
 
@@ -157,6 +160,7 @@ public static class DefaultMenuCatalog
         new("integracoes.achadinhos", "Achadinhos VIP", "/achadinhos", "bi-stars", "integracoes.conteudo", 30),
         new("integracoes.paginas", "Minhas Páginas Públicas", "/minhas-paginas-publicas", "bi-globe2", "integracoes.conteudo", 40),
         new(CustomPublicSlug, "Slug personalizado", null, "bi-pencil", "integracoes.paginas", 10, HiddenForAllPlans: true, ComponentType: ComponentTypes.Feature),
+        Component("integracoes.paginas", ScreenComponents.PaginasPublicas.JoinGroups, "Convite para entrar no grupo de ofertas", ComponentTypes.Section, 20),
         new("integracoes.resultados", "Saúde & Resultados", null, "bi-activity", "integracoes", 40),
         new("integracoes.saude-ofertas", "Saúde de ofertas", "/saude/ofertas", "bi-heart-pulse", "integracoes.resultados", 10),
         new("integracoes.saude-agendamentos", "Saúde de agendamentos", "/saude/agendamentos", "bi-shield-check", "integracoes.resultados", 20),

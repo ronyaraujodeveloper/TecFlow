@@ -24,6 +24,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
     private readonly ILogger<PublicConverterPageService> _logger;
     private readonly ILinkAvailabilityService? _availability;
     private readonly IPublicPageEventService? _events;
+    private readonly IMenuPermissionService? _menus;
 
     public PublicConverterPageService(
         AppDbContext context,
@@ -32,8 +33,10 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         IAffiliateLinkGenerationService generationService,
         ILogger<PublicConverterPageService> logger,
         ILinkAvailabilityService? availability = null,
-        IPublicPageEventService? events = null)
+        IPublicPageEventService? events = null,
+        IMenuPermissionService? menus = null)
     {
+        _menus = menus;
         _availability = availability;
         _events = events;
         _context = context;
@@ -62,6 +65,12 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             .Where(profile => profile.UserId == page.UserId)
             .Select(profile => profile.AvatarUrl)
             .FirstOrDefaultAsync(cancellationToken);
+
+        // Componente "Convite para entrar no grupo" (Minhas Páginas Públicas): vale o plano do dono da página.
+        if (_menus is not null && !await _menus.IsAllowedAsync(page.UserId, ScreenComponents.PaginasPublicas.JoinGroups, cancellationToken))
+        {
+            return dto;
+        }
 
         var links = await _context.PublicPageJoinLinks
             .IgnoreQueryFilters()

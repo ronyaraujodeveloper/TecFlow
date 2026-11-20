@@ -25,6 +25,7 @@ public sealed class PublicPageProfileServiceTests : IDisposable
     private readonly Mock<IEvolutionApiService> _evolution = new();
     private readonly Mock<ITelegramApiService> _telegram = new();
     private int _maxJoinLinks = 2;
+    private bool _joinGroupsAllowed = true;
 
     public void Dispose()
     {
@@ -65,7 +66,32 @@ public sealed class PublicPageProfileServiceTests : IDisposable
         _evolution.Setup(item => item.FetchGroupInviteAsync(It.IsAny<string>(), Jid, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GroupInviteResult(GroupInviteOutcome.Ok, WhatsAppInvite));
 
-        return (new PublicPageProfileService(context, uploads.Object, limits.Object, _evolution.Object, _telegram.Object, NullLogger<PublicPageProfileService>.Instance), context);
+        var menus = new Mock<IMenuPermissionService>();
+        menus.Setup(item => item.IsAllowedAsync(It.IsAny<int>(), ScreenComponents.PaginasPublicas.JoinGroups, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => _joinGroupsAllowed);
+
+        return (new PublicPageProfileService(context, uploads.Object, limits.Object, _evolution.Object, _telegram.Object,
+            NullLogger<PublicPageProfileService>.Instance, menus.Object), context);
+    }
+
+    [Fact]
+    public async Task JoinGroupsComponentOff_ShouldBlockCreationAndTheRedirect()
+    {
+        var (service, context) = await BuildAsync(withGroup: false);
+        await using var _ = context;
+        var created = await service.CreateJoinLinkAsync(UserId, new JoinLinkCreateDto { Channel = "WhatsApp", InviteUrl = WhatsAppInvite });
+        var id = created.Data!.JoinLinks[0].Id;
+
+        _joinGroupsAllowed = false;
+        var blocked = await service.CreateJoinLinkAsync(UserId, new JoinLinkCreateDto { Channel = "Telegram", InviteUrl = "https://t.me/achadinhos_vip" });
+
+        Assert.False(blocked.Status);
+        Assert.Equal(PublicPageProfileService.JoinGroupsBlockedMessage, blocked.Descricao);
+        Assert.Single(context.PublicPageJoinLinks);
+        Assert.Null(await service.ResolveJoinTargetAsync(id));
+
+        _joinGroupsAllowed = true;
+        Assert.NotNull(await service.ResolveJoinTargetAsync(id));
     }
 
     [Fact]

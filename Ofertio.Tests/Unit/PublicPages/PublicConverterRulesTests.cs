@@ -263,6 +263,35 @@ public class PublicConverterPageServiceTests
         Assert.Contains("não libera", blocked.Descricao, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task ResolveBySlug_JoinButtonsShouldFollowTheOwnersPlanComponent(bool allowed, int expectedButtons)
+    {
+        await using var context = CreateContext();
+        context.PublicConverterPages.Add(new PublicConverterPage { UserId = 5, Slug = "loja-do-dono", IsActive = true, PublicCode = Guid.NewGuid() });
+        context.PublicPageJoinLinks.Add(new PublicPageJoinLink
+        {
+            UserId = 5, TenantId = Guid.NewGuid(), Channel = "WhatsApp", Label = "Achadinhos",
+            InviteUrl = "https://chat.whatsapp.com/Ab12Cd34Ef56Gh78Ij90Kl", Status = JoinLinkRules.StatusActive
+        });
+        await context.SaveChangesAsync();
+        var menus = new Moq.Mock<IMenuPermissionService>();
+        menus.Setup(item => item.IsAllowedAsync(5, ScreenComponents.PaginasPublicas.JoinGroups, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(allowed);
+        var accounts = new Moq.Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(item => item.ListByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<MarketplaceAccount>());
+        var service = new PublicConverterPageService(
+            context, accounts.Object, null!, null!,
+            NullLogger<PublicConverterPageService>.Instance, menus: menus.Object);
+
+        var page = await service.ResolveBySlugAsync("loja-do-dono");
+
+        Assert.NotNull(page);
+        Assert.Equal(expectedButtons, page.JoinButtons.Count);
+    }
+
     private static void SeedMaster(AppDbContext context, bool slugActive)
     {
         context.MenuItems.Add(new MenuItem { Key = DefaultMenuCatalog.CustomPublicSlug, Title = "Slug personalizado", IsActive = slugActive });

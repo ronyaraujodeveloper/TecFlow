@@ -4,6 +4,7 @@
 @using Ofertio.Business.Dto
 @using Ofertio.SharedUi.Services.LinkGenerator
 @using Ofertio.Business.Service.PublicPages
+@using Ofertio.Business.Service.Master
 @using Microsoft.AspNetCore.Components.Forms
 @inject Ofertio.SharedUi.Services.Public.IPublicPageProfileApiService ProfileApi
 @inject IPublicConverterApiService PublicPages
@@ -97,6 +98,7 @@
             </div>
         </section>
 
+        <AccessGate Key="@ScreenComponents.PaginasPublicas.JoinGroups">
         <section class="card border-0 shadow-sm mb-4" aria-labelledby="join-title">
             <div class="card-body">
                 <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-1">
@@ -218,6 +220,7 @@
                 }
             </div>
         </section>
+        </AccessGate>
 
         <section class="card border-0 shadow-sm">
             @if (_pages.Count == 0)

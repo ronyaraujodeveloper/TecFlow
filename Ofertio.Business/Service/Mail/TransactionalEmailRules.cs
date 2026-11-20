@@ -246,6 +246,26 @@ public static class TransactionalEmailRules
         };
     }
 
+    /// <summary>Mensagem do botão "Enviar e-mail de teste" do Cofre (Painel Master).</summary>
+    public static TransactionalEmail SmtpTest(string to, DateTime sentAtUtc)
+    {
+        var when = BrazilTimeZoneRules.ToLocal(sentAtUtc, null).ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo("pt-BR"));
+        var text = string.Join(
+            Environment.NewLine + Environment.NewLine,
+            "Este é um e-mail de teste do Ofertio, enviado pelo Painel Master em " + when + ".",
+            "Se você recebeu, o envio de e-mails (recuperação de senha e avisos de assinatura) está funcionando.");
+
+        return new TransactionalEmail
+        {
+            To = to,
+            Subject = "Teste de envio — Ofertio",
+            TextBody = text,
+            HtmlBody = "<p>Este é um e-mail de teste do Ofertio, enviado pelo Painel Master em <strong>"
+                + WebUtility.HtmlEncode(when) + "</strong>.</p>"
+                + "<p>Se você recebeu, o envio de e-mails (recuperação de senha e avisos de assinatura) está funcionando.</p>"
+        };
+    }
+
     public static string BuildPublicPagesUrl(string? publicBaseUrl) =>
         NormalizeRoot(publicBaseUrl) + "/minhas-paginas-publicas";
 

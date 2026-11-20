@@ -6,7 +6,11 @@ public sealed class EmailOptions
 {
     public const string SectionName = "Email";
 
-    public string FromAddress { get; set; } = OfertioMailAddresses.NoReply;
+    /// <summary>
+    /// Remetente. No SMTP do Gmail precisa estar verificado em "Enviar e-mail como" na conta usada,
+    /// senão o Gmail troca pelo endereço da própria conta.
+    /// </summary>
+    public string FromAddress { get; set; } = OfertioMailAddresses.Contact;
 
     public string FromName { get; set; } = OfertioMailAddresses.FromName;
 

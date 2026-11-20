@@ -85,6 +85,62 @@ public class MasterServicesTests
     }
 
     [Fact]
+    public async Task SystemSettings_SmtpGoogleWithGmailUser_IsRejectedAndNothingIsSaved()
+    {
+        await using var context = CreateContext();
+        var service = new SystemSettingsService(context, new ConfigurationBuilder().Build(), new Mock<IMasterAuditService>().Object);
+
+        var result = await service.SaveAsync(Actor, new SystemSettingSaveDto
+        {
+            Values = new()
+            {
+                [SystemSettingCatalog.SmtpHost] = "smtp.google.com",
+                [SystemSettingCatalog.SmtpUser] = "ofertiotecso@gmail.com"
+            }
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("smtp.gmail.com", result.Message);
+        Assert.Equal(0, await context.SystemSettings.CountAsync());
+    }
+
+    [Fact]
+    public async Task SystemSettings_SmtpHostIsNormalizedOnSave()
+    {
+        await using var context = CreateContext();
+        var service = new SystemSettingsService(context, new ConfigurationBuilder().Build(), new Mock<IMasterAuditService>().Object);
+
+        var result = await service.SaveAsync(Actor, new SystemSettingSaveDto
+        {
+            Values = new()
+            {
+                [SystemSettingCatalog.SmtpHost] = " SMTP.Gmail.com:587 ",
+                [SystemSettingCatalog.SmtpUser] = "ofertiotecso@gmail.com"
+            }
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal("smtp.gmail.com", await service.GetValueAsync(SystemSettingCatalog.SmtpHost));
+        Assert.Contains("sem reiniciar", result.Message);
+    }
+
+    [Fact]
+    public async Task SystemSettings_ChangingOnlyTheUserToGmail_ChecksTheStoredHost()
+    {
+        await using var context = CreateContext();
+        var service = new SystemSettingsService(context, new ConfigurationBuilder().Build(), new Mock<IMasterAuditService>().Object);
+        await service.SaveAsync(Actor, new SystemSettingSaveDto { Values = new() { [SystemSettingCatalog.SmtpHost] = "smtp.google.com" } });
+
+        var result = await service.SaveAsync(Actor, new SystemSettingSaveDto
+        {
+            Values = new() { [SystemSettingCatalog.SmtpUser] = "ofertiotecso@gmail.com" }
+        });
+
+        Assert.False(result.Success);
+        Assert.Null(await service.GetValueAsync(SystemSettingCatalog.SmtpUser));
+    }
+
+    [Fact]
     public async Task SystemSettings_NewSecretDifferentFromMask_ShouldReplaceStoredValue()
     {
         await using var context = CreateContext();

@@ -15,19 +15,22 @@ public sealed class MasterSettingsController : MasterControllerBase
     private readonly IHostApplicationLifetime _lifetime;
     private readonly IMasterAuditService _audit;
     private readonly IGlobalCredentialHealthService _credentialHealth;
+    private readonly IEmailTestService _emailTest;
 
     public MasterSettingsController(
         ISystemSettingsService settings,
         ISaasPlanService plans,
         IHostApplicationLifetime lifetime,
         IMasterAuditService audit,
-        IGlobalCredentialHealthService credentialHealth)
+        IGlobalCredentialHealthService credentialHealth,
+        IEmailTestService emailTest)
     {
         _settings = settings;
         _plans = plans;
         _lifetime = lifetime;
         _audit = audit;
         _credentialHealth = credentialHealth;
+        _emailTest = emailTest;
     }
 
     [HttpGet("configuracoes")]
@@ -46,6 +49,12 @@ public sealed class MasterSettingsController : MasterControllerBase
     [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
     public async Task<ActionResult<IReadOnlyList<DeveloperAccountCheckDto>>> CheckGlobalKeysAsync(CancellationToken cancellationToken) =>
         Ok(await _credentialHealth.CheckAsync(cancellationToken));
+
+    /// <summary>Envia um e-mail de teste para o master logado com o SMTP configurado no Cofre.</summary>
+    [HttpPost("configuracoes/email-teste")]
+    [Authorize(Policy = MasterPolicies.ManageGlobalKeys)]
+    public async Task<ActionResult<MasterOperationResultDto>> SendTestEmailAsync(CancellationToken cancellationToken) =>
+        Result(await _emailTest.SendTestAsync(Actor, cancellationToken));
 
     /// <summary>Encerra o processo da API; o IIS recicla e recarrega todas as integrações com as novas chaves.</summary>
     [HttpPost("configuracoes/reiniciar-api")]

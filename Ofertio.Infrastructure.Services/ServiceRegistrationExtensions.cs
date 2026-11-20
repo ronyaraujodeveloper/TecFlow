@@ -30,6 +30,7 @@ namespace Ofertio.Infrastructure.Services
 
             services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
             services.AddScoped<ITransactionalEmailSender, TransactionalEmailSender>();
+            services.AddScoped<IEmailTestService, EmailTestService>();
 
             services.AddOfertioIntegrationHttpClients(configuration);
             services.AddOfertioMarketplaceAuth();

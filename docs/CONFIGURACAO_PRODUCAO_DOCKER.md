@@ -82,7 +82,16 @@ Authentication__Google__Enabled: "true"
 Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
 Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
 UploadStorage__RootPath: /app/uploads
+Email__Smtp__Host: ${SMTP_HOST:-}
+Email__Smtp__Port: "587"
+Email__Smtp__User: ${SMTP_USER:-}
+Email__Smtp__Password: ${SMTP_PASSWORD:-}
 ```
+
+**E-mail transacional:** a API envia pelo SMTP do Gmail com a conta `ofertiotecso@gmail.com` e remetente `contato@ofertio.com.br`. **O lugar principal da configuração é o Painel Master → Cofre (`/master/configuracoes`) → seção E-mail**: servidor `smtp.gmail.com`, usuário e senha de app de 16 letras, gravados criptografados no banco. Vale sem reiniciar, e o botão "Enviar e-mail de teste" confirma. O `.env` (`SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`) é só reserva: o valor do Cofre vence. O `contato@` precisa estar verificado em Gmail → Configurações → Contas → "Enviar e-mail como"; sem isso, o Gmail troca o remetente pela conta. Sem servidor em nenhum dos dois, a API só registra o e-mail no log. O limite é de cerca de 500 envios por dia; com mais volume, trocar por um provedor transacional com DKIM do domínio (só mudam as chaves).
+**`DOTNET_SYSTEM_NET_DISABLEIPV6: "1"` na API:** a rede Docker não tem IPv6. O `smtp.gmail.com` resolve primeiro para IPv6 e o `SmtpClient` do .NET não cai para o IPv4, então o envio falhava com `Network is unreachable` (diagnosticado em 20/11/2026). Com a variável, o .NET usa só IPv4 em todas as chamadas de saída.
+
+**Email Address Obfuscation (Cloudflare) desligado:** ligado, ele troca os `mailto:` por `/cdn-cgi/l/email-protection#...` e a navegação do Blazor não roda o script que desfaz a troca, então o "Fale conosco" abre a página de bloqueio do Cloudflare.
 
 `SQL_CONNECTION` usa o host `sqlserver`, porta `1433`, banco `Ofertio`, `TrustServerCertificate=True`. O host `localhost` dentro da API é o container da API, não o banco.
 

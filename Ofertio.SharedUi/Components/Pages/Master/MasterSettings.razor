@@ -13,7 +13,7 @@
         <div>
             <h1 class="h3 fw-bold mb-1">Cofre de chaves globais (Vault)</h1>
             <p class="text-muted small mb-0">
-                Chaves da plataforma usadas por todos os clientes: AppId/SecretKey dos marketplaces, Evolution API, Telegram, OpenAI e ASAAS.
+                Chaves da plataforma usadas por todos os clientes: AppId/SecretKey dos marketplaces, Evolution API, Telegram, OpenAI, ASAAS e o SMTP de e-mail (as chaves de e-mail valem assim que salvas, sem reiniciar).
                 Valores criptografados no banco (AES); segredos aparecem mascarados — deixe o campo como está para manter o valor atual, clique nele e digite a nova chave para substituí-la (a máscara é selecionada ao focar) ou apague-o para remover.
                 Contas corporativas de teste/dev ficam em <a href="@MasterRoutes.DeveloperAccounts">Contas de teste / dev</a>.
             </p>
@@ -26,7 +26,7 @@
             {
                 <span class="badge text-bg-warning align-self-center">Alterações não salvas</span>
             }
-            <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || !_hasChanges)" @onclick="SaveAsync">Salvar</button>
+            <button type="button" class="btn btn-primary btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || !_hasChanges)" @onclick="SaveAsync">Salvar tudo</button>
             <button type="button" class="btn btn-outline-warning btn-touch" disabled="@(!Can(MasterPermissions.ManageGlobalKeys))" @onclick="RestartAsync">Aplicar e reiniciar API</button>
         </div>
     </div>
@@ -54,55 +54,110 @@
         </div>
     }
 
-    @foreach (var group in _items.GroupBy(item => item.Category))
+    @foreach (var section in _items.GroupBy(item => item.Category))
     {
+        var category = section.Key;
+        var sectionChanged = SectionHasChanges(category);
+        var needsRestart = section.First().RequiresRestart;
+        var isEmail = string.Equals(category, Ofertio.Business.Service.Master.SystemSettingCatalog.CategoryEmail, StringComparison.OrdinalIgnoreCase);
         <div class="card shadow-sm mb-3">
-            <div class="card-header fw-semibold">@group.Key</div>
-            <div class="card-body row g-3">
-                @foreach (var item in group)
+            <div class="card-header fw-semibold d-flex align-items-center gap-2">
+                <span>@category</span>
+                @if (sectionChanged)
                 {
-                    <div class="col-12 col-md-6">
-                        <label class="form-label small mb-1" for="@VaultFieldId(item.Key)">
-                            @item.Label
-                            @if (item.IsSecret)
-                            {
-                                <i class="bi bi-lock-fill text-muted ms-1" title="Segredo criptografado" aria-hidden="true"></i>
-                            }
-                        </label>
-                        <div class="input-group">
-                            <input id="@VaultFieldId(item.Key)"
-                                   type="@(item.IsSecret && !IsSecretVisible(item.Key) ? "password" : "text")"
-                                   class="form-control @(IsChanged(item.Key) ? "border-warning" : null)"
-                                   autocomplete="@(item.IsSecret ? "new-password" : "off")"
-                                   spellcheck="false"
-                                   placeholder="@item.Placeholder"
-                                   onfocus="this.select()"
-                                   @bind-value="_values[item.Key]"
-                                   @bind-value:event="oninput"
-                                   @bind-value:after="UpdateDirty" />
-                            @if (item.IsSecret)
-                            {
-                                var visible = IsSecretVisible(item.Key);
-                                <button id="@VaultToggleId(item.Key)"
-                                        type="button"
-                                        class="btn btn-outline-secondary"
-                                        title="@(visible ? "Ocultar chave" : "Mostrar chave")"
-                                        aria-label="@(visible ? "Ocultar chave" : "Mostrar chave")"
-                                        aria-pressed="@(visible ? "true" : "false")"
-                                        @onclick="() => ToggleVisibility(item.Key)">
-                                    <i class="bi @(visible ? "bi-eye-slash" : "bi-eye")" aria-hidden="true"></i>
-                                </button>
-                            }
-                        </div>
-                        <div class="form-text">
-                            <code>@item.Key</code>
-                            @if (item.UpdatedAt is not null)
-                            {
-                                <span> · atualizado em @DateTimeText(item.UpdatedAt) por @(item.UpdatedBy ?? "—")</span>
-                            }
-                        </div>
-                    </div>
+                    <span class="badge text-bg-warning">Alterações não salvas</span>
                 }
+                @if (!needsRestart)
+                {
+                    <span class="badge text-bg-secondary fw-normal">vale ao salvar, sem reiniciar</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var company in section.GroupBy(item => item.Group))
+                    {
+                        <div class="col-12 @(section.Select(item => item.Group).Distinct().Count() > 1 ? "col-xl-6" : null)">
+                            <div class="border rounded-3 p-3 h-100">
+                                <h2 class="h6 fw-semibold mb-3">
+                                    <i class="bi @GroupIcon(company.Key) me-1" aria-hidden="true"></i> @company.Key
+                                </h2>
+                                <div class="row g-3">
+                                    @foreach (var item in company)
+                                    {
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label small mb-1" for="@VaultFieldId(item.Key)">
+                                                @(string.IsNullOrWhiteSpace(item.Field) ? item.Label : item.Field)
+                                                @if (item.IsSecret)
+                                                {
+                                                    <i class="bi bi-lock-fill text-muted ms-1" title="Segredo criptografado" aria-hidden="true"></i>
+                                                }
+                                            </label>
+                                            <div class="input-group">
+                                                <input id="@VaultFieldId(item.Key)"
+                                                       type="@(item.IsSecret && !IsSecretVisible(item.Key) ? "password" : "text")"
+                                                       class="form-control @(IsChanged(item.Key) ? "border-warning" : null)"
+                                                       autocomplete="@(item.IsSecret ? "new-password" : "off")"
+                                                       spellcheck="false"
+                                                       placeholder="@item.Placeholder"
+                                                       onfocus="this.select()"
+                                                       @bind-value="_values[item.Key]"
+                                                       @bind-value:event="oninput"
+                                                       @bind-value:after="UpdateDirty" />
+                                                @if (item.IsSecret)
+                                                {
+                                                    var visible = IsSecretVisible(item.Key);
+                                                    <button id="@VaultToggleId(item.Key)"
+                                                            type="button"
+                                                            class="btn btn-outline-secondary"
+                                                            title="@(visible ? "Ocultar chave" : "Mostrar chave")"
+                                                            aria-label="@(visible ? "Ocultar chave" : "Mostrar chave")"
+                                                            aria-pressed="@(visible ? "true" : "false")"
+                                                            @onclick="() => ToggleVisibility(item.Key)">
+                                                        <i class="bi @(visible ? "bi-eye-slash" : "bi-eye")" aria-hidden="true"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                            <div class="form-text">
+                                                <code>@item.Key</code>
+                                                @if (item.UpdatedAt is not null)
+                                                {
+                                                    <span> · atualizado em @DateTimeText(item.UpdatedAt) por @(item.UpdatedBy ?? "—")</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="card-footer d-flex flex-column flex-md-row align-items-md-center gap-2">
+                <div class="flex-grow-1 small">
+                    @if (_sectionResults.TryGetValue(category, out var sectionResult))
+                    {
+                        <span class="@(sectionResult.Success ? "text-success" : "text-danger")">
+                            <i class="bi @(sectionResult.Success ? "bi-check-circle" : "bi-x-circle")" aria-hidden="true"></i>
+                            @sectionResult.Message
+                        </span>
+                    }
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                    @if (isEmail)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-touch"
+                                disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || _sectionBusy)"
+                                title="Salva o que estiver pendente nesta seção e envia um e-mail de teste para o seu usuário master"
+                                @onclick="() => SendTestEmailAsync(category)">
+                            <i class="bi bi-envelope-check" aria-hidden="true"></i> Enviar e-mail de teste
+                        </button>
+                    }
+                    <button type="button" class="btn @(needsRestart ? "btn-warning" : "btn-primary") btn-touch"
+                            disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || !sectionChanged || _sectionBusy)"
+                            @onclick="() => SaveSectionAsync(category, needsRestart)">
+                        @(needsRestart ? "Salvar e reiniciar API" : "Salvar " + category.ToLowerInvariant())
+                    </button>
+                </div>
             </div>
         </div>
     }
@@ -115,6 +170,8 @@
     private Dictionary<string, string?> _original = new(StringComparer.OrdinalIgnoreCase);
     private bool _hasChanges;
     private Dictionary<string, bool> _showSecretMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (bool Success, string Message)> _sectionResults = new(StringComparer.OrdinalIgnoreCase);
+    private bool _sectionBusy;
 
     private void ToggleVisibility(string keyName)
     {
@@ -165,6 +222,122 @@
             Info = info;
         }
     }
+
+    private bool SectionHasChanges(string category) =>
+        _items.Any(item => string.Equals(item.Category, category, StringComparison.OrdinalIgnoreCase) && IsChanged(item.Key));
+
+    private Dictionary<string, string?> SectionChanges(string category) =>
+        _items
+            .Where(item => string.Equals(item.Category, category, StringComparison.OrdinalIgnoreCase) && IsChanged(item.Key))
+            .ToDictionary(item => item.Key, item => _values.GetValueOrDefault(item.Key), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Resultado mostrado no rodapé do cartão, sem obrigar a subir a tela.</summary>
+    private void SetSectionResult(string category, bool success, string? message) =>
+        _sectionResults[category] = (success, string.IsNullOrWhiteSpace(message)
+            ? (success ? "Concluído." : "Não foi possível concluir a operação.")
+            : message!);
+
+    private bool AcceptSection(string category, Ofertio.SharedUi.Models.ApiResult<MasterOperationResultDto> result)
+    {
+        if (!result.Success)
+        {
+            SetSectionResult(category, false, result.ErrorMessage);
+            return false;
+        }
+
+        var ok = result.Data?.Success ?? true;
+        SetSectionResult(category, ok, result.Data?.Message);
+        return ok;
+    }
+
+    /// <summary>Salva só as chaves da seção. Recarrega a tela preservando o que estiver pendente nas outras seções.</summary>
+    private async Task<bool> SaveSectionCoreAsync(string category)
+    {
+        var changed = SectionChanges(category);
+        if (changed.Count == 0)
+        {
+            return true;
+        }
+
+        if (!AcceptSection(category, await Api.SaveSettingsAsync(new SystemSettingSaveDto { Values = changed })))
+        {
+            return false;
+        }
+
+        var pendingElsewhere = _values
+            .Where(pair => !changed.ContainsKey(pair.Key) && IsChanged(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+        var results = new Dictionary<string, (bool Success, string Message)>(_sectionResults, StringComparer.OrdinalIgnoreCase);
+        await LoadAsync();
+        foreach (var (key, value) in pendingElsewhere)
+        {
+            _values[key] = value;
+        }
+
+        _sectionResults.Clear();
+        foreach (var pair in results)
+        {
+            _sectionResults[pair.Key] = pair.Value;
+        }
+
+        UpdateDirty();
+        return true;
+    }
+
+    private async Task SaveSectionAsync(string category, bool needsRestart)
+    {
+        _sectionBusy = true;
+        try
+        {
+            if (!await SaveSectionCoreAsync(category) || !needsRestart)
+            {
+                return;
+            }
+
+            var restart = await Api.RestartApiAsync();
+            SetSectionResult(category, restart.Success && (restart.Data?.Success ?? true),
+                restart.Success
+                    ? "Chaves salvas. " + (restart.Data?.Message ?? "API reiniciando.")
+                    : "Chaves salvas, mas o reinício falhou: " + restart.ErrorMessage);
+        }
+        finally
+        {
+            _sectionBusy = false;
+        }
+    }
+
+    /// <summary>Salva o que estiver pendente no e-mail e envia o teste para o master logado.</summary>
+    private async Task SendTestEmailAsync(string category)
+    {
+        _sectionBusy = true;
+        try
+        {
+            if (!await SaveSectionCoreAsync(category))
+            {
+                return;
+            }
+
+            AcceptSection(category, await Api.SendTestEmailAsync());
+        }
+        finally
+        {
+            _sectionBusy = false;
+        }
+    }
+
+    private static string GroupIcon(string group) => group switch
+    {
+        SystemSettingCatalog.GroupMercadoLivre or SystemSettingCatalog.GroupShopee
+            or SystemSettingCatalog.GroupAmazon or SystemSettingCatalog.GroupTikTokShop => "bi-shop",
+        SystemSettingCatalog.GroupEvolution => "bi-whatsapp",
+        SystemSettingCatalog.GroupTelegram => "bi-telegram",
+        SystemSettingCatalog.GroupOpenAi => "bi-stars",
+        SystemSettingCatalog.GroupShortLinks => "bi-link-45deg",
+        SystemSettingCatalog.GroupAsaas => "bi-credit-card",
+        SystemSettingCatalog.GroupGrace => "bi-hourglass-split",
+        SystemSettingCatalog.GroupSmtp => "bi-envelope",
+        _ => "bi-key"
+    };
 
     private async Task RestartAsync()
     {

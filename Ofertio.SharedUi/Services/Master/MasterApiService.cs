@@ -38,6 +38,7 @@ public interface IMasterApiService
     Task<ApiResult<MasterOperationResultDto>> DeleteDeveloperAccountAsync(int id, CancellationToken cancellationToken = default);
     Task<ApiResult<DeveloperAccountCheckDto>> CheckDeveloperAccountAsync(int id, CancellationToken cancellationToken = default);
     Task<ApiResult<List<DeveloperAccountCheckDto>>> CheckGlobalKeysAsync(CancellationToken cancellationToken = default);
+    Task<ApiResult<MasterOperationResultDto>> SendTestEmailAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MenuPermissionMatrixDto>> MenuPermissionsAsync(CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> SaveMenuPermissionsAsync(MenuPermissionSaveDto request, CancellationToken cancellationToken = default);
     Task<ApiResult<MasterOperationResultDto>> MoveMenuItemAsync(MenuMoveDto request, CancellationToken cancellationToken = default);
@@ -157,6 +158,9 @@ public sealed class MasterApiService : IMasterApiService
 
     public Task<ApiResult<List<DeveloperAccountCheckDto>>> CheckGlobalKeysAsync(CancellationToken cancellationToken = default) =>
         WithLoading("Testando chaves do cofre...", () => _http.PostAsync<object, List<DeveloperAccountCheckDto>>("api/master/configuracoes/saude-chaves", new { }, cancellationToken));
+
+    public Task<ApiResult<MasterOperationResultDto>> SendTestEmailAsync(CancellationToken cancellationToken = default) =>
+        WithLoading("Enviando e-mail de teste...", () => _http.PostAsync<object, MasterOperationResultDto>("api/master/configuracoes/email-teste", new { }, cancellationToken));
 
     public Task<ApiResult<MenuPermissionMatrixDto>> MenuPermissionsAsync(CancellationToken cancellationToken = default) =>
         _http.GetAsync<MenuPermissionMatrixDto>("api/master/menu-permissions", cancellationToken: cancellationToken);

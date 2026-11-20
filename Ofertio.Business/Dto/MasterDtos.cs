@@ -68,7 +68,13 @@ public class SystemSettingItemDto
 {
     public string Key { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    /// <summary>Empresa ou serviço (um box por grupo na tela do Cofre).</summary>
+    public string Group { get; set; } = string.Empty;
+    /// <summary>Nome do campo dentro do box, sem o nome da empresa.</summary>
+    public string Field { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
+    /// <summary>False quando salvar já basta (ex.: e-mail); true quando precisa reiniciar a API.</summary>
+    public bool RequiresRestart { get; set; } = true;
     public bool IsSecret { get; set; }
     public bool HasValue { get; set; }
     /// <summary>Valor em claro para chaves não secretas; mascarado para secretas.</summary>

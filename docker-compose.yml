@@ -83,6 +83,15 @@ services:
       # Chaves do Data Protection e sessões do Telegram ficam em /app/App_Data (volume abaixo).
       DataProtection__KeysPath: App_Data/OfertioDataProtectionKeys
       Telegram__UserBotSessionFolder: App_Data/telegram-sessions
+      # E-mail transacional pelo SMTP do Gmail (conta ofertiotecso@gmail.com, remetente contato@ofertio.com.br).
+      # SMTP_HOST vazio no .env = a API só registra o e-mail no log, sem enviar.
+      Email__Smtp__Host: ${SMTP_HOST:-}
+      Email__Smtp__Port: "587"
+      Email__Smtp__User: ${SMTP_USER:-}
+      Email__Smtp__Password: ${SMTP_PASSWORD:-}
+      # A rede Docker não tem IPv6. Sem isto o .NET tenta o IPv6 do smtp.gmail.com e falha com
+      # "Network is unreachable" (o SmtpClient não cai para o IPv4). Vale para todas as chamadas de saída.
+      DOTNET_SYSTEM_NET_DISABLEIPV6: "1"
     volumes:
       - uploads:/app/uploads
       - api_appdata:/app/App_Data

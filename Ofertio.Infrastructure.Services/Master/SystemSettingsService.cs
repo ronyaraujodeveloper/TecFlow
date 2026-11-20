@@ -39,7 +39,10 @@ public sealed class SystemSettingsService : ISystemSettingsService
                 {
                     Key = definition.Key,
                     Category = definition.Category,
+                    Group = definition.Group,
+                    Field = definition.Field,
                     Label = definition.Label,
+                    RequiresRestart = SystemSettingCatalog.RequiresRestart(definition.Category),
                     IsSecret = definition.IsSecret,
                     HasValue = !string.IsNullOrEmpty(effective),
                     DisplayValue = definition.IsSecret ? SystemSettingCatalog.Mask(effective) : effective ?? string.Empty,
@@ -97,6 +100,12 @@ public sealed class SystemSettingsService : ISystemSettingsService
             };
         }
 
+        var smtpError = NormalizeAndValidateSmtp(pending, rows);
+        if (smtpError is not null)
+        {
+            return new MasterOperationResultDto { Success = false, Message = smtpError + " Nada foi salvo." };
+        }
+
         foreach (var (definition, value, row) in pending)
         {
             if (row is null)
@@ -147,11 +156,51 @@ public sealed class SystemSettingsService : ISystemSettingsService
         _configuration.ReloadOfertioDatabaseSettings();
         await _audit.LogAsync(actor, MasterAuditActions.SettingsChanged, "SystemSetting", null,
             "Chaves alteradas: " + string.Join(", ", changed) + " (valores omitidos).", cancellationToken);
+        var needsRestart = changed.Any(key => SystemSettingCatalog.RequiresRestart(SystemSettingCatalog.Find(key)?.Category));
         return new MasterOperationResultDto
         {
             Success = true,
-            Message = $"{changed.Count} chave(s) salva(s) com criptografia. Reinicie a API para aplicar em todas as integrações."
+            Message = needsRestart
+                ? $"{changed.Count} chave(s) salva(s) com criptografia. Reinicie a API para aplicar em todas as integrações."
+                : $"{changed.Count} chave(s) salva(s) com criptografia. Já valem, sem reiniciar."
         };
+    }
+
+    /// <summary>
+    /// Normaliza o servidor SMTP pendente e confere servidor × usuário (enviado agora ou já guardado).
+    /// Roda quando qualquer um dos dois muda, para não deixar uma combinação que o Gmail recusa.
+    /// </summary>
+    private string? NormalizeAndValidateSmtp(
+        List<(SystemSettingDefinition Definition, string Value, SystemSetting? Row)> pending,
+        List<SystemSetting> rows)
+    {
+        var hostIndex = pending.FindIndex(item => item.Definition.Key == SystemSettingCatalog.SmtpHost);
+        var userIndex = pending.FindIndex(item => item.Definition.Key == SystemSettingCatalog.SmtpUser);
+        if (hostIndex < 0 && userIndex < 0)
+        {
+            return null;
+        }
+
+        string host;
+        if (hostIndex >= 0)
+        {
+            var item = pending[hostIndex];
+            host = SystemSettingCatalog.NormalizeSmtpHost(item.Value);
+            pending[hostIndex] = (item.Definition, host, item.Row);
+        }
+        else
+        {
+            host = SystemSettingCatalog.NormalizeSmtpHost(Stored(rows, SystemSettingCatalog.SmtpHost));
+        }
+
+        var user = userIndex >= 0 ? pending[userIndex].Value : Stored(rows, SystemSettingCatalog.SmtpUser);
+        return SystemSettingCatalog.ValidateSmtpHost(host, user);
+    }
+
+    private string? Stored(List<SystemSetting> rows, string key)
+    {
+        var value = rows.FirstOrDefault(item => string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase))?.Value;
+        return string.IsNullOrEmpty(value) ? _configuration[key] : value;
     }
 
     public async Task<string?> GetValueAsync(string key, CancellationToken cancellationToken = default)

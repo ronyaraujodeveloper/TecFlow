@@ -48,6 +48,36 @@ public class TransactionalEmailSenderTests
     }
 
     [Fact]
+    public void BuildMessage_WithGmailAccount_SendsFromTheAccountAndRepliesToContact()
+    {
+        var options = new EmailOptions
+        {
+            FromAddress = "contato@ofertio.com.br",
+            Smtp = new EmailSmtpOptions { Host = "smtp.gmail.com", User = " ofertiotecso@gmail.com " }
+        };
+
+        using var mail = TransactionalEmailSender.BuildMessage(options, Sample());
+
+        Assert.Equal("ofertiotecso@gmail.com", mail.From!.Address);
+        Assert.Equal("Ofertio", mail.From.DisplayName);
+        Assert.Equal("contato@ofertio.com.br", Assert.Single(mail.ReplyToList).Address);
+    }
+
+    [Fact]
+    public void BuildMessage_WithDomainProvider_UsesTheConfiguredSender()
+    {
+        var options = new EmailOptions
+        {
+            FromAddress = "contato@ofertio.com.br",
+            Smtp = new EmailSmtpOptions { Host = "smtp-relay.brevo.com", User = "abc123@smtp-brevo.com" }
+        };
+
+        using var mail = TransactionalEmailSender.BuildMessage(options, Sample());
+
+        Assert.Equal("contato@ofertio.com.br", mail.From!.Address);
+    }
+
+    [Fact]
     public void BuildMessage_WithoutHtml_SendsTextOnly()
     {
         using var mail = TransactionalEmailSender.BuildMessage(new EmailOptions(), Sample(html: ""));

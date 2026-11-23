@@ -59,7 +59,7 @@ public sealed class EmailTestService : IEmailTestService
         return new MasterOperationResultDto
         {
             Success = true,
-            Message = "E-mail de teste enviado para " + actor.Email + " (remetente " + options.FromAddress + "). Confira a caixa de entrada e o spam."
+            Message = "E-mail de teste enviado para " + actor.Email + " (remetente " + TransactionalEmailSender.EffectiveFromAddress(options) + ", respostas para " + options.ReplyToAddress + "). Confira a caixa de entrada e o spam."
         };
     }
 

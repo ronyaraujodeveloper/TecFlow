@@ -63,6 +63,12 @@ O túnel leva `dev.ofertio.com.br` até `https://127.0.0.1:7002` (Caddy). Se o d
 ```powershell
 & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --config "$env:USERPROFILE\.cloudflared\config.yml" run
 ```
+**O túnel é um serviço do Windows** (configurado em 23/11/2026) e sobe sozinho com o PC. Se o 530 voltar, confira `Get-Service cloudflared`. Para reconfigurar, use um PowerShell **como administrador**. O `--%` é obrigatório: sem ele, o PowerShell quebra as aspas no `(x86)`.
+```powershell
+sc.exe --% config cloudflared binPath= "\"C:\Program Files (x86)\cloudflared\cloudflared.exe\" tunnel --config \"C:\Users\rony_\.cloudflared\config.yml\" --protocol http2 run"
+Restart-Service cloudflared
+```
+Se o serviço travar em "Aguardando que o serviço seja parado": Ctrl + C e `Stop-Process -Id (Get-CimInstance Win32_Service -Filter "Name='cloudflared'").ProcessId -Force`.
 
 2.5. Teste de Fumaça (Smoke Test): validar containers, WebUi e API
 ```powershell

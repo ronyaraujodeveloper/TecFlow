@@ -65,7 +65,7 @@ public sealed class TransactionalEmailSender : ITransactionalEmailSender
     {
         var mail = new MailMessage
         {
-            From = new MailAddress(options.FromAddress, options.FromName, Encoding.UTF8),
+            From = new MailAddress(EffectiveFromAddress(options), options.FromName, Encoding.UTF8),
             Subject = message.Subject,
             SubjectEncoding = Encoding.UTF8,
             Body = message.TextBody,
@@ -85,6 +85,17 @@ public sealed class TransactionalEmailSender : ITransactionalEmailSender
         }
 
         return mail;
+    }
+
+    /// <summary>
+    /// Com conta @gmail.com o remetente é sempre a própria conta: o domínio ofertio.com.br tem DMARC p=reject
+    /// e o Gmail assina como gmail.com, então um remetente @ofertio.com.br seria recusado pelos provedores.
+    /// As respostas continuam indo para o Reply-To (contato@). Outro provedor (com DKIM do domínio) usa o FromAddress.
+    /// </summary>
+    public static string EffectiveFromAddress(EmailOptions options)
+    {
+        var user = options.Smtp?.User?.Trim() ?? string.Empty;
+        return user.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase) ? user : options.FromAddress;
     }
 
 #pragma warning disable SYSLIB0014

@@ -91,7 +91,7 @@ public static class SystemSettingCatalog
         new(SmtpHost, CategoryEmail, GroupSmtp, "Servidor (vazio = só registra no log)", false, "smtp.gmail.com"),
         new(SmtpUser, CategoryEmail, GroupSmtp, "Usuário", false, "ofertiotecso@gmail.com"),
         new(SmtpPassword, CategoryEmail, GroupSmtp, "Senha de app do Gmail (16 letras, não a senha da conta)", true),
-        new(EmailFromAddress, CategoryEmail, GroupSmtp, "Remetente (verificado em \"Enviar e-mail como\" no Gmail)", false, "contato@ofertio.com.br"),
+        new(EmailFromAddress, CategoryEmail, GroupSmtp, "Remetente (com Gmail é sempre a própria conta; as respostas vão para contato@)", false, "contato@ofertio.com.br"),
     ];
 
     /// <summary>

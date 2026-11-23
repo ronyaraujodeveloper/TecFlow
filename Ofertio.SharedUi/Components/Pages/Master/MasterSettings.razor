@@ -145,6 +145,11 @@
                 <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                     @if (isEmail)
                     {
+                        <button type="button" class="btn btn-outline-secondary btn-touch"
+                                title="Passo a passo para trocar a senha do Gmail e gerar a senha de app"
+                                @onclick="() => _showGmailTutorial = true">
+                            <i class="bi bi-question-circle" aria-hidden="true"></i> Como trocar a senha
+                        </button>
                         <button type="button" class="btn btn-outline-primary btn-touch"
                                 disabled="@(!Can(MasterPermissions.ManageGlobalKeys) || _sectionBusy)"
                                 title="Salva o que estiver pendente nesta seção e envia um e-mail de teste para o seu usuário master"
@@ -163,6 +168,8 @@
     }
 </div>
 
+<GmailAppPasswordTutorialModal Visible="_showGmailTutorial" Account="@GmailAccount" OnClose="() => _showGmailTutorial = false" />
+
 @code {
     private List<SystemSettingItemDto> _items = [];
     private List<DeveloperAccountCheckDto> _checks = [];
@@ -172,6 +179,13 @@
     private Dictionary<string, bool> _showSecretMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (bool Success, string Message)> _sectionResults = new(StringComparer.OrdinalIgnoreCase);
     private bool _sectionBusy;
+    private bool _showGmailTutorial;
+
+    /// <summary>Usuário SMTP salvo (não é segredo); o tutorial mostra a conta certa.</summary>
+    private string GmailAccount =>
+        _items.FirstOrDefault(item => item.Key == SystemSettingCatalog.SmtpUser)?.DisplayValue is { Length: > 0 } user
+            ? user
+            : "ofertiotecso@gmail.com";
 
     private void ToggleVisibility(string keyName)
     {

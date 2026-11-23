@@ -57,11 +57,11 @@ Se o disco estiver acima de 80%, antes do pull: `docker builder prune -af && doc
 docker exec ofertio-db bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -Q "BACKUP DATABASE [Ofertio] TO DISK=N'\''/var/opt/mssql/data/Ofertio-pre-deploy.bak'\'' WITH INIT, COPY_ONLY, CHECKSUM"'
 ```
 
-2. **Migrations** (script idempotente e transacional; se falhar, nada é aplicado):
+2. **Migrations** (script idempotente e transacional; se falhar, nada é aplicado). O `-I` liga `QUOTED_IDENTIFIER`: sem ele, índice filtrado falha com `Msg 1934` (aconteceu no deploy de 23/11/2026; o rollback foi automático):
 
 ```bash
 docker cp scripts/producao/<script>.sql ofertio-db:/tmp/migrations.sql
-docker exec ofertio-db bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -d Ofertio -i /tmp/migrations.sql' && echo "MIGRATIONS OK"
+docker exec ofertio-db bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -d Ofertio -i /tmp/migrations.sql' && echo "MIGRATIONS OK"
 docker exec ofertio-db bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -h -1 -W -Q "SELECT TOP 1 MigrationId FROM Ofertio.dbo.__EFMigrationsHistory ORDER BY 1 DESC"'
 ```
 
@@ -109,6 +109,7 @@ Se um container reiniciar, leia `docker logs <nome> --tail 80` antes de alterar 
 ---
 
 ## Primeiro deploy com o compose do git (uma vez)
+> **Feito em 23/11/2026.** A VPS já está no compose do git, com `.env`, volume `ofertio_api_appdata` (chave `key-9b6516f4…` migrada) e migrations até `20261119225813_AddMenuItemKindAndComponents`. Esta seção fica como histórico. Diferenças encontradas: além dos arquivos listados no passo C, a VPS tinha `Ofertio.API/appsettings.json` alterado (versão antiga reduzida) e `appsettings.Production.json` (API e WebUi) e `Ofertio.WebUi/wwwroot/appsettings.json` não rastreados, com o segredo do Google. O último era **servido publicamente** em `/appsettings.json`. Todos foram para `/root/ofertio-config-backup` e saíram da pasta. Não recriar arquivos com segredo dentro de `wwwroot`.
 
 Até 20/11/2026 a VPS rodava um compose próprio: segredos escritos no arquivo, sem `.env`, sem volumes na API e na WebUi, chave do Data Protection **dentro do container** em `/usr/share/Ofertio/DataProtectionKeys/` (caminho padrão, porque `DataProtection:KeysPath` não era definido) e log sem limite (19 GB, que derrubou o site em 16/11). Estado conferido em 20/11/2026: nenhuma imagem em `/app/wwwroot/uploads` e nenhuma sessão do Telegram, ou seja, **só a chave precisa ser migrada**.
 

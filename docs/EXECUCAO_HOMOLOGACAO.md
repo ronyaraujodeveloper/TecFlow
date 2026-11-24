@@ -22,13 +22,21 @@ Stop-Website -Name "Ofertio.API"; Stop-Website -Name "Ofertio.WebUi"; Stop-Websi
 Stop-WebAppPool -Name "OfertioApiPool"; Stop-WebAppPool -Name "OfertioWebUiPool"
 ```
 
-- **Acesso público pelo túnel do Cloudflare:** `dev.ofertio.com.br` → Cloudflare → `cloudflared` → `https://127.0.0.1:7002` (config em `%USERPROFILE%\.cloudflared\config.yml`, túnel `9d81a4d1…`, `noTLSVerify`). O Caddy atende a 7002 (`HML_HTTPS_PORT=7002` no `.env`) com certificado interno; o certificado público é do Cloudflare. O túnel precisa estar rodando:
+- **Reinício do PC:** o serviço do IIS (`W3SVC`) precisa ficar com **início Manual**, e o Docker Desktop precisa iniciar com o Windows. Em 23/11/2026, depois de um reinício, o IIS subiu sozinho, pegou as portas 80/7002, e o dev.ofertio.com.br passou a servir a versão antiga (404 nas APIs novas). O Docker Desktop não tinha subido.
+  - PowerShell **como administrador**: `Set-Service W3SVC -StartupType Manual`
+  - Docker Desktop → Settings → General → **Start Docker Desktop when you sign in to your computer**
+  - Se acontecer de novo: `Stop-Service W3SVC` e abrir o Docker Desktop. Os containers voltam sozinhos (`restart: always`).
+
+- **Acesso público pelo túnel do Cloudflare:** `dev.ofertio.com.br` → Cloudflare → `cloudflared` → `https://127.0.0.1:7002` (config em `%USERPROFILE%\.cloudflared\config.yml`, túnel `9d81a4d1…`, `noTLSVerify`). O Caddy atende a 7002 (`HML_HTTPS_PORT=7002` no `.env`) com certificado interno; o certificado público é do Cloudflare.
+
+  **O túnel é um serviço do Windows** (configurado em 23/11/2026) e sobe sozinho com o PC. Se o domínio responder **530**, confira `Get-Service cloudflared`. Para reconfigurar, use um PowerShell **como administrador**. O `--%` é obrigatório: sem ele, o PowerShell quebra as aspas no `(x86)`.
 
 ```powershell
-& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --config "$env:USERPROFILE\.cloudflared\config.yml" run
+sc.exe --% config cloudflared binPath= "\"C:\Program Files (x86)\cloudflared\cloudflared.exe\" tunnel --config \"C:\Users\rony_\.cloudflared\config.yml\" --protocol http2 run"
+Restart-Service cloudflared
 ```
 
-> ⚠️ O serviço `Cloudflared` do Windows está instalado, mas o `config.yml` dele (`C:\Program Files (x86)\cloudflared\config.yml`) só tem `logDirectory`, sem túnel. Enquanto isso não for corrigido, o túnel só funciona com o comando acima aberto, e o domínio responde **530** quando ele não está rodando.
+  Se o serviço travar em "Aguardando que o serviço seja parado": Ctrl + C e `Stop-Process -Id (Get-CimInstance Win32_Service -Filter "Name='cloudflared'").ProcessId -Force`. Para uma emergência, sem o serviço: `& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --config "$env:USERPROFILE\.cloudflared\config.yml" run` (só funciona com a janela aberta).
 
 ## Fase 1 — Encoding, build e testes
 

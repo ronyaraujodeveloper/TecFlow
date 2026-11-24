@@ -1,5 +1,7 @@
 ﻿# 🚀 Script de Automação de Deploy e Versionamento (Homologação)
 
+> ⛔ **ARQUIVADO — não executar.** O roteiro vigente da homologação é [`../EXECUCAO_HOMOLOGACAO.md`](../EXECUCAO_HOMOLOGACAO.md) (Docker, com testes e o atalho `Publicar-Homologacao-Docker.ps1`). Se pedirem para rodar este arquivo, use o vigente e avise.
+
 > ⚠️ **Instruções para o Cursor Agent:** Execute as fases abaixo de forma sequencial no terminal integrado do PowerShell sempre que o usuário solicitar a finalização e publicação de uma etapa.
 
 *"Rode completo de ponta a ponta sem interrupções."*

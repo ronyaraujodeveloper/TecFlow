@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Ofertio.Core.Abstractions;
 
 namespace Ofertio.Core.Entities;
@@ -18,8 +19,14 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     [Required]
     public required string Email { get; set; }
 
+    /// <summary>
+    /// Nunca sai em resposta JSON, mesmo que a entidade seja devolvida por engano.
+    /// Sem o modificador <c>required</c>: o System.Text.Json recusa required + JsonIgnore até na serialização.
+    /// O [Required] mantém a coluna NOT NULL.
+    /// </summary>
     [Required]
-    public required string PasswordHash { get; set; }
+    [JsonIgnore]
+    public string PasswordHash { get; set; } = string.Empty;
 
     [Column("Plano")]
     public string Plan { get; set; } = "Free";
@@ -48,7 +55,10 @@ public class UserAccount : BaseEntity, ITenantScopedEntity
     [MaxLength(64)]
     public string? TermsAcceptedIp { get; set; }
 
+    [JsonIgnore]
     public string? TikTokShopAccessToken { get; set; }
+
+    [JsonIgnore]
     public string? TikTokRefreshToken { get; set; }
     public DateTime? TikTokTokenExpiresAt { get; set; }
 

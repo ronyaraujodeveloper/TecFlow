@@ -3,6 +3,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Ofertio.Business.Dto
 @using Ofertio.Business.Service.LinkStrategies
+@using Ofertio.Business.Service.Radar
 @using Ofertio.SharedUi.Services.Radar
 @inject IDealIntelligenceApiService Api
 @inject ILogger<Achadinhos> Logger
@@ -20,7 +21,7 @@
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <span class="badge text-bg-dark">Créditos @_credits.TotalBalance</span>
             <span class="badge text-bg-secondary">Diários @_credits.DailyBalance</span>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => _showTopUp = true">Comprar pacote</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => _showTopUp = true">Mais créditos</button>
         </div>
     </div>
 
@@ -116,16 +117,17 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title h5">Pacotes de créditos</h2>
+                    <h2 class="modal-title h5">Mais créditos</h2>
                     <button type="button" class="btn-close" @onclick="() => _showTopUp = false"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted">Desconto progressivo por volume. Créditos comprados não expiram.</p>
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => TopUpAsync(10)">+10 créditos</button>
-                        <button type="button" class="btn btn-outline-primary" disabled="@_busy" @onclick="() => TopUpAsync(50)">+50 créditos</button>
-                        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="() => TopUpAsync(100)">+100 créditos</button>
-                    </div>
+                    <p class="mb-2">Seus créditos diários renovam automaticamente no próximo dia.</p>
+                    <p class="small text-muted mb-0">
+                        A compra de pacotes pelo app ainda não está disponível. Para recarregar créditos agora, fale com o suporte.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="() => _showTopUp = false">Entendi</button>
                 </div>
             </div>
         </div>
@@ -176,7 +178,7 @@
             if (result.Data is { Status: false })
             {
                 _error = result.Data.Descricao;
-                if (string.Equals(result.Data.Descricao, "Saldo insuficiente. Compre um pacote de créditos.", StringComparison.Ordinal))
+                if (string.Equals(result.Data.Descricao, DealCreditRules.InsufficientBalanceMessage, StringComparison.Ordinal))
                 {
                     _showTopUp = true;
                 }
@@ -192,27 +194,6 @@
         }
     }
 
-    private async Task TopUpAsync(int pack)
-    {
-        _busy = true;
-        _error = null;
-        try
-        {
-            var result = await Api.TopUpAsync(pack);
-            Apply(result.Data);
-            _showTopUp = false;
-            _info = result.Data?.Descricao;
-            if (result.Data is { Status: false })
-            {
-                _error = result.Data.Descricao;
-                _info = null;
-            }
-        }
-        finally
-        {
-            _busy = false;
-        }
-    }
 
     private Task ApplySearchAsync() => LoadAsync();
 

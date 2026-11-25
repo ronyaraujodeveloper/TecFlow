@@ -24,8 +24,6 @@ public interface IDealCreditsService
 
     Task<DealCreditsResponseDto> UnlockAsync(int userId, int dealId, CancellationToken cancellationToken = default);
 
-    Task<DealCreditsResponseDto> TopUpAsync(int userId, int packSize, CancellationToken cancellationToken = default);
-
     Task<int> GrantDailyQuotasAsync(CancellationToken cancellationToken = default);
 }
 

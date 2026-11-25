@@ -7,7 +7,11 @@ public static class DealCreditRules
     public const int MinEngagement = 2;
     public const int UnlockCost = 1;
 
+    /// <summary>Catálogo de pacotes para a futura compra paga. Hoje não há recarga self-service.</summary>
     public static readonly int[] TopUpPacks = [10, 50, 100];
+
+    public const string InsufficientBalanceMessage =
+        "Saldo insuficiente. Os créditos diários renovam no próximo dia; para recarga, fale com o suporte.";
 
     public const string KindDailyGrant = "DailyGrant";
     public const string KindTopUp = "TopUp";

@@ -15,4 +15,10 @@ public sealed class SocialAuthTokenPayload
     public required string Email { get; init; }
     public required string ProviderKey { get; init; }
     public string? DisplayName { get; init; }
+
+    /// <summary>
+    /// O provedor afirma que o e-mail foi verificado (Google e Apple trazem email_verified;
+    /// o Facebook não expõe essa informação e fica sempre falso).
+    /// </summary>
+    public bool EmailVerified { get; init; }
 }

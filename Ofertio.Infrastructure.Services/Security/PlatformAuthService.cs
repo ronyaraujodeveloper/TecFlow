@@ -9,6 +9,7 @@ using Ofertio.Business.Service.Common;
 using Ofertio.Business.Service.Mail;
 using Ofertio.Business.Service.Legal;
 using Ofertio.Business.Service.Master;
+using Ofertio.Business.Service.Security;
 using Ofertio.Core.Entities;
 using Ofertio.Infrastructure.Security;
 using Ofertio.Util.Validation;
@@ -421,6 +422,15 @@ public class PlatformAuthService : IPlatformAuthService
         var existingByEmail = await _userAccountRepository.GetByEmailAsync(payload.Email);
         if (existingByEmail is not null)
         {
+            if (!SocialAccountLinkRules.CanAutoLinkByEmail(payload))
+            {
+                _logger.LogWarning(
+                    "Vínculo automático recusado: {Provider} não confirmou o e-mail da conta existente {UserId}.",
+                    provider,
+                    existingByEmail.Id);
+                return (false, null, SocialAccountLinkRules.EmailNotVerifiedMessage, "SOCIAL_EMAIL_NOT_VERIFIED");
+            }
+
             _logger.LogInformation(
                 "Auto-linking do provedor {Provider} para usuário existente {Email}.",
                 provider,

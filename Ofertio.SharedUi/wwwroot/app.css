@@ -2284,6 +2284,9 @@ html, body {
 }
 
 .marketplace-chip-row {
+    /* position: relative faz a fileira rolável recortar também os filhos absolutos
+       (ex.: o .visually-hidden "Conectado"); sem isso eles alargavam a página no celular. */
+    position: relative;
     display: flex;
     gap: 0.65rem;
     overflow-x: auto;

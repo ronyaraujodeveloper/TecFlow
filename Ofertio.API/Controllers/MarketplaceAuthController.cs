@@ -25,6 +25,9 @@ namespace Ofertio.API.Controllers;
 [Route("api/marketplace-auth")]
 public class MarketplaceAuthController : ControllerBase
 {
+    public const string VincularManualServerErrorMessage =
+        "Não foi possível vincular a loja agora. Tente de novo em alguns minutos.";
+
     private readonly IMarketplaceAuthService _marketplaceAuthService;
     private readonly IIntegracaoLojaService _integracaoLojaService;
     private readonly ILogger<MarketplaceAuthController> _logger;
@@ -424,9 +427,12 @@ public class MarketplaceAuthController : ControllerBase
         return result.Status ? Ok(result) : BadRequest(result);
     }
 
-    /// <summary>Vinculação manual (homologação). JWT opcional: sem claim usa UserId de fallback no IIS.</summary>
+    /// <summary>
+    /// Vinculação manual de loja (tela Minhas Lojas). Exige login: antes era anônima e,
+    /// sem claim, gravava a loja no UserId 1 — qualquer pessoa injetava credenciais nessa conta.
+    /// </summary>
     [HttpPost("vincular-manual")]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<ActionResult<ResponseDto>> VincularManualAsync(
         [FromBody] IntegracaoLojaDto dto,
         CancellationToken cancellationToken)
@@ -438,13 +444,10 @@ public class MarketplaceAuthController : ControllerBase
                 return InvalidModelState();
             }
 
-            var parsedUserId = GetCurrentUserId();
-            var userId = parsedUserId ?? HomologMarketplaceAuth.FallbackUserId;
-            if (parsedUserId is null)
+            if (GetCurrentUserId() is not { } userId)
             {
-                _logger.LogWarning(
-                    "vincular-manual sem claim NameIdentifier. Fallback UserId={UserId}.",
-                    userId);
+                _logger.LogWarning("vincular-manual recusado: token sem identificação do usuário.");
+                return Unauthorized(ResponseDto.Fail("Sessão inválida. Entre novamente."));
             }
 
             if (dto is null)
@@ -470,9 +473,11 @@ public class MarketplaceAuthController : ControllerBase
         {
             Log.Error(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
             _logger.LogError(ex, "Erro ao salvar MarketplaceAccount no SQL Server");
+
+            // Detalhe da exceção só no log: a mensagem do SQL expunha estrutura do banco ao cliente.
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
-                ResponseDto.Fail($"Erro do Servidor/SQL: {ex.Message}"));
+                ResponseDto.Fail(VincularManualServerErrorMessage));
         }
     }
 

@@ -809,7 +809,7 @@ public class IntegracaoLojaServiceTests
     }
 
     [Fact]
-    public async Task LinkAsync_ShouldUseFirstExistingUser_WhenJwtUserIdIsMissing()
+    public async Task LinkAsync_EmHomologacao_ShouldUseFirstExistingUser_WhenJwtUserIdIsMissing()
     {
         var fallbackUser = new UserAccount
         {
@@ -850,7 +850,7 @@ public class IntegracaoLojaServiceTests
             accounts.Object,
             new Mock<IMarketplaceAuthService>().Object,
             AccountPrep(users),
-            Production());
+            Homolog());
 
         var result = await service.LinkAsync(99, new IntegracaoLojaDto
         {
@@ -1194,6 +1194,64 @@ public class IntegracaoLojaServiceTests
             homolog ? Homolog() : Production());
 
         return (service, stores, auth, accounts);
+    }
+
+    [Fact]
+    public async Task LinkAsync_EmProducao_UsuarioInexistente_NaoGravaEmOutraConta()
+    {
+        var admin = new UserAccount { Id = HomologMarketplaceAuth.FallbackUserId, Name = "Admin", Email = "admin@ofertio.com.br", PasswordHash = "hash" };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdAsync(HomologMarketplaceAuth.FallbackUserId)).ReturnsAsync(admin);
+        users.Setup(repository => repository.GetByIdIgnoringFiltersAsync(HomologMarketplaceAuth.FallbackUserId)).ReturnsAsync(admin);
+        users.Setup(repository => repository.GetFirstIgnoringFiltersAsync()).ReturnsAsync(admin);
+        var stores = new Mock<IIntegracaoLojaRepository>();
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            new Mock<IMarketplaceAccountRepository>().Object,
+            new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users),
+            Production());
+
+        var result = await service.LinkAsync(999, new IntegracaoLojaDto
+        {
+            PlatformType = MarketplaceType.Shopee,
+            TrackingId = "6512300000",
+            FriendlyName = "Loja"
+        });
+
+        Assert.False(result.Status);
+        Assert.Equal("Usuário não encontrado.", result.Descricao);
+        stores.Verify(repository => repository.AddAsync(It.IsAny<IntegracaoLoja>(), It.IsAny<CancellationToken>()), Times.Never);
+        users.Verify(repository => repository.GetByIdIgnoringFiltersAsync(HomologMarketplaceAuth.FallbackUserId), Times.Never);
+        users.Verify(repository => repository.CreateAsync(It.IsAny<UserAccount>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ListByUserAsync_EmHomologacao_UsuarioInexistente_MantemFallbackDeHomologacao()
+    {
+        var demo = new UserAccount { Id = HomologMarketplaceAuth.FallbackUserId, Name = "Demo", Email = "demo@tecso.local", PasswordHash = "hash" };
+        var users = new Mock<IUserAccountRepository>();
+        users.Setup(repository => repository.GetByIdIgnoringFiltersAsync(HomologMarketplaceAuth.FallbackUserId)).ReturnsAsync(demo);
+        var accounts = new Mock<IMarketplaceAccountRepository>();
+        accounts.Setup(repository => repository.ListByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var stores = new Mock<IIntegracaoLojaRepository>();
+        stores.Setup(repository => repository.ListByUserIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = new IntegracaoLojaService(
+            stores.Object,
+            users.Object,
+            accounts.Object,
+            new Mock<IMarketplaceAuthService>().Object,
+            AccountPrep(users, accounts),
+            Homolog());
+
+        await service.ListByUserAsync(999, new IntegracaoLojaFilter());
+
+        stores.Verify(repository => repository.ListByUserIdAsync(HomologMarketplaceAuth.FallbackUserId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static IHostEnvironment Production() => Environment("Production");

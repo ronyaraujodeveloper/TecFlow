@@ -1,13 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Ofertio.API.Security;
 using Ofertio.Business.Dto;
 using Ofertio.Business.Interfaces.Messaging;
 using Ofertio.Business.Messaging;
 
 namespace Ofertio.API.Controllers;
 
+/// <summary>
+/// Sem JWT (chamado por integração externa), mas exige o segredo compartilhado no cabeçalho
+/// X-Webhook-Secret, como os webhooks de Telegram e WhatsApp. Sem segredo configurado, recusa tudo.
+/// </summary>
 [ApiController]
 [AllowAnonymous]
+[WebhookSecurity]
 [Route("api/webhooks/social-media")]
 public class SocialMediaWebhookController : ControllerBase
 {

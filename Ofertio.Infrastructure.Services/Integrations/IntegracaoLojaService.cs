@@ -877,6 +877,13 @@ public class IntegracaoLojaService : IIntegracaoLojaService
             }
         }
 
+        // Fora de Development/Homologacao nunca troca o dono: um token válido de conta apagada
+        // gravaria a loja no usuário 1, no primeiro usuário do banco ou num usuário demo criado na hora.
+        if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Homologacao"))
+        {
+            return null;
+        }
+
         var fallback = await _userAccountRepository.GetByIdIgnoringFiltersAsync(HomologMarketplaceAuth.FallbackUserId)
             ?? await _userAccountRepository.GetByIdAsync(HomologMarketplaceAuth.FallbackUserId);
         if (fallback is not null)

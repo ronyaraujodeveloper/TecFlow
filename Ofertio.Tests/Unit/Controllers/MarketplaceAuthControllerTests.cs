@@ -179,22 +179,26 @@ public class MarketplaceAuthControllerTests
     }
 
     [Fact]
-    public async Task VincularManualAsync_ShouldUseFallbackUserId_WhenClaimIsMissing()
+    public async Task VincularManualAsync_ShouldReturnUnauthorized_AndNotLink_WhenClaimIsMissing()
     {
         var lojas = new Mock<IIntegracaoLojaService>();
-        lojas.Setup(s => s.LinkAsync(
-                HomologMarketplaceAuth.FallbackUserId,
-                It.IsAny<IntegracaoLojaDto>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntegracaoLojaResponseDto { Status = true, Descricao = "OK" });
 
         var action = await CreateController(lojas: lojas.Object, userId: null)
             .VincularManualAsync(ValidDto(), CancellationToken.None);
 
-        Assert.IsType<OkObjectResult>(action.Result);
+        Assert.IsType<UnauthorizedObjectResult>(action.Result);
         lojas.Verify(
-            s => s.LinkAsync(HomologMarketplaceAuth.FallbackUserId, It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+            s => s.LinkAsync(It.IsAny<int>(), It.IsAny<IntegracaoLojaDto>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void VincularManualAsync_ExigeLogin_NaoEhMaisAnonimo()
+    {
+        var method = typeof(MarketplaceAuthController).GetMethod(nameof(MarketplaceAuthController.VincularManualAsync))!;
+
+        Assert.NotEmpty(method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), inherit: true));
+        Assert.Empty(method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), inherit: true));
     }
 
     [Fact]
@@ -221,7 +225,8 @@ public class MarketplaceAuthControllerTests
         Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
         var envelope = Assert.IsType<ResponseDto>(result.Value);
         Assert.False(envelope.Status);
-        Assert.Equal("Erro do Servidor/SQL: falha inesperada", envelope.Descricao);
+        Assert.Equal(MarketplaceAuthController.VincularManualServerErrorMessage, envelope.Descricao);
+        Assert.DoesNotContain("falha inesperada", envelope.Descricao, StringComparison.Ordinal);
     }
 
     [Fact]

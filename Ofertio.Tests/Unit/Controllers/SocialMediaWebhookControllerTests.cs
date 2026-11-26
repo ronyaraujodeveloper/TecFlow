@@ -42,6 +42,47 @@ public class SocialMediaWebhookControllerTests
     }
 
     [Fact]
+    public void Controller_ExigeSegredoDeWebhook()
+    {
+        Assert.NotEmpty(typeof(SocialMediaWebhookController)
+            .GetCustomAttributes(typeof(Ofertio.API.Security.WebhookSecurityAttribute), inherit: true));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("segredo-errado")]
+    public async Task FiltroDeWebhook_SemSegredoCorreto_RespondeUnauthorized_ENaoPublica(string? header)
+    {
+        var filter = new Ofertio.API.Security.WebhookSecurityFilter(
+            Microsoft.Extensions.Options.Options.Create(new Ofertio.Business.Security.WebhookSecurityOptions { Secret = "segredo-certo" }));
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        if (header is not null)
+        {
+            httpContext.Request.Headers[Ofertio.Business.Security.WebhookSecurityOptions.HeaderName] = header;
+        }
+
+        var actionContext = new ActionContext(
+            httpContext,
+            new Microsoft.AspNetCore.Routing.RouteData(),
+            new Microsoft.AspNetCore.Mvc.Abstractions.ActionDescriptor());
+        var executing = new Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext(
+            actionContext,
+            [],
+            new Dictionary<string, object?>(),
+            controller: new object());
+        var actionRan = false;
+
+        await filter.OnActionExecutionAsync(executing, () =>
+        {
+            actionRan = true;
+            return Task.FromResult(new Microsoft.AspNetCore.Mvc.Filters.ActionExecutedContext(actionContext, [], new object()));
+        });
+
+        Assert.IsType<UnauthorizedResult>(executing.Result);
+        Assert.False(actionRan);
+    }
+
+    [Fact]
     public async Task ReceiveCommentAsync_ShouldReturnBadRequest_WhenRequiredFieldsMissing()
     {
         var controller = new SocialMediaWebhookController(

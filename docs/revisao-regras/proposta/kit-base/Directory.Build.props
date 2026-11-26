@@ -1,0 +1,42 @@
+<Project>
+  <!--
+    Kit base: configuração comum a todos os projetos da solução.
+    Fica na raiz; o MSBuild aplica a todos os .csproj abaixo dela.
+    Ativação gradual no Ofertio (ver docs/revisao-regras/PLANO.md, etapas 4 a 6):
+      Etapa 4: este arquivo com TreatWarningsAsErrors=false e AnalysisLevel=8.0-minimum.
+      Etapa 5: WarningsAsErrors com a lista de códigos já zerados.
+      Etapa 6: TreatWarningsAsErrors=true e AnalysisLevel=8.0-recommended.
+    Em projeto novo: comece direto na etapa 6.
+  -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Analisadores .NET -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>8.0-minimum</AnalysisLevel>
+    <!-- Faz as regras IDExxxx do .editorconfig valerem no build (e no CI), não só na IDE -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Warnings -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Códigos que já estão zerados e não podem voltar (lista cresce a cada etapa) -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8600;CS8602;CS8603;CS8618;CS8625;CA2012;CA2200;CA2100;CA5351;CA3075</WarningsAsErrors>
+    <!-- Vulnerabilidade de pacote: NU1903 (alta) e NU1904 (crítica) quebram o build. NU1902 (moderada) fica como aviso.
+         Ofertio: hoje o build gera NU1903 (SixLabors.ImageSharp 3.1.11). Atualize o pacote ANTES de ativar esta linha (PLANO, etapa 4). -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+
+    <!-- 1591: documentação XML ausente. Só a API gera XML para o Swagger -->
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Build de CI: mais rigoroso que o local -->
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>

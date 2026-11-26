@@ -1,0 +1,101 @@
+﻿{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet format *)",
+      "Bash(dotnet restore *)",
+      "Bash(dotnet list *)",
+      "Bash(dotnet --info)",
+      "Bash(dotnet ef migrations add *)",
+      "Bash(dotnet ef migrations script *)",
+      "Bash(dotnet ef migrations list *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch *)",
+      "Bash(git grep *)",
+      "Bash(docker ps *)",
+      "Bash(docker logs *)",
+      "Bash(docker compose * config *)",
+      "Bash(powershell -File scripts/gerar-diagrama-dependencias.ps1)",
+      "Bash(powershell -NoProfile -File .\\NormalizarEncodingPrecoce.ps1 *)"
+    ],
+    "ask": [
+      "Bash(rm *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git checkout -- *)",
+      "Bash(git clean *)",
+      "Bash(git tag *)",
+      "Bash(dotnet add *)",
+      "Bash(dotnet remove *)",
+      "Bash(dotnet ef database update *)",
+      "Bash(dotnet ef migrations remove *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(docker compose *)",
+      "Bash(docker stop *)",
+      "Bash(docker rm *)",
+      "Bash(docker exec *)",
+      "Edit(./Ofertio.Data/Migrations/**)",
+      "Edit(./Ofertio.Infrastructure/Migrations/**)",
+      "Edit(./docker-compose.yml)",
+      "Edit(./Caddyfile)",
+      "Edit(./**/Dockerfile)",
+      "Edit(./nuget.config)",
+      "Edit(./Directory.Build.props)",
+      "Edit(./.editorconfig)",
+      "Edit(./.github/**)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./Ofertio.API/Program.cs)",
+      "Edit(./Ofertio.API/Security/**)",
+      "Edit(./Ofertio.Infrastructure/Security/**)",
+      "Edit(./scripts/producao/**)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(docker volume rm *)",
+      "Bash(docker compose down -v)",
+      "Bash(docker compose down -v *)",
+      "Bash(docker compose * down -v*)",
+      "Bash(docker system prune *)",
+      "Bash(dotnet ef database drop *)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./comandos.txt)",
+      "Read(./**/appsettings.*.local.json)",
+      "Read(./Ofertio.E2E/appsettings.json)",
+      "Read(./**/secrets.json)",
+      "Read(./**/App_Data/OfertioDataProtectionKeys/**)",
+      "Read(./**/App_Data/OfertioDevKeys/**)",
+      "Read(./**/App_Data/telegram-sessions/**)",
+      "Read(./**/*.pfx)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/*.bak)",
+      "Read(~/AppData/Roaming/Microsoft/UserSecrets/**)",
+      "Read(~/.ssh/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/garantir-bom.ps1",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

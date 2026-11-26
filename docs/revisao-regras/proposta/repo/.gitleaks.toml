@@ -1,0 +1,33 @@
+# Configuração do gitleaks (varredura de segredos) para o Ofertio.
+# Usa as regras padrão e acrescenta as chaves de configuração do projeto.
+# Rodar localmente:  gitleaks detect --no-banner --redact
+# Rodar só no que vai ser commitado: gitleaks protect --staged --no-banner --redact
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "ofertio-appsettings-segredo"
+description = "Valor preenchido em chave secreta de appsettings/compose"
+regex = '''(?i)"(Key|Secret|ClientSecret|AppSecret|SecretKey|ApiKey|PartnerKey|Password|ConnectionString)"\s*:\s*"([^"$_][^"]{7,})"'''
+secretGroup = 2
+keywords = ["key", "secret", "password", "connectionstring"]
+
+[[rules]]
+id = "ofertio-env-atribuicao"
+description = "Atribuição de segredo em .env, compose ou script"
+regex = '''(?i)(JWT_KEY|ENCRYPTION_KEY|WEBHOOK_SECRET|EVOLUTION_API_KEY|OPENAI_API_KEY|GEMINI_API_KEY|SA_PASSWORD|MSSQL_SA_PASSWORD|ASAAS_[A-Z_]*TOKEN)\s*[=:]\s*['"]?([^\s'"$]{8,})'''
+secretGroup = 2
+
+[allowlist]
+description = "Placeholders e exemplos"
+paths = [
+  '''\.env\.example$''',
+  '''docs/arquivo/''',
+  '''(^|/)Migrations/''',
+]
+regexes = [
+  '''__DEFINIR__''',
+  '''<[a-z\-]+>''',
+  '''(?i)(changeme|example|exemplo|placeholder|sua-chave|your-key)''',
+]

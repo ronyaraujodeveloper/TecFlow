@@ -96,12 +96,17 @@ public sealed class AsaasWebhookService : IAsaasWebhookService
         {
             case "PAYMENT_CONFIRMED":
             case "PAYMENT_RECEIVED":
-                if (!alreadyPaid)
+                // Idempotente: o Asaas manda CONFIRMED e depois RECEIVED para o mesmo pagamento
+                // e reenvia eventos sem 200. Só o primeiro estende a assinatura e reativa o inquilino;
+                // os seguintes só atualizam o status do pagamento.
+                if (alreadyPaid)
                 {
-                    noticeKind = "confirmed";
+                    message = $"Pagamento {payment.Id} já processado; evento {eventName} sem nova renovação.";
+                    break;
                 }
 
-                row.PaidAt ??= ParseDate(payment.PaymentDate) ?? now;
+                noticeKind = "confirmed";
+                row.PaidAt = ParseDate(payment.PaymentDate) ?? now;
                 if (TenantStatuses.Normalize(tenant.Status) != TenantStatuses.Cancelado)
                 {
                     TenantAdminService.ApplyTransition(

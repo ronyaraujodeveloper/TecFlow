@@ -42,14 +42,13 @@ public class ApiAuthorizationPolicyTests
         "MarketplaceAuthController.GetPlatformAuthorizationUrl",
         "MarketplaceAuthController.CompleteMercadoLivreCallbackAsync",
         "MarketplaceAuthController.CompleteSealedCallbackAsync",
-        "MarketplaceAuthController.VincularManualAsync", // pendente: bloco F da auditoria
         "MercadoLivreController.*",
         "PublicConverterController.GetBySlugAsync",
         "PublicConverterController.ConvertAsync",
         "PublicPlansController.*",
         "ShopeeWebhookController.*",
         "ShortLinkRedirectController.*",
-        "SocialMediaWebhookController.*", // pendente: bloco F da auditoria
+        "SocialMediaWebhookController.*", // protegido por [WebhookSecurity] (X-Webhook-Secret)
         "TelegramWebhookController.*",
         "TikTokShopWebhookController.*",
         "WhatsAppWebhookController.*",

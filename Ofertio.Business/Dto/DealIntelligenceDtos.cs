@@ -63,8 +63,3 @@ public class DealCreditsResponseDto
 
     public List<GlobalTrendingDealDto> Items { get; set; } = [];
 }
-
-public class TopUpCreditsRequestDto
-{
-    public int PackSize { get; set; }
-}

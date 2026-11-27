@@ -13,7 +13,6 @@ public interface IDealIntelligenceApiService
 
     Task<ApiResult<DealCreditsResponseDto>> UnlockAsync(int id, CancellationToken cancellationToken = default);
 
-    Task<ApiResult<DealCreditsResponseDto>> TopUpAsync(int packSize, CancellationToken cancellationToken = default);
 }
 
 public sealed class DealIntelligenceApiService : IDealIntelligenceApiService
@@ -46,14 +45,5 @@ public sealed class DealIntelligenceApiService : IDealIntelligenceApiService
     {
         using var _ = _loading.BeginScope("Desbloqueando oferta...");
         return _http.PostAsync<object, DealCreditsResponseDto>($"api/achadinhos/{id}/desbloquear", new { }, cancellationToken);
-    }
-
-    public Task<ApiResult<DealCreditsResponseDto>> TopUpAsync(int packSize, CancellationToken cancellationToken = default)
-    {
-        using var _ = _loading.BeginScope("Adicionando créditos...");
-        return _http.PostAsync<TopUpCreditsRequestDto, DealCreditsResponseDto>(
-            "api/achadinhos/creditos/pacote",
-            new TopUpCreditsRequestDto { PackSize = packSize },
-            cancellationToken);
     }
 }

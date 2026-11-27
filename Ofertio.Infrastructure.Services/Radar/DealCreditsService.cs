@@ -121,7 +121,7 @@ public sealed class DealCreditsService : IDealCreditsService
             {
                 var empty = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
                 empty.Status = false;
-                empty.Descricao = "Saldo insuficiente. Compre um pacote de créditos.";
+                empty.Descricao = DealCreditRules.InsufficientBalanceMessage;
                 return empty;
             }
 
@@ -146,34 +146,6 @@ public sealed class DealCreditsService : IDealCreditsService
 
         var result = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
         result.Descricao = already ? "Oferta já desbloqueada." : "Oferta desbloqueada com 1 crédito.";
-        return result;
-    }
-
-    public async Task<DealCreditsResponseDto> TopUpAsync(int userId, int packSize, CancellationToken cancellationToken = default)
-    {
-        if (!DealCreditRules.IsValidPack(packSize))
-        {
-            return Fail("Pacote inválido. Use +10, +50 ou +100.");
-        }
-
-        var tenantId = await ResolveTenantIdAsync(userId, cancellationToken);
-        if (tenantId is null)
-        {
-            return Fail("Conta sem tenant associado.");
-        }
-
-        var wallet = await EnsureWalletAsync(tenantId.Value, cancellationToken);
-        wallet.PurchasedBalance += packSize;
-        wallet.Touch();
-        _context.CreditTransactions.Add(new CreditTransaction
-        {
-            TenantId = tenantId.Value,
-            Amount = packSize,
-            Kind = DealCreditRules.KindTopUp
-        });
-        await _context.SaveChangesAsync(cancellationToken);
-        var result = await ListShowcaseAsync(userId, cancellationToken: cancellationToken);
-        result.Descricao = $"Pacote de {packSize} créditos adicionado.";
         return result;
     }
 

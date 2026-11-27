@@ -48,11 +48,9 @@ public sealed class DealIntelligenceController : ControllerBase
     public async Task<ActionResult<DealCreditsResponseDto>> UnlockAsync(int id, CancellationToken cancellationToken) =>
         Ok(await _credits.UnlockAsync(ResolveUserId(), id, cancellationToken));
 
-    [HttpPost("creditos/pacote")]
-    public async Task<ActionResult<DealCreditsResponseDto>> TopUpAsync(
-        [FromBody] TopUpCreditsRequestDto? request,
-        CancellationToken cancellationToken) =>
-        Ok(await _credits.TopUpAsync(ResolveUserId(), request?.PackSize ?? 0, cancellationToken));
+    // Não existe recarga self-service: o antigo POST creditos/pacote somava créditos sem cobrança.
+    // Recarga só pelo Master (api/master/tenants/{id}/creditos, permissão AdjustCredits, com auditoria)
+    // até existir compra paga com crédito lançado pelo webhook de pagamento.
 
     private int ResolveUserId()
     {

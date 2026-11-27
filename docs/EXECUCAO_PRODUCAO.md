@@ -29,6 +29,7 @@ git push origin main
 ```powershell
 $sql = (Get-Content .env | Where-Object { $_ -like 'SQL_CONNECTION=*' }) -replace '^SQL_CONNECTION=', ''
 $env:ConnectionStrings__DefaultConnection = $sql -replace 'Server=sqlserver,1433', 'Server=127.0.0.1,1433'
+$env:Encryption__Key = (Get-Content .env | Where-Object { $_ -like 'ENCRYPTION_KEY=*' }) -replace '^ENCRYPTION_KEY=', ''   # não fica mais no appsettings.json
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet ef migrations script <UltimaMigrationDaProducao> --idempotent --output .\scripts\producao\migrations-pendentes-<de>-ate-<ate>.sql --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 ```
@@ -48,6 +49,14 @@ git pull origin main
 ```
 
 Se o disco estiver acima de 80%, antes do pull: `docker builder prune -af && docker image prune -af` (não toca em containers rodando nem em volumes).
+
+**Variáveis novas no `.env`:** a partir do commit que tirou os segredos dos `appsettings` (27/11/2026), o compose exige `WEBHOOK_SECRET` e não sobe sem ela. Confira antes de subir:
+
+```bash
+grep -c '^WEBHOOK_SECRET=.\{16,\}' .env   # esperado: 1 (sem mostrar o valor)
+```
+
+Se der 0, siga o item C4 do [roteiro de segredos](./auditoria/ROTEIRO_BACKUP_E_SEGREDOS.md): gerar o valor, gravar no `.env` e registrar de novo o webhook do Telegram (e da Evolution, se houver).
 
 ## Fase 3 — Backup, migrations e subida
 

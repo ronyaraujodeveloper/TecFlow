@@ -10,4 +10,5 @@
 .env.*
 *.bak
 *.user
-test_full_output.txt
+test_*.txt
+comandos.txt

@@ -14,6 +14,8 @@ Atalho para as fases 1 a 4: `.\Publicar-Homologacao-Docker.ps1` (ou `-SemTestes`
 
 Os mesmos da fase 0 do [`EXECUCAO_DESENVOLVIMENTO.md`](./EXECUCAO_DESENVOLVIMENTO.md): Docker Desktop, `.wslconfig`, `.env`, user-secrets da API e banco restaurado. Além disso:
 
+- O `.env` precisa de `WEBHOOK_SECRET` (o compose não sobe sem ele). Os segredos não ficam mais nos `appsettings*.json`; o valor antigo de homologação foi retirado do git. Ao gerar um novo, registre de novo o webhook do Telegram e o da Evolution (item C4 do [roteiro de segredos](./auditoria/ROTEIRO_BACKUP_E_SEGREDOS.md)).
+
 - Os sites e pools do IIS (`Ofertio.API`, `Ofertio.WebUi`, `Default Web Site`) ficam **parados**, porque o Caddy usa as portas 80 e 7002:
 
 ```powershell
@@ -61,6 +63,7 @@ O build usa `DOTNET_NUGET_SIGNATURE_VERIFICATION=false` e o `nuget.config` da ra
 ```powershell
 $sql = (Get-Content .env | Where-Object { $_ -like 'SQL_CONNECTION=*' }) -replace '^SQL_CONNECTION=', ''
 $env:ConnectionStrings__DefaultConnection = $sql -replace 'Server=sqlserver,1433', 'Server=127.0.0.1,1433'   # o dotnet ef não lê user-secrets
+$env:Encryption__Key = (Get-Content .env | Where-Object { $_ -like 'ENCRYPTION_KEY=*' }) -replace '^ENCRYPTION_KEY=', ''   # não fica mais no appsettings.json
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 docker compose @c restart api

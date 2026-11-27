@@ -32,6 +32,11 @@ $rp = (Get-Content .env | Where-Object { $_ -like 'RABBITMQ_PASSWORD=*' }) -repl
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=127.0.0.1,1433;Database=Ofertio;User Id=sa;Password=$sa;TrustServerCertificate=True;" --project .\Ofertio.API\Ofertio.API.csproj
 dotnet user-secrets set "RabbitMq:Username" $ru --project .\Ofertio.API\Ofertio.API.csproj
 dotnet user-secrets set "RabbitMq:Password" $rp --project .\Ofertio.API\Ofertio.API.csproj
+# Chaves que não ficam mais nos appsettings versionados (a API não sobe sem Jwt:Key e Encryption:Key):
+foreach ($par in @(@('JWT_KEY','Jwt:Key'), @('ENCRYPTION_KEY','Encryption:Key'), @('WEBHOOK_SECRET','Integrations:Webhook:Secret'), @('EVOLUTION_API_KEY','EvolutionApi:ApiKey'))) {
+  $valor = (Get-Content .env | Where-Object { $_ -like "$($par[0])=*" }) -replace "^$($par[0])=", ''
+  dotnet user-secrets set $par[1] $valor --project .\Ofertio.API\Ofertio.API.csproj | Out-Null
+}
 ```
 
 5. **Banco inicial:** restaure um `.bak` (fase 0.1). **Nunca** crie o banco do zero com `dotnet ef database update`: a migration inicial altera `Usuarios` e falha em base vazia.
@@ -71,11 +76,12 @@ Se a homologação estiver no ar, a infraestrutura já está de pé e é a mesma
 ```powershell
 $sql = (Get-Content .env | Where-Object { $_ -like 'SQL_CONNECTION=*' }) -replace '^SQL_CONNECTION=', ''
 $env:ConnectionStrings__DefaultConnection = $sql -replace 'Server=sqlserver,1433', 'Server=127.0.0.1,1433'
+$env:Encryption__Key = (Get-Content .env | Where-Object { $_ -like 'ENCRYPTION_KEY=*' }) -replace '^ENCRYPTION_KEY=', ''
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet ef database update --project .\Ofertio.Data\Ofertio.Data.csproj --startup-project .\Ofertio.API\Ofertio.API.csproj --context AppDbContext
 ```
 
-O `dotnet ef` usa o `AppDbContextFactory`, que lê os appsettings e as **variáveis de ambiente**, mas não os user-secrets. Por isso a connection string vai por variável, montada a partir do `SQL_CONNECTION` do `.env` (o mesmo valor da produção, trocando o host `sqlserver`, que só existe na rede Docker, por `127.0.0.1`). Use `127.0.0.1`, não `localhost`: o Docker publica a porta só em IPv4, e o `localhost` tenta primeiro o IPv6 (`::1`) e recebe "conexão recusada".
+O `dotnet ef` usa o `AppDbContextFactory`, que lê os appsettings e as **variáveis de ambiente**, mas não os user-secrets. Por isso a connection string e a `Encryption:Key` (que não fica mais no `appsettings.json`) vão por variável, montada a partir do `SQL_CONNECTION` do `.env` (o mesmo valor da produção, trocando o host `sqlserver`, que só existe na rede Docker, por `127.0.0.1`). Use `127.0.0.1`, não `localhost`: o Docker publica a porta só em IPv4, e o `localhost` tenta primeiro o IPv6 (`::1`) e recebe "conexão recusada".
 
 O esperado: `Done.` (ou `No migrations were applied. The database is already up to date.`).
 

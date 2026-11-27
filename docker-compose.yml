@@ -76,6 +76,9 @@ services:
       Jwt__Secret: ${JWT_KEY}
       Jwt__Issuer: ofertio.com.br
       Jwt__Audience: ofertio.com.br
+      # Segredo dos webhooks Telegram/WhatsApp/redes sociais (cabeçalho X-Webhook-Secret).
+      # Obrigatório: sem ele o compose nem sobe, em vez de os webhooks passarem a recusar tudo em silêncio.
+      Integrations__Webhook__Secret: ${WEBHOOK_SECRET:?defina WEBHOOK_SECRET no .env}
       Authentication__Google__Enabled: "true"
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}

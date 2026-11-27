@@ -14,3 +14,13 @@ Ofertio.E2E/appsettings.*.local.json
 .env
 .env.local
 *.bak
+# Segredos: nunca versionar (auditoria S23). O .env.example é o único modelo versionado.
+.env.*
+!.env.example
+secrets.json
+appsettings.*.local.json
+*.pem
+*.key
+*.p8
+# Saídas de teste soltas na raiz
+test_*.txt

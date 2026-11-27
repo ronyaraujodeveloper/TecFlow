@@ -106,8 +106,10 @@ builder.Services.AddHostedService<Ofertio.API.Workers.DataPurgeWorker>();
 builder.Services.AddHostedService<Ofertio.API.Workers.TenantBillingWorker>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtSecret = jwtSection["Key"] ?? jwtSection["Secret"]
-    ?? throw new InvalidOperationException("JWT Secret is missing in configuration (Jwt:Key / Jwt:Secret).");
+// Sem valor no appsettings (segredo fora do git): vem do .env (Jwt__Key) ou dos user-secrets.
+var jwtSecret = new[] { jwtSection["Key"], jwtSection["Secret"] }.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+    ?? throw new InvalidOperationException(
+        "Jwt:Key não configurada. Defina JWT_KEY no .env (Docker) ou Jwt:Key nos user-secrets da API (Visual Studio).");
 var jwtIssuer = string.IsNullOrWhiteSpace(jwtSection["Issuer"]) ? "OfertioAPI" : jwtSection["Issuer"]!;
 var jwtAudience = string.IsNullOrWhiteSpace(jwtSection["Audience"]) ? "OfertioClient" : jwtSection["Audience"]!;
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));

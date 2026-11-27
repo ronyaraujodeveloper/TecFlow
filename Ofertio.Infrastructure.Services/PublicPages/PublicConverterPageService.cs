@@ -244,25 +244,16 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         }
         catch (AffiliateLinkGenerationException ex)
         {
-            return new GerarLinkAfiliadoResponseDto
-            {
-                Success = false,
-                Status = false,
-                Message = ex.Message,
-                Descricao = ex.Message
-            };
+            // Mesma frase que a tela mostra antes de converter (PublicConverterInputCheck).
+            return Refuse(ex.Message == ShortAffiliateLinkService.UnrecognizedDestinationMessage
+                ? PublicConverterStoreMessages.NotServedSite(workingUrl, page.DisplayName)
+                : ex.Message);
         }
 
         if (!UrlUnshortenerService.TryDetectMarketplace(resolvedUrl, out var platform)
             && !UniversalLinkResolverEngine.TryMapDomainToPlatform(resolvedUrl, out platform))
         {
-            return new GerarLinkAfiliadoResponseDto
-            {
-                Success = false,
-                Status = false,
-                Message = ShortAffiliateLinkService.UnrecognizedDestinationMessage,
-                Descricao = ShortAffiliateLinkService.UnrecognizedDestinationMessage
-            };
+            return Refuse(PublicConverterStoreMessages.NotServedSite(resolvedUrl, page.DisplayName));
         }
 
         var accounts = await _marketplaceAccounts.ListByUserIdAsync(
@@ -271,13 +262,7 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
         var account = PublicConverterRules.FirstActiveForPlatform(accounts, platform);
         if (account is null)
         {
-            return new GerarLinkAfiliadoResponseDto
-            {
-                Success = false,
-                Status = false,
-                Message = IntegracaoLojaScopeResolver.MissingConnectedAccountMessage(platform),
-                Descricao = IntegracaoLojaScopeResolver.MissingConnectedAccountMessage(platform)
-            };
+            return Refuse(PublicConverterStoreMessages.NotServed(platform, page.DisplayName));
         }
 
         var request = new GerarLinkAfiliadoDto
@@ -466,6 +451,15 @@ public sealed class PublicConverterPageService : IPublicConverterPageService
             IsActive = page.IsActive,
             CreatedAt = page.CreatedAt,
             ConnectedPlatforms = platforms?.ToList() ?? []
+        };
+
+    private static GerarLinkAfiliadoResponseDto Refuse(string message) =>
+        new()
+        {
+            Success = false,
+            Status = false,
+            Message = message,
+            Descricao = message
         };
 
     private static PublicConverterPageResponseDto Fail(string message) =>

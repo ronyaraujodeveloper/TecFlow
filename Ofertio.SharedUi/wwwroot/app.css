@@ -4306,7 +4306,27 @@ html, body {
 .pc-join-cta { flex: 0 0 auto; font-weight: 700; color: #c2410c; }
 
 .pc-disclosure { margin: 1rem 0 0; font-size: 0.78rem; color: #64748b; }
-.pc-platforms { margin: 0.25rem 0 0; font-size: 0.78rem; color: #94a3b8; }
+/* Lojas aceitas: chips discretos na cor de cada loja, logo abaixo do campo de link. */
+.pc-stores { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.55rem; }
+.pc-stores-label { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: #475569; margin-right: 0.1rem; }
+.pc-store { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.65rem 0.2rem 0.25rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; line-height: 1.2; white-space: nowrap; background: #f1f5f9; color: #334155; }
+.pc-store-dot { width: 1.15rem; height: 1.15rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.66rem; font-weight: 800; color: #fff; background: var(--brand-platform-default); }
+.pc-store--shopee { background: #ffece5; color: #9a3412; }
+.pc-store--shopee .pc-store-dot { background: var(--brand-shopee); }
+.pc-store--mercadolivre { background: #fff7cc; color: #6b4e00; }
+.pc-store--mercadolivre .pc-store-dot { background: var(--brand-mercadolivre); color: var(--brand-mercadolivre-text); box-shadow: inset 0 0 0 1px var(--brand-mercadolivre-border); }
+.pc-store--amazon { background: #eef0f3; color: #232f3e; }
+.pc-store--amazon .pc-store-dot { background: var(--brand-amazon-dark); }
+.pc-store--tiktok { background: #f1f1f3; color: #111; }
+.pc-store--tiktok .pc-store-dot { background: var(--brand-tiktok); box-shadow: inset 0 -2px 0 var(--brand-tiktok-accent); }
+.pc-store--magalu { background: #e6f2ff; color: #0b4f99; }
+.pc-store--magalu .pc-store-dot { background: var(--brand-magalu); }
+.pc-store--kabum { background: #fff0e5; color: #9a3d00; }
+.pc-store--kabum .pc-store-dot { background: var(--brand-kabum); }
+.pc-store--casasbahia { background: #fdecee; color: #8f0610; }
+.pc-store--casasbahia .pc-store-dot { background: var(--brand-casasbahia); }
+.pc-store-warning { display: flex; gap: 0.45rem; align-items: flex-start; margin-top: 0.55rem; padding: 0.6rem 0.75rem; border: 1px solid #f6d0d0; border-radius: 0.65rem; background: #fdf0f0; color: #8f1d1d; font-size: 0.85rem; line-height: 1.45; }
+.pc-store-warning .bi { margin-top: 0.1rem; }
 .pc-footer { text-align: center; font-size: 0.8rem; color: #94a3b8; padding: 1rem 0 2rem; }
 
 /* Minhas Páginas Públicas: links de convite. */

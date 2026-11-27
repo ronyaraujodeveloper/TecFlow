@@ -47,19 +47,48 @@ else
 
         <label class="pc-label" for="public-product-url">Link do produto</label>
         <input id="public-product-url"
-               class="form-control form-control-lg pc-input"
-               placeholder="Cole aqui o link do produto"
+               class="form-control form-control-lg pc-input @(_storeWarning is null ? string.Empty : "is-invalid")"
+               placeholder="@InputPlaceholder"
                inputmode="url"
                autocomplete="off"
                value="@_productUrl"
                disabled="@_isConverting"
-               @oninput="e => _productUrl = e.Value?.ToString() ?? string.Empty"
+               aria-describedby="pc-stores"
+               aria-invalid="@(_storeWarning is null ? "false" : "true")"
+               @oninput="OnUrlInput"
                @onkeydown="OnKeyDownAsync" />
+
+        @if (_storeWarning is not null)
+        {
+            <div class="pc-store-warning" role="alert">
+                <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                <span>@_storeWarning</span>
+            </div>
+        }
+        @if (Stores.Count > 0)
+        {
+            <div id="pc-stores" class="pc-stores">
+                @if (_storeWarning is null)
+                {
+                    <span class="pc-stores-label"><i class="bi bi-check-circle text-success" aria-hidden="true"></i>Aceita links de:</span>
+                }
+                else
+                {
+                    <span class="visually-hidden">Lojas aceitas:</span>
+                }
+                @foreach (var store in Stores)
+                {
+                    <span class="pc-store pc-store--@store.CssKey">
+                        <span class="pc-store-dot" aria-hidden="true">@store.Initial</span>@store.Name
+                    </span>
+                }
+            </div>
+        }
 
         <div class="pc-actions">
             <button type="button"
                     class="btn btn-primary btn-lg pc-convert"
-                    disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl))"
+                    disabled="@(_isConverting || string.IsNullOrWhiteSpace(_productUrl) || _storeWarning is not null)"
                     @onclick="ConvertAsync">
                 @(_isConverting ? "Convertendo..." : "Converter link")
             </button>
@@ -128,10 +157,6 @@ else
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
             Este é um link de afiliado: o preço para você é o mesmo e uma pequena comissão vai para @AffiliateName.
         </p>
-        @if (PlatformNames.Count > 0)
-        {
-            <p class="pc-platforms">Funciona com @string.Join(", ", PlatformNames).</p>
-        }
     </section>
 }
 
@@ -145,17 +170,53 @@ else
     private bool _copiedTrack;
     private string _productUrl = string.Empty;
     private string? _error;
+    private string? _storeWarning;
     private GerarLinkAfiliadoResponseDto? _result;
 
-    private string AffiliateName => string.IsNullOrWhiteSpace(_page?.DisplayName) ? "o afiliado desta página" : _page!.DisplayName!.Trim();
+    private sealed record StoreChip(MarketplaceType Platform, string Name, string Initial, string CssKey);
+
+    private string AffiliateName => PublicConverterStoreMessages.AffiliateName(_page?.DisplayName);
 
     private string Initial => string.IsNullOrWhiteSpace(_page?.DisplayName) ? "?" : char.ToUpperInvariant(_page!.DisplayName!.Trim()[0]).ToString();
 
-    private IReadOnlyList<string> PlatformNames =>
-        (_page?.ConnectedPlatforms ?? [])
-            .Distinct()
-            .Select(platform => platform.GetDisplayName())
-            .ToList();
+    private IReadOnlyList<MarketplaceType> AcceptedPlatforms =>
+        (_page?.ConnectedPlatforms ?? []).Distinct().ToList();
+
+    private IReadOnlyList<StoreChip> Stores =>
+        AcceptedPlatforms.Select(ToChip).ToList();
+
+    private string InputPlaceholder
+    {
+        get
+        {
+            var platforms = AcceptedPlatforms;
+            return platforms.Count switch
+            {
+                0 => "Cole aqui o link do produto",
+                1 => $"Cole aqui o link {PublicConverterStoreMessages.StoreReference(platforms[0])}",
+                2 => $"Cole aqui o link {PublicConverterStoreMessages.StoreReference(platforms[0])} ou {PublicConverterStoreMessages.StoreReference(platforms[1])}",
+                _ => $"Cole aqui o link {PublicConverterStoreMessages.StoreReference(platforms[0])}, {platforms[1].GetDisplayName()}…"
+            };
+        }
+    }
+
+    private static StoreChip ToChip(MarketplaceType platform)
+    {
+        var name = platform.GetDisplayName();
+        var cssClass = MarketplaceUrlDetector.All.FirstOrDefault(item => item.IntegrationType == platform)?.CssClass;
+        var cssKey = cssClass is null ? "default" : cssClass.Replace("marketplace-chip--", string.Empty, StringComparison.Ordinal);
+        var initial = platform == MarketplaceType.Amazon ? "a" : char.ToUpperInvariant(name[0]).ToString();
+        return new StoreChip(platform, name, initial, cssKey);
+    }
+
+    private string? CheckStore(bool whileTyping) =>
+        PublicConverterInputCheck.NotServedMessage(_productUrl, AcceptedPlatforms, _page?.DisplayName, whileTyping);
+
+    private void OnUrlInput(ChangeEventArgs args)
+    {
+        _productUrl = args.Value?.ToString() ?? string.Empty;
+        _storeWarning = CheckStore(whileTyping: true);
+    }
 
     private string OfertioTrackingUrl => ShortLinkPublicUrl.RebaseToCurrentHost(_result?.ResolvedShortUrl, GetBaseUrl());
 
@@ -190,6 +251,7 @@ else
     private void ClearForm()
     {
         _productUrl = string.Empty;
+        _storeWarning = null;
         ClearResults();
     }
 
@@ -205,6 +267,12 @@ else
         _error = null;
         _result = null;
         _copiedTrack = false;
+        _storeWarning = CheckStore(whileTyping: false);
+        if (_storeWarning is not null)
+        {
+            return;
+        }
+
         _isConverting = true;
         try
         {
